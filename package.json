@@ -11,7 +11,7 @@
     "expo-clipboard": "^57.0.1",
     "expo-constants": "^57.0.13",
     "expo-haptics": "^57.0.1",
-    "expo-sqlite": "~16.0.10",
+    "expo-sqlite": "~57.0.1",
     "expo-status-bar": "~57.0.1",
     "expo-store-review": "^57.0.2",
     "expo-web-browser": "~57.0.2",

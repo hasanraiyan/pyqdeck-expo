@@ -160,26 +160,29 @@ export const QuestionItem: React.FC<QuestionItemProps> = React.memo(({
             </TouchableOpacity>
           )}
 
+          {/* Action buttons (Ask AI on left, Copy & Share on right) */}
           <View style={styles.actionsRow}>
-            <TouchableOpacity style={styles.actionButton} onPress={handleCopy}>
-              {copied ? (
-                <Feather name="check" size={14} color={COLORS.primary} />
-              ) : (
-                <Feather name="copy" size={14} color={COLORS.textMuted} />
-              )}
-              <Text style={[styles.actionText, copied && { color: COLORS.primary }]}>
-                {copied ? 'Copied' : 'Copy'}
-              </Text>
-            </TouchableOpacity>
-
             <TouchableOpacity onPress={handleAskAi} activeOpacity={0.7}>
               <AskAiBadge />
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.actionButton} onPress={handleShare}>
-              <Feather name="share-2" size={14} color={COLORS.textMuted} />
-              <Text style={styles.actionText}>Share</Text>
-            </TouchableOpacity>
+            <View style={styles.actionButtonsRight}>
+              <TouchableOpacity style={styles.actionIconButton} onPress={handleCopy} activeOpacity={0.6}>
+                <Feather
+                  name={copied ? 'check' : 'copy'}
+                  size={15}
+                  color={copied ? COLORS.primary : COLORS.textMuted}
+                />
+                <Text style={[styles.actionIconLabel, copied && { color: COLORS.primary }]}>
+                  {copied ? 'Copied' : 'Copy'}
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity style={styles.actionIconButton} onPress={handleShare} activeOpacity={0.6}>
+                <Feather name="share-2" size={15} color={COLORS.textMuted} />
+                <Text style={styles.actionIconLabel}>Share</Text>
+              </TouchableOpacity>
+            </View>
           </View>
 
           {question.hasSolution && (
@@ -270,27 +273,30 @@ const styles = StyleSheet.create({
   actionsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    marginTop: 12,
-    paddingTop: 10,
+    justifyContent: 'space-between',
+    marginTop: 14,
+    paddingTop: 12,
     borderTopWidth: 1,
     borderColor: COLORS.borderLight,
   },
-  actionButton: {
+  actionButtonsRight: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    paddingVertical: 5,
-    paddingHorizontal: 10,
-    borderRadius: 4,
-    backgroundColor: COLORS.card,
-    borderWidth: 1,
-    borderColor: COLORS.border,
+    gap: 14,
   },
-  actionText: {
+  actionIconButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingVertical: 4,
+    paddingHorizontal: 6,
+  },
+  actionIconLabel: {
     fontSize: 12,
+    fontFamily: FONTS.mono,
     color: COLORS.textMuted,
-    fontWeight: '500',
+    fontWeight: '600',
+    letterSpacing: 0.2,
   },
   solutionContainer: {
     marginTop: 16,
