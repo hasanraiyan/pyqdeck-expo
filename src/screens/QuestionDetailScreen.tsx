@@ -7,6 +7,8 @@ import {
   StyleSheet,
   ActivityIndicator,
   Share,
+  Modal,
+  Linking,
 } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -55,6 +57,7 @@ export const QuestionDetailScreen = () => {
   const [copied, setCopied] = useState(false);
   const [showSimilar, setShowSimilar] = useState(true);
   const [showRepeats, setShowRepeats] = useState(true);
+  const [aiModalVisible, setAiModalVisible] = useState(false);
 
   const currentYear = question?.year || year;
 
@@ -230,6 +233,19 @@ export const QuestionDetailScreen = () => {
                 </Text>
               </TouchableOpacity>
 
+              <TouchableOpacity
+                style={[styles.actionButton, styles.askAiActionButton]}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                  setAiModalVisible(true);
+                }}
+              >
+                <Feather name="cpu" size={14} color={COLORS.primary} />
+                <Text style={[styles.actionText, { color: COLORS.primary, fontWeight: '700' }]}>
+                  Ask AI
+                </Text>
+              </TouchableOpacity>
+
               <TouchableOpacity style={styles.actionButton} onPress={handleShare}>
                 <Feather name="share-2" size={14} color={COLORS.textMuted} />
                 <Text style={styles.actionText}>Share</Text>
@@ -357,6 +373,137 @@ export const QuestionDetailScreen = () => {
           )}
         </View>
       </ScrollView>
+
+      {/* Ask AI Bottom Sheet Modal */}
+      <Modal
+        visible={aiModalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setAiModalVisible(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalBackdrop}
+          activeOpacity={1}
+          onPress={() => setAiModalVisible(false)}
+        >
+          <TouchableOpacity
+            style={[styles.modalSheet, { paddingBottom: insets.bottom > 0 ? insets.bottom + 12 : 24 }]}
+            activeOpacity={1}
+            onPress={(e) => e.stopPropagation()}
+          >
+            {/* Modal Handle Bar */}
+            <View style={styles.modalHandle} />
+
+            <View style={styles.modalHeader}>
+              <View style={styles.modalHeaderLeft}>
+                <View style={styles.aiTagBadge}>
+                  <Feather name="cpu" size={12} color={COLORS.primary} />
+                  <Text style={styles.aiTagText}>AI TUTOR</Text>
+                </View>
+                <Text style={styles.modalTitle}>Ask AI Assistant</Text>
+                <Text style={styles.modalSubtitle}>
+                  Choose how you would like to solve or analyze this question.
+                </Text>
+              </View>
+              <TouchableOpacity
+                style={styles.modalCloseBtn}
+                onPress={() => setAiModalVisible(false)}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Feather name="x" size={18} color={COLORS.textMuted} />
+              </TouchableOpacity>
+            </View>
+
+            {/* Question Snippet Preview */}
+            <View style={styles.aiQuestionSnippet}>
+              <Text style={styles.aiSnippetLabel}>QUESTION PREVIEW</Text>
+              <Text style={styles.aiSnippetText} numberOfLines={3}>
+                {cleanMarkdown(question?.text || '')}
+              </Text>
+            </View>
+
+            {/* AI Action Options */}
+            <View style={styles.aiOptionsList}>
+              {/* Option 1: Coursify AI Assistant */}
+              <TouchableOpacity
+                style={styles.aiOptionCard}
+                activeOpacity={0.7}
+                onPress={() => {
+                  setAiModalVisible(false);
+                  if (question?.text) {
+                    const coursifyUrl = `https://hasanraiyan.me/coursify?search_ai=${encodeURIComponent(question.text)}&send=true`;
+                    Linking.openURL(coursifyUrl).catch((err) => console.error(err));
+                  }
+                }}
+              >
+                <View style={[styles.aiIconBox, { backgroundColor: COLORS.primaryLight }]}>
+                  <Feather name="zap" size={18} color={COLORS.primary} />
+                </View>
+                <View style={styles.aiOptionContent}>
+                  <Text style={styles.aiOptionTitle}>Coursify AI Tutor</Text>
+                  <Text style={styles.aiOptionDesc}>
+                    Step-by-step breakdown, concepts & instant AI explanation.
+                  </Text>
+                </View>
+                <Feather name="arrow-up-right" size={16} color={COLORS.textMuted} />
+              </TouchableOpacity>
+
+              {/* Option 2: Search Google for Solution */}
+              <TouchableOpacity
+                style={styles.aiOptionCard}
+                activeOpacity={0.7}
+                onPress={() => {
+                  setAiModalVisible(false);
+                  if (question?.text) {
+                    const googleUrl = `https://www.google.com/search?q=${encodeURIComponent(
+                      `${subjectName || ''} ${question.text}`
+                    )}`;
+                    Linking.openURL(googleUrl).catch((err) => console.error(err));
+                  }
+                }}
+              >
+                <View style={[styles.aiIconBox, { backgroundColor: COLORS.cardSecondary }]}>
+                  <Feather name="globe" size={18} color={COLORS.text} />
+                </View>
+                <View style={styles.aiOptionContent}>
+                  <Text style={styles.aiOptionTitle}>Search Google</Text>
+                  <Text style={styles.aiOptionDesc}>
+                    Find lecture notes, textbook references & web answers.
+                  </Text>
+                </View>
+                <Feather name="arrow-up-right" size={16} color={COLORS.textMuted} />
+              </TouchableOpacity>
+
+              {/* Option 3: Copy Formatted Question for ChatGPT / Claude */}
+              <TouchableOpacity
+                style={styles.aiOptionCard}
+                activeOpacity={0.7}
+                onPress={async () => {
+                  if (question?.text) {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    const promptText = `Please explain and solve this university exam question step-by-step with clear derivations:\n\nSubject: ${subjectName || 'Engineering'}\nYear: ${question.year}\nMarks: ${question.marks || 7}m\n\nQuestion:\n${question.text}`;
+                    await Clipboard.setStringAsync(promptText);
+                    setCopied(true);
+                    setTimeout(() => setCopied(false), 2000);
+                  }
+                  setAiModalVisible(false);
+                }}
+              >
+                <View style={[styles.aiIconBox, { backgroundColor: COLORS.cardSecondary }]}>
+                  <Feather name="copy" size={18} color={COLORS.text} />
+                </View>
+                <View style={styles.aiOptionContent}>
+                  <Text style={styles.aiOptionTitle}>Copy Prompt for ChatGPT</Text>
+                  <Text style={styles.aiOptionDesc}>
+                    Copies optimized prompt with subject & year context.
+                  </Text>
+                </View>
+                <Feather name="check" size={16} color={COLORS.textMuted} />
+              </TouchableOpacity>
+            </View>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
     </View>
   );
 };
@@ -481,10 +628,141 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.border,
   },
+  askAiActionButton: {
+    backgroundColor: COLORS.primaryLight,
+    borderColor: COLORS.primary,
+  },
   actionText: {
     fontSize: 12,
     color: COLORS.textMuted,
     fontWeight: '500',
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+    justifyContent: 'flex-end',
+  },
+  modalSheet: {
+    backgroundColor: COLORS.card,
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    paddingHorizontal: 18,
+    paddingTop: 12,
+  },
+  modalHandle: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: COLORS.borderLight,
+    alignSelf: 'center',
+    marginBottom: 14,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    marginBottom: 14,
+  },
+  modalHeaderLeft: {
+    flex: 1,
+    paddingRight: 10,
+  },
+  aiTagBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: COLORS.primaryLight,
+    borderWidth: 1,
+    borderColor: COLORS.primary,
+    borderRadius: 3,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    alignSelf: 'flex-start',
+    marginBottom: 6,
+  },
+  aiTagText: {
+    fontFamily: FONTS.mono,
+    fontSize: rf(9.5),
+    fontWeight: '700',
+    color: COLORS.primary,
+    letterSpacing: 1,
+  },
+  modalTitle: {
+    fontFamily: FONTS.serif,
+    fontSize: rf(20),
+    fontStyle: 'italic',
+    fontWeight: '600',
+    color: COLORS.text,
+    letterSpacing: -0.3,
+  },
+  modalSubtitle: {
+    fontSize: rf(12.5),
+    color: COLORS.textMuted,
+    marginTop: 3,
+    lineHeight: rf(17),
+  },
+  modalCloseBtn: {
+    padding: 6,
+    marginTop: -2,
+    marginRight: -4,
+  },
+  aiQuestionSnippet: {
+    backgroundColor: COLORS.cardSecondary,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 4,
+    padding: 10,
+    marginBottom: 16,
+  },
+  aiSnippetLabel: {
+    fontFamily: FONTS.mono,
+    fontSize: rf(9),
+    fontWeight: '700',
+    color: COLORS.textSubtle,
+    letterSpacing: 1,
+    marginBottom: 4,
+  },
+  aiSnippetText: {
+    fontSize: rf(12),
+    color: COLORS.text,
+    lineHeight: rf(17),
+  },
+  aiOptionsList: {
+    gap: 10,
+  },
+  aiOptionCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.card,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 6,
+    padding: 12,
+  },
+  aiIconBox: {
+    width: 38,
+    height: 38,
+    borderRadius: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  aiOptionContent: {
+    flex: 1,
+    paddingRight: 8,
+  },
+  aiOptionTitle: {
+    fontSize: rf(13.5),
+    fontWeight: '600',
+    color: COLORS.text,
+    marginBottom: 2,
+  },
+  aiOptionDesc: {
+    fontSize: rf(11.5),
+    color: COLORS.textMuted,
+    lineHeight: rf(16),
   },
   solutionSection: {
     backgroundColor: COLORS.card,
