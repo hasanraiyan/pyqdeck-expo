@@ -116,29 +116,6 @@ export const getSubjectMeta = async (
 };
 
 /**
- * Best-effort expected count for a filter, derived from subject meta.
- * Returns null when it can't be determined (e.g. combined year+chapter filters,
- * since meta only tracks per-year and per-chapter totals separately, never their
- * intersection) - callers must treat null as "can't prove this is complete."
- */
-const getExpectedQuestionCount = (
-  meta: SubjectMeta | null,
-  params: { year?: number; chapter?: string }
-): number | null => {
-  if (!meta) return null;
-  if (params.year !== undefined && params.chapter) return null;
-  if (params.year !== undefined) {
-    const y = meta.years.find((y) => y.year === params.year);
-    return y ? y.questionCount : null;
-  }
-  if (params.chapter) {
-    const c = meta.chapters.find((c) => c.chapter === params.chapter);
-    return c ? c.questionCount : null;
-  }
-  return meta.years.reduce((sum, y) => sum + y.questionCount, 0);
-};
-
-/**
  * Fetch Questions with local SQLite retrieval & background refresh
  */
 export const getQuestions = async (
@@ -189,25 +166,14 @@ export const getQuestions = async (
     }
     return liveResult;
   } catch (e) {
-    // If network fails (offline), return whatever questions we have in SQLite for this
-    // filter - but this subset was never itself verified by a live fetch (that's what
-    // isQueryFresh above is for), it's just whatever happened to get cached from other
-    // year/chapter combinations that overlap with this one. Flag it as such so the UI
-    // doesn't present a partial local scan as if it were the confirmed full result set.
+    // If network fails (offline), return whatever questions we have in SQLite for this filter.
     if (cachedQuestions && cachedQuestions.length > 0) {
-      const expected = getExpectedQuestionCount(cachedMeta, {
-        year: params.year,
-        chapter: params.chapter,
-      });
-      const partial = expected === null ? true : cachedQuestions.length < expected;
       return {
         subject: { id: subjectId, name: cachedMeta?.name || '' },
         total: cachedQuestions.length,
         returned: cachedQuestions.length,
         offset: 0,
         questions: cachedQuestions,
-        fromCache: true,
-        partial,
       };
     }
     throw e;
