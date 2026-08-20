@@ -429,7 +429,15 @@ const styles = StyleSheet.create({
   micBtnActive: {
     backgroundColor: COLORS.primary,
   },
+  scroll: {
+    paddingHorizontal: 16,
+    paddingVertical: verticalScale(16),
+  },
+  centerWrapper: {
+    width: '100%',
+  },
   suggestedSection: {
+    width: '100%',
     paddingTop: 8,
     paddingBottom: 24,
   },
@@ -454,6 +462,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   suggestedList: {
+    width: '100%',
     backgroundColor: COLORS.card,
     borderWidth: 1,
     borderColor: COLORS.border,
@@ -461,10 +470,11 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   suggestedRow: {
+    width: '100%',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 12,
+    paddingVertical: 13,
     paddingHorizontal: 14,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.borderLight,
@@ -480,14 +490,6 @@ const styles = StyleSheet.create({
     fontSize: rf(12.5),
     color: COLORS.text,
     fontWeight: '500',
-  },
-  scroll: {
-    paddingHorizontal: 16,
-    paddingVertical: verticalScale(16),
-    alignItems: 'center',
-  },
-  centerWrapper: {
-    width: '100%',
   },
   section: {
     marginBottom: 24,
