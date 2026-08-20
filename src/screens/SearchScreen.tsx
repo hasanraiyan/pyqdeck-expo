@@ -31,11 +31,15 @@ export const SearchScreen = () => {
   const [isListening, setIsListening] = useState(false);
 
   useEffect(() => {
-    // Load live subject names dynamically from API to populate suggestions
+    // Load live subject names with available questions from API to populate suggestions
     listAllSubjects({ page: 1 })
       .then((res) => {
         if (res.subjects && res.subjects.length > 0) {
-          const names = res.subjects.slice(0, 6).map((s) => s.name);
+          // Filter to only subjects with questions so students don't get 0-question coming soon subjects
+          const activeSubjects = res.subjects.filter((s) => (s.questionCount || 0) > 0);
+          const names = (activeSubjects.length > 0 ? activeSubjects : res.subjects)
+            .slice(0, 6)
+            .map((s) => s.name);
           setDynamicSuggestions(names);
         }
       })
