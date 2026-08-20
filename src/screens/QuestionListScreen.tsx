@@ -221,6 +221,7 @@ export const QuestionListScreen = () => {
             subjectId={subjectId}
             semesterId={semesterId}
             subjectName={subjectName}
+            hideYearBadge={Boolean(selectedYear)}
           />
         )}
       />

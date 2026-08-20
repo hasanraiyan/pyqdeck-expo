@@ -25,6 +25,7 @@ interface QuestionItemProps {
   semesterId: string;
   subjectName?: string;
   showOpenButton?: boolean;
+  hideYearBadge?: boolean;
 }
 
 export const QuestionItem: React.FC<QuestionItemProps> = ({
@@ -33,6 +34,7 @@ export const QuestionItem: React.FC<QuestionItemProps> = ({
   semesterId,
   subjectName,
   showOpenButton = true,
+  hideYearBadge = false,
 }) => {
   const navigation = useNavigation<any>();
   const [expanded, setExpanded] = useState(false);
@@ -121,7 +123,9 @@ export const QuestionItem: React.FC<QuestionItemProps> = ({
           </Text>
         </View>
         <View style={styles.headerRight}>
-          <Badge label={question.year} variant="secondary" />
+          {!hideYearBadge ? (
+            <Badge label={question.year} variant="secondary" />
+          ) : null}
           <MarksBadge marks={question.marks} />
           {expanded ? (
             <Feather name="chevron-up" size={16} color={COLORS.primary} />
