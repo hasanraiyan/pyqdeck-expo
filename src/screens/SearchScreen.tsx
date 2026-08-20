@@ -135,7 +135,7 @@ export const SearchScreen = () => {
       {/* Header with Search Input */}
       <View style={styles.header}>
         <View style={styles.headerInner}>
-          <Text style={styles.badgeText}>SEMANTIC & KEYWORD SEARCH</Text>
+          <Text style={styles.badgeText}>FIND ANY QUESTION OR TOPIC</Text>
           <Text style={styles.title}>Search</Text>
 
           <View style={[styles.searchBar, isListening && styles.searchBarListening]}>
