@@ -81,6 +81,26 @@ export const QuestionSkeleton: React.FC = () => {
   );
 };
 
+export const SimilarQuestionSkeleton: React.FC = () => {
+  return (
+    <View style={styles.similarSkeletonCard}>
+      {[1, 2].map((i) => (
+        <View key={i} style={[styles.similarSkeletonRow, i === 2 && { borderBottomWidth: 0 }]}>
+          <View style={styles.row}>
+            <Skeleton width="45%" height={12} borderRadius={3} />
+            <View style={{ flexDirection: 'row', gap: 6 }}>
+              <Skeleton width={36} height={16} borderRadius={3} />
+              <Skeleton width={30} height={16} borderRadius={3} />
+            </View>
+          </View>
+          <Skeleton width="90%" height={14} borderRadius={3} style={{ marginTop: 8 }} />
+          <Skeleton width="60%" height={14} borderRadius={3} style={{ marginTop: 4 }} />
+        </View>
+      ))}
+    </View>
+  );
+};
+
 export const SubjectCardSkeleton: React.FC = () => {
   return (
     <View style={styles.cardSkeleton}>
@@ -129,5 +149,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+  },
+  similarSkeletonCard: {
+    backgroundColor: COLORS.card,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  similarSkeletonRow: {
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderColor: COLORS.border,
   },
 });

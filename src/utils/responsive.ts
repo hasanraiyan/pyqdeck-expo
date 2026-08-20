@@ -132,16 +132,19 @@ export const cleanMarkdown = (text: string | null | undefined): string => {
     // Replace literal escaped "\n" or "\\n" strings with actual newlines
     .replace(/\\r\\n/g, '\n')
     .replace(/\\n/g, '\n')
-    .replace(/\r\n/g, '\n');
+    .replace(/\r\n/g, '\n')
+    // Normalize raw HTML breaks and horizontal rules
+    .replace(/<hr\s*\/?>/gi, '\n\n---\n\n')
+    .replace(/<br\s*\/?>/gi, '\n');
 
   // Convert display math $$...$$
   formatted = formatted.replace(/\$\$([\s\S]*?)\$\$/g, (_, math) => {
-    return `\n\n*${formatMathExpression(math)}*\n\n`;
+    return `\n\n\`$$ ${formatMathExpression(math)} $$\`\n\n`;
   });
 
   // Convert inline math $...$
   formatted = formatted.replace(/\$([^\$\n]+)\$/g, (_, math) => {
-    return `*${formatMathExpression(math)}*`;
+    return `\`$ ${formatMathExpression(math)} $\``;
   });
 
   // Convert remaining single LaTeX commands outside math blocks

@@ -17,7 +17,9 @@ import { QuestionSummary, Solution } from '../types';
 import { getSolution } from '../api';
 import { COLORS, FONTS } from '../theme/colors';
 import { Badge, MarksBadge, AskAiBadge } from './Badge';
+import { SolutionSkeleton } from './Skeleton';
 import { cleanMarkdown } from '../utils/responsive';
+import { questionMarkdownStyles, solutionMarkdownStyles, markdownRules } from '../theme/markdownStyles';
 
 interface QuestionItemProps {
   question: QuestionSummary;
@@ -142,7 +144,9 @@ export const QuestionItem: React.FC<QuestionItemProps> = ({
           ) : null}
 
           <View style={styles.markdownWrapper}>
-            <Markdown style={markdownStyles}>{cleanMarkdown(question.text)}</Markdown>
+            <Markdown style={questionMarkdownStyles} rules={markdownRules}>
+              {cleanMarkdown(question.text)}
+            </Markdown>
           </View>
 
           {showOpenButton && (
@@ -182,17 +186,14 @@ export const QuestionItem: React.FC<QuestionItemProps> = ({
             <View style={styles.solutionContainer}>
               <View style={styles.solutionHeader}>
                 <Text style={styles.solutionTag}>Solution</Text>
-                {loadingSolution && (
-                  <ActivityIndicator size="small" color={COLORS.primary} />
-                )}
               </View>
 
               {solution ? (
-                <Markdown style={solutionMarkdownStyles}>
+                <Markdown style={solutionMarkdownStyles} rules={markdownRules}>
                   {cleanMarkdown(solution.content)}
                 </Markdown>
               ) : loadingSolution ? (
-                <Text style={styles.loadingText}>Loading solution...</Text>
+                <SolutionSkeleton />
               ) : (
                 <Text style={styles.loadingText}>Failed to load solution.</Text>
               )}
@@ -318,40 +319,4 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
 });
-
-const markdownStyles = {
-  body: {
-    color: COLORS.text,
-    fontSize: 14.5,
-    lineHeight: 23,
-    fontFamily: FONTS.serif,
-  },
-  code_inline: {
-    backgroundColor: COLORS.cardSecondary,
-    color: COLORS.primary,
-    fontFamily: FONTS.mono,
-    paddingHorizontal: 4,
-    borderRadius: 3,
-  },
-  code_block: {
-    backgroundColor: COLORS.cardSecondary,
-    padding: 12,
-    borderRadius: 6,
-    fontFamily: FONTS.mono,
-    color: COLORS.text,
-  },
-};
-
-const solutionMarkdownStyles = {
-  body: {
-    color: COLORS.text,
-    fontSize: 14,
-    lineHeight: 22,
-  },
-  code_inline: {
-    backgroundColor: COLORS.cardSecondary,
-    color: COLORS.primary,
-    fontFamily: FONTS.mono,
-  },
-};
 

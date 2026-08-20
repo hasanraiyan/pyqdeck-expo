@@ -27,8 +27,9 @@ import { QuestionSummary, Solution } from '../types';
 import { COLORS, FONTS } from '../theme/colors';
 import { Badge, MarksBadge, AskAiBadge } from '../components/Badge';
 import { PrevNextNav } from '../components/PrevNextNav';
-import { SolutionSkeleton } from '../components/Skeleton';
+import { SolutionSkeleton, SimilarQuestionSkeleton } from '../components/Skeleton';
 import { rf, cleanMarkdown } from '../utils/responsive';
+import { questionMarkdownStyles, solutionMarkdownStyles, markdownRules } from '../theme/markdownStyles';
 
 export const QuestionDetailScreen = () => {
   const insets = useSafeAreaInsets();
@@ -54,6 +55,7 @@ export const QuestionDetailScreen = () => {
   const [repeats, setRepeats] = useState<any[]>([]);
   const [similar, setSimilar] = useState<any[]>([]);
   const [loading, setLoading] = useState(!initialQuestion);
+  const [loadingRelated, setLoadingRelated] = useState(true);
   const [copied, setCopied] = useState(false);
   const [showSimilar, setShowSimilar] = useState(true);
   const [showRepeats, setShowRepeats] = useState(true);
@@ -89,6 +91,7 @@ export const QuestionDetailScreen = () => {
         console.error(e);
       } finally {
         setLoading(false);
+        setLoadingRelated(false);
       }
     };
     loadAll();
@@ -178,7 +181,9 @@ export const QuestionDetailScreen = () => {
               <MarksBadge marks={question.marks} />
             </View>
 
-            <Markdown style={markdownStyles}>{cleanMarkdown(question.text)}</Markdown>
+            <Markdown style={questionMarkdownStyles} rules={markdownRules}>
+              {cleanMarkdown(question.text)}
+            </Markdown>
 
             {/* Alert: Repeated in previous years (with clickable years) */}
             {repeats && repeats.length > 0 && (
@@ -268,7 +273,7 @@ export const QuestionDetailScreen = () => {
               <Text style={styles.solutionTitle}>WORKED SOLUTION</Text>
               {solution ? (
                 <View style={styles.solutionBody}>
-                  <Markdown style={solutionMarkdownStyles}>
+                  <Markdown style={solutionMarkdownStyles} rules={markdownRules}>
                     {cleanMarkdown(solution.content)}
                   </Markdown>
                 </View>
@@ -279,7 +284,7 @@ export const QuestionDetailScreen = () => {
           )}
 
           {/* Similar Questions (collapsible) */}
-          {similar.length > 0 && (
+          {(loadingRelated || similar.length > 0) && (
             <View style={styles.relatedSection}>
               <TouchableOpacity
                 style={styles.sectionHeaderBtn}
@@ -287,7 +292,7 @@ export const QuestionDetailScreen = () => {
                 onPress={() => setShowSimilar(!showSimilar)}
               >
                 <Text style={styles.relatedHeading}>
-                  SIMILAR QUESTIONS ({similar.length})
+                  SIMILAR QUESTIONS {loadingRelated ? '' : `(${similar.length})`}
                 </Text>
                 <Feather
                   name={showSimilar ? 'chevron-up' : 'chevron-down'}
@@ -296,41 +301,50 @@ export const QuestionDetailScreen = () => {
                 />
               </TouchableOpacity>
               {showSimilar && (
-                <View style={[styles.similarContainer, { marginTop: 8 }]}>
-                  {similar.map((item, idx) => (
-                    <TouchableOpacity
-                      key={idx}
-                      style={styles.similarRow}
-                      activeOpacity={0.7}
-                      onPress={() =>
-                        navigation.push('QuestionDetail', {
-                          subjectId: item.subject?.id || subjectId,
-                          semesterId: item.subject?.semesterId || semesterId,
-                          year: item.year,
-                          questionId: item.questionId,
-                          initialQuestion: item,
-                          subjectName: item.subject?.name || subjectName,
-                        })
-                      }
-                    >
-                      {/* Top Line: Module/Subject on left, Year & Marks badge on right */}
-                      <View style={styles.similarTopMeta}>
-                        <Text style={styles.similarSubject} numberOfLines={1}>
-                          {item.chapter || item.subject?.name || subjectName}
-                        </Text>
-                        <View style={styles.similarBadgeGroup}>
-                          <Badge label={item.year} variant="secondary" />
-                          <MarksBadge marks={item.marks} />
+                loadingRelated ? (
+                  <View style={{ marginTop: 8 }}>
+                    <SimilarQuestionSkeleton />
+                  </View>
+                ) : (
+                  <View style={[styles.similarContainer, { marginTop: 8 }]}>
+                    {similar.map((item, idx) => (
+                      <TouchableOpacity
+                        key={idx}
+                        style={[
+                          styles.similarRow,
+                          idx === similar.length - 1 && { borderBottomWidth: 0 },
+                        ]}
+                        activeOpacity={0.7}
+                        onPress={() =>
+                          navigation.push('QuestionDetail', {
+                            subjectId: item.subject?.id || subjectId,
+                            semesterId: item.subject?.semesterId || semesterId,
+                            year: item.year,
+                            questionId: item.questionId,
+                            initialQuestion: item,
+                            subjectName: item.subject?.name || subjectName,
+                          })
+                        }
+                      >
+                        {/* Top Line: Module/Subject on left, Year & Marks badge on right */}
+                        <View style={styles.similarTopMeta}>
+                          <Text style={styles.similarSubject} numberOfLines={1}>
+                            {item.chapter || item.subject?.name || subjectName}
+                          </Text>
+                          <View style={styles.similarBadgeGroup}>
+                            <Badge label={item.year} variant="secondary" />
+                            <MarksBadge marks={item.marks} />
+                          </View>
                         </View>
-                      </View>
 
-                      {/* Bottom Line: Question Preview Text */}
-                      <Text style={styles.similarText} numberOfLines={2}>
-                        {cleanMarkdown(item.textPreview || item.text)}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
+                        {/* Bottom Line: Question Preview Text */}
+                        <Text style={styles.similarText} numberOfLines={2}>
+                          {cleanMarkdown(item.textPreview || item.text)}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )
               )}
             </View>
           )}
@@ -760,42 +774,4 @@ const styles = StyleSheet.create({
     width: '100%',
   },
 });
-
-const markdownStyles = {
-  body: {
-    color: COLORS.text,
-    fontSize: 15,
-    lineHeight: 24,
-    marginTop: 0,
-    paddingTop: 0,
-  },
-  paragraph: {
-    marginTop: 0,
-    marginBottom: 8,
-  },
-  code_inline: {
-    backgroundColor: COLORS.cardSecondary,
-    color: COLORS.primary,
-    paddingHorizontal: 4,
-    borderRadius: 3,
-  },
-  code_block: {
-    backgroundColor: COLORS.cardSecondary,
-    padding: 12,
-    borderRadius: 6,
-    color: COLORS.text,
-  },
-};
-
-const solutionMarkdownStyles = {
-  body: {
-    color: COLORS.text,
-    fontSize: 14,
-    lineHeight: 22,
-  },
-  code_inline: {
-    backgroundColor: COLORS.cardSecondary,
-    color: COLORS.primary,
-  },
-};
 
