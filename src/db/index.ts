@@ -77,6 +77,11 @@ export async function getDatabase(): Promise<SQLite.SQLiteDatabase> {
       key TEXT PRIMARY KEY,
       value TEXT NOT NULL
     );
+
+    -- questions/solutions are size-capped (see cacheService.ts) - indexed so the
+    -- oldest-first eviction scan stays cheap as the tables approach the cap.
+    CREATE INDEX IF NOT EXISTS idx_questions_cached_at ON questions(cached_at);
+    CREATE INDEX IF NOT EXISTS idx_solutions_cached_at ON solutions(cached_at);
   `);
 
   return dbInstance;

@@ -10,6 +10,40 @@ import {
 // 12 Hours in milliseconds for background cache validation
 const CACHE_TTL_MS = 12 * 60 * 60 * 1000;
 
+// -------------------------------------------------------------
+// CACHE SIZE LIMITS
+// -------------------------------------------------------------
+// Every write to `questions`/`solutions` is an upsert - nothing ever deleted a row,
+// so a heavy user's local DB could grow unbounded. semesters/subjects/meta stay tiny
+// regardless of usage, but these two are the actual content tables, so they're capped.
+// Eviction keeps the most-recently-cached rows and drops the oldest - effectively LRU,
+// since a row's cached_at is refreshed every time it's re-fetched from the network.
+const MAX_CACHED_QUESTIONS = 5000;
+const MAX_CACHED_SOLUTIONS = 1500;
+
+async function pruneTable(table: 'questions' | 'solutions', idColumn: string, cap: number) {
+  try {
+    const db = await getDatabase();
+    const { changes } = await db.runAsync(
+      `DELETE FROM ${table} WHERE ${idColumn} NOT IN (
+         SELECT ${idColumn} FROM ${table} ORDER BY cached_at DESC LIMIT ?
+       )`,
+      [cap]
+    );
+
+    // Eviction can shrink a subject's cached question rows out from under a per-query
+    // cache_meta entry (see getQueryCacheKey) that's still within its 12h freshness
+    // window - without this, getQuestions' fast path would keep trusting that entry
+    // and serve the now-incomplete set as if it were verified-complete. Wiping the
+    // affected freshness flags forces the next read to re-verify instead.
+    if (table === 'questions' && changes > 0) {
+      await db.runAsync(`DELETE FROM cache_meta WHERE key GLOB 'questions_*'`);
+    }
+  } catch (e) {
+    console.error(`Failed to prune ${table} cache:`, e);
+  }
+}
+
 /**
  * Generate a deterministic fingerprint hash for a subject's metadata
  */
@@ -275,6 +309,7 @@ export async function saveCachedQuestions(subjectId: string, questions: Question
         ]
       );
     }
+    await pruneTable('questions', 'question_id', MAX_CACHED_QUESTIONS);
   } catch (e) {
     console.error('Failed to save questions cache:', e);
   }
@@ -332,6 +367,7 @@ export async function saveCachedSolution(subjectId: string, solution: Solution) 
         now,
       ]
     );
+    await pruneTable('solutions', 'question_id', MAX_CACHED_SOLUTIONS);
   } catch (e) {
     console.error('Failed to save solution cache:', e);
   }
