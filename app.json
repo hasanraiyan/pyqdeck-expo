@@ -11,6 +11,7 @@
       "supportsTablet": true
     },
     "android": {
+      "package": "in.pyqdeck.app",
       "adaptiveIcon": {
         "backgroundColor": "#09090b",
         "foregroundImage": "./assets/android-icon-foreground.png",
