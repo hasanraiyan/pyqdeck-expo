@@ -82,15 +82,16 @@ const styles = StyleSheet.create({
     color: COLORS.secondary,
   },
   marksContainer: {
-    width: 44,
-    height: 24,
+    width: 38,
+    height: 20,
     alignItems: 'center',
     justifyContent: 'center',
   },
   marksText: {
-    fontSize: 11,
+    fontSize: 10.5,
     fontFamily: FONTS.mono,
     fontWeight: '700',
     color: COLORS.primary,
+    lineHeight: 14,
   },
 });

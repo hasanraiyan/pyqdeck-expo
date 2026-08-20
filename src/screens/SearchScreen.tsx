@@ -351,8 +351,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.border,
     borderRadius: 3,
-    paddingVertical: 2,
     paddingHorizontal: 6,
+    height: 20,
+    justifyContent: 'center',
     alignSelf: 'flex-start',
     maxWidth: '100%',
   },
@@ -362,6 +363,7 @@ const styles = StyleSheet.create({
     color: COLORS.textSubtle,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
+    lineHeight: 14,
   },
   resultCardSkeleton: {
     backgroundColor: COLORS.card,
