@@ -46,12 +46,12 @@ export const AskAiBadge: React.FC<{ label?: string }> = ({
   return (
     <View style={styles.askAiContainer}>
       <Svg
-        viewBox="0 0 76 34"
+        viewBox="0 0 100 36"
         style={StyleSheet.absoluteFill}
         fill="none"
       >
         <Path
-          d="M7 17C5 8 16 4 38 4C60 4 70 8 69 17C68 26 58 30 38 30C16 30 9 26 7 17Z"
+          d="M5 18C3 8 20 4 50 4C80 4 97 8 95 18C93 28 80 32 50 32C20 32 7 28 5 18Z"
           stroke={COLORS.primary}
           strokeWidth="1.8"
           strokeLinecap="round"
@@ -121,15 +121,16 @@ const styles = StyleSheet.create({
     lineHeight: 16,
   },
   askAiContainer: {
-    width: 66,
-    height: 22,
+    width: 76,
+    height: 24,
     alignItems: 'center',
     justifyContent: 'center',
+    paddingHorizontal: 8,
   },
   askAiInner: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 3,
+    gap: 3.5,
   },
   askAiSparkle: {
     fontSize: 9,
@@ -137,7 +138,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   askAiText: {
-    fontSize: 11,
+    fontSize: 10.5,
     fontFamily: FONTS.mono,
     fontWeight: '700',
     color: COLORS.primary,
