@@ -174,11 +174,19 @@ export const SearchScreen = () => {
                       {q.textPreview || q.text}
                     </Text>
                     <View style={styles.resultBadgeRow}>
-                      <Badge label={q.year} variant="secondary" />
-                      {q.chapter ? (
-                        <Badge label={q.chapter} variant="outline" />
-                      ) : null}
-                      <MarksBadge marks={q.marks} />
+                      <View style={styles.resultBadgeLeft}>
+                        {q.chapter ? (
+                          <View style={styles.chapterPill}>
+                            <Text style={styles.chapterPillText} numberOfLines={1}>
+                              {q.chapter}
+                            </Text>
+                          </View>
+                        ) : null}
+                      </View>
+                      <View style={styles.resultBadgeRight}>
+                        <Badge label={q.year} variant="secondary" />
+                        <MarksBadge marks={q.marks} />
+                      </View>
                     </View>
                   </TouchableOpacity>
                 ))}
@@ -323,10 +331,37 @@ const styles = StyleSheet.create({
   },
   resultBadgeRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+    marginTop: 10,
+  },
+  resultBadgeLeft: {
+    flex: 1,
+    paddingRight: 6,
+  },
+  resultBadgeRight: {
+    flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    marginTop: 10,
+    flexShrink: 0,
+  },
+  chapterPill: {
+    backgroundColor: COLORS.cardSecondary,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 3,
+    paddingVertical: 2,
+    paddingHorizontal: 6,
+    alignSelf: 'flex-start',
+    maxWidth: '100%',
+  },
+  chapterPillText: {
+    fontFamily: FONTS.mono,
+    fontSize: rf(10),
+    color: COLORS.textSubtle,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   resultCardSkeleton: {
     backgroundColor: COLORS.card,
