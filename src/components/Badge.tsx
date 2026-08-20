@@ -40,22 +40,20 @@ export const MarksBadge: React.FC<{ marks: number | null | undefined }> = ({ mar
 };
 
 // Signature element: Hand-drawn / stamped Ask AI action badge button
-export const AskAiBadge: React.FC<{ onPress?: () => void; label?: string }> = ({
-  onPress,
+export const AskAiBadge: React.FC<{ label?: string }> = ({
   label = 'Ask AI',
 }) => {
   return (
     <View style={styles.askAiContainer}>
       <Svg
-        viewBox="0 0 84 34"
+        viewBox="0 0 76 34"
         style={StyleSheet.absoluteFill}
         fill="none"
       >
         <Path
-          d="M6 17C4 8 18 4 42 4C66 4 80 8 78 17C76 26 66 30 42 30C18 30 8 26 6 17Z"
+          d="M7 17C5 8 16 4 38 4C60 4 70 8 69 17C68 26 58 30 38 30C16 30 9 26 7 17Z"
           stroke={COLORS.primary}
-          strokeWidth="1.6"
-          strokeDasharray="2,2"
+          strokeWidth="1.8"
           strokeLinecap="round"
         />
       </Svg>
@@ -123,12 +121,10 @@ const styles = StyleSheet.create({
     lineHeight: 16,
   },
   askAiContainer: {
-    width: 68,
+    width: 66,
     height: 22,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: COLORS.primaryLight,
-    borderRadius: 11,
   },
   askAiInner: {
     flexDirection: 'row',
@@ -141,10 +137,10 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   askAiText: {
-    fontSize: 10.5,
+    fontSize: 11,
     fontFamily: FONTS.mono,
     fontWeight: '700',
     color: COLORS.primary,
-    letterSpacing: 0.5,
+    letterSpacing: 0.3,
   },
 });
