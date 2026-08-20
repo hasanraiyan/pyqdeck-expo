@@ -86,65 +86,98 @@ export const SubjectDetailScreen = () => {
                 </View>
               ))}
             </View>
-          ) : (
+          ) : meta?.years && meta.years.length > 0 ? (
             <View style={styles.grid}>
-              {meta?.years?.map((y) => (
-                <TouchableOpacity
-                  key={y.year}
-                  style={styles.yearCard}
-                  activeOpacity={0.7}
-                  onPress={() =>
-                    navigation.navigate('QuestionList', {
-                      semesterId,
-                      subjectId,
-                      subjectName: meta?.name || subjectName,
-                      subjectCode,
-                      initialYear: y.year,
-                    })
-                  }
-                >
-                  <Text style={styles.yearNumber}>{y.year}</Text>
-                  <Text style={styles.yearSubtext}>
-                    {y.questionCount} question{y.questionCount === 1 ? '' : 's'}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+              {meta.years.map((y) => {
+                const isComingSoon = y.questionCount === 0;
+                return (
+                  <TouchableOpacity
+                    key={y.year}
+                    style={[styles.yearCard, isComingSoon && styles.cardComingSoon]}
+                    activeOpacity={0.7}
+                    onPress={() =>
+                      navigation.navigate('QuestionList', {
+                        semesterId,
+                        subjectId,
+                        subjectName: meta?.name || subjectName,
+                        subjectCode,
+                        initialYear: y.year,
+                      })
+                    }
+                  >
+                    <View style={styles.yearCardTop}>
+                      <Text style={styles.yearNumber}>{y.year}</Text>
+                      {isComingSoon && (
+                        <View style={styles.soonTag}>
+                          <Text style={styles.soonTagText}>SOON</Text>
+                        </View>
+                      )}
+                    </View>
+                    <Text style={styles.yearSubtext}>
+                      {isComingSoon
+                        ? 'Coming Soon'
+                        : `${y.questionCount} question${y.questionCount === 1 ? '' : 's'}`}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          ) : (
+            <View style={styles.sectionEmptyBox}>
+              <Feather name="clock" size={14} color={COLORS.primary} />
+              <Text style={styles.sectionEmptyText}>Question papers coming soon</Text>
             </View>
           )}
         </View>
 
         {/* Modules / Chapters Section */}
-        {meta?.chapters && meta.chapters.length > 0 && (
-          <View style={styles.section}>
-            <Text style={styles.sectionHeading}>PRACTICE BY MODULE</Text>
+        <View style={styles.section}>
+          <Text style={styles.sectionHeading}>PRACTICE BY MODULE</Text>
+          {meta?.chapters && meta.chapters.length > 0 ? (
             <View style={styles.moduleList}>
-              {meta.chapters.map((ch, idx) => (
-                <TouchableOpacity
-                  key={idx}
-                  style={styles.moduleCard}
-                  activeOpacity={0.7}
-                  onPress={() =>
-                    navigation.navigate('QuestionList', {
-                      semesterId,
-                      subjectId,
-                      subjectName: meta?.name || subjectName,
-                      subjectCode,
-                      initialChapter: ch.chapter,
-                    })
-                  }
-                >
-                  <View style={styles.moduleLeft}>
-                    <Text style={styles.moduleName}>{ch.chapter}</Text>
-                    <Text style={styles.moduleCount}>
-                      {ch.questionCount} question{ch.questionCount === 1 ? '' : 's'}
-                    </Text>
-                  </View>
-                  <Feather name="arrow-right" size={15} color={COLORS.textMuted} />
-                </TouchableOpacity>
-              ))}
+              {meta.chapters.map((ch, idx) => {
+                const isComingSoon = ch.questionCount === 0;
+                return (
+                  <TouchableOpacity
+                    key={idx}
+                    style={[styles.moduleCard, isComingSoon && styles.cardComingSoon]}
+                    activeOpacity={0.7}
+                    onPress={() =>
+                      navigation.navigate('QuestionList', {
+                        semesterId,
+                        subjectId,
+                        subjectName: meta?.name || subjectName,
+                        subjectCode,
+                        initialChapter: ch.chapter,
+                      })
+                    }
+                  >
+                    <View style={styles.moduleLeft}>
+                      <Text style={styles.moduleName}>{ch.chapter}</Text>
+                      <Text style={styles.moduleCount}>
+                        {isComingSoon
+                          ? 'Coming Soon'
+                          : `${ch.questionCount} question${ch.questionCount === 1 ? '' : 's'}`}
+                      </Text>
+                    </View>
+                    {isComingSoon ? (
+                      <View style={styles.soonTag}>
+                        <Text style={styles.soonTagText}>SOON</Text>
+                      </View>
+                    ) : (
+                      <Feather name="arrow-right" size={15} color={COLORS.textMuted} />
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
             </View>
-          </View>
-        )}
+          ) : (
+            <View style={styles.sectionEmptyBox}>
+              <Feather name="clock" size={14} color={COLORS.primary} />
+              <Text style={styles.sectionEmptyText}>Module breakdown coming soon</Text>
+            </View>
+          )}
+        </View>
       </ScrollView>
     </View>
   );
@@ -219,6 +252,46 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     paddingHorizontal: 14,
   },
+  cardComingSoon: {
+    backgroundColor: COLORS.cardSecondary,
+    borderStyle: 'dashed',
+  },
+  yearCardTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 4,
+  },
+  soonTag: {
+    backgroundColor: COLORS.card,
+    borderWidth: 1,
+    borderColor: COLORS.borderLight,
+    borderRadius: 3,
+    paddingHorizontal: 4,
+    paddingVertical: 1,
+  },
+  soonTagText: {
+    fontFamily: FONTS.mono,
+    fontSize: 8.5,
+    fontWeight: '700',
+    color: COLORS.textSubtle,
+  },
+  sectionEmptyBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: COLORS.cardSecondary,
+    borderWidth: 1,
+    borderColor: COLORS.borderLight,
+    borderStyle: 'dashed',
+    borderRadius: 4,
+    padding: 14,
+  },
+  sectionEmptyText: {
+    fontFamily: FONTS.mono,
+    fontSize: 12,
+    color: COLORS.textMuted,
+  },
   yearCardSkeleton: {
     width: '48.5%',
     backgroundColor: COLORS.card,
@@ -234,7 +307,6 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
     fontWeight: '500',
     color: COLORS.text,
-    marginBottom: 4,
   },
   yearSubtext: {
     fontFamily: FONTS.mono,
