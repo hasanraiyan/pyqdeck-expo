@@ -12,13 +12,15 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import * as Haptics from 'expo-haptics';
 import { Feather } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { searchAllQuestions, searchSubjects, listAllSubjects } from '../api';
-import { getDatabase } from '../db';
 import * as Cache from '../db/cacheService';
 import { COLORS, FONTS } from '../theme/colors';
 import { Badge, MarksBadge } from '../components/Badge';
 import { Skeleton } from '../components/Skeleton';
 import { rf, verticalScale } from '../utils/responsive';
+
+const RECENT_SEARCHES_KEY = 'pyq_recent_searches';
 
 export const SearchScreen = () => {
   const insets = useSafeAreaInsets();
@@ -31,12 +33,11 @@ export const SearchScreen = () => {
   const [loading, setLoading] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
 
+  // Fetch subjects with actual questions to populate search suggestions
   useEffect(() => {
-    // Load live subject names with available questions from API to populate suggestions
-    listAllSubjects({ page: 1 })
+    listAllSubjects()
       .then((res) => {
-        if (res.subjects && res.subjects.length > 0) {
-          // Filter to only subjects with questions and trim leading/trailing whitespace
+        if (res && res.subjects && res.subjects.length > 0) {
           const activeSubjects = res.subjects.filter((s) => (s.questionCount || 0) > 0);
           const names = (activeSubjects.length > 0 ? activeSubjects : res.subjects)
             .slice(0, 6)
@@ -48,13 +49,12 @@ export const SearchScreen = () => {
       .catch(() => {});
   }, []);
 
-  // Load recent searches from SQLite on mount
+  // Load recent searches from AsyncStorage on mount
   useEffect(() => {
-    getDatabase()
-      .then((db) => db.getAllAsync<{ query: string }>('SELECT query FROM recent_searches ORDER BY searched_at DESC LIMIT 6'))
-      .then((rows) => {
-        if (rows && rows.length > 0) {
-          setRecentSearches(rows.map((r) => r.query));
+    AsyncStorage.getItem(RECENT_SEARCHES_KEY)
+      .then((raw) => {
+        if (raw) {
+          setRecentSearches(JSON.parse(raw));
         }
       })
       .catch(() => {});
@@ -65,18 +65,10 @@ export const SearchScreen = () => {
     if (!trimmed) return;
     setRecentSearches((prev) => {
       const filtered = prev.filter((t) => t.toLowerCase() !== trimmed.toLowerCase());
-      return [trimmed, ...filtered].slice(0, 6);
+      const updated = [trimmed, ...filtered].slice(0, 6);
+      AsyncStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(updated)).catch(() => {});
+      return updated;
     });
-
-    // Save to SQLite
-    getDatabase()
-      .then((db) =>
-        db.runAsync(
-          'INSERT INTO recent_searches (query, searched_at) VALUES (?, ?) ON CONFLICT(query) DO UPDATE SET searched_at = excluded.searched_at',
-          [trimmed, Date.now()]
-        )
-      )
-      .catch(() => {});
   };
 
   const handleSearch = async () => {
@@ -96,16 +88,16 @@ export const SearchScreen = () => {
         setSubjectResults(subs.subjects || []);
         setQuestionResults(qs.questions || []);
       } else {
-        // Fallback to local SQLite cache
+        // Fallback to local cache
         const local = await Cache.searchLocalCache(q);
-        setSubjectResults(local.subjects.map((s) => ({ ...s, semester: { id: '', number: 0 } })));
-        setQuestionResults(local.questions.map((qu) => ({ ...qu, subject: { id: '', name: '', semesterId: '' } })));
+        setSubjectResults(local.subjects.map((s: any) => ({ ...s, semester: { id: '', number: 0 } })));
+        setQuestionResults(local.questions.map((qu: any) => ({ ...qu, subject: { id: '', name: '', semesterId: '' } })));
       }
     } catch (e) {
       // Complete offline fallback
       const local = await Cache.searchLocalCache(q);
-      setSubjectResults(local.subjects.map((s) => ({ ...s, semester: { id: '', number: 0 } })));
-      setQuestionResults(local.questions.map((qu) => ({ ...qu, subject: { id: '', name: '', semesterId: '' } })));
+      setSubjectResults(local.subjects.map((s: any) => ({ ...s, semester: { id: '', number: 0 } })));
+      setQuestionResults(local.questions.map((qu: any) => ({ ...qu, subject: { id: '', name: '', semesterId: '' } })));
     } finally {
       setLoading(false);
     }
@@ -133,23 +125,21 @@ export const SearchScreen = () => {
           setQuestionResults(qs.questions || []);
         } else {
           const local = await Cache.searchLocalCache(term);
-          setSubjectResults(local.subjects.map((s) => ({ ...s, semester: { id: '', number: 0 } })));
-          setQuestionResults(local.questions.map((qu) => ({ ...qu, subject: { id: '', name: '', semesterId: '' } })));
+          setSubjectResults(local.subjects.map((s: any) => ({ ...s, semester: { id: '', number: 0 } })));
+          setQuestionResults(local.questions.map((qu: any) => ({ ...qu, subject: { id: '', name: '', semesterId: '' } })));
         }
       })
       .catch(async () => {
         const local = await Cache.searchLocalCache(term);
-        setSubjectResults(local.subjects.map((s) => ({ ...s, semester: { id: '', number: 0 } })));
-        setQuestionResults(local.questions.map((qu) => ({ ...qu, subject: { id: '', name: '', semesterId: '' } })));
+        setSubjectResults(local.subjects.map((s: any) => ({ ...s, semester: { id: '', number: 0 } })));
+        setQuestionResults(local.questions.map((qu: any) => ({ ...qu, subject: { id: '', name: '', semesterId: '' } })));
       })
       .finally(() => setLoading(false));
   };
 
   const clearRecentSearches = () => {
     setRecentSearches([]);
-    getDatabase()
-      .then((db) => db.runAsync('DELETE FROM recent_searches'))
-      .catch(() => {});
+    AsyncStorage.removeItem(RECENT_SEARCHES_KEY).catch(() => {});
   };
 
   const activeSuggestions = dynamicSuggestions.length > 0 ? dynamicSuggestions : [

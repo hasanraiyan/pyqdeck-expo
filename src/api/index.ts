@@ -51,15 +51,16 @@ export const getSemesters = async (forceRefresh = false): Promise<Semester[]> =>
 
   // Semester list barely changes - skip the network entirely while cache is fresh.
   if (cached && cached.length > 0 && isFresh) {
-    return cached.map((c) => c.semester);
+    return cached;
   }
 
   try {
     const live = await fetchApi<Semester[]>('/semesters');
+    Cache.saveCachedSemesters(live);
     await Cache.updateSubjectCacheMeta(SEMESTERS_CACHE_KEY, `count_${live.length}`);
     return live;
   } catch (e) {
-    if (cached && cached.length > 0) return cached.map((c) => c.semester);
+    if (cached && cached.length > 0) return cached;
     throw e;
   }
 };
@@ -106,7 +107,7 @@ export const getSubjectMeta = async (
   try {
     const liveMeta = await fetchApi<SubjectMeta>(`/subjects/${subjectId}/meta`);
     const newHash = Cache.generateSubjectHash(liveMeta);
-    await Cache.saveCachedSubjectMeta(liveMeta);
+    await Cache.saveCachedSubjectMeta(subjectId, liveMeta);
     await Cache.updateSubjectCacheMeta(subjectId, newHash);
     return liveMeta;
   } catch (e) {

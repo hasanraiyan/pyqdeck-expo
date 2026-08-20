@@ -1,4 +1,4 @@
-import { getDatabase } from './index';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   Semester,
   SubjectSummary,
@@ -7,42 +7,7 @@ import {
   Solution,
 } from '../types';
 
-// 12 Hours in milliseconds for background cache validation
-const CACHE_TTL_MS = 12 * 60 * 60 * 1000;
-
-// -------------------------------------------------------------
-// CACHE SIZE LIMITS
-// -------------------------------------------------------------
-// Every write to `questions`/`solutions` is an upsert - nothing ever deleted a row,
-// so a heavy user's local DB could grow unbounded. semesters/subjects/meta stay tiny
-// regardless of usage, but these two are the actual content tables, so they're capped.
-// Eviction keeps the most-recently-cached rows and drops the oldest - effectively LRU,
-// since a row's cached_at is refreshed every time it's re-fetched from the network.
-const MAX_CACHED_QUESTIONS = 5000;
-const MAX_CACHED_SOLUTIONS = 1500;
-
-async function pruneTable(table: 'questions' | 'solutions', idColumn: string, cap: number) {
-  try {
-    const db = await getDatabase();
-    const { changes } = await db.runAsync(
-      `DELETE FROM ${table} WHERE ${idColumn} NOT IN (
-         SELECT ${idColumn} FROM ${table} ORDER BY cached_at DESC LIMIT ?
-       )`,
-      [cap]
-    );
-
-    // Eviction can shrink a subject's cached question rows out from under a per-query
-    // cache_meta entry (see getQueryCacheKey) that's still within its 12h freshness
-    // window - without this, getQuestions' fast path would keep trusting that entry
-    // and serve the now-incomplete set as if it were verified-complete. Wiping the
-    // affected freshness flags forces the next read to re-verify instead.
-    if (table === 'questions' && changes > 0) {
-      await db.runAsync(`DELETE FROM cache_meta WHERE key GLOB 'questions_*'`);
-    }
-  } catch (e) {
-    console.error(`Failed to prune ${table} cache:`, e);
-  }
-}
+const CACHE_TTL_MS = 12 * 60 * 60 * 1000; // 12 Hours
 
 /**
  * Generate a deterministic fingerprint hash for a subject's metadata
@@ -54,26 +19,25 @@ export function generateSubjectHash(meta: SubjectMeta): string {
   return `${meta.id}_q${totalQuestions}_y[${yearsSig}]_c[${chaptersSig}]`;
 }
 
-// -------------------------------------------------------------
-// CACHE METADATA & FINGERPRINT CHECKS
-// -------------------------------------------------------------
-
-export function getQueryCacheKey(subjectId: string, params: { year?: number; chapter?: string } = {}): string {
+export function getQueryCacheKey(
+  subjectId: string,
+  params: { year?: number; chapter?: string } = {}
+): string {
   const y = params.year !== undefined ? String(params.year) : 'all';
   const c = params.chapter ? params.chapter.trim().toLowerCase() : 'all';
   return `questions_${subjectId}_y[${y}]_c[${c}]`;
 }
 
+// -------------------------------------------------------------
+// CACHE METADATA
+// -------------------------------------------------------------
+
 export async function isSubjectCacheFresh(cacheKey: string): Promise<boolean> {
   try {
-    const db = await getDatabase();
-    const row = await db.getFirstAsync<{ last_checked: number }>(
-      'SELECT last_checked FROM cache_meta WHERE key = ?',
-      [cacheKey]
-    );
-    if (!row) return false;
-    const isFresh = Date.now() - row.last_checked < CACHE_TTL_MS;
-    return isFresh;
+    const raw = await AsyncStorage.getItem(`pyq_cm_${cacheKey}`);
+    if (!raw) return false;
+    const meta = JSON.parse(raw);
+    return Date.now() - (meta.last_checked || 0) < CACHE_TTL_MS;
   } catch {
     return false;
   }
@@ -81,12 +45,10 @@ export async function isSubjectCacheFresh(cacheKey: string): Promise<boolean> {
 
 export async function getCachedSubjectHash(subjectId: string): Promise<string | null> {
   try {
-    const db = await getDatabase();
-    const row = await db.getFirstAsync<{ hash: string }>(
-      'SELECT hash FROM cache_meta WHERE key = ?',
-      [`subject_meta_${subjectId}`]
-    );
-    return row?.hash || null;
+    const raw = await AsyncStorage.getItem(`pyq_cm_subject_meta_${subjectId}`);
+    if (!raw) return null;
+    const meta = JSON.parse(raw);
+    return meta.hash || null;
   } catch {
     return null;
   }
@@ -94,13 +56,10 @@ export async function getCachedSubjectHash(subjectId: string): Promise<string | 
 
 export async function updateSubjectCacheMeta(cacheKey: string, hash: string) {
   try {
-    const db = await getDatabase();
     const now = Date.now();
-    await db.runAsync(
-      `INSERT INTO cache_meta (key, hash, last_checked, updated_at) 
-       VALUES (?, ?, ?, ?) 
-       ON CONFLICT(key) DO UPDATE SET hash = excluded.hash, last_checked = excluded.last_checked, updated_at = excluded.updated_at`,
-      [cacheKey, hash, now, now]
+    await AsyncStorage.setItem(
+      `pyq_cm_${cacheKey}`,
+      JSON.stringify({ key: cacheKey, hash, last_checked: now, updated_at: now })
     );
   } catch (e) {
     console.error('Failed to update cache meta:', e);
@@ -108,56 +67,30 @@ export async function updateSubjectCacheMeta(cacheKey: string, hash: string) {
 }
 
 // -------------------------------------------------------------
-// SEMESTERS & SUBJECTS CACHE
+// SEMESTERS & SUBJECTS
 // -------------------------------------------------------------
 
-export async function getCachedSemesters(): Promise<{ semester: Semester; subjectCount: number }[] | null> {
+export async function getCachedSemesters(): Promise<Semester[] | null> {
   try {
-    const db = await getDatabase();
-    const rows = await db.getAllAsync<{ id: string; number: number; subject_count: number }>(
-      'SELECT id, number, subject_count FROM semesters ORDER BY number ASC'
-    );
-    if (!rows || rows.length === 0) return null;
-    return rows.map((r) => ({
-      semester: { id: r.id, number: r.number },
-      subjectCount: r.subject_count,
-    }));
+    const raw = await AsyncStorage.getItem('pyq_semesters');
+    return raw ? JSON.parse(raw) : null;
   } catch {
     return null;
   }
 }
 
-export async function saveCachedSemesters(data: { semester: Semester; subjectCount: number }[]) {
+export async function saveCachedSemesters(semesters: Semester[]) {
   try {
-    const db = await getDatabase();
-    const now = Date.now();
-    for (const item of data) {
-      await db.runAsync(
-        `INSERT INTO semesters (id, number, subject_count, cached_at) 
-         VALUES (?, ?, ?, ?) 
-         ON CONFLICT(id) DO UPDATE SET number = excluded.number, subject_count = excluded.subject_count, cached_at = excluded.cached_at`,
-        [item.semester.id, item.semester.number, item.subjectCount, now]
-      );
-    }
+    await AsyncStorage.setItem('pyq_semesters', JSON.stringify(semesters));
   } catch (e) {
-    console.error('Failed to save cached semesters:', e);
+    console.error('Failed to save semesters cache:', e);
   }
 }
 
 export async function getCachedSubjects(semesterId: string): Promise<SubjectSummary[] | null> {
   try {
-    const db = await getDatabase();
-    const rows = await db.getAllAsync<{ id: string; name: string; code: string; question_count: number }>(
-      'SELECT id, name, code, question_count FROM subjects WHERE semester_id = ? ORDER BY name ASC',
-      [semesterId]
-    );
-    if (!rows || rows.length === 0) return null;
-    return rows.map((r) => ({
-      id: r.id,
-      name: r.name,
-      code: r.code || '',
-      questionCount: r.question_count,
-    }));
+    const raw = await AsyncStorage.getItem(`pyq_subjects_${semesterId}`);
+    return raw ? JSON.parse(raw) : null;
   } catch {
     return null;
   }
@@ -165,72 +98,35 @@ export async function getCachedSubjects(semesterId: string): Promise<SubjectSumm
 
 export async function saveCachedSubjects(semesterId: string, subjects: SubjectSummary[]) {
   try {
-    const db = await getDatabase();
-    const now = Date.now();
-    for (const s of subjects) {
-      await db.runAsync(
-        `INSERT INTO subjects (id, semester_id, name, code, question_count, cached_at) 
-         VALUES (?, ?, ?, ?, ?, ?) 
-         ON CONFLICT(id) DO UPDATE SET semester_id = excluded.semester_id, name = excluded.name, code = excluded.code, question_count = excluded.question_count, cached_at = excluded.cached_at`,
-        [s.id, semesterId, s.name, s.code || '', s.questionCount, now]
-      );
-    }
+    await AsyncStorage.setItem(`pyq_subjects_${semesterId}`, JSON.stringify(subjects));
   } catch (e) {
-    console.error('Failed to save cached subjects:', e);
+    console.error('Failed to save subjects cache:', e);
   }
 }
 
+// -------------------------------------------------------------
+// SUBJECT METADATA
+// -------------------------------------------------------------
+
 export async function getCachedSubjectMeta(subjectId: string): Promise<SubjectMeta | null> {
   try {
-    const db = await getDatabase();
-    const row = await db.getFirstAsync<{ id: string; name: string; code: string; meta_json: string }>(
-      'SELECT id, name, code, meta_json FROM subjects WHERE id = ?',
-      [subjectId]
-    );
-    if (!row || !row.meta_json) return null;
-    const parsed = JSON.parse(row.meta_json);
-    return {
-      id: row.id,
-      name: row.name,
-      code: row.code || '',
-      years: parsed.years || [],
-      chapters: parsed.chapters || [],
-    };
+    const raw = await AsyncStorage.getItem(`pyq_meta_${subjectId}`);
+    return raw ? JSON.parse(raw) : null;
   } catch {
     return null;
   }
 }
 
-export async function saveCachedSubjectMeta(meta: SubjectMeta) {
+export async function saveCachedSubjectMeta(subjectId: string, meta: SubjectMeta) {
   try {
-    const db = await getDatabase();
-    const now = Date.now();
-    const metaJson = JSON.stringify({
-      years: meta.years,
-      chapters: meta.chapters,
-    });
-    const totalQuestions = meta.years.reduce((sum, y) => sum + y.questionCount, 0);
-    // Upsert: this can be the first time this subject is ever cached (e.g. reached via
-    // Search or "All Subjects" rather than the Semester -> Subject list flow, which is the
-    // only path that otherwise creates the `subjects` row). A plain UPDATE would silently
-    // no-op with 0 rows affected in that case, and the meta would never actually persist.
-    await db.runAsync(
-      `INSERT INTO subjects (id, semester_id, name, code, question_count, meta_json, cached_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?)
-       ON CONFLICT(id) DO UPDATE SET
-         name = excluded.name,
-         code = excluded.code,
-         meta_json = excluded.meta_json,
-         cached_at = excluded.cached_at`,
-      [meta.id, '', meta.name, meta.code || '', totalQuestions, metaJson, now]
-    );
+    await AsyncStorage.setItem(`pyq_meta_${subjectId}`, JSON.stringify(meta));
   } catch (e) {
     console.error('Failed to save subject meta cache:', e);
   }
 }
 
 // -------------------------------------------------------------
-// QUESTIONS CACHE
+// QUESTIONS
 // -------------------------------------------------------------
 
 export async function getCachedQuestions(
@@ -238,104 +134,70 @@ export async function getCachedQuestions(
   params: { year?: number; chapter?: string } = {}
 ): Promise<QuestionSummary[] | null> {
   try {
-    const db = await getDatabase();
-    let query = 'SELECT * FROM questions WHERE subject_id = ?';
-    const args: any[] = [subjectId];
+    const key = `pyq_q_${getQueryCacheKey(subjectId, params)}`;
+    const raw = await AsyncStorage.getItem(key);
+    if (raw) return JSON.parse(raw);
 
-    if (params.year !== undefined) {
-      query += ' AND year = ?';
-      args.push(params.year);
+    // Fallback: Check if all questions for this subject are cached
+    const allKey = `pyq_q_${getQueryCacheKey(subjectId, {})}`;
+    const allRaw = await AsyncStorage.getItem(allKey);
+    if (allRaw) {
+      const all: QuestionSummary[] = JSON.parse(allRaw);
+      let filtered = all;
+      if (params.year !== undefined) {
+        filtered = filtered.filter((q) => q.year === params.year);
+      }
+      if (params.chapter) {
+        filtered = filtered.filter(
+          (q) => q.chapter?.trim().toLowerCase() === params.chapter?.trim().toLowerCase()
+        );
+      }
+      return filtered;
     }
-    if (params.chapter) {
-      query += ' AND chapter = ?';
-      args.push(params.chapter);
-    }
 
-    query += ' ORDER BY year DESC, q_number ASC';
-
-    const rows = await db.getAllAsync<any>(query, args);
-    if (!rows || rows.length === 0) return null;
-
-    return rows.map((r) => ({
-      questionId: r.question_id,
-      year: r.year,
-      qNumber: r.q_number || '',
-      chapter: r.chapter || '',
-      marks: r.marks || 0,
-      text: r.text,
-      textPreview: r.text_preview || r.text,
-      textHtml: r.text_html || '',
-      type: r.type || 'text',
-      hasSolution: Boolean(r.has_solution),
-    }));
+    return null;
   } catch {
     return null;
   }
 }
 
-export async function saveCachedQuestions(subjectId: string, questions: QuestionSummary[]) {
+export async function saveCachedQuestions(
+  subjectId: string,
+  questions: QuestionSummary[],
+  params: { year?: number; chapter?: string } = {}
+) {
   try {
-    const db = await getDatabase();
-    const now = Date.now();
+    const key = `pyq_q_${getQueryCacheKey(subjectId, params)}`;
+    await AsyncStorage.setItem(key, JSON.stringify(questions));
+
+    // Also cache individual questions for fast detail lookup
     for (const q of questions) {
-      await db.runAsync(
-        `INSERT INTO questions (question_id, subject_id, year, q_number, chapter, marks, text, text_preview, text_html, type, has_solution, cached_at) 
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) 
-         ON CONFLICT(question_id) DO UPDATE SET 
-           subject_id = excluded.subject_id, 
-           year = excluded.year, 
-           q_number = excluded.q_number, 
-           chapter = excluded.chapter, 
-           marks = excluded.marks, 
-           text = excluded.text, 
-           text_preview = excluded.text_preview, 
-           text_html = excluded.text_html, 
-           type = excluded.type, 
-           has_solution = excluded.has_solution, 
-           cached_at = excluded.cached_at`,
-        [
-          q.questionId,
-          subjectId,
-          q.year,
-          q.qNumber || '',
-          q.chapter || '',
-          q.marks || 0,
-          q.text,
-          q.textPreview || '',
-          q.textHtml || '',
-          q.type || 'text',
-          q.hasSolution ? 1 : 0,
-          now,
-        ]
-      );
+      if (q.questionId) {
+        await AsyncStorage.setItem(`pyq_question_${q.questionId}`, JSON.stringify(q));
+      }
     }
-    await pruneTable('questions', 'question_id', MAX_CACHED_QUESTIONS);
   } catch (e) {
-    console.error('Failed to save questions cache:', e);
+    console.error('Failed to save cached questions:', e);
+  }
+}
+
+export async function getCachedQuestion(questionId: string): Promise<QuestionSummary | null> {
+  try {
+    const raw = await AsyncStorage.getItem(`pyq_question_${questionId}`);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
   }
 }
 
 // -------------------------------------------------------------
-// SOLUTIONS CACHE
+// SOLUTIONS
 // -------------------------------------------------------------
 
 export async function getCachedSolution(questionId: string): Promise<Solution | null> {
   try {
-    const db = await getDatabase();
-    const row = await db.getFirstAsync<any>(
-      'SELECT s.*, sub.name as subject_name FROM solutions s LEFT JOIN subjects sub ON s.subject_id = sub.id WHERE s.question_id = ?',
-      [questionId]
-    );
-    if (!row) return null;
-    return {
-      subject: { id: row.subject_id, name: row.subject_name || '' },
-      questionId: row.question_id,
-      content: row.content,
-      contentHtml: row.content_html || '',
-      type: row.type || 'markdown',
-      votes: row.votes || 0,
-      isVerified: row.is_verified === 1 ? true : row.is_verified === 0 ? false : null,
-    };
+    const raw = await AsyncStorage.getItem(`pyq_solution_${questionId}`);
+    return raw ? JSON.parse(raw) : null;
   } catch {
     return null;
   }
@@ -343,81 +205,52 @@ export async function getCachedSolution(questionId: string): Promise<Solution | 
 
 export async function saveCachedSolution(subjectId: string, solution: Solution) {
   try {
-    const db = await getDatabase();
-    const now = Date.now();
-    await db.runAsync(
-      `INSERT INTO solutions (question_id, subject_id, content, content_html, type, votes, is_verified, cached_at) 
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?) 
-       ON CONFLICT(question_id) DO UPDATE SET 
-         subject_id = excluded.subject_id, 
-         content = excluded.content, 
-         content_html = excluded.content_html, 
-         type = excluded.type, 
-         votes = excluded.votes, 
-         is_verified = excluded.is_verified, 
-         cached_at = excluded.cached_at`,
-      [
-        solution.questionId,
-        subjectId,
-        solution.content,
-        solution.contentHtml || '',
-        solution.type || 'markdown',
-        solution.votes || 0,
-        solution.isVerified === true ? 1 : solution.isVerified === false ? 0 : null,
-        now,
-      ]
-    );
-    await pruneTable('solutions', 'question_id', MAX_CACHED_SOLUTIONS);
+    if (solution && solution.questionId) {
+      await AsyncStorage.setItem(`pyq_solution_${solution.questionId}`, JSON.stringify(solution));
+    }
   } catch (e) {
-    console.error('Failed to save solution cache:', e);
+    console.error('Failed to save cached solution:', e);
   }
 }
 
 // -------------------------------------------------------------
-// OFFLINE LOCAL SEARCH
+// OFFLINE SEARCH FALLBACK
 // -------------------------------------------------------------
 
-export async function searchLocalCache(query: string): Promise<{
-  subjects: SubjectSummary[];
-  questions: QuestionSummary[];
-}> {
+export async function searchOfflineQuestions(query: string): Promise<QuestionSummary[]> {
   try {
-    const db = await getDatabase();
-    const cleanQuery = `%${query.trim()}%`;
+    const keys = await AsyncStorage.getAllKeys();
+    const qKeys = keys.filter((k) => k.startsWith('pyq_question_'));
+    if (qKeys.length === 0) return [];
 
-    const [subjectRows, questionRows] = await Promise.all([
-      db.getAllAsync<any>(
-        'SELECT * FROM subjects WHERE name LIKE ? OR code LIKE ? LIMIT 15',
-        [cleanQuery, cleanQuery]
-      ),
-      db.getAllAsync<any>(
-        'SELECT * FROM questions WHERE text LIKE ? OR chapter LIKE ? ORDER BY year DESC LIMIT 25',
-        [cleanQuery, cleanQuery]
-      ),
-    ]);
+    const rawValues = await Promise.all(qKeys.map((k) => AsyncStorage.getItem(k)));
+    const questions: QuestionSummary[] = [];
+    const qTerm = query.toLowerCase().trim();
 
-    const subjects: SubjectSummary[] = (subjectRows || []).map((s) => ({
-      id: s.id,
-      name: s.name,
-      code: s.code || '',
-      questionCount: s.question_count || 0,
-    }));
+    for (const val of rawValues) {
+      if (val) {
+        const q: QuestionSummary = JSON.parse(val);
+        const subjectName = (q as any).subject?.name || '';
+        if (
+          (q.text && q.text.toLowerCase().includes(qTerm)) ||
+          (q.chapter && q.chapter.toLowerCase().includes(qTerm)) ||
+          (subjectName && subjectName.toLowerCase().includes(qTerm))
+        ) {
+          questions.push(q);
+        }
+      }
+    }
 
-    const questions: QuestionSummary[] = (questionRows || []).map((q) => ({
-      questionId: q.question_id,
-      year: q.year,
-      qNumber: q.q_number || '',
-      chapter: q.chapter || '',
-      marks: q.marks || 0,
-      text: q.text,
-      textPreview: q.text_preview || q.text,
-      textHtml: q.text_html || '',
-      type: q.type || 'text',
-      hasSolution: Boolean(q.has_solution),
-    }));
-
-    return { subjects, questions };
+    return questions.slice(0, 20);
   } catch {
-    return { subjects: [], questions: [] };
+    return [];
   }
 }
+
+export const searchLocalCache = async (query: string) => {
+  const questions = await searchOfflineQuestions(query);
+  return {
+    subjects: [] as SubjectSummary[],
+    questions,
+  };
+};

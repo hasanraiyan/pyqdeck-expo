@@ -1,5 +1,5 @@
 import * as StoreReview from 'expo-store-review';
-import { getDatabase } from '../db';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const OPENS_KEY = 'review_prompt_opens';
 const PROMPTED_KEY = 'review_prompt_shown';
@@ -9,20 +9,17 @@ const PROMPTED_KEY = 'review_prompt_shown';
 const OPENS_BEFORE_PROMPT = 5;
 
 async function getState(key: string): Promise<string | null> {
-  const db = await getDatabase();
-  const row = await db.getFirstAsync<{ value: string }>(
-    'SELECT value FROM app_state WHERE key = ?',
-    [key]
-  );
-  return row?.value ?? null;
+  try {
+    return await AsyncStorage.getItem(key);
+  } catch {
+    return null;
+  }
 }
 
 async function setState(key: string, value: string) {
-  const db = await getDatabase();
-  await db.runAsync(
-    'INSERT INTO app_state (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value',
-    [key, value]
-  );
+  try {
+    await AsyncStorage.setItem(key, value);
+  } catch {}
 }
 
 /**

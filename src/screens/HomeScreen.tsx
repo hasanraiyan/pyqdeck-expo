@@ -12,7 +12,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
 import { getSemesters, getSubjects } from '../api';
-import { getCachedSemesters, saveCachedSemesters } from '../db/cacheService';
+import { getCachedSemesters, getCachedSubjects, saveCachedSemesters } from '../db/cacheService';
 import { Semester } from '../types';
 import { COLORS, FONTS } from '../theme/colors';
 import { Skeleton } from '../components/Skeleton';
@@ -29,19 +29,24 @@ export const HomeScreen = () => {
   const [refreshing, setRefreshing] = useState(false);
 
   const loadData = async (isManualRefresh = false) => {
-    // 1. Instant 0ms load from SQLite cache if available
+    // 1. Instant 0ms load from cache if available
     if (!isManualRefresh) {
       const cached = await getCachedSemesters();
       if (cached && cached.length > 0) {
-        setSemestersData(cached);
-        const totalSub = cached.reduce((sum, item) => sum + item.subjectCount, 0);
+        const cachedWithCounts = await Promise.all(
+          cached.map(async (sem) => {
+            const subs = (await getCachedSubjects(sem.id)) || [];
+            return { semester: sem, subjectCount: subs.length };
+          })
+        );
+        setSemestersData(cachedWithCounts);
+        const totalSub = cachedWithCounts.reduce((sum, item) => sum + item.subjectCount, 0);
         setStats((prev) => ({ ...prev, subjects: totalSub }));
         setLoading(false);
       }
     }
 
-    // 2. Fetch fresh data from API (force a real network hit on manual pull-to-refresh,
-    // otherwise this would just re-return the still-fresh cached data)
+    // 2. Fetch fresh data from API
     try {
       const semesters = await getSemesters(isManualRefresh);
       let totalQuestions = 0;
@@ -62,8 +67,6 @@ export const HomeScreen = () => {
 
       setSemestersData(withCounts);
       setStats({ subjects: totalSubjects, questions: totalQuestions });
-      // Save fresh data to local SQLite
-      saveCachedSemesters(withCounts);
     } catch (e) {
       console.error(e);
     } finally {
