@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   RefreshControl,
+  Platform,
 } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -42,6 +43,59 @@ export const SubjectListScreen = () => {
     loadData();
   }, [semesterId]);
 
+  const renderSubjectItem = useCallback(
+    ({ item }: { item: SubjectSummary }) => {
+      const isComingSoon = item.questionCount === 0;
+      return (
+        <TouchableOpacity
+          style={[styles.card, isComingSoon && styles.cardComingSoon]}
+          activeOpacity={isComingSoon ? 1 : 0.7}
+          disabled={isComingSoon}
+          onPress={() =>
+            navigation.navigate('SubjectDetail', {
+              semesterId,
+              semesterNumber,
+              subjectId: item.id,
+              subjectName: item.name,
+              subjectCode: item.code,
+            })
+          }
+        >
+          <View style={styles.cardLeft}>
+            {item.code ? (
+              <View style={styles.codeRow}>
+                <Badge label={item.code} variant="secondary" />
+                {isComingSoon && (
+                  <View style={styles.cardSoonTag}>
+                    <Text style={styles.cardSoonTagText}>SOON</Text>
+                  </View>
+                )}
+              </View>
+            ) : isComingSoon ? (
+              <View style={[styles.codeRow, { marginBottom: 6 }]}>
+                <View style={styles.cardSoonTag}>
+                  <Text style={styles.cardSoonTagText}>SOON</Text>
+                </View>
+              </View>
+            ) : null}
+            <Text style={[styles.subjectName, isComingSoon && styles.subjectNameSoon]}>
+              {item.name}
+            </Text>
+          </View>
+          <View style={styles.cardRight}>
+            <Text style={styles.questionCountText}>
+              {isComingSoon ? 'Coming Soon' : `${item.questionCount}q`}
+            </Text>
+            {!isComingSoon && (
+              <Feather name="chevron-right" size={16} color={COLORS.textMuted} />
+            )}
+          </View>
+        </TouchableOpacity>
+      );
+    },
+    [semesterId, semesterNumber, navigation]
+  );
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -63,6 +117,11 @@ export const SubjectListScreen = () => {
           <FlatList
             data={subjects}
             keyExtractor={(item) => item.id}
+            renderItem={renderSubjectItem}
+            initialNumToRender={10}
+            maxToRenderPerBatch={10}
+            windowSize={5}
+            removeClippedSubviews={Platform.OS === 'android'}
             contentContainerStyle={{ paddingBottom: 24 }}
             refreshControl={
               <RefreshControl
@@ -94,48 +153,6 @@ export const SubjectListScreen = () => {
                 </TouchableOpacity>
               </View>
             }
-            renderItem={({ item }) => {
-              const isComingSoon = item.questionCount === 0;
-              return (
-                <TouchableOpacity
-                  style={[styles.card, isComingSoon && styles.cardComingSoon]}
-                  activeOpacity={isComingSoon ? 1 : 0.7}
-                  disabled={isComingSoon}
-                  onPress={() =>
-                    navigation.navigate('SubjectDetail', {
-                      semesterId,
-                      subjectId: item.id,
-                      subjectName: item.name,
-                      subjectCode: item.code,
-                    })
-                  }
-                >
-                  <View style={styles.cardLeft}>
-                    <View style={styles.codeRow}>
-                      {item.code ? (
-                        <Badge label={item.code} variant="secondary" />
-                      ) : null}
-                      {isComingSoon && (
-                        <View style={styles.cardSoonTag}>
-                          <Text style={styles.cardSoonTagText}>SOON</Text>
-                        </View>
-                      )}
-                    </View>
-                    <Text style={[styles.subjectName, isComingSoon && styles.subjectNameSoon]}>
-                      {item.name}
-                    </Text>
-                  </View>
-                  <View style={styles.cardRight}>
-                    <Text style={styles.questionCountText}>
-                      {isComingSoon ? 'Coming Soon' : `${item.questionCount}q`}
-                    </Text>
-                    {!isComingSoon && (
-                      <Feather name="chevron-right" size={16} color={COLORS.textMuted} />
-                    )}
-                  </View>
-                </TouchableOpacity>
-              );
-            }}
           />
         )}
       </View>

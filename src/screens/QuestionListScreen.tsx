@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
   RefreshControl,
   Modal,
   TouchableWithoutFeedback,
+  Platform,
 } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -110,6 +111,19 @@ export const QuestionListScreen = () => {
       ? yearsList[currentYearIdx + 1]
       : null;
 
+  const renderItem = useCallback(
+    ({ item }: { item: QuestionSummary }) => (
+      <QuestionItem
+        question={item}
+        subjectId={subjectId}
+        semesterId={semesterId}
+        subjectName={subjectName}
+        hideYearBadge={Boolean(selectedYear)}
+      />
+    ),
+    [subjectId, semesterId, subjectName, selectedYear]
+  );
+
   const hasActiveFilters = Boolean(selectedChapter || selectedYear);
 
   return (
@@ -117,6 +131,11 @@ export const QuestionListScreen = () => {
       <FlatList
         data={questions}
         keyExtractor={(item) => item.questionId}
+        renderItem={renderItem}
+        initialNumToRender={8}
+        maxToRenderPerBatch={10}
+        windowSize={5}
+        removeClippedSubviews={Platform.OS === 'android'}
         contentContainerStyle={{ paddingBottom: 24 }}
         refreshControl={
           <RefreshControl
@@ -232,15 +251,6 @@ export const QuestionListScreen = () => {
             </View>
           ) : null
         }
-        renderItem={({ item }) => (
-          <QuestionItem
-            question={item}
-            subjectId={subjectId}
-            semesterId={semesterId}
-            subjectName={subjectName}
-            hideYearBadge={Boolean(selectedYear)}
-          />
-        )}
       />
 
       {/* Filter Bottom Sheet Modal */}

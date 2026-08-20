@@ -30,7 +30,7 @@ interface QuestionItemProps {
   hideYearBadge?: boolean;
 }
 
-export const QuestionItem: React.FC<QuestionItemProps> = ({
+export const QuestionItem: React.FC<QuestionItemProps> = React.memo(({
   question,
   subjectId,
   semesterId,
@@ -203,7 +203,7 @@ export const QuestionItem: React.FC<QuestionItemProps> = ({
       )}
     </View>
   );
-};
+});
 
 const styles = StyleSheet.create({
   container: {

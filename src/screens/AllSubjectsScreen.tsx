@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   StyleSheet,
   RefreshControl,
   ActivityIndicator,
+  Platform,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
@@ -76,6 +77,51 @@ export const AllSubjectsScreen = () => {
     loadData(query, 1, false);
   };
 
+  const renderSubjectCard = useCallback(
+    ({ item }: { item: SubjectSummary & { semester: Semester } }) => {
+      const isComingSoon = item.questionCount === 0;
+      return (
+        <TouchableOpacity
+          style={[styles.card, isComingSoon && styles.cardComingSoon]}
+          activeOpacity={isComingSoon ? 1 : 0.7}
+          disabled={isComingSoon}
+          onPress={() =>
+            navigation.navigate('SubjectDetail', {
+              semesterId: item.semester?.id,
+              subjectId: item.id,
+              subjectName: item.name,
+              subjectCode: item.code,
+            })
+          }
+        >
+          <View style={styles.cardLeft}>
+            <View style={styles.codeRow}>
+              {item.code ? <Badge label={item.code} variant="secondary" /> : null}
+              <Badge label={`Sem ${item.semester?.number || ''}`} variant="outline" />
+              {isComingSoon && (
+                <View style={styles.cardSoonTag}>
+                  <Text style={styles.cardSoonTagText}>SOON</Text>
+                </View>
+              )}
+            </View>
+            <Text style={[styles.subjectName, isComingSoon && styles.subjectNameSoon]}>
+              {item.name}
+            </Text>
+          </View>
+          <View style={styles.cardRight}>
+            <Text style={styles.questionCount}>
+              {isComingSoon ? 'Coming Soon' : `${item.questionCount}q`}
+            </Text>
+            {!isComingSoon && (
+              <Feather name="chevron-right" size={16} color={COLORS.textMuted} />
+            )}
+          </View>
+        </TouchableOpacity>
+      );
+    },
+    [navigation]
+  );
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -108,10 +154,10 @@ export const AllSubjectsScreen = () => {
       <View style={styles.content}>
         {loading && !refreshing ? (
           <View style={{ padding: 16 }}>
-            {[1, 2, 3, 4, 5, 6].map((i) => (
+            {[1, 2, 3, 4, 5].map((i) => (
               <View key={i} style={styles.skeletonCard}>
-                <Skeleton width="60%" height={18} style={{ marginBottom: 6 }} />
-                <Skeleton width="40%" height={12} />
+                <Skeleton width="40%" height={16} style={{ marginBottom: 8 }} />
+                <Skeleton width="70%" height={14} />
               </View>
             ))}
           </View>
@@ -119,9 +165,14 @@ export const AllSubjectsScreen = () => {
           <FlatList
             data={subjects}
             keyExtractor={(item) => item.id}
-            contentContainerStyle={{ paddingBottom: 24 }}
+            renderItem={renderSubjectCard}
+            initialNumToRender={10}
+            maxToRenderPerBatch={10}
+            windowSize={5}
+            removeClippedSubviews={Platform.OS === 'android'}
             onEndReached={handleEndReached}
-            onEndReachedThreshold={0.4}
+            onEndReachedThreshold={0.5}
+            contentContainerStyle={{ paddingBottom: 24 }}
             refreshControl={
               <RefreshControl
                 refreshing={refreshing}
@@ -142,47 +193,6 @@ export const AllSubjectsScreen = () => {
                 </View>
               ) : null
             }
-            renderItem={({ item }) => {
-              const isComingSoon = item.questionCount === 0;
-              return (
-                <TouchableOpacity
-                  style={[styles.card, isComingSoon && styles.cardComingSoon]}
-                  activeOpacity={isComingSoon ? 1 : 0.7}
-                  disabled={isComingSoon}
-                  onPress={() =>
-                    navigation.navigate('SubjectDetail', {
-                      semesterId: item.semester?.id,
-                      subjectId: item.id,
-                      subjectName: item.name,
-                      subjectCode: item.code,
-                    })
-                  }
-                >
-                  <View style={styles.cardLeft}>
-                    <View style={styles.codeRow}>
-                      {item.code ? <Badge label={item.code} variant="secondary" /> : null}
-                      <Badge label={`Sem ${item.semester?.number || ''}`} variant="outline" />
-                      {isComingSoon && (
-                        <View style={styles.cardSoonTag}>
-                          <Text style={styles.cardSoonTagText}>SOON</Text>
-                        </View>
-                      )}
-                    </View>
-                    <Text style={[styles.subjectName, isComingSoon && styles.subjectNameSoon]}>
-                      {item.name}
-                    </Text>
-                  </View>
-                  <View style={styles.cardRight}>
-                    <Text style={styles.questionCount}>
-                      {isComingSoon ? 'Coming Soon' : `${item.questionCount}q`}
-                    </Text>
-                    {!isComingSoon && (
-                      <Feather name="chevron-right" size={16} color={COLORS.textMuted} />
-                    )}
-                  </View>
-                </TouchableOpacity>
-              );
-            }}
           />
         )}
       </View>
