@@ -18,6 +18,7 @@ import { getSolution } from '../api';
 import { COLORS, FONTS } from '../theme/colors';
 import { Badge, MarksBadge, AskAiBadge } from './Badge';
 import { cleanMarkdown } from '../utils/responsive';
+import { markdownRules } from '../utils/markdownRules';
 
 interface QuestionItemProps {
   question: QuestionSummary;
@@ -142,7 +143,9 @@ export const QuestionItem: React.FC<QuestionItemProps> = ({
           ) : null}
 
           <View style={styles.markdownWrapper}>
-            <Markdown style={markdownStyles}>{cleanMarkdown(question.text)}</Markdown>
+            <Markdown style={markdownStyles} rules={markdownRules}>
+              {cleanMarkdown(question.text)}
+            </Markdown>
           </View>
 
           {showOpenButton && (
@@ -188,7 +191,7 @@ export const QuestionItem: React.FC<QuestionItemProps> = ({
               </View>
 
               {solution ? (
-                <Markdown style={solutionMarkdownStyles}>
+                <Markdown style={solutionMarkdownStyles} rules={markdownRules}>
                   {cleanMarkdown(solution.content)}
                 </Markdown>
               ) : loadingSolution ? (

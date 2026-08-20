@@ -40,16 +40,17 @@ export const HomeScreen = () => {
       }
     }
 
-    // 2. Fetch fresh data from API
+    // 2. Fetch fresh data from API (force a real network hit on manual pull-to-refresh,
+    // otherwise this would just re-return the still-fresh cached data)
     try {
-      const semesters = await getSemesters();
+      const semesters = await getSemesters(isManualRefresh);
       let totalQuestions = 0;
       let totalSubjects = 0;
 
       const withCounts = await Promise.all(
         semesters.map(async (sem) => {
           try {
-            const subs = await getSubjects(sem.id);
+            const subs = await getSubjects(sem.id, isManualRefresh);
             totalSubjects += subs.length;
             totalQuestions += subs.reduce((n, s) => n + s.questionCount, 0);
             return { semester: sem, subjectCount: subs.length };

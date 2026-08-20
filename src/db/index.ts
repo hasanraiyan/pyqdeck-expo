@@ -71,6 +71,12 @@ export async function getDatabase(): Promise<SQLite.SQLiteDatabase> {
       query TEXT PRIMARY KEY,
       searched_at INTEGER NOT NULL
     );
+
+    -- Small generic key/value store for app-level state (e.g. review-prompt tracking)
+    CREATE TABLE IF NOT EXISTS app_state (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL
+    );
   `);
 
   return dbInstance;

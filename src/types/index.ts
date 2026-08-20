@@ -37,6 +37,13 @@ export interface QuestionListResult {
   returned: number;
   offset: number;
   questions: QuestionSummary[];
+  // Set when this result was served from the offline SQLite fallback (network unreachable)
+  // rather than a verified live/fresh-cache fetch.
+  fromCache?: boolean;
+  // Set alongside fromCache when the cached rows can't be proven to be the complete set for
+  // this filter (e.g. combined year+chapter filters, or a locally-cached subset smaller than
+  // what `meta` says should exist for this filter).
+  partial?: boolean;
 }
 
 export interface Solution {

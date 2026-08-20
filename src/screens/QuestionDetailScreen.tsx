@@ -29,6 +29,7 @@ import { Badge, MarksBadge, AskAiBadge } from '../components/Badge';
 import { PrevNextNav } from '../components/PrevNextNav';
 import { SolutionSkeleton } from '../components/Skeleton';
 import { rf, cleanMarkdown } from '../utils/responsive';
+import { markdownRules } from '../utils/markdownRules';
 
 export const QuestionDetailScreen = () => {
   const insets = useSafeAreaInsets();
@@ -178,7 +179,9 @@ export const QuestionDetailScreen = () => {
               <MarksBadge marks={question.marks} />
             </View>
 
-            <Markdown style={markdownStyles}>{cleanMarkdown(question.text)}</Markdown>
+            <Markdown style={markdownStyles} rules={markdownRules}>
+              {cleanMarkdown(question.text)}
+            </Markdown>
 
             {/* Alert: Repeated in previous years (with clickable years) */}
             {repeats && repeats.length > 0 && (
@@ -268,7 +271,7 @@ export const QuestionDetailScreen = () => {
               <Text style={styles.solutionTitle}>WORKED SOLUTION</Text>
               {solution ? (
                 <View style={styles.solutionBody}>
-                  <Markdown style={solutionMarkdownStyles}>
+                  <Markdown style={solutionMarkdownStyles} rules={markdownRules}>
                     {cleanMarkdown(solution.content)}
                   </Markdown>
                 </View>

@@ -45,26 +45,29 @@ export const QuestionListScreen = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [filterModalVisible, setFilterModalVisible] = useState(false);
+  const [partialOffline, setPartialOffline] = useState(false);
 
-  const loadData = async () => {
+  const loadData = async (forceRefresh = false) => {
     try {
-      const metaData = await getSubjectMeta(subjectId);
+      const metaData = await getSubjectMeta(subjectId, forceRefresh);
       setMeta(metaData);
 
       // Only default to first year if neither a specific year NOR a specific chapter was requested
       const shouldDefaultYear = selectedYear === undefined && selectedChapter === undefined;
       const defaultYear = shouldDefaultYear ? (metaData.years[0]?.year || undefined) : undefined;
-      
+
       if (shouldDefaultYear && defaultYear) {
         setSelectedYear(defaultYear);
       }
 
       const queryYear = selectedYear ?? defaultYear;
-      const questionsData = await getQuestions(subjectId, {
-        year: queryYear,
-        chapter: selectedChapter,
-      });
+      const questionsData = await getQuestions(
+        subjectId,
+        { year: queryYear, chapter: selectedChapter },
+        forceRefresh
+      );
       setQuestions(questionsData.questions);
+      setPartialOffline(Boolean(questionsData.fromCache && questionsData.partial));
     } catch (e) {
       console.error(e);
     } finally {
@@ -78,6 +81,7 @@ export const QuestionListScreen = () => {
     try {
       const questionsData = await getQuestions(subjectId, { year, chapter });
       setQuestions(questionsData.questions);
+      setPartialOffline(Boolean(questionsData.fromCache && questionsData.partial));
     } catch (e) {
       console.error(e);
     } finally {
@@ -123,7 +127,7 @@ export const QuestionListScreen = () => {
             refreshing={refreshing}
             onRefresh={() => {
               setRefreshing(true);
-              loadData();
+              loadData(true);
             }}
             tintColor={COLORS.primary}
           />
@@ -167,6 +171,15 @@ export const QuestionListScreen = () => {
                   ? ` across all years for ${selectedChapter}.`
                   : ' across all papers.'}
               </Text>
+
+              {partialOffline && (
+                <View style={styles.offlineNotice}>
+                  <Feather name="wifi-off" size={12} color={COLORS.textMuted} />
+                  <Text style={styles.offlineNoticeText}>
+                    You're offline — showing cached results, some questions may be missing.
+                  </Text>
+                </View>
+              )}
 
               {/* Active Filter summary pills */}
               {(selectedYear || selectedChapter) && (
@@ -413,6 +426,24 @@ const styles = StyleSheet.create({
     fontSize: rf(12.5),
     color: COLORS.textMuted,
     marginTop: 4,
+  },
+  offlineNotice: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 10,
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+    backgroundColor: COLORS.cardSecondary,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 4,
+  },
+  offlineNoticeText: {
+    flex: 1,
+    fontSize: rf(11),
+    color: COLORS.textMuted,
+    fontStyle: 'italic',
   },
   activePillsRow: {
     flexDirection: 'row',

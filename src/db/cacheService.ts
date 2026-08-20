@@ -24,12 +24,18 @@ export function generateSubjectHash(meta: SubjectMeta): string {
 // CACHE METADATA & FINGERPRINT CHECKS
 // -------------------------------------------------------------
 
-export async function isSubjectCacheFresh(subjectId: string): Promise<boolean> {
+export function getQueryCacheKey(subjectId: string, params: { year?: number; chapter?: string } = {}): string {
+  const y = params.year !== undefined ? String(params.year) : 'all';
+  const c = params.chapter ? params.chapter.trim().toLowerCase() : 'all';
+  return `questions_${subjectId}_y[${y}]_c[${c}]`;
+}
+
+export async function isSubjectCacheFresh(cacheKey: string): Promise<boolean> {
   try {
     const db = await getDatabase();
     const row = await db.getFirstAsync<{ last_checked: number }>(
       'SELECT last_checked FROM cache_meta WHERE key = ?',
-      [`subject_meta_${subjectId}`]
+      [cacheKey]
     );
     if (!row) return false;
     const isFresh = Date.now() - row.last_checked < CACHE_TTL_MS;
@@ -52,7 +58,7 @@ export async function getCachedSubjectHash(subjectId: string): Promise<string | 
   }
 }
 
-export async function updateSubjectCacheMeta(subjectId: string, hash: string) {
+export async function updateSubjectCacheMeta(cacheKey: string, hash: string) {
   try {
     const db = await getDatabase();
     const now = Date.now();
@@ -60,7 +66,7 @@ export async function updateSubjectCacheMeta(subjectId: string, hash: string) {
       `INSERT INTO cache_meta (key, hash, last_checked, updated_at) 
        VALUES (?, ?, ?, ?) 
        ON CONFLICT(key) DO UPDATE SET hash = excluded.hash, last_checked = excluded.last_checked, updated_at = excluded.updated_at`,
-      [`subject_meta_${subjectId}`, hash, now, now]
+      [cacheKey, hash, now, now]
     );
   } catch (e) {
     console.error('Failed to update cache meta:', e);
@@ -169,9 +175,20 @@ export async function saveCachedSubjectMeta(meta: SubjectMeta) {
       years: meta.years,
       chapters: meta.chapters,
     });
+    const totalQuestions = meta.years.reduce((sum, y) => sum + y.questionCount, 0);
+    // Upsert: this can be the first time this subject is ever cached (e.g. reached via
+    // Search or "All Subjects" rather than the Semester -> Subject list flow, which is the
+    // only path that otherwise creates the `subjects` row). A plain UPDATE would silently
+    // no-op with 0 rows affected in that case, and the meta would never actually persist.
     await db.runAsync(
-      `UPDATE subjects SET meta_json = ?, cached_at = ? WHERE id = ?`,
-      [metaJson, now, meta.id]
+      `INSERT INTO subjects (id, semester_id, name, code, question_count, meta_json, cached_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?)
+       ON CONFLICT(id) DO UPDATE SET
+         name = excluded.name,
+         code = excluded.code,
+         meta_json = excluded.meta_json,
+         cached_at = excluded.cached_at`,
+      [meta.id, '', meta.name, meta.code || '', totalQuestions, metaJson, now]
     );
   } catch (e) {
     console.error('Failed to save subject meta cache:', e);

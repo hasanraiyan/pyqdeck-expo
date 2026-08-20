@@ -43,26 +43,45 @@ async function fetchApi<T>(path: string): Promise<T> {
 // CACHE-FIRST API ENDPOINTS WITH SILENT BACKGROUND REVALIDATION
 // -------------------------------------------------------------
 
-export const getSemesters = async (): Promise<Semester[]> => {
+const SEMESTERS_CACHE_KEY = 'semesters';
+
+export const getSemesters = async (forceRefresh = false): Promise<Semester[]> => {
+  const cached = await Cache.getCachedSemesters();
+  const isFresh = !forceRefresh && (await Cache.isSubjectCacheFresh(SEMESTERS_CACHE_KEY));
+
+  // Semester list barely changes - skip the network entirely while cache is fresh.
+  if (cached && cached.length > 0 && isFresh) {
+    return cached.map((c) => c.semester);
+  }
+
   try {
     const live = await fetchApi<Semester[]>('/semesters');
+    await Cache.updateSubjectCacheMeta(SEMESTERS_CACHE_KEY, `count_${live.length}`);
     return live;
   } catch (e) {
-    const cached = await Cache.getCachedSemesters();
-    if (cached && cached.length > 0) {
-      return cached.map((c) => c.semester);
-    }
+    if (cached && cached.length > 0) return cached.map((c) => c.semester);
     throw e;
   }
 };
 
-export const getSubjects = async (semesterId: string): Promise<SubjectSummary[]> => {
+export const getSubjects = async (
+  semesterId: string,
+  forceRefresh = false
+): Promise<SubjectSummary[]> => {
+  const cacheKey = `subjects_${semesterId}`;
+  const cached = await Cache.getCachedSubjects(semesterId);
+  const isFresh = !forceRefresh && (await Cache.isSubjectCacheFresh(cacheKey));
+
+  if (cached && cached.length > 0 && isFresh) {
+    return cached;
+  }
+
   try {
     const live = await fetchApi<SubjectSummary[]>(`/semesters/${semesterId}/subjects`);
     Cache.saveCachedSubjects(semesterId, live);
+    await Cache.updateSubjectCacheMeta(cacheKey, `count_${live.length}`);
     return live;
   } catch (e) {
-    const cached = await Cache.getCachedSubjects(semesterId);
     if (cached && cached.length > 0) return cached;
     throw e;
   }
@@ -71,10 +90,13 @@ export const getSubjects = async (semesterId: string): Promise<SubjectSummary[]>
 /**
  * Fetch Subject Meta with 12h hash comparison
  */
-export const getSubjectMeta = async (subjectId: string): Promise<SubjectMeta> => {
+export const getSubjectMeta = async (
+  subjectId: string,
+  forceRefresh = false
+): Promise<SubjectMeta> => {
   // 1. Try local cache first
   const cachedMeta = await Cache.getCachedSubjectMeta(subjectId);
-  const isFresh = await Cache.isSubjectCacheFresh(subjectId);
+  const isFresh = !forceRefresh && (await Cache.isSubjectCacheFresh(subjectId));
 
   // If cached and fresh (within 12 hours), return immediately
   if (cachedMeta && isFresh) {
@@ -94,23 +116,53 @@ export const getSubjectMeta = async (subjectId: string): Promise<SubjectMeta> =>
 };
 
 /**
+ * Best-effort expected count for a filter, derived from subject meta.
+ * Returns null when it can't be determined (e.g. combined year+chapter filters,
+ * since meta only tracks per-year and per-chapter totals separately, never their
+ * intersection) - callers must treat null as "can't prove this is complete."
+ */
+const getExpectedQuestionCount = (
+  meta: SubjectMeta | null,
+  params: { year?: number; chapter?: string }
+): number | null => {
+  if (!meta) return null;
+  if (params.year !== undefined && params.chapter) return null;
+  if (params.year !== undefined) {
+    const y = meta.years.find((y) => y.year === params.year);
+    return y ? y.questionCount : null;
+  }
+  if (params.chapter) {
+    const c = meta.chapters.find((c) => c.chapter === params.chapter);
+    return c ? c.questionCount : null;
+  }
+  return meta.years.reduce((sum, y) => sum + y.questionCount, 0);
+};
+
+/**
  * Fetch Questions with local SQLite retrieval & background refresh
  */
 export const getQuestions = async (
   subjectId: string,
-  params: { year?: number; chapter?: string; search?: string; limit?: number; offset?: number } = {}
+  params: { year?: number; chapter?: string; search?: string; limit?: number; offset?: number } = {},
+  forceRefresh = false
 ): Promise<QuestionListResult> => {
-  // Read local cache first
+  const queryKey = Cache.getQueryCacheKey(subjectId, {
+    year: params.year,
+    chapter: params.chapter,
+  });
+
+  // 1. Read local SQLite cache
   const cachedQuestions = await Cache.getCachedQuestions(subjectId, {
     year: params.year,
     chapter: params.chapter,
   });
 
   const cachedMeta = await Cache.getCachedSubjectMeta(subjectId);
-  const isFresh = await Cache.isSubjectCacheFresh(subjectId);
+  // Check if THIS SPECIFIC query (e.g. Module 1 across all years) was previously fetched & fresh
+  const isQueryFresh = !forceRefresh && (await Cache.isSubjectCacheFresh(queryKey));
 
-  // If offline or data is fresh in cache, return immediately
-  if (cachedQuestions && cachedQuestions.length > 0 && isFresh) {
+  // If we already have fresh cached data for this exact query, return immediately
+  if (cachedQuestions && cachedQuestions.length > 0 && isQueryFresh) {
     return {
       subject: { id: subjectId, name: cachedMeta?.name || '' },
       total: cachedQuestions.length,
@@ -120,6 +172,7 @@ export const getQuestions = async (
     };
   }
 
+  // 2. Fetch full question set for this query from API
   try {
     const qs = new URLSearchParams();
     if (params.year !== undefined) qs.set('year', String(params.year));
@@ -130,17 +183,31 @@ export const getQuestions = async (
 
     const liveResult = await fetchApi<QuestionListResult>(`/subjects/${subjectId}/questions?${qs.toString()}`);
     if (liveResult && liveResult.questions) {
-      Cache.saveCachedQuestions(subjectId, liveResult.questions);
+      await Cache.saveCachedQuestions(subjectId, liveResult.questions);
+      // Mark THIS query as fresh
+      await Cache.updateSubjectCacheMeta(queryKey, `count_${liveResult.questions.length}`);
     }
     return liveResult;
   } catch (e) {
+    // If network fails (offline), return whatever questions we have in SQLite for this
+    // filter - but this subset was never itself verified by a live fetch (that's what
+    // isQueryFresh above is for), it's just whatever happened to get cached from other
+    // year/chapter combinations that overlap with this one. Flag it as such so the UI
+    // doesn't present a partial local scan as if it were the confirmed full result set.
     if (cachedQuestions && cachedQuestions.length > 0) {
+      const expected = getExpectedQuestionCount(cachedMeta, {
+        year: params.year,
+        chapter: params.chapter,
+      });
+      const partial = expected === null ? true : cachedQuestions.length < expected;
       return {
         subject: { id: subjectId, name: cachedMeta?.name || '' },
         total: cachedQuestions.length,
         returned: cachedQuestions.length,
         offset: 0,
         questions: cachedQuestions,
+        fromCache: true,
+        partial,
       };
     }
     throw e;
