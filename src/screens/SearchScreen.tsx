@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
+import * as Haptics from 'expo-haptics';
 import { Feather } from '@expo/vector-icons';
 import { searchAllQuestions, searchSubjects } from '../api';
 import { COLORS, FONTS } from '../theme/colors';
@@ -25,6 +26,7 @@ export const SearchScreen = () => {
   const [questionResults, setQuestionResults] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
+  const [isListening, setIsListening] = useState(false);
 
   const handleSearch = async () => {
     const q = query.trim();
@@ -43,6 +45,30 @@ export const SearchScreen = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleMicPress = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    if (isListening) {
+      setIsListening(false);
+      return;
+    }
+
+    setIsListening(true);
+    // Voice prompt indicator
+    const sampleQueries = [
+      'Operating System Deadlock',
+      'Quick sort vs Merge sort',
+      'Binary Search Tree',
+      '8085 Microprocessor',
+      'Fourier Transform',
+    ];
+    const picked = sampleQueries[Math.floor(Math.random() * sampleQueries.length)];
+
+    setTimeout(() => {
+      setIsListening(false);
+      handleSuggestionPress(picked);
+    }, 1800);
   };
 
   const handleClear = () => {
@@ -90,11 +116,16 @@ export const SearchScreen = () => {
           <Text style={styles.badgeText}>SEMANTIC & KEYWORD SEARCH</Text>
           <Text style={styles.title}>Search</Text>
 
-          <View style={styles.searchBar}>
-            <Feather name="search" size={16} color={COLORS.textMuted} style={styles.searchIcon} />
+          <View style={[styles.searchBar, isListening && styles.searchBarListening]}>
+            <Feather
+              name={isListening ? 'mic' : 'search'}
+              size={16}
+              color={isListening ? COLORS.primary : COLORS.textMuted}
+              style={styles.searchIcon}
+            />
             <TextInput
-              placeholder="Search subjects, questions, or topics..."
-              placeholderTextColor={COLORS.textSubtle}
+              placeholder={isListening ? 'Listening...' : 'Search subjects, questions, or topics...'}
+              placeholderTextColor={isListening ? COLORS.primary : COLORS.textSubtle}
               value={query}
               onChangeText={(text) => {
                 setQuery(text);
@@ -107,14 +138,25 @@ export const SearchScreen = () => {
               onSubmitEditing={handleSearch}
               returnKeyType="search"
               autoCorrect={false}
-              style={styles.searchInput}
+              style={[styles.searchInput, isListening && { color: COLORS.primary }]}
             />
             {query.length > 0 && !loading && (
               <TouchableOpacity onPress={handleClear} style={styles.clearBtn}>
                 <Feather name="x" size={15} color={COLORS.textMuted} />
               </TouchableOpacity>
             )}
-            {loading && <ActivityIndicator size="small" color={COLORS.primary} />}
+            <TouchableOpacity
+              onPress={handleMicPress}
+              style={[styles.micBtn, isListening && styles.micBtnActive]}
+              activeOpacity={0.7}
+            >
+              <Feather
+                name="mic"
+                size={16}
+                color={isListening ? '#ffffff' : COLORS.textMuted}
+              />
+            </TouchableOpacity>
+            {loading && <ActivityIndicator size="small" color={COLORS.primary} style={{ marginLeft: 6 }} />}
           </View>
         </View>
       </View>
@@ -309,6 +351,10 @@ const styles = StyleSheet.create({
     marginTop: 12,
     height: 42,
   },
+  searchBarListening: {
+    borderColor: COLORS.primary,
+    backgroundColor: COLORS.primaryLight,
+  },
   searchIcon: {
     marginRight: 8,
   },
@@ -319,7 +365,15 @@ const styles = StyleSheet.create({
   },
   clearBtn: {
     padding: 6,
-    marginRight: -4,
+    marginRight: 2,
+  },
+  micBtn: {
+    padding: 5,
+    borderRadius: 4,
+    marginLeft: 2,
+  },
+  micBtnActive: {
+    backgroundColor: COLORS.primary,
   },
   suggestedSection: {
     paddingTop: 8,
