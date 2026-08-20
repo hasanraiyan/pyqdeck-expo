@@ -180,6 +180,7 @@ export const SearchScreen = () => {
                       nestedScrollEnabled
                     >
                       <Badge label={q.year} variant="secondary" />
+                      <MarksBadge marks={q.marks} />
                       {q.chapter ? (
                         <View style={styles.chapterPill}>
                           <Text style={styles.chapterPillText}>
@@ -187,7 +188,6 @@ export const SearchScreen = () => {
                           </Text>
                         </View>
                       ) : null}
-                      <MarksBadge marks={q.marks} />
                     </ScrollView>
                   </TouchableOpacity>
                 ))}
