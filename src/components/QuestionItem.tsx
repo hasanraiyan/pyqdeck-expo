@@ -160,7 +160,6 @@ export const QuestionItem: React.FC<QuestionItemProps> = React.memo(({
             </TouchableOpacity>
           )}
 
-          {/* Action buttons (Ask AI on left, Copy & Share on right) */}
           <View style={styles.actionsRow}>
             <TouchableOpacity onPress={handleAskAi} activeOpacity={0.7}>
               <AskAiBadge />
@@ -186,15 +185,14 @@ export const QuestionItem: React.FC<QuestionItemProps> = React.memo(({
           </View>
 
           {question.hasSolution && (
-            <View style={styles.solutionContainer}>
-              <View style={styles.solutionHeader}>
-                <Text style={styles.solutionTag}>Solution</Text>
-              </View>
-
+            <View style={styles.solutionSection}>
+              <Text style={styles.solutionTitle}>WORKED SOLUTION</Text>
               {solution ? (
-                <Markdown style={solutionMarkdownStyles} rules={markdownRules}>
-                  {cleanMarkdown(solution.content)}
-                </Markdown>
+                <View style={styles.solutionBody}>
+                  <Markdown style={solutionMarkdownStyles} rules={markdownRules}>
+                    {cleanMarkdown(solution.content)}
+                  </Markdown>
+                </View>
               ) : loadingSolution ? (
                 <SolutionSkeleton />
               ) : (
@@ -227,48 +225,56 @@ const styles = StyleSheet.create({
   },
   headerLeft: {
     flex: 1,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+  },
+  qNumber: {
+    fontFamily: FONTS.mono,
+    fontSize: 13,
+    color: COLORS.textMuted,
+    fontWeight: '600',
+    marginTop: 1,
+  },
+  previewText: {
+    flex: 1,
+    fontSize: 14,
+    color: COLORS.text,
+    lineHeight: 20,
   },
   headerRight: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
   },
-  previewText: {
-    fontSize: 14,
-    color: COLORS.text,
-    lineHeight: 20,
-  },
-  qNumber: {
-    color: COLORS.textMuted,
-    fontWeight: '600',
-  },
   body: {
     paddingHorizontal: 16,
     paddingBottom: 16,
+    backgroundColor: COLORS.background,
     borderTopWidth: 1,
-    borderTopColor: COLORS.borderLight,
-    backgroundColor: '#fafbfc',
+    borderColor: COLORS.borderLight,
   },
   chapter: {
-    fontSize: 11,
     fontFamily: FONTS.mono,
-    color: COLORS.textSubtle,
+    fontSize: 11,
+    color: COLORS.textMuted,
     textTransform: 'uppercase',
-    letterSpacing: 1,
-    marginTop: 12,
-    marginBottom: 6,
+    letterSpacing: 0.8,
+    marginTop: 14,
+    marginBottom: 8,
   },
   markdownWrapper: {
-    marginTop: 6,
+    marginVertical: 4,
   },
   fullPageLink: {
-    marginTop: 10,
-    paddingVertical: 4,
+    marginTop: 8,
+    marginBottom: 4,
+    alignSelf: 'flex-start',
   },
   fullPageLinkText: {
     fontSize: 12.5,
     color: COLORS.primary,
-    fontWeight: '500',
+    fontWeight: '600',
   },
   actionsRow: {
     flexDirection: 'row',
@@ -298,31 +304,28 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     letterSpacing: 0.2,
   },
-  solutionContainer: {
+  solutionSection: {
+    backgroundColor: COLORS.card,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 6,
+    padding: 16,
     marginTop: 16,
-    paddingTop: 14,
-    borderTopWidth: 1,
-    borderColor: COLORS.borderDashed,
   },
-  solutionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 8,
-  },
-  solutionTag: {
-    fontSize: 11,
+  solutionTitle: {
     fontFamily: FONTS.mono,
-    color: COLORS.primary,
+    fontSize: 11,
     fontWeight: '700',
-    textTransform: 'uppercase',
-    letterSpacing: 1,
+    color: COLORS.primary,
+    letterSpacing: 1.2,
+    marginBottom: 10,
+  },
+  solutionBody: {
+    paddingTop: 4,
   },
   loadingText: {
     fontSize: 13,
     color: COLORS.textMuted,
     fontStyle: 'italic',
-    marginTop: 4,
   },
 });
-

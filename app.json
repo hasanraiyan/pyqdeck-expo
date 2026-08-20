@@ -11,7 +11,9 @@
       "supportsTablet": true,
       "bundleIdentifier": "app.hasanraiyan.pyqdeck",
       "infoPlist": {
-        "LSApplicationQueriesSchemes": ["itms-apps"]
+        "LSApplicationQueriesSchemes": [
+          "itms-apps"
+        ]
       }
     },
     "android": {
@@ -26,7 +28,8 @@
       "favicon": "./assets/app-icon.png"
     },
     "plugins": [
-      "expo-web-browser"
+      "expo-web-browser",
+      "expo-sqlite"
     ]
   }
 }
