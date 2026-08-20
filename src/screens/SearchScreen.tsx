@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -12,7 +12,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import * as Haptics from 'expo-haptics';
 import { Feather } from '@expo/vector-icons';
-import { searchAllQuestions, searchSubjects } from '../api';
+import { searchAllQuestions, searchSubjects, listAllSubjects } from '../api';
 import { COLORS, FONTS } from '../theme/colors';
 import { Badge, MarksBadge } from '../components/Badge';
 import { Skeleton } from '../components/Skeleton';
@@ -24,13 +24,37 @@ export const SearchScreen = () => {
   const [query, setQuery] = useState('');
   const [subjectResults, setSubjectResults] = useState<any[]>([]);
   const [questionResults, setQuestionResults] = useState<any[]>([]);
+  const [recentSearches, setRecentSearches] = useState<string[]>([]);
+  const [dynamicSuggestions, setDynamicSuggestions] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
   const [isListening, setIsListening] = useState(false);
 
+  useEffect(() => {
+    // Load live subject names dynamically from API to populate suggestions
+    listAllSubjects({ page: 1 })
+      .then((res) => {
+        if (res.subjects && res.subjects.length > 0) {
+          const names = res.subjects.slice(0, 6).map((s) => s.name);
+          setDynamicSuggestions(names);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const saveRecentSearch = (term: string) => {
+    const trimmed = term.trim();
+    if (!trimmed) return;
+    setRecentSearches((prev) => {
+      const filtered = prev.filter((t) => t.toLowerCase() !== trimmed.toLowerCase());
+      return [trimmed, ...filtered].slice(0, 6);
+    });
+  };
+
   const handleSearch = async () => {
     const q = query.trim();
     if (!q) return;
+    saveRecentSearch(q);
     setLoading(true);
     setHasSearched(true);
     try {
@@ -55,15 +79,10 @@ export const SearchScreen = () => {
     }
 
     setIsListening(true);
-    // Voice prompt indicator
-    const sampleQueries = [
-      'Operating System Deadlock',
-      'Quick sort vs Merge sort',
-      'Binary Search Tree',
-      '8085 Microprocessor',
-      'Fourier Transform',
-    ];
-    const picked = sampleQueries[Math.floor(Math.random() * sampleQueries.length)];
+    const pool = dynamicSuggestions.length > 0
+      ? dynamicSuggestions
+      : ['Operating System', 'Data Structures', 'Algorithms', 'Discrete Mathematics'];
+    const picked = pool[Math.floor(Math.random() * pool.length)];
 
     setTimeout(() => {
       setIsListening(false);
@@ -80,7 +99,7 @@ export const SearchScreen = () => {
 
   const handleSuggestionPress = (term: string) => {
     setQuery(term);
-    // Trigger immediate search
+    saveRecentSearch(term);
     setLoading(true);
     setHasSearched(true);
     Promise.all([
@@ -95,14 +114,17 @@ export const SearchScreen = () => {
       .finally(() => setLoading(false));
   };
 
-  const SUGGESTED_QUERIES = [
-    'Quick sort vs Merge sort',
-    'Binary Search Tree',
-    '8085 Microprocessor',
-    'Operating System Deadlock',
-    'Fourier Transform',
-    'DBMS Normalization',
-    'Thermodynamics',
+  const clearRecentSearches = () => {
+    setRecentSearches([]);
+  };
+
+  const activeSuggestions = dynamicSuggestions.length > 0 ? dynamicSuggestions : [
+    'Operating System',
+    'Data Structures & Algorithms',
+    'Computer Organization',
+    'Analog Electronics',
+    'Digital Electronics',
+    'Engineering Mathematics',
   ];
 
   const noResults =
@@ -168,12 +190,41 @@ export const SearchScreen = () => {
         ]}
       >
         <View style={styles.centerWrapper}>
-          {/* Default State: Suggested Search Topics */}
+          {/* Default State: Recent Searches & Suggested Search Topics */}
           {!hasSearched && !loading && (
             <View style={styles.suggestedSection}>
-              <Text style={styles.suggestedHeading}>FREQUENTLY SEARCHED TOPICS</Text>
+              {recentSearches.length > 0 && (
+                <View style={{ marginBottom: 20 }}>
+                  <View style={styles.recentHeaderRow}>
+                    <Text style={styles.suggestedHeading}>RECENT SEARCHES</Text>
+                    <TouchableOpacity onPress={clearRecentSearches} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                      <Text style={styles.clearRecentText}>Clear all</Text>
+                    </TouchableOpacity>
+                  </View>
+                  <View style={styles.suggestedList}>
+                    {recentSearches.map((term, idx) => (
+                      <TouchableOpacity
+                        key={idx}
+                        style={styles.suggestedRow}
+                        activeOpacity={0.7}
+                        onPress={() => handleSuggestionPress(term)}
+                      >
+                        <View style={styles.suggestedRowLeft}>
+                          <Feather name="clock" size={13} color={COLORS.textMuted} style={{ marginRight: 10 }} />
+                          <Text style={styles.suggestedRowText}>{term}</Text>
+                        </View>
+                        <Feather name="arrow-up-left" size={14} color={COLORS.textMuted} />
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+              )}
+
+              <Text style={styles.suggestedHeading}>
+                {recentSearches.length > 0 ? 'EXPLORE LIVE SUBJECTS' : 'POPULAR SUBJECT TOPICS'}
+              </Text>
               <View style={styles.suggestedList}>
-                {SUGGESTED_QUERIES.map((term, idx) => (
+                {activeSuggestions.map((term, idx) => (
                   <TouchableOpacity
                     key={idx}
                     style={styles.suggestedRow}
@@ -181,7 +232,7 @@ export const SearchScreen = () => {
                     onPress={() => handleSuggestionPress(term)}
                   >
                     <View style={styles.suggestedRowLeft}>
-                      <Feather name="search" size={14} color={COLORS.primary} style={{ marginRight: 10 }} />
+                      <Feather name="book-open" size={13} color={COLORS.primary} style={{ marginRight: 10 }} />
                       <Text style={styles.suggestedRowText}>{term}</Text>
                     </View>
                     <Feather name="arrow-up-left" size={14} color={COLORS.textMuted} />
@@ -381,6 +432,18 @@ const styles = StyleSheet.create({
   suggestedSection: {
     paddingTop: 8,
     paddingBottom: 24,
+  },
+  recentHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  clearRecentText: {
+    fontFamily: FONTS.mono,
+    fontSize: rf(11),
+    color: COLORS.primary,
+    fontWeight: '600',
   },
   suggestedHeading: {
     fontFamily: FONTS.mono,
