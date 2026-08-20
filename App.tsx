@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -13,6 +13,8 @@ import { AllSubjectsScreen } from './src/screens/AllSubjectsScreen';
 import { QuestionListScreen } from './src/screens/QuestionListScreen';
 import { QuestionDetailScreen } from './src/screens/QuestionDetailScreen';
 import { SearchScreen } from './src/screens/SearchScreen';
+import { checkForStoreUpdate } from './src/utils/appUpdate';
+import { maybeRequestReview } from './src/utils/appReview';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -119,6 +121,13 @@ export default function App() {
 
 function AppContent() {
   const insets = useSafeAreaInsets();
+
+  useEffect(() => {
+    // Sequenced so a store-update prompt and a review prompt never show back to back.
+    checkForStoreUpdate().finally(() => {
+      maybeRequestReview();
+    });
+  }, []);
 
   return (
     <NavigationContainer>

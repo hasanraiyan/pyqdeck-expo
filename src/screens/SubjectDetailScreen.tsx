@@ -26,9 +26,9 @@ export const SubjectDetailScreen = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  const loadData = async () => {
+  const loadData = async (forceRefresh = false) => {
     try {
-      const data = await getSubjectMeta(subjectId);
+      const data = await getSubjectMeta(subjectId, forceRefresh);
       setMeta(data);
     } catch (e) {
       console.error(e);
@@ -44,7 +44,7 @@ export const SubjectDetailScreen = () => {
 
   const onRefresh = () => {
     setRefreshing(true);
-    loadData();
+    loadData(true);
   };
 
   return (

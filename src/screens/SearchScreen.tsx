@@ -13,6 +13,8 @@ import { useNavigation } from '@react-navigation/native';
 import * as Haptics from 'expo-haptics';
 import { Feather } from '@expo/vector-icons';
 import { searchAllQuestions, searchSubjects, listAllSubjects } from '../api';
+import { getDatabase } from '../db';
+import * as Cache from '../db/cacheService';
 import { COLORS, FONTS } from '../theme/colors';
 import { Badge, MarksBadge } from '../components/Badge';
 import { Skeleton } from '../components/Skeleton';
@@ -46,6 +48,18 @@ export const SearchScreen = () => {
       .catch(() => {});
   }, []);
 
+  // Load recent searches from SQLite on mount
+  useEffect(() => {
+    getDatabase()
+      .then((db) => db.getAllAsync<{ query: string }>('SELECT query FROM recent_searches ORDER BY searched_at DESC LIMIT 6'))
+      .then((rows) => {
+        if (rows && rows.length > 0) {
+          setRecentSearches(rows.map((r) => r.query));
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   const saveRecentSearch = (term: string) => {
     const trimmed = term.trim();
     if (!trimmed) return;
@@ -53,6 +67,16 @@ export const SearchScreen = () => {
       const filtered = prev.filter((t) => t.toLowerCase() !== trimmed.toLowerCase());
       return [trimmed, ...filtered].slice(0, 6);
     });
+
+    // Save to SQLite
+    getDatabase()
+      .then((db) =>
+        db.runAsync(
+          'INSERT INTO recent_searches (query, searched_at) VALUES (?, ?) ON CONFLICT(query) DO UPDATE SET searched_at = excluded.searched_at',
+          [trimmed, Date.now()]
+        )
+      )
+      .catch(() => {});
   };
 
   const handleSearch = async () => {
@@ -66,10 +90,22 @@ export const SearchScreen = () => {
         searchSubjects(q).catch(() => ({ subjects: [] })),
         searchAllQuestions(q).catch(() => ({ questions: [] })),
       ]);
-      setSubjectResults(subs.subjects || []);
-      setQuestionResults(qs.questions || []);
+      
+      // If online results found, set them
+      if ((subs.subjects && subs.subjects.length > 0) || (qs.questions && qs.questions.length > 0)) {
+        setSubjectResults(subs.subjects || []);
+        setQuestionResults(qs.questions || []);
+      } else {
+        // Fallback to local SQLite cache
+        const local = await Cache.searchLocalCache(q);
+        setSubjectResults(local.subjects.map((s) => ({ ...s, semester: { id: '', number: 0 } })));
+        setQuestionResults(local.questions.map((qu) => ({ ...qu, subject: { id: '', name: '', semesterId: '' } })));
+      }
     } catch (e) {
-      console.error(e);
+      // Complete offline fallback
+      const local = await Cache.searchLocalCache(q);
+      setSubjectResults(local.subjects.map((s) => ({ ...s, semester: { id: '', number: 0 } })));
+      setQuestionResults(local.questions.map((qu) => ({ ...qu, subject: { id: '', name: '', semesterId: '' } })));
     } finally {
       setLoading(false);
     }
@@ -91,16 +127,29 @@ export const SearchScreen = () => {
       searchSubjects(term).catch(() => ({ subjects: [] })),
       searchAllQuestions(term).catch(() => ({ questions: [] })),
     ])
-      .then(([subs, qs]) => {
-        setSubjectResults(subs.subjects || []);
-        setQuestionResults(qs.questions || []);
+      .then(async ([subs, qs]) => {
+        if ((subs.subjects && subs.subjects.length > 0) || (qs.questions && qs.questions.length > 0)) {
+          setSubjectResults(subs.subjects || []);
+          setQuestionResults(qs.questions || []);
+        } else {
+          const local = await Cache.searchLocalCache(term);
+          setSubjectResults(local.subjects.map((s) => ({ ...s, semester: { id: '', number: 0 } })));
+          setQuestionResults(local.questions.map((qu) => ({ ...qu, subject: { id: '', name: '', semesterId: '' } })));
+        }
       })
-      .catch((e) => console.error(e))
+      .catch(async () => {
+        const local = await Cache.searchLocalCache(term);
+        setSubjectResults(local.subjects.map((s) => ({ ...s, semester: { id: '', number: 0 } })));
+        setQuestionResults(local.questions.map((qu) => ({ ...qu, subject: { id: '', name: '', semesterId: '' } })));
+      })
       .finally(() => setLoading(false));
   };
 
   const clearRecentSearches = () => {
     setRecentSearches([]);
+    getDatabase()
+      .then((db) => db.runAsync('DELETE FROM recent_searches'))
+      .catch(() => {});
   };
 
   const activeSuggestions = dynamicSuggestions.length > 0 ? dynamicSuggestions : [

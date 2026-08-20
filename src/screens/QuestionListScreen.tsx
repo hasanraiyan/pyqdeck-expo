@@ -47,24 +47,25 @@ export const QuestionListScreen = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [filterModalVisible, setFilterModalVisible] = useState(false);
 
-  const loadData = async () => {
+  const loadData = async (forceRefresh = false) => {
     try {
-      const metaData = await getSubjectMeta(subjectId);
+      const metaData = await getSubjectMeta(subjectId, forceRefresh);
       setMeta(metaData);
 
       // Only default to first year if neither a specific year NOR a specific chapter was requested
       const shouldDefaultYear = selectedYear === undefined && selectedChapter === undefined;
       const defaultYear = shouldDefaultYear ? (metaData.years[0]?.year || undefined) : undefined;
-      
+
       if (shouldDefaultYear && defaultYear) {
         setSelectedYear(defaultYear);
       }
 
       const queryYear = selectedYear ?? defaultYear;
-      const questionsData = await getQuestions(subjectId, {
-        year: queryYear,
-        chapter: selectedChapter,
-      });
+      const questionsData = await getQuestions(
+        subjectId,
+        { year: queryYear, chapter: selectedChapter },
+        forceRefresh
+      );
       setQuestions(questionsData.questions);
     } catch (e) {
       console.error(e);
@@ -142,7 +143,7 @@ export const QuestionListScreen = () => {
             refreshing={refreshing}
             onRefresh={() => {
               setRefreshing(true);
-              loadData();
+              loadData(true);
             }}
             tintColor={COLORS.primary}
           />

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
+  Image,
   TouchableOpacity,
   StyleSheet,
   RefreshControl,
@@ -11,6 +12,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
 import { getSemesters, getSubjects } from '../api';
+import { getCachedSemesters, saveCachedSemesters } from '../db/cacheService';
 import { Semester } from '../types';
 import { COLORS, FONTS } from '../theme/colors';
 import { Skeleton } from '../components/Skeleton';
@@ -26,16 +28,29 @@ export const HomeScreen = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  const loadData = async () => {
+  const loadData = async (isManualRefresh = false) => {
+    // 1. Instant 0ms load from SQLite cache if available
+    if (!isManualRefresh) {
+      const cached = await getCachedSemesters();
+      if (cached && cached.length > 0) {
+        setSemestersData(cached);
+        const totalSub = cached.reduce((sum, item) => sum + item.subjectCount, 0);
+        setStats((prev) => ({ ...prev, subjects: totalSub }));
+        setLoading(false);
+      }
+    }
+
+    // 2. Fetch fresh data from API (force a real network hit on manual pull-to-refresh,
+    // otherwise this would just re-return the still-fresh cached data)
     try {
-      const semesters = await getSemesters();
+      const semesters = await getSemesters(isManualRefresh);
       let totalQuestions = 0;
       let totalSubjects = 0;
 
       const withCounts = await Promise.all(
         semesters.map(async (sem) => {
           try {
-            const subs = await getSubjects(sem.id);
+            const subs = await getSubjects(sem.id, isManualRefresh);
             totalSubjects += subs.length;
             totalQuestions += subs.reduce((n, s) => n + s.questionCount, 0);
             return { semester: sem, subjectCount: subs.length };
@@ -47,6 +62,8 @@ export const HomeScreen = () => {
 
       setSemestersData(withCounts);
       setStats({ subjects: totalSubjects, questions: totalQuestions });
+      // Save fresh data to local SQLite
+      saveCachedSemesters(withCounts);
     } catch (e) {
       console.error(e);
     } finally {
@@ -61,17 +78,24 @@ export const HomeScreen = () => {
 
   const onRefresh = () => {
     setRefreshing(true);
-    loadData();
+    loadData(true);
   };
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
-      {/* Site Header bar */}
+      {/* Site Header bar with Official PyQdeck Logo */}
       <View style={styles.siteHeader}>
         <View style={styles.headerInner}>
           <View style={styles.brandRow}>
-            <Text style={styles.brandTitle}>PYQDeck</Text>
-            <Text style={styles.brandSubtitle}>BEU PYQ ARCHIVE</Text>
+            <Image
+              source={require('../../assets/app-icon.png')}
+              style={styles.headerLogo}
+              resizeMode="contain"
+            />
+            <View>
+              <Text style={styles.brandTitle}>PyQdeck</Text>
+              <Text style={styles.brandSubtitle}>BEU PYQ ARCHIVE</Text>
+            </View>
           </View>
           <TouchableOpacity
             onPress={() => navigation.navigate('AllSubjects')}
@@ -105,6 +129,16 @@ export const HomeScreen = () => {
               Previous-year exam question papers for Bihar Engineering University (BEU)
               B.Tech students, sorted by semester, subject, and year.
             </Text>
+
+            {/* Quick Search Bar Shortcut */}
+            <TouchableOpacity
+              style={styles.heroSearchBox}
+              activeOpacity={0.75}
+              onPress={() => navigation.navigate('Search')}
+            >
+              <Feather name="search" size={16} color={COLORS.textMuted} />
+              <Text style={styles.heroSearchPlaceholder}>Search subjects, questions, theorems...</Text>
+            </TouchableOpacity>
 
             {/* Stats Bar */}
             <View style={styles.statsRow}>
@@ -223,20 +257,26 @@ const styles = StyleSheet.create({
   },
   brandRow: {
     flexDirection: 'row',
-    alignItems: 'baseline',
-    gap: 8,
+    alignItems: 'center',
+    gap: 10,
+  },
+  headerLogo: {
+    width: 32,
+    height: 32,
+    borderRadius: 6,
   },
   brandTitle: {
     fontFamily: FONTS.serif,
-    fontSize: rf(21),
+    fontSize: rf(20),
     fontWeight: '600',
     fontStyle: 'italic',
     color: COLORS.text,
     letterSpacing: -0.5,
+    lineHeight: rf(22),
   },
   brandSubtitle: {
     fontFamily: FONTS.mono,
-    fontSize: rf(9.5),
+    fontSize: rf(8.5),
     color: COLORS.textSubtle,
     letterSpacing: 1,
     textTransform: 'uppercase',
@@ -279,6 +319,23 @@ const styles = StyleSheet.create({
     color: COLORS.textMuted,
     marginTop: 8,
     lineHeight: rf(20),
+  },
+  heroSearchBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: COLORS.card,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 6,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    marginTop: 14,
+  },
+  heroSearchPlaceholder: {
+    fontFamily: FONTS.sans,
+    fontSize: rf(13),
+    color: COLORS.textMuted,
   },
   statsRow: {
     flexDirection: 'row',

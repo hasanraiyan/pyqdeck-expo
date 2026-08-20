@@ -1,8 +1,9 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
 import { Feather } from '@expo/vector-icons';
+import FitImage from 'react-native-fit-image';
 import { COLORS, FONTS } from './colors';
 import { rf } from '../utils/responsive';
 import { HighlightedCode } from '../utils/syntaxHighlighter';
@@ -484,4 +485,40 @@ export const markdownRules = {
       )}
     </View>
   ),
+
+  image: (
+    node: any,
+    children: any,
+    parent: any,
+    styles: any,
+    allowedImageHandlers: any,
+    defaultImageHandler: any
+  ) => {
+    const { src, alt } = node.attributes;
+
+    const show =
+      allowedImageHandlers &&
+      allowedImageHandlers.filter((value: string) =>
+        src.toLowerCase().startsWith(value.toLowerCase())
+      ).length > 0;
+
+    if (show === false && defaultImageHandler === null) {
+      return null;
+    }
+
+    const imageProps: Record<string, any> = {
+      indicator: true,
+      style: styles._VIEW_SAFE_image,
+      source: {
+        uri: show === true ? src : `${defaultImageHandler || ''}${src}`,
+      },
+    };
+
+    if (alt) {
+      imageProps.accessible = true;
+      imageProps.accessibilityLabel = alt;
+    }
+
+    return <FitImage key={node.key} {...imageProps} />;
+  },
 };
