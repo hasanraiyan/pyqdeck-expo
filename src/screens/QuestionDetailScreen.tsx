@@ -304,18 +304,21 @@ export const QuestionDetailScreen = () => {
                         })
                       }
                     >
-                      <View style={{ flex: 1, paddingRight: 10 }}>
-                        <Text style={styles.similarSubject}>
-                          {item.subject?.name || subjectName}
+                      {/* Top Line: Module/Subject on left, Year & Marks badge on right */}
+                      <View style={styles.similarTopMeta}>
+                        <Text style={styles.similarSubject} numberOfLines={1}>
+                          {item.chapter || item.subject?.name || subjectName}
                         </Text>
-                        <Text style={styles.similarText} numberOfLines={1}>
-                          {cleanMarkdown(item.textPreview || item.text)}
-                        </Text>
+                        <View style={styles.similarBadgeGroup}>
+                          <Badge label={item.year} variant="secondary" />
+                          <MarksBadge marks={item.marks} />
+                        </View>
                       </View>
-                      <View style={styles.badgeGroup}>
-                        <Badge label={item.year} variant="secondary" />
-                        <MarksBadge marks={item.marks} />
-                      </View>
+
+                      {/* Bottom Line: Question Preview Text */}
+                      <Text style={styles.similarText} numberOfLines={2}>
+                        {cleanMarkdown(item.textPreview || item.text)}
+                      </Text>
                     </TouchableOpacity>
                   ))}
                 </View>
@@ -825,25 +828,37 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   similarRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
     paddingHorizontal: 14,
     paddingVertical: 12,
     borderBottomWidth: 1,
     borderColor: COLORS.border,
   },
+  similarTopMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 6,
+  },
   similarSubject: {
-    fontFamily: 'Courier',
-    fontSize: 10.5,
+    flex: 1,
+    fontFamily: FONTS.mono,
+    fontSize: rf(10),
+    fontWeight: '700',
     textTransform: 'uppercase',
     letterSpacing: 0.8,
-    color: COLORS.textMuted,
-    marginBottom: 3,
+    color: COLORS.textSubtle,
+    paddingRight: 8,
+  },
+  similarBadgeGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    flexShrink: 0,
   },
   similarText: {
-    fontSize: 13,
+    fontSize: rf(13.5),
     color: COLORS.text,
+    lineHeight: rf(19),
   },
   centerWrapper: {
     width: '100%',
