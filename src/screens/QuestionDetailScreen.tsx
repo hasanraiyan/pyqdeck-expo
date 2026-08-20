@@ -136,12 +136,7 @@ export const QuestionDetailScreen = () => {
 
   return (
     <View style={styles.container}>
-      <ScrollView
-        contentContainerStyle={[
-          styles.scroll,
-          { paddingBottom: 24 },
-        ]}
-      >
+      <ScrollView contentContainerStyle={styles.scroll}>
         <View style={styles.centerWrapper}>
           {/* Breadcrumb / Paper info */}
           <View style={styles.metaRow}>
@@ -402,7 +397,8 @@ const styles = StyleSheet.create({
   },
   scroll: {
     paddingHorizontal: 16,
-    paddingVertical: 16,
+    paddingTop: 4,
+    paddingBottom: 24,
   },
   metaRow: {
     marginBottom: 8,
@@ -751,6 +747,12 @@ const markdownStyles = {
     color: COLORS.text,
     fontSize: 15,
     lineHeight: 24,
+    marginTop: 0,
+    paddingTop: 0,
+  },
+  paragraph: {
+    marginTop: 0,
+    marginBottom: 8,
   },
   code_inline: {
     backgroundColor: COLORS.cardSecondary,
