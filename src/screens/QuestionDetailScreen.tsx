@@ -150,31 +150,32 @@ export const QuestionDetailScreen = () => {
           <View style={styles.questionCard}>
             {/* Top row inside card: Q-Number on left, Year & Marks badge on right */}
             <View style={styles.qNumRow}>
-              {question.qNumber ? (
+              <View style={styles.qNumLeftGroup}>
                 <Text style={styles.qNumber}>
-                  {String(question.qNumber).startsWith('Q')
-                    ? question.qNumber
-                    : `Q${question.qNumber}`}
+                  {question.qNumber
+                    ? String(question.qNumber).startsWith('Q')
+                      ? question.qNumber
+                      : `Q${question.qNumber}`
+                    : 'QUESTION'}
                 </Text>
-              ) : (
-                <Text style={styles.qNumber}>QUESTION</Text>
-              )}
-              <View style={styles.cardBadgeGroup}>
-                <TouchableOpacity
-                  onPress={() =>
-                    navigation.navigate('QuestionList', {
-                      semesterId,
-                      subjectId,
-                      subjectName,
-                      initialYear: question.year,
-                    })
-                  }
-                  activeOpacity={0.7}
-                >
-                  <Badge label={question.year} variant="secondary" />
-                </TouchableOpacity>
-                <MarksBadge marks={question.marks} />
+                {question.year ? (
+                  <TouchableOpacity
+                    onPress={() =>
+                      navigation.navigate('QuestionList', {
+                        semesterId,
+                        subjectId,
+                        subjectName,
+                        initialYear: question.year,
+                      })
+                    }
+                    activeOpacity={0.7}
+                  >
+                    <Text style={styles.qYearText}>{question.year}</Text>
+                  </TouchableOpacity>
+                ) : null}
               </View>
+
+              <MarksBadge marks={question.marks} />
             </View>
 
             <Markdown style={markdownStyles}>{cleanMarkdown(question.text)}</Markdown>
@@ -218,17 +219,6 @@ export const QuestionDetailScreen = () => {
 
             {/* Action buttons */}
             <View style={styles.actionsRow}>
-              <TouchableOpacity style={styles.actionButton} onPress={handleCopy}>
-                {copied ? (
-                  <Feather name="check" size={14} color={COLORS.primary} />
-                ) : (
-                  <Feather name="copy" size={14} color={COLORS.textMuted} />
-                )}
-                <Text style={[styles.actionText, copied && { color: COLORS.primary }]}>
-                  {copied ? 'Copied' : 'Copy'}
-                </Text>
-              </TouchableOpacity>
-
               <TouchableOpacity
                 onPress={async () => {
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -252,10 +242,23 @@ export const QuestionDetailScreen = () => {
                 <AskAiBadge />
               </TouchableOpacity>
 
-              <TouchableOpacity style={styles.actionButton} onPress={handleShare}>
-                <Feather name="share-2" size={14} color={COLORS.textMuted} />
-                <Text style={styles.actionText}>Share</Text>
-              </TouchableOpacity>
+              <View style={styles.actionButtonsRight}>
+                <TouchableOpacity style={styles.actionButton} onPress={handleCopy} activeOpacity={0.7}>
+                  {copied ? (
+                    <Feather name="check" size={13} color={COLORS.primary} />
+                  ) : (
+                    <Feather name="copy" size={13} color={COLORS.textMuted} />
+                  )}
+                  <Text style={[styles.actionText, copied && { color: COLORS.primary }]}>
+                    {copied ? 'Copied' : 'Copy'}
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity style={styles.actionButton} onPress={handleShare} activeOpacity={0.7}>
+                  <Feather name="share-2" size={13} color={COLORS.textMuted} />
+                  <Text style={styles.actionText}>Share</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
 
@@ -427,11 +430,28 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: COLORS.borderLight,
   },
+  qNumLeftGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   qNumber: {
     fontFamily: FONTS.mono,
     fontSize: 13,
     fontWeight: '700',
     color: COLORS.primary,
+  },
+  qYearText: {
+    fontFamily: FONTS.mono,
+    fontSize: 11,
+    fontWeight: '600',
+    color: COLORS.textMuted,
+    backgroundColor: COLORS.cardSecondary,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 3,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
   },
   cardBadgeGroup: {
     flexDirection: 'row',
@@ -487,31 +507,33 @@ const styles = StyleSheet.create({
   actionsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    justifyContent: 'space-between',
     marginTop: 16,
     paddingTop: 12,
     borderTopWidth: 1,
     borderColor: COLORS.border,
   },
+  actionButtonsRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   actionButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    paddingVertical: 6,
-    paddingHorizontal: 12,
+    gap: 5,
+    paddingVertical: 5,
+    paddingHorizontal: 10,
     borderRadius: 4,
     backgroundColor: COLORS.cardSecondary,
     borderWidth: 1,
     borderColor: COLORS.border,
   },
-  askAiActionButton: {
-    backgroundColor: COLORS.primaryLight,
-    borderColor: COLORS.primary,
-  },
   actionText: {
-    fontSize: 12,
+    fontSize: 11.5,
+    fontFamily: FONTS.mono,
     color: COLORS.textMuted,
-    fontWeight: '500',
+    fontWeight: '600',
   },
   modalBackdrop: {
     flex: 1,
