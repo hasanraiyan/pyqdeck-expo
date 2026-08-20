@@ -62,32 +62,83 @@ jobs:
       - name: 🚀 Prebuild Android project
         run: npx expo prebuild --platform android --clean
 
-      - name: 🔐 Setup Release Keystore
+      - name: 🔐 Setup Release Keystore & Gradle Signing
         env:
           KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
           if [ -n "$KEYSTORE_BASE64" ]; then
             echo "$KEYSTORE_BASE64" | base64 --decode > android/app/release.keystore
-            echo "Release keystore configured."
+            echo "Release keystore file created."
+            
+            # Inject release signing properties into gradle.properties
+            echo "" >> android/gradle.properties
+            echo "MYAPP_UPLOAD_STORE_FILE=release.keystore" >> android/gradle.properties
+            echo "MYAPP_UPLOAD_KEY_ALIAS=$KEY_ALIAS" >> android/gradle.properties
+            echo "MYAPP_UPLOAD_STORE_PASSWORD=$KEYSTORE_PASSWORD" >> android/gradle.properties
+            echo "MYAPP_UPLOAD_KEY_PASSWORD=$KEY_PASSWORD" >> android/gradle.properties
+            
+            # Also inject standard Expo / React Native signing config properties
+            echo "RELEASE_STORE_FILE=release.keystore" >> android/gradle.properties
+            echo "RELEASE_KEY_ALIAS=$KEY_ALIAS" >> android/gradle.properties
+            echo "RELEASE_STORE_PASSWORD=$KEYSTORE_PASSWORD" >> android/gradle.properties
+            echo "RELEASE_KEY_PASSWORD=$KEY_PASSWORD" >> android/gradle.properties
+
+            # Configure android/app/build.gradle to explicitly use release signing
+            node -e "
+              const fs = require('fs');
+              const file = 'android/app/build.gradle';
+              let content = fs.readFileSync(file, 'utf8');
+              const signingConfigBlock = \`
+                  signingConfigs {
+                      debug {
+                          storeFile file('debug.keystore')
+                          storePassword 'android'
+                          keyAlias 'androiddebugkey'
+                          keyPassword 'android'
+                      }
+                      release {
+                          if (project.hasProperty('MYAPP_UPLOAD_STORE_FILE')) {
+                              storeFile file(MYAPP_UPLOAD_STORE_FILE)
+                              storePassword MYAPP_UPLOAD_STORE_PASSWORD
+                              keyAlias MYAPP_UPLOAD_KEY_ALIAS
+                              keyPassword MYAPP_UPLOAD_KEY_PASSWORD
+                          } else if (project.hasProperty('RELEASE_STORE_FILE')) {
+                              storeFile file(RELEASE_STORE_FILE)
+                              storePassword RELEASE_STORE_PASSWORD
+                              keyAlias RELEASE_KEY_ALIAS
+                              keyPassword RELEASE_KEY_PASSWORD
+                          }
+                      }
+                  }
+              \`;
+              // Replace signingConfigs block or insert before buildTypes
+              if (content.includes('signingConfigs {')) {
+                content = content.replace(/signingConfigs\s*\{[\s\S]*?\n\s*\}/, signingConfigBlock.trim());
+              }
+              // Ensure buildTypes.release uses signingConfigs.release
+              content = content.replace(/buildTypes\s*\{[\s\S]*?release\s*\{[\s\S]*?signingConfig\s+signingConfigs\.debug/, (match) => {
+                return match.replace('signingConfig signingConfigs.debug', 'signingConfig signingConfigs.release');
+              });
+              fs.writeFileSync(file, content);
+              console.log('Updated android/app/build.gradle with custom release signingConfig');
+            "
           else
-            echo "No custom keystore provided in secrets; building with default signing."
+            echo "WARNING: No custom keystore provided in secrets!"
           fi
 
       - name: 🔨 Build Release APK & AAB
         working-directory: android
-        env:
-          SIGNING_STORE_FILE: release.keystore
-          SIGNING_STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          SIGNING_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-          SIGNING_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
           BUILD_CHOICE="${{ github.event.inputs.build_type }}"
           if [ "$BUILD_CHOICE" = "apk" ]; then
-            ./gradlew assembleRelease --no-daemon
+            ./gradlew assembleRelease --no-daemon -PMYAPP_UPLOAD_STORE_FILE=release.keystore -PMYAPP_UPLOAD_KEY_ALIAS="${{ secrets.ANDROID_KEY_ALIAS }}" -PMYAPP_UPLOAD_STORE_PASSWORD="${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" -PMYAPP_UPLOAD_KEY_PASSWORD="${{ secrets.ANDROID_KEY_PASSWORD }}"
           elif [ "$BUILD_CHOICE" = "aab" ]; then
-            ./gradlew bundleRelease --no-daemon
+            ./gradlew bundleRelease --no-daemon -PMYAPP_UPLOAD_STORE_FILE=release.keystore -PMYAPP_UPLOAD_KEY_ALIAS="${{ secrets.ANDROID_KEY_ALIAS }}" -PMYAPP_UPLOAD_STORE_PASSWORD="${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" -PMYAPP_UPLOAD_KEY_PASSWORD="${{ secrets.ANDROID_KEY_PASSWORD }}"
           else
-            ./gradlew assembleRelease bundleRelease --no-daemon
+            ./gradlew assembleRelease bundleRelease --no-daemon -PMYAPP_UPLOAD_STORE_FILE=release.keystore -PMYAPP_UPLOAD_KEY_ALIAS="${{ secrets.ANDROID_KEY_ALIAS }}" -PMYAPP_UPLOAD_STORE_PASSWORD="${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" -PMYAPP_UPLOAD_KEY_PASSWORD="${{ secrets.ANDROID_KEY_PASSWORD }}"
           fi
 
       - name: 📤 Upload Release APK
