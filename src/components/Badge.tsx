@@ -41,15 +41,15 @@ export const MarksBadge: React.FC<{ marks: number | null | undefined }> = ({ mar
 
 const styles = StyleSheet.create({
   badge: {
-    paddingHorizontal: 7,
-    paddingVertical: 2,
-    borderRadius: 3,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 4,
     borderWidth: 1,
     borderColor: 'transparent',
     alignSelf: 'flex-start',
   },
   text: {
-    fontSize: 10.5,
+    fontSize: 11.5,
     fontWeight: '600',
     fontFamily: FONTS.mono,
   },
@@ -82,16 +82,16 @@ const styles = StyleSheet.create({
     color: COLORS.secondary,
   },
   marksContainer: {
-    width: 38,
-    height: 20,
+    width: 44,
+    height: 22,
     alignItems: 'center',
     justifyContent: 'center',
   },
   marksText: {
-    fontSize: 10.5,
+    fontSize: 12,
     fontFamily: FONTS.mono,
     fontWeight: '700',
     color: COLORS.primary,
-    lineHeight: 14,
+    lineHeight: 16,
   },
 });

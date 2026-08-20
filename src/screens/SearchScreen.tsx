@@ -173,21 +173,22 @@ export const SearchScreen = () => {
                     <Text style={styles.resultTextPreview} numberOfLines={2}>
                       {q.textPreview || q.text}
                     </Text>
-                    <View style={styles.resultBadgeRow}>
-                      <View style={styles.resultBadgeLeft}>
-                        {q.chapter ? (
-                          <View style={styles.chapterPill}>
-                            <Text style={styles.chapterPillText} numberOfLines={1}>
-                              {q.chapter}
-                            </Text>
-                          </View>
-                        ) : null}
-                      </View>
-                      <View style={styles.resultBadgeRight}>
-                        <Badge label={q.year} variant="secondary" />
-                        <MarksBadge marks={q.marks} />
-                      </View>
-                    </View>
+                    <ScrollView
+                      horizontal
+                      showsHorizontalScrollIndicator={false}
+                      contentContainerStyle={styles.resultBadgeScroll}
+                      nestedScrollEnabled
+                    >
+                      <Badge label={q.year} variant="secondary" />
+                      {q.chapter ? (
+                        <View style={styles.chapterPill}>
+                          <Text style={styles.chapterPillText}>
+                            {q.chapter}
+                          </Text>
+                        </View>
+                      ) : null}
+                      <MarksBadge marks={q.marks} />
+                    </ScrollView>
                   </TouchableOpacity>
                 ))}
               </View>
@@ -329,41 +330,30 @@ const styles = StyleSheet.create({
     color: COLORS.text,
     lineHeight: rf(21),
   },
-  resultBadgeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 8,
-    marginTop: 10,
-  },
-  resultBadgeLeft: {
-    flex: 1,
-    paddingRight: 6,
-  },
-  resultBadgeRight: {
+  resultBadgeScroll: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    flexShrink: 0,
+    marginTop: 10,
+    paddingRight: 10,
   },
   chapterPill: {
     backgroundColor: COLORS.cardSecondary,
     borderWidth: 1,
     borderColor: COLORS.border,
     borderRadius: 3,
-    paddingHorizontal: 6,
-    height: 20,
+    paddingHorizontal: 8,
+    height: 22,
     justifyContent: 'center',
     alignSelf: 'flex-start',
-    maxWidth: '100%',
   },
   chapterPillText: {
     fontFamily: FONTS.mono,
-    fontSize: rf(10),
+    fontSize: rf(11),
     color: COLORS.textSubtle,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
-    lineHeight: 14,
+    lineHeight: 15,
   },
   resultCardSkeleton: {
     backgroundColor: COLORS.card,
