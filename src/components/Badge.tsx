@@ -39,6 +39,34 @@ export const MarksBadge: React.FC<{ marks: number | null | undefined }> = ({ mar
   );
 };
 
+// Signature element: Hand-drawn / stamped Ask AI action badge button
+export const AskAiBadge: React.FC<{ onPress?: () => void; label?: string }> = ({
+  onPress,
+  label = 'Ask AI',
+}) => {
+  return (
+    <View style={styles.askAiContainer}>
+      <Svg
+        viewBox="0 0 84 34"
+        style={StyleSheet.absoluteFill}
+        fill="none"
+      >
+        <Path
+          d="M6 17C4 8 18 4 42 4C66 4 80 8 78 17C76 26 66 30 42 30C18 30 8 26 6 17Z"
+          stroke={COLORS.primary}
+          strokeWidth="1.6"
+          strokeDasharray="2,2"
+          strokeLinecap="round"
+        />
+      </Svg>
+      <View style={styles.askAiInner}>
+        <Text style={styles.askAiSparkle}>✦</Text>
+        <Text style={styles.askAiText}>{label}</Text>
+      </View>
+    </View>
+  );
+};
+
 const styles = StyleSheet.create({
   badge: {
     paddingHorizontal: 8,
@@ -93,5 +121,30 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: COLORS.primary,
     lineHeight: 16,
+  },
+  askAiContainer: {
+    width: 68,
+    height: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.primaryLight,
+    borderRadius: 11,
+  },
+  askAiInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+  },
+  askAiSparkle: {
+    fontSize: 9,
+    color: COLORS.primary,
+    fontWeight: '700',
+  },
+  askAiText: {
+    fontSize: 10.5,
+    fontFamily: FONTS.mono,
+    fontWeight: '700',
+    color: COLORS.primary,
+    letterSpacing: 0.5,
   },
 });

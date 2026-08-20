@@ -9,13 +9,14 @@ import {
 } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
+import * as WebBrowser from 'expo-web-browser';
 import { Feather } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import Markdown from 'react-native-markdown-display';
 import { QuestionSummary, Solution } from '../types';
 import { getSolution } from '../api';
 import { COLORS, FONTS } from '../theme/colors';
-import { Badge, MarksBadge } from './Badge';
+import { Badge, MarksBadge, AskAiBadge } from './Badge';
 import { cleanMarkdown } from '../utils/responsive';
 
 interface QuestionItemProps {
@@ -71,6 +72,24 @@ export const QuestionItem: React.FC<QuestionItemProps> = ({
       });
     } catch (e) {
       console.error(e);
+    }
+  };
+
+  const handleAskAi = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    if (question?.text) {
+      const coursifyUrl = `https://hasanraiyan.me/coursify?search_ai=${encodeURIComponent(question.text)}&send=true`;
+      try {
+        await WebBrowser.openBrowserAsync(coursifyUrl, {
+          toolbarColor: COLORS.card,
+          controlsColor: COLORS.primary,
+          secondaryToolbarColor: COLORS.background,
+          showTitle: true,
+          enableBarCollapsing: true,
+        });
+      } catch (err) {
+        console.error(err);
+      }
     }
   };
 
@@ -143,6 +162,10 @@ export const QuestionItem: React.FC<QuestionItemProps> = ({
               <Text style={[styles.actionText, copied && { color: COLORS.primary }]}>
                 {copied ? 'Copied' : 'Copy'}
               </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity onPress={handleAskAi} activeOpacity={0.7}>
+              <AskAiBadge />
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.actionButton} onPress={handleShare}>

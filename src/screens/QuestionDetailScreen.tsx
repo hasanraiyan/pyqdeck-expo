@@ -25,7 +25,7 @@ import {
 } from '../api';
 import { QuestionSummary, Solution } from '../types';
 import { COLORS, FONTS } from '../theme/colors';
-import { Badge, MarksBadge } from '../components/Badge';
+import { Badge, MarksBadge, AskAiBadge } from '../components/Badge';
 import { PrevNextNav } from '../components/PrevNextNav';
 import { SolutionSkeleton } from '../components/Skeleton';
 import { rf, cleanMarkdown } from '../utils/responsive';
@@ -233,7 +233,6 @@ export const QuestionDetailScreen = () => {
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={[styles.actionButton, styles.askAiActionButton]}
                 onPress={async () => {
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                   if (question?.text) {
@@ -251,11 +250,9 @@ export const QuestionDetailScreen = () => {
                     }
                   }
                 }}
+                activeOpacity={0.7}
               >
-                <Feather name="cpu" size={14} color={COLORS.primary} />
-                <Text style={[styles.actionText, { color: COLORS.primary, fontWeight: '700' }]}>
-                  Ask AI
-                </Text>
+                <AskAiBadge />
               </TouchableOpacity>
 
               <TouchableOpacity style={styles.actionButton} onPress={handleShare}>
