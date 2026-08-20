@@ -1,24 +1,22 @@
-name: Build Signed Android APK & AAB
+﻿name: Build Android Release
 
 on:
   workflow_dispatch:
     inputs:
       build_type:
-        description: 'Build format to produce'
+        description: 'Build format'
         required: true
-        default: 'both'
+        default: 'aab'
         type: choice
         options:
-          - both
-          - apk
           - aab
+          - apk
+          - both
 
 jobs:
   build:
     name: Build Android (${{ github.run_number }})
     runs-on: ubuntu-latest
-    env:
-      ACTIONS_RUNNER_FORCE_ACTIONS_NODE_VERSION: node24
     steps:
       - name: 🏗 Checkout repository
         uses: actions/checkout@v4
@@ -62,7 +60,7 @@ jobs:
       - name: 🚀 Prebuild Android project
         run: npx expo prebuild --platform android --clean
 
-      - name: 🔐 Setup Release Keystore & Gradle Signing
+      - name: 🔐 Setup Release Keystore
         env:
           KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
@@ -71,44 +69,39 @@ jobs:
         run: |
           if [ -n "$KEYSTORE_BASE64" ]; then
             echo "$KEYSTORE_BASE64" | base64 --decode > android/app/release.keystore
-            echo "Release keystore file created."
+            echo "Release keystore decoded."
             
-            # Inject release signing properties into gradle.properties
+            # Map Gradle signing properties
             echo "" >> android/gradle.properties
             echo "MYAPP_UPLOAD_STORE_FILE=release.keystore" >> android/gradle.properties
             echo "MYAPP_UPLOAD_KEY_ALIAS=$KEY_ALIAS" >> android/gradle.properties
             echo "MYAPP_UPLOAD_STORE_PASSWORD=$KEYSTORE_PASSWORD" >> android/gradle.properties
             echo "MYAPP_UPLOAD_KEY_PASSWORD=$KEY_PASSWORD" >> android/gradle.properties
 
-            # Configure android/app/build.gradle with exact release signingConfig
+            # Configure build.gradle with release signingConfig
             node -e "
               const fs = require('fs');
               const file = 'android/app/build.gradle';
-              let content = fs.readFileSync(file, 'utf8');
-
-              // 1. Add release block inside signingConfigs
-              const releaseSigningConfig = \`
-        release {
-            if (project.hasProperty('MYAPP_UPLOAD_STORE_FILE')) {
-                storeFile file(MYAPP_UPLOAD_STORE_FILE)
-                storePassword MYAPP_UPLOAD_STORE_PASSWORD
-                keyAlias MYAPP_UPLOAD_KEY_ALIAS
-                keyPassword MYAPP_UPLOAD_KEY_PASSWORD
-            }
-        }\`;
-
-              if (content.includes('signingConfigs {')) {
-                content = content.replace('signingConfigs {', 'signingConfigs {' + releaseSigningConfig);
+              let lines = fs.readFileSync(file, 'utf8').split('\n');
+              let out = [];
+              for (let line of lines) {
+                out.push(line);
+                if (line.trim() === 'signingConfigs {') {
+                  out.push('        release {');
+                  out.push('            if (project.hasProperty(\"MYAPP_UPLOAD_STORE_FILE\")) {');
+                  out.push('                storeFile file(MYAPP_UPLOAD_STORE_FILE)');
+                  out.push('                storePassword MYAPP_UPLOAD_STORE_PASSWORD');
+                  out.push('                keyAlias MYAPP_UPLOAD_KEY_ALIAS');
+                  out.push('                keyPassword MYAPP_UPLOAD_KEY_PASSWORD');
+                  out.push('            }');
+                  out.push('        }');
+                }
               }
-
-              // 2. Set release buildType to use signingConfigs.release
+              let content = out.join('\n');
               content = content.replace(/(buildTypes\s*\{[\s\S]*?release\s*\{[\s\S]*?signingConfig\s+)signingConfigs\.[a-zA-Z0-9_]+/, '\$1signingConfigs.release');
-
               fs.writeFileSync(file, content);
-              console.log('Successfully updated android/app/build.gradle with release signingConfig');
+              console.log('Successfully configured release signing in android/app/build.gradle');
             "
-          else
-            echo "WARNING: No custom keystore provided in secrets!"
           fi
 
       - name: 🔨 Build Release APK & AAB
@@ -138,4 +131,3 @@ jobs:
           name: pyqdeck-v${{ github.run_number }}-aab
           path: android/app/build/outputs/bundle/release/*.aab
           retention-days: 14
-
