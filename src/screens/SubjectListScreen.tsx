@@ -74,6 +74,26 @@ export const SubjectListScreen = () => {
                 tintColor={COLORS.primary}
               />
             }
+            ListEmptyComponent={
+              <View style={styles.comingSoonContainer}>
+                <View style={styles.comingSoonBadge}>
+                  <Feather name="clock" size={14} color={COLORS.primary} />
+                  <Text style={styles.comingSoonBadgeText}>COMING SOON</Text>
+                </View>
+                <Text style={styles.comingSoonTitle}>No subjects added yet</Text>
+                <Text style={styles.comingSoonDesc}>
+                  We are actively curating previous year questions for Semester {semesterNumber}. Check back soon or browse other active semesters.
+                </Text>
+                <TouchableOpacity
+                  style={styles.browseAllBtn}
+                  activeOpacity={0.7}
+                  onPress={() => navigation.navigate('AllSubjects')}
+                >
+                  <Text style={styles.browseAllBtnText}>Browse all available subjects</Text>
+                  <Feather name="arrow-right" size={14} color={COLORS.text} />
+                </TouchableOpacity>
+              </View>
+            }
             renderItem={({ item }) => (
               <TouchableOpacity
                 style={styles.card}
@@ -181,5 +201,63 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.mono,
     fontSize: 12,
     color: COLORS.textMuted,
+  },
+  comingSoonContainer: {
+    paddingHorizontal: 20,
+    paddingTop: 36,
+    paddingBottom: 24,
+    alignItems: 'center',
+  },
+  comingSoonBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: COLORS.card,
+    borderWidth: 1,
+    borderColor: COLORS.primaryLight,
+    borderRadius: 4,
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+    marginBottom: 14,
+  },
+  comingSoonBadgeText: {
+    fontFamily: FONTS.mono,
+    fontSize: 11,
+    fontWeight: '700',
+    color: COLORS.primary,
+    letterSpacing: 1,
+  },
+  comingSoonTitle: {
+    fontFamily: FONTS.serif,
+    fontSize: 22,
+    fontStyle: 'italic',
+    color: COLORS.text,
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  comingSoonDesc: {
+    fontSize: 13.5,
+    color: COLORS.textMuted,
+    textAlign: 'center',
+    lineHeight: 20,
+    maxWidth: 320,
+    marginBottom: 20,
+  },
+  browseAllBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: COLORS.card,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 4,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+  },
+  browseAllBtnText: {
+    fontFamily: FONTS.mono,
+    fontSize: 12,
+    fontWeight: '600',
+    color: COLORS.text,
   },
 });

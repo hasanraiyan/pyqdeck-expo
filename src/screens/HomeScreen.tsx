@@ -142,27 +142,39 @@ export const HomeScreen = () => {
               </View>
             ) : (
               <View style={styles.grid}>
-                {semestersData.map(({ semester, subjectCount }) => (
-                  <TouchableOpacity
-                    key={semester.id}
-                    style={styles.gridCard}
-                    activeOpacity={0.7}
-                    onPress={() =>
-                      navigation.navigate('SubjectList', {
-                        semesterId: semester.id,
-                        semesterNumber: semester.number,
-                      })
-                    }
-                  >
-                    <Text style={styles.cardLabel}>SEMESTER</Text>
-                    <Text style={styles.cardSemesterNumber}>
-                      {semester.number}
-                    </Text>
-                    <Text style={styles.cardSublabel}>
-                      {subjectCount} subject{subjectCount === 1 ? '' : 's'}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
+                {semestersData.map(({ semester, subjectCount }) => {
+                  const isComingSoon = subjectCount === 0;
+                  return (
+                    <TouchableOpacity
+                      key={semester.id}
+                      style={[styles.gridCard, isComingSoon && styles.gridCardComingSoon]}
+                      activeOpacity={0.7}
+                      onPress={() =>
+                        navigation.navigate('SubjectList', {
+                          semesterId: semester.id,
+                          semesterNumber: semester.number,
+                        })
+                      }
+                    >
+                      <View style={styles.cardHeaderRow}>
+                        <Text style={styles.cardLabel}>SEMESTER</Text>
+                        {isComingSoon && (
+                          <View style={styles.comingSoonTag}>
+                            <Text style={styles.comingSoonTagText}>SOON</Text>
+                          </View>
+                        )}
+                      </View>
+                      <Text style={[styles.cardSemesterNumber, isComingSoon && styles.cardSemesterNumberSoon]}>
+                        {semester.number}
+                      </Text>
+                      <Text style={styles.cardSublabel}>
+                        {isComingSoon
+                          ? 'Coming Soon'
+                          : `${subjectCount} subject${subjectCount === 1 ? '' : 's'}`}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
             )}
           </View>
@@ -320,6 +332,29 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  gridCardComingSoon: {
+    backgroundColor: COLORS.cardSecondary,
+    borderStyle: 'dashed',
+  },
+  cardHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  comingSoonTag: {
+    backgroundColor: COLORS.card,
+    borderWidth: 1,
+    borderColor: COLORS.borderLight,
+    borderRadius: 3,
+    paddingHorizontal: 4,
+    paddingVertical: 1,
+  },
+  comingSoonTagText: {
+    fontFamily: FONTS.mono,
+    fontSize: rf(8),
+    color: COLORS.textSubtle,
+    fontWeight: '700',
+  },
   gridCardSkeleton: {
     width: isTablet ? '23.5%' : '48.5%',
     backgroundColor: COLORS.card,
@@ -345,6 +380,9 @@ const styles = StyleSheet.create({
     fontWeight: '400',
     color: COLORS.text,
     marginVertical: 2,
+  },
+  cardSemesterNumberSoon: {
+    color: COLORS.textMuted,
   },
   cardSublabel: {
     fontFamily: FONTS.mono,
