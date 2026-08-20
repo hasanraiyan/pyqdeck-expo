@@ -13,6 +13,7 @@ import { useRoute, useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
+import * as WebBrowser from 'expo-web-browser';
 import { Feather } from '@expo/vector-icons';
 import Markdown from 'react-native-markdown-display';
 import {
@@ -233,11 +234,21 @@ export const QuestionDetailScreen = () => {
 
               <TouchableOpacity
                 style={[styles.actionButton, styles.askAiActionButton]}
-                onPress={() => {
+                onPress={async () => {
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                   if (question?.text) {
                     const coursifyUrl = `https://hasanraiyan.me/coursify?search_ai=${encodeURIComponent(question.text)}&send=true`;
-                    Linking.openURL(coursifyUrl).catch((err) => console.error(err));
+                    try {
+                      await WebBrowser.openBrowserAsync(coursifyUrl, {
+                        toolbarColor: COLORS.card,
+                        controlsColor: COLORS.primary,
+                        secondaryToolbarColor: COLORS.background,
+                        showTitle: true,
+                        enableBarCollapsing: true,
+                      });
+                    } catch (err) {
+                      Linking.openURL(coursifyUrl).catch((e) => console.error(e));
+                    }
                   }
                 }}
               >
