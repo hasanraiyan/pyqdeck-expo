@@ -28,8 +28,7 @@
       "favicon": "./assets/app-icon.png"
     },
     "plugins": [
-      "expo-web-browser",
-      "expo-sqlite"
+      "expo-web-browser"
     ]
   }
 }
