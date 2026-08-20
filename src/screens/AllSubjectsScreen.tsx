@@ -7,9 +7,9 @@ import {
   TouchableOpacity,
   StyleSheet,
   RefreshControl,
+  ActivityIndicator,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { listAllSubjects } from '../api';
 import { SubjectSummary, Semester } from '../types';
@@ -18,7 +18,6 @@ import { Skeleton } from '../components/Skeleton';
 import { Badge } from '../components/Badge';
 
 export const AllSubjectsScreen = () => {
-  const insets = useSafeAreaInsets();
   const navigation = useNavigation<any>();
   const [query, setQuery] = useState('');
   const [page, setPage] = useState(1);
@@ -26,30 +25,55 @@ export const AllSubjectsScreen = () => {
   const [pageCount, setPageCount] = useState(1);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
-  const loadData = async (q = query, p = page) => {
-    setLoading(true);
+  const loadData = async (q: string, p: number, append = false) => {
+    if (append) {
+      setLoadingMore(true);
+    } else {
+      setLoading(true);
+    }
+
     try {
       const res = await listAllSubjects({ q: q.trim() || undefined, page: p });
-      setSubjects(res.subjects || []);
+      if (append) {
+        setSubjects((prev) => [...prev, ...(res.subjects || [])]);
+      } else {
+        setSubjects(res.subjects || []);
+      }
       setPageCount(res.pageCount || 1);
       setTotal(res.total || 0);
     } catch (e) {
       console.error(e);
     } finally {
       setLoading(false);
+      setLoadingMore(false);
       setRefreshing(false);
     }
   };
 
   useEffect(() => {
-    loadData(query, page);
-  }, [page]);
+    loadData(query, 1, false);
+  }, []);
 
   const handleSearch = () => {
     setPage(1);
-    loadData(query, 1);
+    loadData(query, 1, false);
+  };
+
+  const handleEndReached = () => {
+    if (!loading && !loadingMore && page < pageCount) {
+      const nextPage = page + 1;
+      setPage(nextPage);
+      loadData(query, nextPage, true);
+    }
+  };
+
+  const handleRefresh = () => {
+    setRefreshing(true);
+    setPage(1);
+    loadData(query, 1, false);
   };
 
   return (
@@ -67,7 +91,13 @@ export const AllSubjectsScreen = () => {
             placeholder="Filter by subject name or code..."
             placeholderTextColor={COLORS.textSubtle}
             value={query}
-            onChangeText={setQuery}
+            onChangeText={(text) => {
+              setQuery(text);
+              if (!text) {
+                setPage(1);
+                loadData('', 1, false);
+              }
+            }}
             onSubmitEditing={handleSearch}
             returnKeyType="search"
             style={styles.searchInput}
@@ -76,7 +106,7 @@ export const AllSubjectsScreen = () => {
       </View>
 
       <View style={styles.content}>
-        {loading ? (
+        {loading && !refreshing ? (
           <View style={{ padding: 16 }}>
             {[1, 2, 3, 4, 5, 6].map((i) => (
               <View key={i} style={styles.skeletonCard}>
@@ -89,14 +119,13 @@ export const AllSubjectsScreen = () => {
           <FlatList
             data={subjects}
             keyExtractor={(item) => item.id}
-            contentContainerStyle={{ paddingBottom: 16 }}
+            contentContainerStyle={{ paddingBottom: 24 }}
+            onEndReached={handleEndReached}
+            onEndReachedThreshold={0.4}
             refreshControl={
               <RefreshControl
                 refreshing={refreshing}
-                onRefresh={() => {
-                  setRefreshing(true);
-                  loadData(query, page);
-                }}
+                onRefresh={handleRefresh}
                 tintColor={COLORS.primary}
               />
             }
@@ -104,6 +133,14 @@ export const AllSubjectsScreen = () => {
               <View style={styles.emptyState}>
                 <Text style={styles.emptyText}>No subjects found.</Text>
               </View>
+            }
+            ListFooterComponent={
+              loadingMore ? (
+                <View style={styles.loadingMoreFooter}>
+                  <ActivityIndicator size="small" color={COLORS.primary} />
+                  <Text style={styles.loadingMoreText}>Loading more subjects...</Text>
+                </View>
+              ) : null
             }
             renderItem={({ item }) => (
               <TouchableOpacity
@@ -132,37 +169,6 @@ export const AllSubjectsScreen = () => {
               </TouchableOpacity>
             )}
           />
-        )}
-
-        {/* Pagination controls */}
-        {pageCount > 1 && (
-          <View style={styles.paginationBar}>
-            <TouchableOpacity
-              disabled={page <= 1}
-              style={[styles.pageButton, page <= 1 && styles.pageButtonDisabled]}
-              onPress={() => setPage((p) => Math.max(1, p - 1))}
-            >
-              <Feather name="chevron-left" size={16} color={page <= 1 ? COLORS.textSubtle : COLORS.text} />
-              <Text style={[styles.pageBtnText, page <= 1 && styles.pageBtnTextDisabled]}>
-                Prev
-              </Text>
-            </TouchableOpacity>
-
-            <Text style={styles.pageIndicator}>
-              Page {page} of {pageCount}
-            </Text>
-
-            <TouchableOpacity
-              disabled={page >= pageCount}
-              style={[styles.pageButton, page >= pageCount && styles.pageButtonDisabled]}
-              onPress={() => setPage((p) => Math.min(pageCount, p + 1))}
-            >
-              <Text style={[styles.pageBtnText, page >= pageCount && styles.pageBtnTextDisabled]}>
-                Next
-              </Text>
-              <Feather name="chevron-right" size={16} color={page >= pageCount ? COLORS.textSubtle : COLORS.text} />
-            </TouchableOpacity>
-          </View>
         )}
       </View>
     </View>
@@ -276,41 +282,16 @@ const styles = StyleSheet.create({
     color: COLORS.textMuted,
     fontSize: 14,
   },
-  paginationBar: {
+  loadingMoreFooter: {
+    paddingVertical: 16,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderTopWidth: 1,
-    borderColor: COLORS.border,
-    backgroundColor: COLORS.card,
+    justifyContent: 'center',
+    gap: 8,
   },
-  pageButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 4,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    backgroundColor: COLORS.cardSecondary,
-  },
-  pageButtonDisabled: {
-    opacity: 0.4,
-  },
-  pageBtnText: {
+  loadingMoreText: {
     fontFamily: FONTS.mono,
     fontSize: 12,
-    color: COLORS.text,
-    fontWeight: '600',
-  },
-  pageBtnTextDisabled: {
-    color: COLORS.textSubtle,
-  },
-  pageIndicator: {
-    fontFamily: FONTS.mono,
-    fontSize: 11,
     color: COLORS.textMuted,
   },
 });
