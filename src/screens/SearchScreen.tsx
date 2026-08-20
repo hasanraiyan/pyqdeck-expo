@@ -28,7 +28,6 @@ export const SearchScreen = () => {
   const [dynamicSuggestions, setDynamicSuggestions] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
-  const [isListening, setIsListening] = useState(false);
 
   useEffect(() => {
     // Load live subject names with available questions from API to populate suggestions
@@ -74,25 +73,6 @@ export const SearchScreen = () => {
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleMicPress = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    if (isListening) {
-      setIsListening(false);
-      return;
-    }
-
-    setIsListening(true);
-    const pool = dynamicSuggestions.length > 0
-      ? dynamicSuggestions
-      : ['Operating System', 'Data Structures', 'Algorithms', 'Discrete Mathematics'];
-    const picked = pool[Math.floor(Math.random() * pool.length)];
-
-    setTimeout(() => {
-      setIsListening(false);
-      handleSuggestionPress(picked);
-    }, 1800);
   };
 
   const handleClear = () => {
@@ -143,16 +123,16 @@ export const SearchScreen = () => {
           <Text style={styles.badgeText}>FIND ANY QUESTION OR TOPIC</Text>
           <Text style={styles.title}>Search</Text>
 
-          <View style={[styles.searchBar, isListening && styles.searchBarListening]}>
+          <View style={styles.searchBar}>
             <Feather
-              name={isListening ? 'mic' : 'search'}
+              name="search"
               size={16}
-              color={isListening ? COLORS.primary : COLORS.textMuted}
+              color={COLORS.textMuted}
               style={styles.searchIcon}
             />
             <TextInput
-              placeholder={isListening ? 'Listening...' : 'Search subjects, questions, or topics...'}
-              placeholderTextColor={isListening ? COLORS.primary : COLORS.textSubtle}
+              placeholder="Search subjects, questions, or topics..."
+              placeholderTextColor={COLORS.textSubtle}
               value={query}
               onChangeText={(text) => {
                 setQuery(text);
@@ -165,24 +145,13 @@ export const SearchScreen = () => {
               onSubmitEditing={handleSearch}
               returnKeyType="search"
               autoCorrect={false}
-              style={[styles.searchInput, isListening && { color: COLORS.primary }]}
+              style={styles.searchInput}
             />
             {query.length > 0 && !loading && (
               <TouchableOpacity onPress={handleClear} style={styles.clearBtn}>
                 <Feather name="x" size={15} color={COLORS.textMuted} />
               </TouchableOpacity>
             )}
-            <TouchableOpacity
-              onPress={handleMicPress}
-              style={[styles.micBtn, isListening && styles.micBtnActive]}
-              activeOpacity={0.7}
-            >
-              <Feather
-                name="mic"
-                size={16}
-                color={isListening ? '#ffffff' : COLORS.textMuted}
-              />
-            </TouchableOpacity>
             {loading && <ActivityIndicator size="small" color={COLORS.primary} style={{ marginLeft: 6 }} />}
           </View>
         </View>
