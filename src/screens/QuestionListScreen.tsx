@@ -50,13 +50,18 @@ export const QuestionListScreen = () => {
     try {
       const metaData = await getSubjectMeta(subjectId);
       setMeta(metaData);
-      const defaultYear =
-        selectedYear ?? (metaData.years[0]?.year || undefined);
-      if (!selectedYear && defaultYear) {
+
+      // Only default to first year if neither a specific year NOR a specific chapter was requested
+      const shouldDefaultYear = selectedYear === undefined && selectedChapter === undefined;
+      const defaultYear = shouldDefaultYear ? (metaData.years[0]?.year || undefined) : undefined;
+      
+      if (shouldDefaultYear && defaultYear) {
         setSelectedYear(defaultYear);
       }
+
+      const queryYear = selectedYear ?? defaultYear;
       const questionsData = await getQuestions(subjectId, {
-        year: selectedYear ?? defaultYear,
+        year: queryYear,
         chapter: selectedChapter,
       });
       setQuestions(questionsData.questions);
@@ -127,7 +132,11 @@ export const QuestionListScreen = () => {
             <View style={styles.header}>
               <View style={styles.headerTopRow}>
                 <Text style={styles.yearTag}>
-                  {selectedYear ? `${selectedYear} QUESTION PAPER` : 'ALL QUESTIONS'}
+                  {selectedYear
+                    ? `${selectedYear} QUESTION PAPER`
+                    : selectedChapter
+                    ? `${selectedChapter.toUpperCase()} QUESTIONS`
+                    : 'ALL QUESTIONS'}
                 </Text>
                 <TouchableOpacity
                   style={[styles.filterIconButton, hasActiveFilters && styles.filterIconButtonActive]}
@@ -148,7 +157,13 @@ export const QuestionListScreen = () => {
               <Text style={styles.title}>{meta?.name || subjectName}</Text>
               <Text style={styles.subtitle}>
                 {questions.length} question{questions.length === 1 ? '' : 's'}
-                {selectedYear ? ` in the ${selectedYear} paper.` : '.'}
+                {selectedYear && selectedChapter
+                  ? ` in ${selectedYear} for ${selectedChapter}.`
+                  : selectedYear
+                  ? ` in the ${selectedYear} paper.`
+                  : selectedChapter
+                  ? ` across all years for ${selectedChapter}.`
+                  : ' across all papers.'}
               </Text>
 
               {/* Active Filter summary pills */}
