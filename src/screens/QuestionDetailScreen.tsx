@@ -243,20 +243,20 @@ export const QuestionDetailScreen = () => {
               </TouchableOpacity>
 
               <View style={styles.actionButtonsRight}>
-                <TouchableOpacity style={styles.actionButton} onPress={handleCopy} activeOpacity={0.7}>
-                  {copied ? (
-                    <Feather name="check" size={13} color={COLORS.primary} />
-                  ) : (
-                    <Feather name="copy" size={13} color={COLORS.textMuted} />
-                  )}
-                  <Text style={[styles.actionText, copied && { color: COLORS.primary }]}>
+                <TouchableOpacity style={styles.actionIconButton} onPress={handleCopy} activeOpacity={0.6}>
+                  <Feather
+                    name={copied ? 'check' : 'copy'}
+                    size={15}
+                    color={copied ? COLORS.primary : COLORS.textMuted}
+                  />
+                  <Text style={[styles.actionIconLabel, copied && { color: COLORS.primary }]}>
                     {copied ? 'Copied' : 'Copy'}
                   </Text>
                 </TouchableOpacity>
 
-                <TouchableOpacity style={styles.actionButton} onPress={handleShare} activeOpacity={0.7}>
-                  <Feather name="share-2" size={13} color={COLORS.textMuted} />
-                  <Text style={styles.actionText}>Share</Text>
+                <TouchableOpacity style={styles.actionIconButton} onPress={handleShare} activeOpacity={0.6}>
+                  <Feather name="share-2" size={15} color={COLORS.textMuted} />
+                  <Text style={styles.actionIconLabel}>Share</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -511,29 +511,26 @@ const styles = StyleSheet.create({
     marginTop: 16,
     paddingTop: 12,
     borderTopWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: COLORS.borderLight,
   },
   actionButtonsRight: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 14,
   },
-  actionButton: {
+  actionIconButton: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    paddingVertical: 5,
-    paddingHorizontal: 10,
-    borderRadius: 4,
-    backgroundColor: COLORS.cardSecondary,
-    borderWidth: 1,
-    borderColor: COLORS.border,
+    paddingVertical: 4,
+    paddingHorizontal: 6,
   },
-  actionText: {
-    fontSize: 11.5,
+  actionIconLabel: {
+    fontSize: 12,
     fontFamily: FONTS.mono,
     color: COLORS.textMuted,
     fontWeight: '600',
+    letterSpacing: 0.2,
   },
   modalBackdrop: {
     flex: 1,
