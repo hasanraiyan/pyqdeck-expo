@@ -1,20 +1,168 @@
+import React from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View } from 'react-native';
+import { NavigationContainer } from '@react-navigation/native';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { useSafeAreaInsets, SafeAreaProvider } from 'react-native-safe-area-context';
+import { Feather } from '@expo/vector-icons';
+import { COLORS } from './src/theme/colors';
+import { HomeScreen } from './src/screens/HomeScreen';
+import { SubjectListScreen } from './src/screens/SubjectListScreen';
+import { SubjectDetailScreen } from './src/screens/SubjectDetailScreen';
+import { AllSubjectsScreen } from './src/screens/AllSubjectsScreen';
+import { QuestionListScreen } from './src/screens/QuestionListScreen';
+import { QuestionDetailScreen } from './src/screens/QuestionDetailScreen';
+import { SearchScreen } from './src/screens/SearchScreen';
 
-export default function App() {
+const Stack = createNativeStackNavigator();
+const Tab = createBottomTabNavigator();
+
+const commonScreenOptions = {
+  headerStyle: {
+    backgroundColor: COLORS.background,
+  },
+  headerTintColor: COLORS.text,
+  headerTitleStyle: {
+    fontWeight: '600' as const,
+  },
+  headerShadowVisible: false,
+  contentStyle: {
+    backgroundColor: COLORS.background,
+  },
+};
+
+function HomeStack() {
   return (
-    <View style={styles.container}>
-      <Text>Open up App.tsx to start working on your app!</Text>
-      <StatusBar style="auto" />
-    </View>
+    <Stack.Navigator screenOptions={commonScreenOptions}>
+      <Stack.Screen
+        name="Home"
+        component={HomeScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="AllSubjects"
+        component={AllSubjectsScreen}
+        options={{ title: 'All Subjects' }}
+      />
+      <Stack.Screen
+        name="SubjectList"
+        component={SubjectListScreen}
+        options={({ route }: any) => ({
+          title: `Semester ${route.params?.semesterNumber || ''}`,
+        })}
+      />
+      <Stack.Screen
+        name="SubjectDetail"
+        component={SubjectDetailScreen}
+        options={({ route }: any) => ({
+          title: route.params?.subjectName || 'Subject',
+        })}
+      />
+      <Stack.Screen
+        name="QuestionList"
+        component={QuestionListScreen}
+        options={({ route }: any) => ({
+          title: route.params?.subjectName || 'Questions',
+        })}
+      />
+      <Stack.Screen
+        name="QuestionDetail"
+        component={QuestionDetailScreen}
+        options={{
+          title: 'Question Paper',
+        }}
+      />
+    </Stack.Navigator>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});
+function SearchStack() {
+  return (
+    <Stack.Navigator screenOptions={commonScreenOptions}>
+      <Stack.Screen
+        name="SearchRoot"
+        component={SearchScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="SubjectDetail"
+        component={SubjectDetailScreen}
+        options={({ route }: any) => ({
+          title: route.params?.subjectName || 'Subject',
+        })}
+      />
+      <Stack.Screen
+        name="QuestionList"
+        component={QuestionListScreen}
+        options={({ route }: any) => ({
+          title: route.params?.subjectName || 'Questions',
+        })}
+      />
+      <Stack.Screen
+        name="QuestionDetail"
+        component={QuestionDetailScreen}
+        options={{
+          title: 'Question Paper',
+        }}
+      />
+    </Stack.Navigator>
+  );
+}
+
+export default function App() {
+  return (
+    <SafeAreaProvider>
+      <AppContent />
+    </SafeAreaProvider>
+  );
+}
+
+function AppContent() {
+  const insets = useSafeAreaInsets();
+
+  return (
+    <NavigationContainer>
+      <StatusBar style="dark" />
+      <Tab.Navigator
+        screenOptions={{
+          headerShown: false,
+          tabBarStyle: {
+            backgroundColor: COLORS.card,
+            borderTopColor: COLORS.border,
+            borderTopWidth: 1,
+            height: 56 + insets.bottom,
+            paddingBottom: insets.bottom > 0 ? insets.bottom : 6,
+            paddingTop: 6,
+          },
+          tabBarActiveTintColor: COLORS.primary,
+          tabBarInactiveTintColor: COLORS.textMuted,
+        }}
+      >
+        <Tab.Screen
+          name="Browse"
+          component={HomeStack}
+          options={{
+            tabBarLabel: 'Browse',
+            tabBarIcon: ({ color, size }) => (
+              <Feather name="book-open" size={size} color={color} />
+            ),
+          }}
+        />
+        <Tab.Screen
+          name="Search"
+          component={SearchStack}
+          options={{
+            tabBarLabel: 'Search',
+            tabBarIcon: ({ color, size }) => (
+              <Feather name="search" size={size} color={color} />
+            ),
+          }}
+        />
+      </Tab.Navigator>
+    </NavigationContainer>
+  );
+}
+
+
+
+
