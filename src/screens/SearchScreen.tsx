@@ -35,11 +35,12 @@ export const SearchScreen = () => {
     listAllSubjects({ page: 1 })
       .then((res) => {
         if (res.subjects && res.subjects.length > 0) {
-          // Filter to only subjects with questions so students don't get 0-question coming soon subjects
+          // Filter to only subjects with questions and trim leading/trailing whitespace
           const activeSubjects = res.subjects.filter((s) => (s.questionCount || 0) > 0);
           const names = (activeSubjects.length > 0 ? activeSubjects : res.subjects)
             .slice(0, 6)
-            .map((s) => s.name);
+            .map((s) => (s.name || '').trim())
+            .filter((n) => n.length > 0);
           setDynamicSuggestions(names);
         }
       })
