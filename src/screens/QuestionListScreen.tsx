@@ -86,8 +86,10 @@ export const QuestionListScreen = () => {
   };
 
   useEffect(() => {
+    setSelectedYear(initialYear || undefined);
+    setSelectedChapter(initialChapter || undefined);
     loadData();
-  }, [subjectId]);
+  }, [subjectId, initialYear, initialChapter]);
 
   const handleYearSelect = (year?: number) => {
     setSelectedYear(year);
@@ -131,7 +133,7 @@ export const QuestionListScreen = () => {
             {/* Header */}
             <View style={styles.header}>
               <View style={styles.headerTopRow}>
-                <Text style={styles.yearTag}>
+                <Text style={styles.yearTag} numberOfLines={1}>
                   {selectedYear
                     ? `${selectedYear} QUESTION PAPER`
                     : selectedChapter
@@ -365,13 +367,16 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   yearTag: {
+    flex: 1,
     fontFamily: FONTS.mono,
     fontSize: rf(10.5),
     color: COLORS.primary,
     fontWeight: '700',
     letterSpacing: 1.5,
+    paddingRight: 8,
   },
   filterIconButton: {
+    flexShrink: 0,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
