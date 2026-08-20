@@ -142,32 +142,47 @@ export const AllSubjectsScreen = () => {
                 </View>
               ) : null
             }
-            renderItem={({ item }) => (
-              <TouchableOpacity
-                style={styles.card}
-                activeOpacity={0.7}
-                onPress={() =>
-                  navigation.navigate('SubjectDetail', {
-                    semesterId: item.semester?.id,
-                    subjectId: item.id,
-                    subjectName: item.name,
-                    subjectCode: item.code,
-                  })
-                }
-              >
-                <View style={styles.cardLeft}>
-                  <View style={styles.codeRow}>
-                    {item.code ? <Badge label={item.code} variant="secondary" /> : null}
-                    <Badge label={`Sem ${item.semester?.number || ''}`} variant="outline" />
+            renderItem={({ item }) => {
+              const isComingSoon = item.questionCount === 0;
+              return (
+                <TouchableOpacity
+                  style={[styles.card, isComingSoon && styles.cardComingSoon]}
+                  activeOpacity={isComingSoon ? 1 : 0.7}
+                  disabled={isComingSoon}
+                  onPress={() =>
+                    navigation.navigate('SubjectDetail', {
+                      semesterId: item.semester?.id,
+                      subjectId: item.id,
+                      subjectName: item.name,
+                      subjectCode: item.code,
+                    })
+                  }
+                >
+                  <View style={styles.cardLeft}>
+                    <View style={styles.codeRow}>
+                      {item.code ? <Badge label={item.code} variant="secondary" /> : null}
+                      <Badge label={`Sem ${item.semester?.number || ''}`} variant="outline" />
+                      {isComingSoon && (
+                        <View style={styles.cardSoonTag}>
+                          <Text style={styles.cardSoonTagText}>SOON</Text>
+                        </View>
+                      )}
+                    </View>
+                    <Text style={[styles.subjectName, isComingSoon && styles.subjectNameSoon]}>
+                      {item.name}
+                    </Text>
                   </View>
-                  <Text style={styles.subjectName}>{item.name}</Text>
-                </View>
-                <View style={styles.cardRight}>
-                  <Text style={styles.questionCount}>{item.questionCount}q</Text>
-                  <Feather name="chevron-right" size={16} color={COLORS.textMuted} />
-                </View>
-              </TouchableOpacity>
-            )}
+                  <View style={styles.cardRight}>
+                    <Text style={styles.questionCount}>
+                      {isComingSoon ? 'Coming Soon' : `${item.questionCount}q`}
+                    </Text>
+                    {!isComingSoon && (
+                      <Feather name="chevron-right" size={16} color={COLORS.textMuted} />
+                    )}
+                  </View>
+                </TouchableOpacity>
+              );
+            }}
           />
         )}
       </View>
@@ -241,20 +256,42 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 14,
   },
+  cardComingSoon: {
+    backgroundColor: COLORS.cardSecondary,
+    opacity: 0.85,
+  },
+  cardSoonTag: {
+    backgroundColor: COLORS.card,
+    borderWidth: 1,
+    borderColor: COLORS.borderLight,
+    borderRadius: 3,
+    paddingHorizontal: 4,
+    paddingVertical: 1,
+  },
+  cardSoonTagText: {
+    fontFamily: FONTS.mono,
+    fontSize: 8.5,
+    fontWeight: '700',
+    color: COLORS.textSubtle,
+  },
   cardLeft: {
     flex: 1,
     paddingRight: 12,
   },
   codeRow: {
     flexDirection: 'row',
-    gap: 8,
-    marginBottom: 6,
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 4,
   },
   subjectName: {
     fontSize: 14.5,
     fontWeight: '600',
     color: COLORS.text,
     lineHeight: 19,
+  },
+  subjectNameSoon: {
+    color: COLORS.textMuted,
   },
   cardRight: {
     flexDirection: 'row',
