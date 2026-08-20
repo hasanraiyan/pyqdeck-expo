@@ -133,7 +133,16 @@ export const SubjectDetailScreen = () => {
         {/* Modules / Chapters Section */}
         <View style={styles.section}>
           <Text style={styles.sectionHeading}>PRACTICE BY MODULE</Text>
-          {meta?.chapters && meta.chapters.length > 0 ? (
+          {loading ? (
+            <View style={styles.moduleList}>
+              {[1, 2, 3].map((i) => (
+                <View key={i} style={styles.moduleCardSkeleton}>
+                  <Skeleton width="60%" height={16} style={{ marginBottom: 6 }} />
+                  <Skeleton width="30%" height={12} />
+                </View>
+              ))}
+            </View>
+          ) : meta?.chapters && meta.chapters.length > 0 ? (
             <View style={styles.moduleList}>
               {meta.chapters.map((ch, idx) => {
                 const isComingSoon = ch.questionCount === 0;
@@ -325,6 +334,14 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border,
     borderRadius: 4,
     paddingVertical: 13,
+    paddingHorizontal: 14,
+  },
+  moduleCardSkeleton: {
+    backgroundColor: COLORS.card,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 4,
+    paddingVertical: 14,
     paddingHorizontal: 14,
   },
   moduleLeft: {
