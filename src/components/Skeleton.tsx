@@ -68,18 +68,14 @@ export const SolutionSkeleton: React.FC = () => {
 
 export const QuestionSkeleton: React.FC = () => {
   return (
-    <View style={styles.cardSkeleton}>
-      <View style={styles.row}>
-        <Skeleton width={40} height={20} borderRadius={4} />
-        <Skeleton width={60} height={20} borderRadius={12} />
+    <View style={styles.questionRowSkeleton}>
+      <View style={styles.questionRowLeft}>
+        <Skeleton width="75%" height={16} borderRadius={3} />
       </View>
-      <View style={{ marginTop: 12 }}>
-        <Skeleton width="90%" height={16} style={{ marginBottom: 6 }} />
-        <Skeleton width="75%" height={16} />
-      </View>
-      <View style={[styles.row, { marginTop: 14 }]}>
-        <Skeleton width={100} height={14} />
-        <Skeleton width={50} height={14} />
+      <View style={styles.questionRowRight}>
+        <Skeleton width={38} height={18} borderRadius={3} />
+        <Skeleton width={32} height={18} borderRadius={3} />
+        <Skeleton width={14} height={14} borderRadius={3} />
       </View>
     </View>
   );
@@ -114,5 +110,24 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+  },
+  questionRowSkeleton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: COLORS.card,
+    borderBottomWidth: 1,
+    borderColor: COLORS.border,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    gap: 12,
+  },
+  questionRowLeft: {
+    flex: 1,
+  },
+  questionRowRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
 });

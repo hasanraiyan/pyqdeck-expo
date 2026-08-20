@@ -43,7 +43,7 @@ export const SubjectListScreen = () => {
   }, [semesterId]);
 
   return (
-    <View style={[styles.container, { paddingBottom: insets.bottom }]}>
+    <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.badgeText}>SEMESTER {semesterNumber}</Text>
         <Text style={styles.title}>Subjects</Text>

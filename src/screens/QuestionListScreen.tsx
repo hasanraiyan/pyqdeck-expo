@@ -7,9 +7,12 @@ import {
   ScrollView,
   StyleSheet,
   RefreshControl,
+  Modal,
+  TouchableWithoutFeedback,
 } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Feather } from '@expo/vector-icons';
 import { getSubjectMeta, getQuestions } from '../api';
 import { SubjectMeta, QuestionSummary } from '../types';
 import { COLORS, FONTS } from '../theme/colors';
@@ -41,6 +44,7 @@ export const QuestionListScreen = () => {
   const [questions, setQuestions] = useState<QuestionSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [filterModalVisible, setFilterModalVisible] = useState(false);
 
   const loadData = async () => {
     try {
@@ -80,16 +84,14 @@ export const QuestionListScreen = () => {
     loadData();
   }, [subjectId]);
 
-  const handleYearChange = (year: number) => {
-    const nextYear = selectedYear === year ? undefined : year;
-    setSelectedYear(nextYear);
-    fetchFilteredQuestions(nextYear, selectedChapter);
+  const handleYearSelect = (year?: number) => {
+    setSelectedYear(year);
+    fetchFilteredQuestions(year, selectedChapter);
   };
 
-  const handleChapterChange = (chapter: string) => {
-    const nextChapter = selectedChapter === chapter ? undefined : chapter;
-    setSelectedChapter(nextChapter);
-    fetchFilteredQuestions(selectedYear, nextChapter);
+  const handleChapterSelect = (chapter?: string) => {
+    setSelectedChapter(chapter);
+    fetchFilteredQuestions(selectedYear, chapter);
   };
 
   // Prev / Next Year Navigation
@@ -101,7 +103,7 @@ export const QuestionListScreen = () => {
       ? yearsList[currentYearIdx + 1]
       : null;
 
-  const currentYearMeta = meta?.years?.find((y) => y.year === selectedYear);
+  const hasActiveFilters = Boolean(selectedChapter || selectedYear);
 
   return (
     <View style={styles.container}>
@@ -121,104 +123,59 @@ export const QuestionListScreen = () => {
         }
         ListHeaderComponent={
           <View style={styles.headerWrapper}>
-            {/* Header matching web PaperPage */}
+            {/* Header */}
             <View style={styles.header}>
-              <Text style={styles.yearTag}>
-                {selectedYear ? `${selectedYear} QUESTION PAPER` : 'ALL QUESTIONS'}
-              </Text>
+              <View style={styles.headerTopRow}>
+                <Text style={styles.yearTag}>
+                  {selectedYear ? `${selectedYear} QUESTION PAPER` : 'ALL QUESTIONS'}
+                </Text>
+                <TouchableOpacity
+                  style={[styles.filterIconButton, hasActiveFilters && styles.filterIconButtonActive]}
+                  onPress={() => setFilterModalVisible(true)}
+                  activeOpacity={0.7}
+                >
+                  <Feather
+                    name="sliders"
+                    size={14}
+                    color={hasActiveFilters ? COLORS.primary : COLORS.text}
+                  />
+                  <Text style={[styles.filterIconText, hasActiveFilters && styles.filterIconTextActive]}>
+                    Filter
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
               <Text style={styles.title}>{meta?.name || subjectName}</Text>
               <Text style={styles.subtitle}>
                 {questions.length} question{questions.length === 1 ? '' : 's'}
-                {selectedYear ? ` in the ${selectedYear} exam paper.` : '.'}
+                {selectedYear ? ` in the ${selectedYear} paper.` : '.'}
               </Text>
+
+              {/* Active Filter summary pills */}
+              {(selectedYear || selectedChapter) && (
+                <View style={styles.activePillsRow}>
+                  {selectedYear ? (
+                    <View style={styles.activePill}>
+                      <Text style={styles.activePillText}>{selectedYear}</Text>
+                    </View>
+                  ) : null}
+                  {selectedChapter ? (
+                    <View style={styles.activePill}>
+                      <Text style={styles.activePillText} numberOfLines={1}>
+                        {selectedChapter}
+                      </Text>
+                      <TouchableOpacity onPress={() => handleChapterSelect(undefined)}>
+                        <Feather name="x" size={12} color={COLORS.textMuted} />
+                      </TouchableOpacity>
+                    </View>
+                  ) : null}
+                </View>
+              )}
             </View>
 
-            {/* Filter Section: Dual scrollable chip bars */}
-            {meta && (
-              <View style={styles.filterSection}>
-                {meta.years && meta.years.length > 0 && (
-                  <View style={styles.filterGroup}>
-                    <Text style={styles.filterGroupLabel}>EXAM YEAR</Text>
-                    <ScrollView
-                      horizontal
-                      showsHorizontalScrollIndicator={false}
-                      contentContainerStyle={styles.chipScroll}
-                    >
-                      {meta.years.map((y) => {
-                        const active = selectedYear === y.year;
-                        return (
-                          <TouchableOpacity
-                            key={y.year}
-                            onPress={() => handleYearChange(y.year)}
-                            style={[styles.filterChip, active && styles.filterChipActive]}
-                          >
-                            <Text
-                              style={[
-                                styles.filterChipText,
-                                active && styles.filterChipTextActive,
-                              ]}
-                            >
-                              {y.year} ({y.questionCount})
-                            </Text>
-                          </TouchableOpacity>
-                        );
-                      })}
-                    </ScrollView>
-                  </View>
-                )}
-
-                {meta.chapters && meta.chapters.length > 0 && (
-                  <View style={[styles.filterGroup, { borderTopWidth: 1, borderColor: COLORS.borderLight }]}>
-                    <Text style={styles.filterGroupLabel}>MODULE</Text>
-                    <ScrollView
-                      horizontal
-                      showsHorizontalScrollIndicator={false}
-                      contentContainerStyle={styles.chipScroll}
-                    >
-                      <TouchableOpacity
-                        onPress={() => handleChapterChange('')}
-                        style={[
-                          styles.filterChip,
-                          !selectedChapter && styles.filterChipActive,
-                        ]}
-                      >
-                        <Text
-                          style={[
-                            styles.filterChipText,
-                            !selectedChapter && styles.filterChipTextActive,
-                          ]}
-                        >
-                          All Modules
-                        </Text>
-                      </TouchableOpacity>
-                      {meta.chapters.map((c) => {
-                        const active = selectedChapter === c.chapter;
-                        return (
-                          <TouchableOpacity
-                            key={c.chapter}
-                            onPress={() => handleChapterChange(c.chapter)}
-                            style={[styles.filterChip, active && styles.filterChipActive]}
-                          >
-                            <Text
-                              style={[
-                                styles.filterChipText,
-                                active && styles.filterChipTextActive,
-                              ]}
-                            >
-                              {c.chapter} ({c.questionCount})
-                            </Text>
-                          </TouchableOpacity>
-                        );
-                      })}
-                    </ScrollView>
-                  </View>
-                )}
-              </View>
-            )}
-
             {loading && (
-              <View style={{ paddingVertical: 8 }}>
-                {[1, 2, 3, 4].map((i) => (
+              <View>
+                {[1, 2, 3, 4, 5, 6].map((i) => (
                   <QuestionSkeleton key={i} />
                 ))}
               </View>
@@ -241,7 +198,7 @@ export const QuestionListScreen = () => {
                     ? {
                         label: `${prevYear} Paper`,
                         sublabel: 'Previous year',
-                        onPress: () => handleYearChange(prevYear),
+                        onPress: () => handleYearSelect(prevYear),
                       }
                     : null
                 }
@@ -250,7 +207,7 @@ export const QuestionListScreen = () => {
                     ? {
                         label: `${nextYear} Paper`,
                         sublabel: 'Next year',
-                        onPress: () => handleYearChange(nextYear),
+                        onPress: () => handleYearSelect(nextYear),
                       }
                     : null
                 }
@@ -267,6 +224,104 @@ export const QuestionListScreen = () => {
           />
         )}
       />
+
+      {/* Filter Bottom Sheet Modal */}
+      <Modal
+        visible={filterModalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setFilterModalVisible(false)}
+      >
+        <TouchableWithoutFeedback onPress={() => setFilterModalVisible(false)}>
+          <View style={styles.modalOverlay}>
+            <TouchableWithoutFeedback>
+              <View style={[styles.modalContent, { paddingBottom: insets.bottom + 16 }]}>
+                <View style={styles.modalHeader}>
+                  <View>
+                    <Text style={styles.modalTag}>FILTER QUESTIONS</Text>
+                    <Text style={styles.modalTitle}>Refine Paper</Text>
+                  </View>
+                  <TouchableOpacity
+                    onPress={() => setFilterModalVisible(false)}
+                    style={styles.modalCloseBtn}
+                  >
+                    <Feather name="x" size={18} color={COLORS.text} />
+                  </TouchableOpacity>
+                </View>
+
+                {meta && (
+                  <ScrollView style={styles.modalBody}>
+                    {/* Year section */}
+                    {meta.years && meta.years.length > 0 && (
+                      <View style={styles.filterModalSection}>
+                        <Text style={styles.filterSectionTitle}>EXAM YEAR</Text>
+                        <View style={styles.filterChipGrid}>
+                          {meta.years.map((y) => {
+                            const active = selectedYear === y.year;
+                            return (
+                              <TouchableOpacity
+                                key={y.year}
+                                style={[styles.modalChip, active && styles.modalChipActive]}
+                                onPress={() => {
+                                  handleYearSelect(active ? undefined : y.year);
+                                }}
+                              >
+                                <Text style={[styles.modalChipText, active && styles.modalChipTextActive]}>
+                                  {y.year} ({y.questionCount})
+                                </Text>
+                              </TouchableOpacity>
+                            );
+                          })}
+                        </View>
+                      </View>
+                    )}
+
+                    {/* Module / Chapter Section */}
+                    {meta.chapters && meta.chapters.length > 0 && (
+                      <View style={styles.filterModalSection}>
+                        <Text style={styles.filterSectionTitle}>MODULE / TOPIC</Text>
+                        <View style={styles.filterChipGrid}>
+                          <TouchableOpacity
+                            style={[styles.modalChip, !selectedChapter && styles.modalChipActive]}
+                            onPress={() => handleChapterSelect(undefined)}
+                          >
+                            <Text style={[styles.modalChipText, !selectedChapter && styles.modalChipTextActive]}>
+                              All Modules
+                            </Text>
+                          </TouchableOpacity>
+                          {meta.chapters.map((c) => {
+                            const active = selectedChapter === c.chapter;
+                            return (
+                              <TouchableOpacity
+                                key={c.chapter}
+                                style={[styles.modalChip, active && styles.modalChipActive]}
+                                onPress={() => {
+                                  handleChapterSelect(active ? undefined : c.chapter);
+                                }}
+                              >
+                                <Text style={[styles.modalChipText, active && styles.modalChipTextActive]}>
+                                  {c.chapter} ({c.questionCount})
+                                </Text>
+                              </TouchableOpacity>
+                            );
+                          })}
+                        </View>
+                      </View>
+                    )}
+                  </ScrollView>
+                )}
+
+                <TouchableOpacity
+                  style={styles.applyFilterBtn}
+                  onPress={() => setFilterModalVisible(false)}
+                >
+                  <Text style={styles.applyFilterBtnText}>Show Results ({questions.length})</Text>
+                </TouchableOpacity>
+              </View>
+            </TouchableWithoutFeedback>
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
     </View>
   );
 };
@@ -287,13 +342,42 @@ const styles = StyleSheet.create({
     borderColor: COLORS.borderDashed,
     backgroundColor: COLORS.card,
   },
+  headerTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 4,
+  },
   yearTag: {
     fontFamily: FONTS.mono,
     fontSize: rf(10.5),
     color: COLORS.primary,
     fontWeight: '700',
     letterSpacing: 1.5,
-    marginBottom: 4,
+  },
+  filterIconButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: COLORS.background,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 4,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+  },
+  filterIconButtonActive: {
+    backgroundColor: COLORS.primaryLight,
+    borderColor: COLORS.primary,
+  },
+  filterIconText: {
+    fontFamily: FONTS.mono,
+    fontSize: rf(11),
+    fontWeight: '600',
+    color: COLORS.text,
+  },
+  filterIconTextActive: {
+    color: COLORS.primary,
   },
   title: {
     fontFamily: FONTS.serif,
@@ -309,48 +393,28 @@ const styles = StyleSheet.create({
     color: COLORS.textMuted,
     marginTop: 4,
   },
-  filterSection: {
-    backgroundColor: COLORS.card,
-    borderBottomWidth: 1,
-    borderColor: COLORS.border,
-  },
-  filterGroup: {
-    paddingVertical: 6,
-  },
-  filterGroupLabel: {
-    fontFamily: FONTS.mono,
-    fontSize: rf(9),
-    color: COLORS.textSubtle,
-    letterSpacing: 1,
-    paddingHorizontal: 16,
-    marginBottom: 4,
-  },
-  chipScroll: {
-    paddingHorizontal: 16,
-    paddingVertical: 2,
+  activePillsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 6,
+    marginTop: 10,
   },
-  filterChip: {
-    paddingHorizontal: 9,
-    paddingVertical: 4,
-    borderRadius: 3,
+  activePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
     backgroundColor: COLORS.cardSecondary,
     borderWidth: 1,
     borderColor: COLORS.border,
+    borderRadius: 3,
+    paddingVertical: 3,
+    paddingHorizontal: 7,
   },
-  filterChipActive: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
-  },
-  filterChipText: {
-    fontSize: rf(11),
-    fontWeight: '600',
-    color: COLORS.textMuted,
+  activePillText: {
     fontFamily: FONTS.mono,
-  },
-  filterChipTextActive: {
-    color: '#ffffff',
-    fontWeight: '700',
+    fontSize: rf(10.5),
+    color: COLORS.text,
+    fontWeight: '600',
   },
   footerNavWrapper: {
     width: '100%',
@@ -366,5 +430,97 @@ const styles = StyleSheet.create({
     color: COLORS.textMuted,
     fontSize: rf(13.5),
     fontStyle: 'italic',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: COLORS.card,
+    borderTopLeftRadius: 12,
+    borderTopRightRadius: 12,
+    maxHeight: '80%',
+    paddingHorizontal: 18,
+    paddingTop: 18,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingBottom: 14,
+    borderBottomWidth: 1,
+    borderColor: COLORS.border,
+  },
+  modalTag: {
+    fontFamily: FONTS.mono,
+    fontSize: 10,
+    color: COLORS.primary,
+    fontWeight: '700',
+    letterSpacing: 1.2,
+  },
+  modalTitle: {
+    fontFamily: FONTS.serif,
+    fontSize: 20,
+    fontStyle: 'italic',
+    color: COLORS.text,
+  },
+  modalCloseBtn: {
+    padding: 6,
+  },
+  modalBody: {
+    paddingVertical: 12,
+  },
+  filterModalSection: {
+    marginBottom: 16,
+  },
+  filterSectionTitle: {
+    fontFamily: FONTS.mono,
+    fontSize: 10.5,
+    fontWeight: '700',
+    color: COLORS.textSubtle,
+    letterSpacing: 1,
+    marginBottom: 8,
+  },
+  filterChipGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  modalChip: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 4,
+    backgroundColor: COLORS.background,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  modalChipActive: {
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
+  },
+  modalChipText: {
+    fontFamily: FONTS.mono,
+    fontSize: 11.5,
+    color: COLORS.textMuted,
+    fontWeight: '600',
+  },
+  modalChipTextActive: {
+    color: '#ffffff',
+    fontWeight: '700',
+  },
+  applyFilterBtn: {
+    backgroundColor: COLORS.primary,
+    borderRadius: 4,
+    paddingVertical: 12,
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  applyFilterBtnText: {
+    fontFamily: FONTS.mono,
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#ffffff',
+    letterSpacing: 0.5,
   },
 });

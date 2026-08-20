@@ -170,7 +170,11 @@ export const QuestionDetailScreen = () => {
           <View style={styles.questionCard}>
             {question.qNumber ? (
               <View style={styles.qNumRow}>
-                <Text style={styles.qNumber}>Q{question.qNumber}</Text>
+                <Text style={styles.qNumber}>
+                  {String(question.qNumber).startsWith('Q')
+                    ? question.qNumber
+                    : `Q${question.qNumber}`}
+                </Text>
               </View>
             ) : null}
 
@@ -309,7 +313,11 @@ export const QuestionDetailScreen = () => {
                 prev={
                   prevQuestion
                     ? {
-                        label: prevQuestion.textPreview || `Q${prevQuestion.qNumber}`,
+                        label:
+                          prevQuestion.textPreview ||
+                          (String(prevQuestion.qNumber).startsWith('Q')
+                            ? prevQuestion.qNumber
+                            : `Q${prevQuestion.qNumber}`),
                         sublabel: 'Previous',
                         onPress: () =>
                           navigation.push('QuestionDetail', {
@@ -326,7 +334,11 @@ export const QuestionDetailScreen = () => {
                 next={
                   nextQuestion
                     ? {
-                        label: nextQuestion.textPreview || `Q${nextQuestion.qNumber}`,
+                        label:
+                          nextQuestion.textPreview ||
+                          (String(nextQuestion.qNumber).startsWith('Q')
+                            ? nextQuestion.qNumber
+                            : `Q${nextQuestion.qNumber}`),
                         sublabel: 'Next',
                         onPress: () =>
                           navigation.push('QuestionDetail', {

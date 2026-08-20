@@ -50,16 +50,104 @@ export const rf = (size: number): number => {
   return Math.min(scaled * fontScale, size * 1.4);
 };
 
+const SUPERSCRIPTS: Record<string, string> = {
+  '0': '⁰', '1': '¹', '2': '²', '3': '³', '4': '⁴',
+  '5': '⁵', '6': '⁶', '7': '⁷', '8': '⁸', '9': '⁹',
+  '+': '⁺', '-': '⁻', '=': '⁼', '(': '⁽', ')': '⁾',
+  'n': 'ⁿ', 'i': 'ⁱ', 'x': 'ˣ', 'y': 'ʸ', 'k': 'ᵏ',
+};
+
+const SUBSCRIPTS: Record<string, string> = {
+  '0': '₀', '1': '₁', '2': '₂', '3': '₃', '4': '₄',
+  '5': '₅', '6': '₆', '7': '₇', '8': '₈', '9': '₉',
+  '+': '₊', '-': '₋', '=': '₌', '(': '₍', ')': '₎',
+  'a': 'ₐ', 'e': 'ₑ', 'h': 'ₕ', 'i': 'ᵢ', 'j': 'ⱼ',
+  'k': 'ₖ', 'l': 'ₗ', 'm': 'ₘ', 'n': 'ₙ', 'o': 'ₒ',
+  'p': 'ₚ', 'r': 'ᵣ', 's': 'ₛ', 't': 'ₜ', 'u': 'ᵤ',
+  'v': 'ᵥ', 'x': 'ₓ',
+};
+
+const formatMathExpression = (expr: string): string => {
+  return expr
+    // Common LaTeX symbols
+    .replace(/\\theta/gi, 'θ')
+    .replace(/\\omega/gi, 'ω')
+    .replace(/\\alpha/gi, 'α')
+    .replace(/\\beta/gi, 'β')
+    .replace(/\\gamma/gi, 'γ')
+    .replace(/\\delta/gi, 'δ')
+    .replace(/\\lambda/gi, 'λ')
+    .replace(/\\mu/gi, 'μ')
+    .replace(/\\pi/gi, 'π')
+    .replace(/\\sigma/gi, 'σ')
+    .replace(/\\tau/gi, 'τ')
+    .replace(/\\phi/gi, 'φ')
+    .replace(/\\psi/gi, 'ψ')
+    .replace(/\\infty/gi, '∞')
+    .replace(/\\approx/gi, '≈')
+    .replace(/\\neq/gi, '≠')
+    .replace(/\\leq/gi, '≤')
+    .replace(/\\geq/gi, '≥')
+    .replace(/\\times/gi, '×')
+    .replace(/\\div/gi, '÷')
+    .replace(/\\pm/gi, '±')
+    .replace(/\\cdot/gi, '·')
+    .replace(/\\in/gi, '∈')
+    .replace(/\\subset/gi, '⊂')
+    .replace(/\\cup/gi, '∪')
+    .replace(/\\cap/gi, '∩')
+    .replace(/\\rightarrow/gi, '→')
+    .replace(/\\leftarrow/gi, '←')
+    .replace(/\\leftrightarrow/gi, '↔')
+    .replace(/\\Rightarrow/gi, '⇒')
+    .replace(/\\Leftarrow/gi, '⇐')
+    .replace(/\\sqrt\{([^}]+)\}/gi, '√($1)')
+    .replace(/\\sqrt/gi, '√')
+    // Fractions \frac{a}{b} -> (a / b)
+    .replace(/\\frac\{([^}]+)\}\{([^}]+)\}/gi, '($1 / $2)')
+    // Text blocks \text{...} -> ...
+    .replace(/\\text\{([^}]+)\}/gi, '$1')
+    .replace(/\\mathrm\{([^}]+)\}/gi, '$1')
+    .replace(/\\mathbf\{([^}]+)\}/gi, '$1')
+    // Superscripts x^{2} or x^2
+    .replace(/\^{([^}]+)}/g, (_, p1) =>
+      p1.split('').map((c: string) => SUPERSCRIPTS[c] || c).join('')
+    )
+    .replace(/\^([0-9a-zA-Z+-])/g, (_, p1) => SUPERSCRIPTS[p1] || `^${p1}`)
+    // Subscripts x_{i} or x_i
+    .replace(/_{([^}]+)}/g, (_, p1) =>
+      p1.split('').map((c: string) => SUBSCRIPTS[c] || c).join('')
+    )
+    .replace(/_([0-9a-zA-Z+-])/g, (_, p1) => SUBSCRIPTS[p1] || `_${p1}`)
+    .trim();
+};
+
 /**
- * Cleans escaped newlines and markdown artifacts from backend responses
+ * Cleans escaped newlines and formats LaTeX math blocks ($...$, $$...$$) into clean unicode math
  */
 export const cleanMarkdown = (text: string | null | undefined): string => {
   if (!text) return '';
-  return text
+  
+  let formatted = text
     // Replace literal escaped "\n" or "\\n" strings with actual newlines
     .replace(/\\r\\n/g, '\n')
     .replace(/\\n/g, '\n')
-    .replace(/\r\n/g, '\n')
+    .replace(/\r\n/g, '\n');
+
+  // Convert display math $$...$$
+  formatted = formatted.replace(/\$\$([\s\S]*?)\$\$/g, (_, math) => {
+    return `\n\n*${formatMathExpression(math)}*\n\n`;
+  });
+
+  // Convert inline math $...$
+  formatted = formatted.replace(/\$([^\$\n]+)\$/g, (_, math) => {
+    return `*${formatMathExpression(math)}*`;
+  });
+
+  // Convert remaining single LaTeX commands outside math blocks
+  formatted = formatMathExpression(formatted);
+
+  return formatted
     // Clean excessive blank line runs (> 2 newlines)
     .replace(/\n{3,}/g, '\n\n')
     .trim();

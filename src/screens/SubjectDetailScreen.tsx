@@ -48,9 +48,9 @@ export const SubjectDetailScreen = () => {
   };
 
   return (
-    <View style={[styles.container, { paddingBottom: insets.bottom }]}>
+    <View style={styles.container}>
       <ScrollView
-        contentContainerStyle={styles.scroll}
+        contentContainerStyle={[styles.scroll, { paddingBottom: 24 }]}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
