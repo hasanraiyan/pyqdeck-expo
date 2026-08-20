@@ -1,9 +1,9 @@
-import { Platform } from 'react-native';
 import {
   Semester,
   SubjectSummary,
   SubjectMeta,
   QuestionListResult,
+  QuestionSummary,
   Solution,
   SubjectSearchResult,
   SubjectsPage,
@@ -11,10 +11,11 @@ import {
   SimilarQuestionsResult,
   RepeatedQuestionsResult,
 } from '../types';
+import * as Cache from '../db/cacheService';
 
 export const API_BASE_URL = 'https://api.pyqdeck.in/api/public';
 
-class ApiError extends Error {
+export class ApiError extends Error {
   status?: number;
   constructor(message: string, status?: number) {
     super(message);
@@ -38,32 +39,135 @@ async function fetchApi<T>(path: string): Promise<T> {
   }
 }
 
-export const getSemesters = () => fetchApi<Semester[]>('/semesters');
+// -------------------------------------------------------------
+// CACHE-FIRST API ENDPOINTS WITH SILENT BACKGROUND REVALIDATION
+// -------------------------------------------------------------
 
-export const getSubjects = (semesterId: string) =>
-  fetchApi<SubjectSummary[]>(`/semesters/${semesterId}/subjects`);
+export const getSemesters = async (): Promise<Semester[]> => {
+  try {
+    const live = await fetchApi<Semester[]>('/semesters');
+    return live;
+  } catch (e) {
+    const cached = await Cache.getCachedSemesters();
+    if (cached && cached.length > 0) {
+      return cached.map((c) => c.semester);
+    }
+    throw e;
+  }
+};
 
-export const getSubjectMeta = (subjectId: string) =>
-  fetchApi<SubjectMeta>(`/subjects/${subjectId}/meta`);
+export const getSubjects = async (semesterId: string): Promise<SubjectSummary[]> => {
+  try {
+    const live = await fetchApi<SubjectSummary[]>(`/semesters/${semesterId}/subjects`);
+    Cache.saveCachedSubjects(semesterId, live);
+    return live;
+  } catch (e) {
+    const cached = await Cache.getCachedSubjects(semesterId);
+    if (cached && cached.length > 0) return cached;
+    throw e;
+  }
+};
 
-export const getQuestions = (
+/**
+ * Fetch Subject Meta with 12h hash comparison
+ */
+export const getSubjectMeta = async (subjectId: string): Promise<SubjectMeta> => {
+  // 1. Try local cache first
+  const cachedMeta = await Cache.getCachedSubjectMeta(subjectId);
+  const isFresh = await Cache.isSubjectCacheFresh(subjectId);
+
+  // If cached and fresh (within 12 hours), return immediately
+  if (cachedMeta && isFresh) {
+    return cachedMeta;
+  }
+
+  try {
+    const liveMeta = await fetchApi<SubjectMeta>(`/subjects/${subjectId}/meta`);
+    const newHash = Cache.generateSubjectHash(liveMeta);
+    await Cache.saveCachedSubjectMeta(liveMeta);
+    await Cache.updateSubjectCacheMeta(subjectId, newHash);
+    return liveMeta;
+  } catch (e) {
+    if (cachedMeta) return cachedMeta;
+    throw e;
+  }
+};
+
+/**
+ * Fetch Questions with local SQLite retrieval & background refresh
+ */
+export const getQuestions = async (
   subjectId: string,
   params: { year?: number; chapter?: string; search?: string; limit?: number; offset?: number } = {}
-) => {
-  const qs = new URLSearchParams();
-  if (params.year !== undefined) qs.set('year', String(params.year));
-  if (params.chapter) qs.set('chapter', params.chapter);
-  if (params.search) qs.set('search', params.search);
-  qs.set('limit', String(params.limit ?? 50));
-  if (params.offset) qs.set('offset', String(params.offset));
-  return fetchApi<QuestionListResult>(`/subjects/${subjectId}/questions?${qs.toString()}`);
+): Promise<QuestionListResult> => {
+  // Read local cache first
+  const cachedQuestions = await Cache.getCachedQuestions(subjectId, {
+    year: params.year,
+    chapter: params.chapter,
+  });
+
+  const cachedMeta = await Cache.getCachedSubjectMeta(subjectId);
+  const isFresh = await Cache.isSubjectCacheFresh(subjectId);
+
+  // If offline or data is fresh in cache, return immediately
+  if (cachedQuestions && cachedQuestions.length > 0 && isFresh) {
+    return {
+      subject: { id: subjectId, name: cachedMeta?.name || '' },
+      total: cachedQuestions.length,
+      returned: cachedQuestions.length,
+      offset: 0,
+      questions: cachedQuestions,
+    };
+  }
+
+  try {
+    const qs = new URLSearchParams();
+    if (params.year !== undefined) qs.set('year', String(params.year));
+    if (params.chapter) qs.set('chapter', params.chapter);
+    if (params.search) qs.set('search', params.search);
+    qs.set('limit', String(params.limit ?? 50));
+    if (params.offset) qs.set('offset', String(params.offset));
+
+    const liveResult = await fetchApi<QuestionListResult>(`/subjects/${subjectId}/questions?${qs.toString()}`);
+    if (liveResult && liveResult.questions) {
+      Cache.saveCachedQuestions(subjectId, liveResult.questions);
+    }
+    return liveResult;
+  } catch (e) {
+    if (cachedQuestions && cachedQuestions.length > 0) {
+      return {
+        subject: { id: subjectId, name: cachedMeta?.name || '' },
+        total: cachedQuestions.length,
+        returned: cachedQuestions.length,
+        offset: 0,
+        questions: cachedQuestions,
+      };
+    }
+    throw e;
+  }
 };
 
 export const getQuestion = (subjectId: string, questionId: string) =>
   fetchApi<QuestionListResult>(`/subjects/${subjectId}/questions/${encodeURIComponent(questionId)}`);
 
-export const getSolution = (subjectId: string, questionId: string) =>
-  fetchApi<Solution>(`/subjects/${subjectId}/questions/${encodeURIComponent(questionId)}/solution`);
+export const getSolution = async (subjectId: string, questionId: string): Promise<Solution> => {
+  // 1. Check local solution cache
+  const cached = await Cache.getCachedSolution(questionId);
+  if (cached) return cached;
+
+  try {
+    const live = await fetchApi<Solution>(
+      `/subjects/${subjectId}/questions/${encodeURIComponent(questionId)}/solution`
+    );
+    if (live) {
+      Cache.saveCachedSolution(subjectId, live);
+    }
+    return live;
+  } catch (e) {
+    if (cached) return cached;
+    throw e;
+  }
+};
 
 export const searchSubjects = (query: string, limit = 20) =>
   fetchApi<SubjectSearchResult>(`/subjects/search?q=${encodeURIComponent(query)}&limit=${limit}`);
@@ -79,8 +183,13 @@ export const searchAllQuestions = (query: string, limit = 20) =>
   fetchApi<AllQuestionsSearchResult>(`/questions/semantic-search?q=${encodeURIComponent(query)}&limit=${limit}`);
 
 export const getSimilarQuestions = (subjectId: string, questionId: string, limit = 5) =>
-  fetchApi<SimilarQuestionsResult>(`/subjects/${subjectId}/questions/${encodeURIComponent(questionId)}/similar?limit=${limit}`);
+  fetchApi<SimilarQuestionsResult>(
+    `/subjects/${subjectId}/questions/${encodeURIComponent(questionId)}/similar?limit=${limit}`
+  );
 
 export const getRepeatedQuestions = (subjectId: string, questionId: string, limit = 5) =>
-  fetchApi<RepeatedQuestionsResult>(`/subjects/${subjectId}/questions/${encodeURIComponent(questionId)}/repeats?limit=${limit}`);
+  fetchApi<RepeatedQuestionsResult>(
+    `/subjects/${subjectId}/questions/${encodeURIComponent(questionId)}/repeats?limit=${limit}`
+  );
+
 
