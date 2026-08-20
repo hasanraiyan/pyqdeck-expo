@@ -45,6 +45,40 @@ export const SearchScreen = () => {
     }
   };
 
+  const handleClear = () => {
+    setQuery('');
+    setSubjectResults([]);
+    setQuestionResults([]);
+    setHasSearched(false);
+  };
+
+  const handleSuggestionPress = (term: string) => {
+    setQuery(term);
+    // Trigger immediate search
+    setLoading(true);
+    setHasSearched(true);
+    Promise.all([
+      searchSubjects(term).catch(() => ({ subjects: [] })),
+      searchAllQuestions(term).catch(() => ({ questions: [] })),
+    ])
+      .then(([subs, qs]) => {
+        setSubjectResults(subs.subjects || []);
+        setQuestionResults(qs.questions || []);
+      })
+      .catch((e) => console.error(e))
+      .finally(() => setLoading(false));
+  };
+
+  const SUGGESTED_QUERIES = [
+    'Quick sort vs Merge sort',
+    'Binary Search Tree',
+    '8085 Microprocessor',
+    'Operating System Deadlock',
+    'Fourier Transform',
+    'DBMS Normalization',
+    'Thermodynamics',
+  ];
+
   const noResults =
     hasSearched && !loading && subjectResults.length === 0 && questionResults.length === 0;
 
@@ -59,15 +93,27 @@ export const SearchScreen = () => {
           <View style={styles.searchBar}>
             <Feather name="search" size={16} color={COLORS.textMuted} style={styles.searchIcon} />
             <TextInput
-              placeholder="Search subjects or questions..."
+              placeholder="Search subjects, questions, or topics..."
               placeholderTextColor={COLORS.textSubtle}
               value={query}
-              onChangeText={setQuery}
+              onChangeText={(text) => {
+                setQuery(text);
+                if (!text) {
+                  setHasSearched(false);
+                  setSubjectResults([]);
+                  setQuestionResults([]);
+                }
+              }}
               onSubmitEditing={handleSearch}
               returnKeyType="search"
               autoCorrect={false}
               style={styles.searchInput}
             />
+            {query.length > 0 && !loading && (
+              <TouchableOpacity onPress={handleClear} style={styles.clearBtn}>
+                <Feather name="x" size={15} color={COLORS.textMuted} />
+              </TouchableOpacity>
+            )}
             {loading && <ActivityIndicator size="small" color={COLORS.primary} />}
           </View>
         </View>
@@ -80,6 +126,25 @@ export const SearchScreen = () => {
         ]}
       >
         <View style={styles.centerWrapper}>
+          {/* Default State: Suggested Search Topics */}
+          {!hasSearched && !loading && (
+            <View style={styles.suggestedSection}>
+              <Text style={styles.suggestedHeading}>TRY SEARCHING FOR</Text>
+              <View style={styles.suggestedWrap}>
+                {SUGGESTED_QUERIES.map((term, idx) => (
+                  <TouchableOpacity
+                    key={idx}
+                    style={styles.suggestedChip}
+                    activeOpacity={0.7}
+                    onPress={() => handleSuggestionPress(term)}
+                  >
+                    <Feather name="search" size={12} color={COLORS.primary} style={{ marginRight: 6 }} />
+                    <Text style={styles.suggestedChipText}>{term}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          )}
           {loading ? (
             <View style={{ paddingVertical: 12 }}>
               <Skeleton width={120} height={14} style={{ marginBottom: 12 }} />
@@ -251,6 +316,43 @@ const styles = StyleSheet.create({
     flex: 1,
     color: COLORS.text,
     fontSize: rf(13.5),
+  },
+  clearBtn: {
+    padding: 6,
+    marginRight: -4,
+  },
+  suggestedSection: {
+    paddingTop: 8,
+    paddingBottom: 24,
+  },
+  suggestedHeading: {
+    fontFamily: FONTS.mono,
+    fontSize: rf(11),
+    fontWeight: '700',
+    color: COLORS.textSubtle,
+    letterSpacing: 1.2,
+    marginBottom: 12,
+  },
+  suggestedWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  suggestedChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.card,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 4,
+    paddingVertical: 7,
+    paddingHorizontal: 12,
+  },
+  suggestedChipText: {
+    fontFamily: FONTS.mono,
+    fontSize: rf(12),
+    color: COLORS.text,
+    fontWeight: '500',
   },
   scroll: {
     paddingHorizontal: 16,
