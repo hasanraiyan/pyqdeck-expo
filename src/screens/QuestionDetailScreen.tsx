@@ -145,40 +145,42 @@ export const QuestionDetailScreen = () => {
         <View style={styles.centerWrapper}>
           {/* Breadcrumb / Paper info */}
           <View style={styles.metaRow}>
-            <Text style={styles.subjectText}>{subjectName || 'Subject'}</Text>
-            <View style={styles.badgeGroup}>
-              <TouchableOpacity
-                onPress={() =>
-                  navigation.navigate('QuestionList', {
-                    semesterId,
-                    subjectId,
-                    subjectName,
-                    initialYear: question.year,
-                  })
-                }
-                activeOpacity={0.7}
-              >
-                <Badge label={question.year} variant="secondary" />
-              </TouchableOpacity>
-              <MarksBadge marks={question.marks} />
-            </View>
+            <Text style={styles.subjectText} numberOfLines={1}>
+              {subjectName || 'Subject'}
+              {question.chapter ? ` • ${question.chapter}` : ''}
+            </Text>
           </View>
-
-          {question.chapter ? (
-            <Text style={styles.chapter}>{question.chapter}</Text>
-          ) : null}
 
           {/* Question Card */}
           <View style={styles.questionCard}>
-            {question.qNumber ? (
-              <View style={styles.qNumRow}>
+            {/* Top row inside card: Q-Number on left, Year & Marks badge on right */}
+            <View style={styles.qNumRow}>
+              {question.qNumber ? (
                 <Text style={styles.qNumber}>
                   {String(question.qNumber).startsWith('Q')
                     ? question.qNumber
                     : `Q${question.qNumber}`}
                 </Text>
+              ) : (
+                <Text style={styles.qNumber}>QUESTION</Text>
+              )}
+              <View style={styles.cardBadgeGroup}>
+                <TouchableOpacity
+                  onPress={() =>
+                    navigation.navigate('QuestionList', {
+                      semesterId,
+                      subjectId,
+                      subjectName,
+                      initialYear: question.year,
+                    })
+                  }
+                  activeOpacity={0.7}
+                >
+                  <Badge label={question.year} variant="secondary" />
+                </TouchableOpacity>
+                <MarksBadge marks={question.marks} />
               </View>
-            ) : null}
+            </View>
 
             <Markdown style={markdownStyles}>{cleanMarkdown(question.text)}</Markdown>
 
@@ -403,28 +405,14 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
   },
   metaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
     marginBottom: 8,
   },
   subjectText: {
-    fontSize: 13,
-    color: COLORS.textMuted,
-    fontWeight: '600',
-  },
-  badgeGroup: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  chapter: {
-    fontFamily: 'Courier',
+    fontFamily: FONTS.mono,
     fontSize: 11,
     color: COLORS.textSubtle,
     textTransform: 'uppercase',
-    letterSpacing: 1.2,
-    marginBottom: 12,
+    letterSpacing: 1,
   },
   questionCard: {
     backgroundColor: COLORS.card,
@@ -435,13 +423,24 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   qNumRow: {
-    marginBottom: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+    paddingBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.borderLight,
   },
   qNumber: {
-    fontFamily: 'Courier',
-    fontSize: 12,
+    fontFamily: FONTS.mono,
+    fontSize: 13,
     fontWeight: '700',
     color: COLORS.primary,
+  },
+  cardBadgeGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
   repeatAlert: {
     backgroundColor: COLORS.primaryLight,
