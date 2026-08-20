@@ -171,17 +171,20 @@ export const SearchScreen = () => {
           {/* Default State: Suggested Search Topics */}
           {!hasSearched && !loading && (
             <View style={styles.suggestedSection}>
-              <Text style={styles.suggestedHeading}>TRY SEARCHING FOR</Text>
-              <View style={styles.suggestedWrap}>
+              <Text style={styles.suggestedHeading}>FREQUENTLY SEARCHED TOPICS</Text>
+              <View style={styles.suggestedList}>
                 {SUGGESTED_QUERIES.map((term, idx) => (
                   <TouchableOpacity
                     key={idx}
-                    style={styles.suggestedChip}
+                    style={styles.suggestedRow}
                     activeOpacity={0.7}
                     onPress={() => handleSuggestionPress(term)}
                   >
-                    <Feather name="search" size={12} color={COLORS.primary} style={{ marginRight: 6 }} />
-                    <Text style={styles.suggestedChipText}>{term}</Text>
+                    <View style={styles.suggestedRowLeft}>
+                      <Feather name="search" size={14} color={COLORS.primary} style={{ marginRight: 10 }} />
+                      <Text style={styles.suggestedRowText}>{term}</Text>
+                    </View>
+                    <Feather name="arrow-up-left" size={14} color={COLORS.textMuted} />
                   </TouchableOpacity>
                 ))}
               </View>
@@ -387,24 +390,31 @@ const styles = StyleSheet.create({
     letterSpacing: 1.2,
     marginBottom: 12,
   },
-  suggestedWrap: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  suggestedChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  suggestedList: {
     backgroundColor: COLORS.card,
     borderWidth: 1,
     borderColor: COLORS.border,
     borderRadius: 4,
-    paddingVertical: 7,
-    paddingHorizontal: 12,
+    overflow: 'hidden',
   },
-  suggestedChipText: {
+  suggestedRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.borderLight,
+  },
+  suggestedRowLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    paddingRight: 10,
+  },
+  suggestedRowText: {
     fontFamily: FONTS.mono,
-    fontSize: rf(12),
+    fontSize: rf(12.5),
     color: COLORS.text,
     fontWeight: '500',
   },
