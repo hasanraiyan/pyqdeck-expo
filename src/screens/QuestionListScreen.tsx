@@ -139,10 +139,14 @@ export const QuestionListScreen = () => {
           semesterId={semesterId}
           subjectName={subjectName}
           hideYearBadge={Boolean(selectedYear)}
+          // Only a single-year-scoped list matches what QuestionDetailScreen's
+          // prev/next-in-paper nav expects - an "all years" list would let it
+          // step across years, so only hand it off when we're year-filtered.
+          paperQuestions={selectedYear ? questions : undefined}
         />
       );
     },
-    [subjectId, semesterId, subjectName, selectedYear]
+    [subjectId, semesterId, subjectName, selectedYear, questions]
   );
 
   const hasActiveFilters = Boolean(selectedChapter || selectedYear);

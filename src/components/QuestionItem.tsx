@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -6,6 +6,7 @@ import {
   StyleSheet,
   ActivityIndicator,
   Share,
+  InteractionManager,
 } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
@@ -28,6 +29,9 @@ interface QuestionItemProps {
   subjectName?: string;
   showOpenButton?: boolean;
   hideYearBadge?: boolean;
+  // Same-paper question list already loaded by the parent screen, handed
+  // forward to QuestionDetailScreen so it doesn't have to re-fetch it.
+  paperQuestions?: QuestionSummary[];
 }
 
 export const QuestionItem: React.FC<QuestionItemProps> = React.memo(({
@@ -37,12 +41,41 @@ export const QuestionItem: React.FC<QuestionItemProps> = React.memo(({
   subjectName,
   showOpenButton = true,
   hideYearBadge = false,
+  paperQuestions,
 }) => {
   const navigation = useNavigation<any>();
   const [expanded, setExpanded] = useState(false);
   const [solution, setSolution] = useState<Solution | null>(null);
   const [loadingSolution, setLoadingSolution] = useState(false);
   const [copied, setCopied] = useState(false);
+
+  // FlatList pre-renders items just outside the viewport (initialNumToRender /
+  // windowSize), so fetching here rather than on-expand means the solution is
+  // usually already cached by the time the user reaches this item and taps it.
+  // Deferred via runAfterInteractions: up to initialNumToRender items mount at
+  // once on first paint, and firing all their fetches immediately competed
+  // with the JS thread for touch handling, making taps feel laggy right when
+  // the list appears. This waits until interactions/animations are idle.
+  useEffect(() => {
+    if (!question.hasSolution) return;
+    let cancelled = false;
+    const task = InteractionManager.runAfterInteractions(() => {
+      if (cancelled) return;
+      setLoadingSolution(true);
+      getSolution(subjectId, question.questionId)
+        .then((sol) => {
+          if (!cancelled) setSolution(sol);
+        })
+        .catch((e) => console.error('Failed to prefetch solution', e))
+        .finally(() => {
+          if (!cancelled) setLoadingSolution(false);
+        });
+    });
+    return () => {
+      cancelled = true;
+      task.cancel();
+    };
+  }, [subjectId, question.questionId, question.hasSolution]);
 
   const toggleExpand = async () => {
     Haptics.selectionAsync();
@@ -106,6 +139,7 @@ export const QuestionItem: React.FC<QuestionItemProps> = React.memo(({
       initialQuestion: question,
       initialSolution: solution,
       subjectName,
+      ...(paperQuestions ? { initialPaperQuestions: paperQuestions } : {}),
     });
   };
 
