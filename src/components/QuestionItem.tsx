@@ -6,6 +6,7 @@ import {
   StyleSheet,
   ActivityIndicator,
   Share,
+  InteractionManager,
 } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
@@ -51,20 +52,28 @@ export const QuestionItem: React.FC<QuestionItemProps> = React.memo(({
   // FlatList pre-renders items just outside the viewport (initialNumToRender /
   // windowSize), so fetching here rather than on-expand means the solution is
   // usually already cached by the time the user reaches this item and taps it.
+  // Deferred via runAfterInteractions: up to initialNumToRender items mount at
+  // once on first paint, and firing all their fetches immediately competed
+  // with the JS thread for touch handling, making taps feel laggy right when
+  // the list appears. This waits until interactions/animations are idle.
   useEffect(() => {
     if (!question.hasSolution) return;
     let cancelled = false;
-    setLoadingSolution(true);
-    getSolution(subjectId, question.questionId)
-      .then((sol) => {
-        if (!cancelled) setSolution(sol);
-      })
-      .catch((e) => console.error('Failed to prefetch solution', e))
-      .finally(() => {
-        if (!cancelled) setLoadingSolution(false);
-      });
+    const task = InteractionManager.runAfterInteractions(() => {
+      if (cancelled) return;
+      setLoadingSolution(true);
+      getSolution(subjectId, question.questionId)
+        .then((sol) => {
+          if (!cancelled) setSolution(sol);
+        })
+        .catch((e) => console.error('Failed to prefetch solution', e))
+        .finally(() => {
+          if (!cancelled) setLoadingSolution(false);
+        });
+    });
     return () => {
       cancelled = true;
+      task.cancel();
     };
   }, [subjectId, question.questionId, question.hasSolution]);
 
