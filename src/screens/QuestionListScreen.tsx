@@ -9,7 +9,6 @@ import {
   RefreshControl,
   Modal,
   TouchableWithoutFeedback,
-  Platform,
 } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -157,7 +156,7 @@ export const QuestionListScreen = () => {
         initialNumToRender={8}
         maxToRenderPerBatch={10}
         windowSize={5}
-        removeClippedSubviews={Platform.OS === 'android'}
+        removeClippedSubviews={false}
         contentContainerStyle={{
           paddingBottom: 24,
           maxWidth: contentMaxWidth,
