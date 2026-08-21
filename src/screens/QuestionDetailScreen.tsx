@@ -417,6 +417,11 @@ const styles = StyleSheet.create({
     paddingTop: 4,
     paddingBottom: 24,
   },
+  centerWrapper: {
+    maxWidth: 780,
+    width: '100%',
+    alignSelf: 'center',
+  },
   metaRow: {
     marginBottom: 8,
   },
@@ -765,9 +770,6 @@ const styles = StyleSheet.create({
     fontSize: rf(13.5),
     color: COLORS.text,
     lineHeight: rf(19),
-  },
-  centerWrapper: {
-    width: '100%',
   },
   navSection: {
     marginTop: 18,

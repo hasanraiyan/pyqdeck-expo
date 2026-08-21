@@ -16,11 +16,12 @@ import { getCachedSemesters, getCachedSubjects, saveCachedSemesters } from '../d
 import { Semester } from '../types';
 import { COLORS, FONTS } from '../theme/colors';
 import { Skeleton } from '../components/Skeleton';
-import { rf, scale, verticalScale, isTablet } from '../utils/responsive';
+import { rf, scale, verticalScale, useResponsive } from '../utils/responsive';
 
 export const HomeScreen = () => {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<any>();
+  const { isLandscape, isTablet, contentMaxWidth } = useResponsive();
   const [semestersData, setSemestersData] = useState<
     { semester: Semester; subjectCount: number }[]
   >([]);
@@ -122,7 +123,7 @@ export const HomeScreen = () => {
           />
         }
       >
-        <View style={styles.centerWrapper}>
+        <View style={[styles.centerWrapper, { maxWidth: contentMaxWidth }]}>
           {/* Hero Section */}
           <View style={styles.hero}>
             <Text style={styles.heroTitle}>
@@ -170,7 +171,13 @@ export const HomeScreen = () => {
             {loading ? (
               <View style={styles.grid}>
                 {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
-                  <View key={i} style={styles.gridCardSkeleton}>
+                  <View
+                    key={i}
+                    style={[
+                      styles.gridCardSkeleton,
+                      (isLandscape || isTablet) && { width: '23.5%' },
+                    ]}
+                  >
                     <Skeleton width={50} height={10} style={{ marginBottom: 6 }} />
                     <Skeleton width={40} height={28} style={{ marginBottom: 6 }} />
                     <Skeleton width={60} height={10} />
@@ -184,7 +191,11 @@ export const HomeScreen = () => {
                   return (
                     <TouchableOpacity
                       key={semester.id}
-                      style={[styles.gridCard, isComingSoon && styles.gridCardComingSoon]}
+                      style={[
+                        styles.gridCard,
+                        (isLandscape || isTablet) && { width: '23.5%' },
+                        isComingSoon && styles.gridCardComingSoon,
+                      ]}
                       activeOpacity={0.7}
                       onPress={() =>
                         navigation.navigate('SubjectList', {
@@ -382,7 +393,7 @@ const styles = StyleSheet.create({
     rowGap: 12,
   },
   gridCard: {
-    width: isTablet ? '23.5%' : '48.5%',
+    width: '48.5%',
     backgroundColor: COLORS.card,
     borderWidth: 1,
     borderColor: COLORS.border,
@@ -416,7 +427,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   gridCardSkeleton: {
-    width: isTablet ? '23.5%' : '48.5%',
+    width: '48.5%',
     backgroundColor: COLORS.card,
     borderWidth: 1,
     borderColor: COLORS.border,

@@ -16,11 +16,13 @@ import { SubjectSummary } from '../types';
 import { COLORS, FONTS } from '../theme/colors';
 import { SubjectCardSkeleton } from '../components/Skeleton';
 import { Badge } from '../components/Badge';
+import { useResponsive } from '../utils/responsive';
 
 export const SubjectListScreen = () => {
   const insets = useSafeAreaInsets();
   const route = useRoute<any>();
   const navigation = useNavigation<any>();
+  const { isLandscape, isTablet, contentMaxWidth } = useResponsive();
   const { semesterId, semesterNumber } = route.params || {};
 
   const [subjects, setSubjects] = useState<SubjectSummary[]>([]);
@@ -122,7 +124,12 @@ export const SubjectListScreen = () => {
             maxToRenderPerBatch={10}
             windowSize={5}
             removeClippedSubviews={Platform.OS === 'android'}
-            contentContainerStyle={{ paddingBottom: 24 }}
+            contentContainerStyle={{
+              paddingBottom: 24,
+              maxWidth: contentMaxWidth,
+              width: '100%',
+              alignSelf: 'center',
+            }}
             refreshControl={
               <RefreshControl
                 refreshing={refreshing}

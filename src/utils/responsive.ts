@@ -1,4 +1,4 @@
-import { Dimensions, PixelRatio } from 'react-native';
+import { Dimensions, PixelRatio, useWindowDimensions } from 'react-native';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -8,6 +8,26 @@ const baseHeight = 812;
 
 export const isTablet = SCREEN_WIDTH >= 768;
 export const isSmallDevice = SCREEN_WIDTH < 360;
+
+export const useResponsive = () => {
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const isTabletDevice = width >= 768 || (isLandscape && width >= 900);
+  const isSmall = width < 360;
+
+  const contentMaxWidth = isLandscape ? 860 : 720;
+  const gridColumns = isLandscape ? (width > 900 ? 4 : 3) : (width > 600 ? 3 : 2);
+
+  return {
+    width,
+    height,
+    isLandscape,
+    isTablet: isTabletDevice,
+    isSmallDevice: isSmall,
+    contentMaxWidth,
+    gridColumns,
+  };
+};
 
 /**
  * Scale horizontal sizes (padding, width, margin)

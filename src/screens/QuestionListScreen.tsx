@@ -20,12 +20,13 @@ import { COLORS, FONTS } from '../theme/colors';
 import { QuestionItem } from '../components/QuestionItem';
 import { QuestionSkeleton } from '../components/Skeleton';
 import { PrevNextNav } from '../components/PrevNextNav';
-import { rf, verticalScale } from '../utils/responsive';
+import { rf, verticalScale, useResponsive } from '../utils/responsive';
 
 export const QuestionListScreen = () => {
   const insets = useSafeAreaInsets();
   const route = useRoute<any>();
   const navigation = useNavigation<any>();
+  const { isLandscape, isTablet, contentMaxWidth } = useResponsive();
   const {
     semesterId,
     subjectId,
@@ -137,7 +138,12 @@ export const QuestionListScreen = () => {
         maxToRenderPerBatch={10}
         windowSize={5}
         removeClippedSubviews={Platform.OS === 'android'}
-        contentContainerStyle={{ paddingBottom: 24 }}
+        contentContainerStyle={{
+          paddingBottom: 24,
+          maxWidth: contentMaxWidth,
+          width: '100%',
+          alignSelf: 'center',
+        }}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}

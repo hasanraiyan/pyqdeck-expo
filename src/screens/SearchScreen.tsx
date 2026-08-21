@@ -18,13 +18,14 @@ import * as Cache from '../db/cacheService';
 import { COLORS, FONTS } from '../theme/colors';
 import { Badge, MarksBadge, YearBadge } from '../components/Badge';
 import { Skeleton } from '../components/Skeleton';
-import { rf, verticalScale } from '../utils/responsive';
+import { rf, verticalScale, useResponsive } from '../utils/responsive';
 
 const RECENT_SEARCHES_KEY = 'pyq_recent_searches';
 
 export const SearchScreen = () => {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<any>();
+  const { contentMaxWidth } = useResponsive();
   const [query, setQuery] = useState('');
   const [subjectResults, setSubjectResults] = useState<any[]>([]);
   const [questionResults, setQuestionResults] = useState<any[]>([]);
@@ -158,7 +159,7 @@ export const SearchScreen = () => {
     <View style={[styles.container, { paddingTop: insets.top }]}>
       {/* Header with Search Input */}
       <View style={styles.header}>
-        <View style={styles.headerInner}>
+        <View style={[styles.headerInner, { maxWidth: contentMaxWidth }]}>
           <Text style={styles.badgeText}>FIND ANY QUESTION OR TOPIC</Text>
           <Text style={styles.title}>Search</Text>
 
@@ -202,7 +203,7 @@ export const SearchScreen = () => {
           { paddingBottom: 24 },
         ]}
       >
-        <View style={styles.centerWrapper}>
+        <View style={[styles.centerWrapper, { maxWidth: contentMaxWidth }]}>
           {/* Default State: Recent Searches & Suggested Search Topics */}
           {!hasSearched && !loading && (
             <View style={styles.suggestedSection}>

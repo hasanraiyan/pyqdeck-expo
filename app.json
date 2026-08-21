@@ -3,7 +3,7 @@
     "name": "PyQdeck",
     "slug": "pyqdeck",
     "version": "1.0.0",
-    "orientation": "portrait",
+    "orientation": "default",
     "icon": "./assets/app-icon.png",
     "userInterfaceStyle": "light",
     "backgroundColor": "#f5f6f2",
