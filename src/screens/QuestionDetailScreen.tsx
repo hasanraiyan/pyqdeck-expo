@@ -29,6 +29,7 @@ import { Badge, MarksBadge, AskAiBadge, YearBadge } from '../components/Badge';
 import { PrevNextNav } from '../components/PrevNextNav';
 import { SolutionSkeleton, SimilarQuestionSkeleton } from '../components/Skeleton';
 import { rf, cleanMarkdown } from '../utils/responsive';
+import { buildQuestionUrl } from '../utils/links';
 import { questionMarkdownStyles, solutionMarkdownStyles, markdownRules } from '../theme/markdownStyles';
 import { recordQuestionOpenedAndMaybeShowInterstitial } from '../utils/ads';
 
@@ -43,7 +44,7 @@ export const QuestionDetailScreen = () => {
     questionId,
     initialQuestion,
     initialSolution,
-    subjectName,
+    subjectName: paramSubjectName,
   } = route.params || {};
 
   const [question, setQuestion] = useState<QuestionSummary | null>(
@@ -52,6 +53,9 @@ export const QuestionDetailScreen = () => {
   const [solution, setSolution] = useState<Solution | null>(
     initialSolution || null
   );
+  // Deep links (see App.tsx's `linking` config) only carry semesterId/subjectId/
+  // year/questionId - no subjectName - so backfill it from getQuestion's response.
+  const [subjectName, setSubjectName] = useState<string | undefined>(paramSubjectName);
   const [paperQuestions, setPaperQuestions] = useState<QuestionSummary[]>([]);
   const [repeats, setRepeats] = useState<any[]>([]);
   const [similar, setSimilar] = useState<any[]>([]);
@@ -74,6 +78,9 @@ export const QuestionDetailScreen = () => {
           const res = await getQuestion(subjectId, questionId);
           if (res.questions && res.questions.length > 0) {
             setQuestion(res.questions[0]);
+          }
+          if (!paramSubjectName && res.subject?.name) {
+            setSubjectName(res.subject.name);
           }
         }
         if (!initialSolution) {
@@ -130,8 +137,9 @@ export const QuestionDetailScreen = () => {
   const handleShare = async () => {
     if (!question) return;
     try {
+      const url = buildQuestionUrl(semesterId, subjectId, question.year, questionId);
       await Share.share({
-        message: `${question.text}\n\n[PYQDeck - ${question.year}]`,
+        message: `${question.text}\n\n[PYQDeck - ${question.year}]\n${url}`,
       });
     } catch (e) {
       console.error(e);
