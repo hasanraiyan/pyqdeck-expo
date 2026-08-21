@@ -16,7 +16,7 @@ import Markdown from 'react-native-markdown-display';
 import { QuestionSummary, Solution } from '../types';
 import { getSolution } from '../api';
 import { COLORS, FONTS } from '../theme/colors';
-import { Badge, MarksBadge, AskAiBadge } from './Badge';
+import { Badge, MarksBadge, AskAiBadge, YearBadge } from './Badge';
 import { SolutionSkeleton } from './Skeleton';
 import { cleanMarkdown } from '../utils/responsive';
 import { questionMarkdownStyles, solutionMarkdownStyles, markdownRules } from '../theme/markdownStyles';
@@ -125,8 +125,8 @@ export const QuestionItem: React.FC<QuestionItemProps> = React.memo(({
           </Text>
         </View>
         <View style={styles.headerRight}>
-          {!hideYearBadge ? (
-            <Badge label={question.year} variant="secondary" />
+          {!hideYearBadge && question.year ? (
+            <YearBadge year={question.year} />
           ) : null}
           <MarksBadge marks={question.marks} />
           {expanded ? (

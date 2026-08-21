@@ -39,6 +39,40 @@ export const MarksBadge: React.FC<{ marks: number | null | undefined }> = ({ mar
   );
 };
 
+// Signature element: Year stamped inside hand-drawn exam badge
+export const YearBadge: React.FC<{
+  year: number | string | null | undefined;
+  variant?: 'default' | 'teal' | 'primary' | 'muted';
+}> = ({ year, variant = 'teal' }) => {
+  if (!year) return null;
+  const strokeColor =
+    variant === 'primary'
+      ? COLORS.primary
+      : variant === 'muted'
+      ? COLORS.textMuted
+      : COLORS.secondary;
+  const textColor =
+    variant === 'primary'
+      ? COLORS.primary
+      : variant === 'muted'
+      ? COLORS.textMuted
+      : COLORS.secondary;
+
+  return (
+    <View style={styles.yearContainer}>
+      <Svg viewBox="0 0 76 34" style={StyleSheet.absoluteFill} fill="none">
+        <Path
+          d="M6 17C4 8 16 4 38 4C60 4 72 8 70 17C68 26 58 30 38 30C18 30 8 26 6 17Z"
+          stroke={strokeColor}
+          strokeWidth="1.8"
+          strokeLinecap="round"
+        />
+      </Svg>
+      <Text style={[styles.yearBadgeText, { color: textColor }]}>{year}</Text>
+    </View>
+  );
+};
+
 // Signature element: Hand-drawn / stamped Ask AI action badge button
 export const AskAiBadge: React.FC<{ label?: string }> = ({
   label = 'Ask AI',
@@ -119,6 +153,19 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: COLORS.primary,
     lineHeight: 16,
+  },
+  yearContainer: {
+    width: 52,
+    height: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  yearBadgeText: {
+    fontSize: 11.5,
+    fontFamily: FONTS.mono,
+    fontWeight: '700',
+    lineHeight: 16,
+    letterSpacing: 0.2,
   },
   askAiContainer: {
     width: 76,

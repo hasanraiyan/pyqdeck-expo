@@ -25,7 +25,7 @@ import {
 } from '../api';
 import { QuestionSummary, Solution } from '../types';
 import { COLORS, FONTS } from '../theme/colors';
-import { Badge, MarksBadge, AskAiBadge } from '../components/Badge';
+import { Badge, MarksBadge, AskAiBadge, YearBadge } from '../components/Badge';
 import { PrevNextNav } from '../components/PrevNextNav';
 import { SolutionSkeleton, SimilarQuestionSkeleton } from '../components/Skeleton';
 import { rf, cleanMarkdown } from '../utils/responsive';
@@ -173,7 +173,7 @@ export const QuestionDetailScreen = () => {
                     }
                     activeOpacity={0.7}
                   >
-                    <Text style={styles.qYearText}>{question.year}</Text>
+                    <YearBadge year={question.year} />
                   </TouchableOpacity>
                 ) : null}
               </View>

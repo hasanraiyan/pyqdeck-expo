@@ -16,7 +16,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { searchAllQuestions, searchSubjects, listAllSubjects } from '../api';
 import * as Cache from '../db/cacheService';
 import { COLORS, FONTS } from '../theme/colors';
-import { Badge, MarksBadge } from '../components/Badge';
+import { Badge, MarksBadge, YearBadge } from '../components/Badge';
 import { Skeleton } from '../components/Skeleton';
 import { rf, verticalScale } from '../utils/responsive';
 
@@ -353,7 +353,7 @@ export const SearchScreen = () => {
                       contentContainerStyle={styles.resultBadgeScroll}
                       nestedScrollEnabled
                     >
-                      <Badge label={q.year} variant="secondary" />
+                      {q.year ? <YearBadge year={q.year} /> : null}
                       <MarksBadge marks={q.marks} />
                       {q.chapter ? (
                         <View style={styles.chapterPill}>
