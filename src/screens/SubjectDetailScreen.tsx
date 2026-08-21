@@ -15,6 +15,7 @@ import { SubjectMeta } from '../types';
 import { COLORS, FONTS } from '../theme/colors';
 import { Skeleton } from '../components/Skeleton';
 import { Badge } from '../components/Badge';
+import { AdBanner } from '../components/AdBanner';
 import { useResponsive } from '../utils/responsive';
 
 export const SubjectDetailScreen = () => {
@@ -202,6 +203,7 @@ export const SubjectDetailScreen = () => {
         </View>
         </View>
       </ScrollView>
+      <AdBanner />
     </View>
   );
 };

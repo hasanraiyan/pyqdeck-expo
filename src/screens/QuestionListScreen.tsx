@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -9,7 +9,6 @@ import {
   RefreshControl,
   Modal,
   TouchableWithoutFeedback,
-  Platform,
 } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -20,6 +19,7 @@ import { COLORS, FONTS } from '../theme/colors';
 import { QuestionItem } from '../components/QuestionItem';
 import { QuestionSkeleton } from '../components/Skeleton';
 import { PrevNextNav } from '../components/PrevNextNav';
+import { AdBanner } from '../components/AdBanner';
 import { rf, verticalScale, useResponsive } from '../utils/responsive';
 
 export const QuestionListScreen = () => {
@@ -113,16 +113,35 @@ export const QuestionListScreen = () => {
       ? yearsList[currentYearIdx + 1]
       : null;
 
+  const QUESTIONS_PER_AD = 6;
+  type ListRow =
+    | { kind: 'question'; question: QuestionSummary }
+    | { kind: 'ad'; id: string };
+
+  const listData: ListRow[] = useMemo(() => {
+    const rows: ListRow[] = [];
+    questions.forEach((q, idx) => {
+      rows.push({ kind: 'question', question: q });
+      if ((idx + 1) % QUESTIONS_PER_AD === 0) {
+        rows.push({ kind: 'ad', id: `ad-${idx}` });
+      }
+    });
+    return rows;
+  }, [questions]);
+
   const renderItem = useCallback(
-    ({ item }: { item: QuestionSummary }) => (
-      <QuestionItem
-        question={item}
-        subjectId={subjectId}
-        semesterId={semesterId}
-        subjectName={subjectName}
-        hideYearBadge={Boolean(selectedYear)}
-      />
-    ),
+    ({ item }: { item: ListRow }) => {
+      if (item.kind === 'ad') return <AdBanner />;
+      return (
+        <QuestionItem
+          question={item.question}
+          subjectId={subjectId}
+          semesterId={semesterId}
+          subjectName={subjectName}
+          hideYearBadge={Boolean(selectedYear)}
+        />
+      );
+    },
     [subjectId, semesterId, subjectName, selectedYear]
   );
 
@@ -131,13 +150,13 @@ export const QuestionListScreen = () => {
   return (
     <View style={styles.container}>
       <FlatList
-        data={questions}
-        keyExtractor={(item) => item.questionId}
+        data={listData}
+        keyExtractor={(item) => (item.kind === 'ad' ? item.id : item.question.questionId)}
         renderItem={renderItem}
         initialNumToRender={8}
         maxToRenderPerBatch={10}
         windowSize={5}
-        removeClippedSubviews={Platform.OS === 'android'}
+        removeClippedSubviews={false}
         contentContainerStyle={{
           paddingBottom: 24,
           maxWidth: contentMaxWidth,
