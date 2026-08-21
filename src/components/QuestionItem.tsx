@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -28,6 +28,9 @@ interface QuestionItemProps {
   subjectName?: string;
   showOpenButton?: boolean;
   hideYearBadge?: boolean;
+  // Same-paper question list already loaded by the parent screen, handed
+  // forward to QuestionDetailScreen so it doesn't have to re-fetch it.
+  paperQuestions?: QuestionSummary[];
 }
 
 export const QuestionItem: React.FC<QuestionItemProps> = React.memo(({
@@ -37,12 +40,33 @@ export const QuestionItem: React.FC<QuestionItemProps> = React.memo(({
   subjectName,
   showOpenButton = true,
   hideYearBadge = false,
+  paperQuestions,
 }) => {
   const navigation = useNavigation<any>();
   const [expanded, setExpanded] = useState(false);
   const [solution, setSolution] = useState<Solution | null>(null);
   const [loadingSolution, setLoadingSolution] = useState(false);
   const [copied, setCopied] = useState(false);
+
+  // FlatList pre-renders items just outside the viewport (initialNumToRender /
+  // windowSize), so fetching here rather than on-expand means the solution is
+  // usually already cached by the time the user reaches this item and taps it.
+  useEffect(() => {
+    if (!question.hasSolution) return;
+    let cancelled = false;
+    setLoadingSolution(true);
+    getSolution(subjectId, question.questionId)
+      .then((sol) => {
+        if (!cancelled) setSolution(sol);
+      })
+      .catch((e) => console.error('Failed to prefetch solution', e))
+      .finally(() => {
+        if (!cancelled) setLoadingSolution(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [subjectId, question.questionId, question.hasSolution]);
 
   const toggleExpand = async () => {
     Haptics.selectionAsync();
@@ -106,6 +130,7 @@ export const QuestionItem: React.FC<QuestionItemProps> = React.memo(({
       initialQuestion: question,
       initialSolution: solution,
       subjectName,
+      ...(paperQuestions ? { initialPaperQuestions: paperQuestions } : {}),
     });
   };
 

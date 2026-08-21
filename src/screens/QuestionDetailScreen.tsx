@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -32,6 +32,8 @@ import { rf, cleanMarkdown } from '../utils/responsive';
 import { questionMarkdownStyles, solutionMarkdownStyles, markdownRules } from '../theme/markdownStyles';
 import { recordQuestionOpenedAndMaybeShowInterstitial } from '../utils/ads';
 
+type PrefetchEntry = { ready: boolean; solution: Solution | null; similar: any[]; repeats: any[] };
+
 export const QuestionDetailScreen = () => {
   const insets = useSafeAreaInsets();
   const route = useRoute<any>();
@@ -43,6 +45,9 @@ export const QuestionDetailScreen = () => {
     questionId,
     initialQuestion,
     initialSolution,
+    initialSimilar,
+    initialRepeats,
+    initialPaperQuestions,
     subjectName,
   } = route.params || {};
 
@@ -52,11 +57,15 @@ export const QuestionDetailScreen = () => {
   const [solution, setSolution] = useState<Solution | null>(
     initialSolution || null
   );
-  const [paperQuestions, setPaperQuestions] = useState<QuestionSummary[]>([]);
-  const [repeats, setRepeats] = useState<any[]>([]);
-  const [similar, setSimilar] = useState<any[]>([]);
+  const [paperQuestions, setPaperQuestions] = useState<QuestionSummary[]>(
+    initialPaperQuestions || []
+  );
+  const [repeats, setRepeats] = useState<any[]>(initialRepeats || []);
+  const [similar, setSimilar] = useState<any[]>(initialSimilar || []);
   const [loading, setLoading] = useState(!initialQuestion);
-  const [loadingRelated, setLoadingRelated] = useState(true);
+  const [loadingRelated, setLoadingRelated] = useState(
+    !(initialSimilar && initialRepeats && initialPaperQuestions)
+  );
   const [copied, setCopied] = useState(false);
   const [showSimilar, setShowSimilar] = useState(true);
   const [showRepeats, setShowRepeats] = useState(true);
@@ -80,17 +89,31 @@ export const QuestionDetailScreen = () => {
           const sol = await getSolution(subjectId, questionId).catch(() => null);
           setSolution(sol);
         }
-        const [repData, simData, paperData] = await Promise.all([
-          getRepeatedQuestions(subjectId, questionId).catch(() => ({ questions: [] })),
-          getSimilarQuestions(subjectId, questionId).catch(() => ({ questions: [] })),
-          currentYear
-            ? getQuestions(subjectId, { year: Number(currentYear), limit: 50 }).catch(() => null)
-            : Promise.resolve(null),
-        ]);
-        setRepeats(repData.questions || []);
-        setSimilar(simData.questions || []);
-        if (paperData?.questions) {
-          setPaperQuestions(paperData.questions);
+
+        // Adjacent-question navigation (see the prefetch effect below) already
+        // hands these down as route params when they've resolved in time, so
+        // only hit the network for whichever piece is actually missing.
+        const needsRepeats = !initialRepeats;
+        const needsSimilar = !initialSimilar;
+        const needsPaper = !initialPaperQuestions;
+
+        if (needsRepeats || needsSimilar || needsPaper) {
+          const [repData, simData, paperData] = await Promise.all([
+            needsRepeats
+              ? getRepeatedQuestions(subjectId, questionId).catch(() => ({ questions: [] }))
+              : Promise.resolve(null),
+            needsSimilar
+              ? getSimilarQuestions(subjectId, questionId).catch(() => ({ questions: [] }))
+              : Promise.resolve(null),
+            needsPaper && currentYear
+              ? getQuestions(subjectId, { year: Number(currentYear), limit: 50 }).catch(() => null)
+              : Promise.resolve(null),
+          ]);
+          if (repData) setRepeats(repData.questions || []);
+          if (simData) setSimilar(simData.questions || []);
+          if (paperData?.questions) {
+            setPaperQuestions(paperData.questions);
+          }
         }
       } catch (e) {
         console.error(e);
@@ -150,6 +173,66 @@ export const QuestionDetailScreen = () => {
       : null;
 
   const hasNav = Boolean(prevQuestion || nextQuestion);
+
+  // Idle-prefetch the neighboring questions' solution/similar/repeats once
+  // the current question has settled, so Prev/Next feels instant instead of
+  // re-hitting the network for each step through the paper.
+  const prefetchRef = useRef<Record<string, PrefetchEntry>>({});
+
+  useEffect(() => {
+    if (loadingRelated) return;
+
+    [prevQuestion, nextQuestion].filter(Boolean).forEach((q) => {
+      const target = q as QuestionSummary;
+      if (prefetchRef.current[target.questionId]) return;
+      prefetchRef.current[target.questionId] = {
+        ready: false,
+        solution: null,
+        similar: [],
+        repeats: [],
+      };
+
+      (async () => {
+        try {
+          const [sol, simRes, repRes] = await Promise.all([
+            target.hasSolution
+              ? getSolution(subjectId, target.questionId).catch(() => null)
+              : Promise.resolve(null),
+            getSimilarQuestions(subjectId, target.questionId).catch(() => ({ questions: [] })),
+            getRepeatedQuestions(subjectId, target.questionId).catch(() => ({ questions: [] })),
+          ]);
+          prefetchRef.current[target.questionId] = {
+            ready: true,
+            solution: sol,
+            similar: simRes.questions || [],
+            repeats: repRes.questions || [],
+          };
+        } catch {
+          delete prefetchRef.current[target.questionId];
+        }
+      })();
+    });
+  }, [loadingRelated, prevQuestion?.questionId, nextQuestion?.questionId]);
+
+  const buildNavParams = (target: QuestionSummary) => {
+    const prefetched = prefetchRef.current[target.questionId];
+    return {
+      subjectId,
+      semesterId,
+      year,
+      questionId: target.questionId,
+      initialQuestion: target,
+      subjectName,
+      initialPaperQuestions: paperQuestions,
+      ...(prefetched?.ready
+        ? {
+            initialSolution: prefetched.solution ?? undefined,
+            initialSimilar: prefetched.similar,
+            initialRepeats: prefetched.repeats,
+          }
+        : {}),
+    };
+  };
 
   if (loading || !question) {
     return (
@@ -374,14 +457,7 @@ export const QuestionDetailScreen = () => {
                             : `Q${prevQuestion.qNumber}`),
                         sublabel: 'Previous',
                         onPress: () =>
-                          navigation.push('QuestionDetail', {
-                            subjectId,
-                            semesterId,
-                            year,
-                            questionId: prevQuestion.questionId,
-                            initialQuestion: prevQuestion,
-                            subjectName,
-                          }),
+                          navigation.push('QuestionDetail', buildNavParams(prevQuestion)),
                       }
                     : null
                 }
@@ -395,14 +471,7 @@ export const QuestionDetailScreen = () => {
                             : `Q${nextQuestion.qNumber}`),
                         sublabel: 'Next',
                         onPress: () =>
-                          navigation.push('QuestionDetail', {
-                            subjectId,
-                            semesterId,
-                            year,
-                            questionId: nextQuestion.questionId,
-                            initialQuestion: nextQuestion,
-                            subjectName,
-                          }),
+                          navigation.push('QuestionDetail', buildNavParams(nextQuestion)),
                       }
                     : null
                 }
