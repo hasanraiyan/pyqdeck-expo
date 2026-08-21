@@ -1,8 +1,8 @@
 import { TestIds } from 'react-native-google-mobile-ads';
 
-// Google's shared test unit IDs always fill and are safe to click. Swap these
-// for real AdMob unit IDs once an account exists (see GitHub issue #5).
+// Test unit IDs always fill and are safe to click, so dev/debug builds use
+// those and only release builds (__DEV__ === false) serve real ads.
 export const AD_UNIT_IDS = {
-  banner: TestIds.BANNER,
-  interstitial: TestIds.INTERSTITIAL,
+  banner: __DEV__ ? TestIds.BANNER : 'ca-app-pub-6179737775385101/2841064525',
+  interstitial: __DEV__ ? TestIds.INTERSTITIAL : 'ca-app-pub-6179737775385101/3967227754',
 };
