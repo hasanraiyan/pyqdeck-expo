@@ -33,7 +33,7 @@ export const SubjectListScreen = () => {
   const loadData = async () => {
     try {
       const data = await getSubjects(semesterId);
-      setSubjects(data);
+      setSubjects([...data].sort((a, b) => a.name.localeCompare(b.name)));
     } catch (e) {
       console.error(e);
     } finally {
