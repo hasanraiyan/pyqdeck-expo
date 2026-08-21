@@ -24,6 +24,12 @@ export class ApiError extends Error {
   }
 }
 
+// Backend subject names occasionally carry stray leading/trailing whitespace,
+// which breaks alphabetical sorting and looks wrong wherever it's rendered.
+function trimName<T extends { name: string }>(item: T): T {
+  return item.name === item.name.trim() ? item : { ...item, name: item.name.trim() };
+}
+
 async function fetchApi<T>(path: string): Promise<T> {
   const url = `${API_BASE_URL}${path}`;
   try {
@@ -74,16 +80,16 @@ export const getSubjects = async (
   const isFresh = !forceRefresh && (await Cache.isSubjectCacheFresh(cacheKey));
 
   if (cached && cached.length > 0 && isFresh) {
-    return cached;
+    return cached.map(trimName);
   }
 
   try {
     const live = await fetchApi<SubjectSummary[]>(`/semesters/${semesterId}/subjects`);
     Cache.saveCachedSubjects(semesterId, live);
     await Cache.updateSubjectCacheMeta(cacheKey, `count_${live.length}`);
-    return live;
+    return live.map(trimName);
   } catch (e) {
-    if (cached && cached.length > 0) return cached;
+    if (cached && cached.length > 0) return cached.map(trimName);
     throw e;
   }
 };
@@ -101,7 +107,7 @@ export const getSubjectMeta = async (
 
   // If cached and fresh (within 12 hours), return immediately
   if (cachedMeta && isFresh) {
-    return cachedMeta;
+    return trimName(cachedMeta);
   }
 
   try {
@@ -109,9 +115,9 @@ export const getSubjectMeta = async (
     const newHash = Cache.generateSubjectHash(liveMeta);
     await Cache.saveCachedSubjectMeta(subjectId, liveMeta);
     await Cache.updateSubjectCacheMeta(subjectId, newHash);
-    return liveMeta;
+    return trimName(liveMeta);
   } catch (e) {
-    if (cachedMeta) return cachedMeta;
+    if (cachedMeta) return trimName(cachedMeta);
     throw e;
   }
 };
@@ -203,14 +209,17 @@ export const getSolution = async (subjectId: string, questionId: string): Promis
   }
 };
 
-export const searchSubjects = (query: string, limit = 20) =>
-  fetchApi<SubjectSearchResult>(`/subjects/search?q=${encodeURIComponent(query)}&limit=${limit}`);
+export const searchSubjects = async (query: string, limit = 20) => {
+  const res = await fetchApi<SubjectSearchResult>(`/subjects/search?q=${encodeURIComponent(query)}&limit=${limit}`);
+  return { ...res, subjects: res.subjects.map(trimName) };
+};
 
-export const listAllSubjects = (params: { q?: string; page?: number } = {}) => {
+export const listAllSubjects = async (params: { q?: string; page?: number } = {}) => {
   const qs = new URLSearchParams();
   if (params.q) qs.set('q', params.q);
   if (params.page) qs.set('page', String(params.page));
-  return fetchApi<SubjectsPage>(`/subjects?${qs.toString()}`);
+  const res = await fetchApi<SubjectsPage>(`/subjects?${qs.toString()}`);
+  return { ...res, subjects: res.subjects.map(trimName) };
 };
 
 export const searchAllQuestions = (query: string, limit = 20) =>
