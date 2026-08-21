@@ -17,12 +17,14 @@ class VolumeScrollModule(private val reactContext: ReactApplicationContext) :
   ReactContextBaseJavaModule(reactContext) {
 
   companion object {
+    // No @JvmStatic here: it would also generate static setEnabled/setInstance
+    // accessors on the outer class, clashing with the @ReactMethod setEnabled
+    // below ("Platform declaration clash"). MainActivity.kt is Kotlin too, so
+    // plain companion access (VolumeScrollModule.enabled) works fine without it.
     @Volatile
-    @JvmStatic
     var enabled: Boolean = false
 
     @Volatile
-    @JvmStatic
     var instance: VolumeScrollModule? = null
   }
 
