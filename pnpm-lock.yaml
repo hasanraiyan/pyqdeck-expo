@@ -32,6 +32,9 @@ importers:
       expo-constants:
         specifier: ^57.0.13
         version: 57.0.13(expo@57.0.15)(react-native@0.86.2(@babel/core@7.29.7)(@types/react@19.2.18)(react@19.2.3))
+      expo-font:
+        specifier: ~57.0.1
+        version: 57.0.1(expo@57.0.15)(react-native@0.86.2(@babel/core@7.29.7)(@types/react@19.2.18)(react@19.2.3))(react@19.2.3)
       expo-haptics:
         specifier: ^57.0.1
         version: 57.0.1(expo@57.0.15)
