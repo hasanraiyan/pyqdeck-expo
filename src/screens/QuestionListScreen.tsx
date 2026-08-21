@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import {
   View,
   Text,
@@ -20,7 +20,11 @@ import { QuestionItem } from '../components/QuestionItem';
 import { QuestionSkeleton } from '../components/Skeleton';
 import { PrevNextNav } from '../components/PrevNextNav';
 import { AdBanner } from '../components/AdBanner';
+import { VolumeScrollHint } from '../components/VolumeScrollHint';
 import { rf, verticalScale, useResponsive } from '../utils/responsive';
+import { useVolumeScroll } from '../utils/volumeScroll';
+
+const VOLUME_SCROLL_STEP = 320;
 
 export const QuestionListScreen = () => {
   const insets = useSafeAreaInsets();
@@ -147,9 +151,27 @@ export const QuestionListScreen = () => {
 
   const hasActiveFilters = Boolean(selectedChapter || selectedYear);
 
+  const listRef = useRef<FlatList>(null);
+  const scrollOffsetRef = useRef(0);
+  const [showVolumeHint, setShowVolumeHint] = useState(false);
+
+  useVolumeScroll(
+    useCallback((direction) => {
+      const delta = direction === 'down' ? VOLUME_SCROLL_STEP : -VOLUME_SCROLL_STEP;
+      const nextOffset = Math.max(0, scrollOffsetRef.current + delta);
+      listRef.current?.scrollToOffset({ offset: nextOffset, animated: true });
+    }, []),
+    useCallback(() => setShowVolumeHint(true), [])
+  );
+
   return (
     <View style={styles.container}>
       <FlatList
+        ref={listRef}
+        onScroll={(e) => {
+          scrollOffsetRef.current = e.nativeEvent.contentOffset.y;
+        }}
+        scrollEventThrottle={32}
         data={listData}
         keyExtractor={(item) => (item.kind === 'ad' ? item.id : item.question.questionId)}
         renderItem={renderItem}
@@ -376,6 +398,12 @@ export const QuestionListScreen = () => {
           </View>
         </TouchableWithoutFeedback>
       </Modal>
+
+      <VolumeScrollHint
+        visible={showVolumeHint}
+        onHide={() => setShowVolumeHint(false)}
+        bottomOffset={insets.bottom + 16}
+      />
     </View>
   );
 };
