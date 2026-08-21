@@ -102,6 +102,23 @@ export const QuestionDetailScreen = () => {
     loadAll();
   }, [subjectId, questionId, currentYear]);
 
+  const openAiSearch = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    if (!question?.text) return;
+    const coursifyUrl = `https://hasanraiyan.me/coursify?search_ai=${encodeURIComponent(question.text)}&send=true`;
+    try {
+      await WebBrowser.openBrowserAsync(coursifyUrl, {
+        toolbarColor: COLORS.card,
+        controlsColor: COLORS.primary,
+        secondaryToolbarColor: COLORS.background,
+        showTitle: true,
+        enableBarCollapsing: true,
+      });
+    } catch (err) {
+      Linking.openURL(coursifyUrl).catch((e) => console.error(e));
+    }
+  };
+
   const handleCopy = async () => {
     if (!question) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -229,28 +246,13 @@ export const QuestionDetailScreen = () => {
 
             {/* Action buttons */}
             <View style={styles.actionsRow}>
-              <TouchableOpacity
-                onPress={async () => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                  if (question?.text) {
-                    const coursifyUrl = `https://hasanraiyan.me/coursify?search_ai=${encodeURIComponent(question.text)}&send=true`;
-                    try {
-                      await WebBrowser.openBrowserAsync(coursifyUrl, {
-                        toolbarColor: COLORS.card,
-                        controlsColor: COLORS.primary,
-                        secondaryToolbarColor: COLORS.background,
-                        showTitle: true,
-                        enableBarCollapsing: true,
-                      });
-                    } catch (err) {
-                      Linking.openURL(coursifyUrl).catch((e) => console.error(e));
-                    }
-                  }
-                }}
-                activeOpacity={0.7}
-              >
-                <AskAiBadge />
-              </TouchableOpacity>
+              {question.hasSolution ? (
+                <View />
+              ) : (
+                <TouchableOpacity onPress={openAiSearch} activeOpacity={0.7}>
+                  <AskAiBadge />
+                </TouchableOpacity>
+              )}
 
               <View style={styles.actionButtonsRight}>
                 <TouchableOpacity style={styles.actionIconButton} onPress={handleCopy} activeOpacity={0.6}>
@@ -275,7 +277,12 @@ export const QuestionDetailScreen = () => {
           {/* Worked Solution */}
           {question.hasSolution && (
             <View style={styles.solutionSection}>
-              <Text style={styles.solutionTitle}>WORKED SOLUTION</Text>
+              <View style={styles.solutionHeaderRow}>
+                <Text style={styles.solutionTitle}>WORKED SOLUTION</Text>
+                <TouchableOpacity onPress={openAiSearch} activeOpacity={0.7}>
+                  <AskAiBadge />
+                </TouchableOpacity>
+              </View>
               {solution ? (
                 <View style={styles.solutionBody}>
                   <Markdown style={solutionMarkdownStyles} rules={markdownRules}>
@@ -691,13 +698,18 @@ const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 20,
   },
+  solutionHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+  },
   solutionTitle: {
     fontFamily: 'Courier',
     fontSize: 11,
     fontWeight: '700',
     color: COLORS.primary,
     letterSpacing: 1.2,
-    marginBottom: 10,
   },
   solutionBody: {
     paddingTop: 4,
