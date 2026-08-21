@@ -17,6 +17,7 @@ import { SubjectSummary, Semester } from '../types';
 import { COLORS, FONTS } from '../theme/colors';
 import { Skeleton } from '../components/Skeleton';
 import { Badge } from '../components/Badge';
+import { AdBanner } from '../components/AdBanner';
 
 export const AllSubjectsScreen = () => {
   const navigation = useNavigation<any>();
@@ -196,6 +197,7 @@ export const AllSubjectsScreen = () => {
           />
         )}
       </View>
+      <AdBanner />
     </View>
   );
 };

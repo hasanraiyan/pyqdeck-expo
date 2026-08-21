@@ -30,6 +30,7 @@ import { PrevNextNav } from '../components/PrevNextNav';
 import { SolutionSkeleton, SimilarQuestionSkeleton } from '../components/Skeleton';
 import { rf, cleanMarkdown } from '../utils/responsive';
 import { questionMarkdownStyles, solutionMarkdownStyles, markdownRules } from '../theme/markdownStyles';
+import { recordQuestionOpenedAndMaybeShowInterstitial } from '../utils/ads';
 
 export const QuestionDetailScreen = () => {
   const insets = useSafeAreaInsets();
@@ -61,6 +62,10 @@ export const QuestionDetailScreen = () => {
   const [showRepeats, setShowRepeats] = useState(true);
 
   const currentYear = question?.year || year;
+
+  useEffect(() => {
+    recordQuestionOpenedAndMaybeShowInterstitial();
+  }, [questionId]);
 
   useEffect(() => {
     const loadAll = async () => {

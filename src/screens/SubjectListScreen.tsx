@@ -16,6 +16,7 @@ import { SubjectSummary } from '../types';
 import { COLORS, FONTS } from '../theme/colors';
 import { SubjectCardSkeleton } from '../components/Skeleton';
 import { Badge } from '../components/Badge';
+import { AdBanner } from '../components/AdBanner';
 import { useResponsive } from '../utils/responsive';
 
 export const SubjectListScreen = () => {
@@ -163,6 +164,7 @@ export const SubjectListScreen = () => {
           />
         )}
       </View>
+      <AdBanner />
     </View>
   );
 };

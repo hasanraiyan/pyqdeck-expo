@@ -5,6 +5,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets, SafeAreaProvider } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
+import mobileAds from 'react-native-google-mobile-ads';
 import { COLORS } from './src/theme/colors';
 import { HomeScreen } from './src/screens/HomeScreen';
 import { SubjectListScreen } from './src/screens/SubjectListScreen';
@@ -123,6 +124,8 @@ function AppContent() {
   const insets = useSafeAreaInsets();
 
   useEffect(() => {
+    mobileAds().initialize();
+
     // Sequenced so a store-update prompt and a review prompt never show back to back.
     checkForStoreUpdate().finally(() => {
       maybeRequestReview();
