@@ -45,6 +45,25 @@ async function fetchApi<T>(path: string): Promise<T> {
   }
 }
 
+async function postApi<T>(path: string, body: unknown): Promise<T> {
+  const url = `${API_BASE_URL}${path}`;
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({ message: res.statusText }));
+      throw new ApiError(errData.message || `Request failed with status ${res.status}`, res.status);
+    }
+    return await res.json();
+  } catch (err: any) {
+    if (err instanceof ApiError) throw err;
+    throw new ApiError(err.message || 'Network error occurred');
+  }
+}
+
 // -------------------------------------------------------------
 // CACHE-FIRST API ENDPOINTS WITH SILENT BACKGROUND REVALIDATION
 // -------------------------------------------------------------
@@ -233,6 +252,17 @@ export const getSimilarQuestions = (subjectId: string, questionId: string, limit
 export const getRepeatedQuestions = (subjectId: string, questionId: string, limit = 5) =>
   fetchApi<RepeatedQuestionsResult>(
     `/subjects/${subjectId}/questions/${encodeURIComponent(questionId)}/repeats?limit=${limit}`
+  );
+
+export const voteSolution = (
+  subjectId: string,
+  questionId: string,
+  voterId: string,
+  value: 1 | -1 | 0
+) =>
+  postApi<{ upvotes: number; downvotes: number }>(
+    `/subjects/${subjectId}/questions/${encodeURIComponent(questionId)}/solution/vote`,
+    { voterId, value }
   );
 
 
