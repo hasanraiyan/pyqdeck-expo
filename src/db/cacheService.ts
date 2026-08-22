@@ -254,3 +254,21 @@ export const searchLocalCache = async (query: string) => {
     questions,
   };
 };
+
+// -------------------------------------------------------------
+// CACHE CLEARING
+// -------------------------------------------------------------
+
+/**
+ * Wipes all cached content (semesters, subjects, questions, solutions,
+ * recent searches) - every cache key in this app is prefixed `pyq_`.
+ * Leaves behavioral/preference keys (volume_scroll_*, interstitial_*,
+ * review_prompt_*) untouched.
+ */
+export async function clearAllCache(): Promise<void> {
+  const keys = await AsyncStorage.getAllKeys();
+  const cacheKeys = keys.filter((k) => k.startsWith('pyq_'));
+  if (cacheKeys.length > 0) {
+    await AsyncStorage.multiRemove(cacheKeys);
+  }
+}
