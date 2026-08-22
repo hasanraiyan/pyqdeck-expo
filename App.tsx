@@ -5,7 +5,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets, SafeAreaProvider } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
-import mobileAds from 'react-native-google-mobile-ads';
+import { mobileAds } from './src/utils/mobileAds';
 import { COLORS } from './src/theme/colors';
 import { HomeScreen } from './src/screens/HomeScreen';
 import { SubjectListScreen } from './src/screens/SubjectListScreen';

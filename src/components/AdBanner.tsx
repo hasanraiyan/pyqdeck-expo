@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import { View, StyleSheet } from 'react-native';
-import { BannerAd, BannerAdSize } from 'react-native-google-mobile-ads';
+import { BannerAd, BannerAdSize, adsAvailable } from '../utils/mobileAds';
 import { AD_UNIT_IDS } from '../config/ads';
 
 export const AdBanner: React.FC = () => {
   const [failed, setFailed] = useState(false);
 
-  if (failed) return null;
+  if (!adsAvailable || !BannerAd || failed) return null;
 
   return (
     <View style={styles.container}>
