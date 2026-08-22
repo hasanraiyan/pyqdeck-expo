@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -13,12 +13,13 @@ import { useNavigation } from '@react-navigation/native';
 import * as Haptics from 'expo-haptics';
 import { Feather } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { searchAllQuestions, searchSubjects, listAllSubjects } from '../api';
+import { searchAllQuestions, searchSubjects, listAllSubjects, ApiError } from '../api';
 import * as Cache from '../db/cacheService';
 import { COLORS, FONTS } from '../theme/colors';
 import { Badge, MarksBadge, YearBadge } from '../components/Badge';
 import { Skeleton } from '../components/Skeleton';
 import { rf, verticalScale, useResponsive } from '../utils/responsive';
+import { normalizeQuery, consumeSearchToken, shouldDebounceTap, applyServerRetryAfter } from '../utils/searchGuard';
 
 const RECENT_SEARCHES_KEY = 'pyq_recent_searches';
 
@@ -33,6 +34,11 @@ export const SearchScreen = () => {
   const [dynamicSuggestions, setDynamicSuggestions] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
+  const [cooldownSec, setCooldownSec] = useState(0);
+  const [validationError, setValidationError] = useState<string | null>(null);
+
+  const cooldownTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const lastQueryRef = useRef<string>('');
 
   // Fetch subjects with actual questions to populate search suggestions
   useEffect(() => {
@@ -61,6 +67,37 @@ export const SearchScreen = () => {
       .catch(() => {});
   }, []);
 
+  // Cooldown countdown — re-enable input when it hits 0
+  useEffect(() => {
+    if (cooldownSec <= 0) {
+      if (cooldownTimerRef.current) {
+        clearInterval(cooldownTimerRef.current);
+        cooldownTimerRef.current = null;
+      }
+      return;
+    }
+    if (cooldownTimerRef.current) clearInterval(cooldownTimerRef.current);
+    cooldownTimerRef.current = setInterval(() => {
+      setCooldownSec((prev) => {
+        if (prev <= 1) {
+          if (cooldownTimerRef.current) {
+            clearInterval(cooldownTimerRef.current);
+            cooldownTimerRef.current = null;
+          }
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => {
+      if (cooldownTimerRef.current) clearInterval(cooldownTimerRef.current);
+    };
+  }, [cooldownSec]);
+
+  const startCooldown = (sec: number) => {
+    setCooldownSec(Math.max(1, Math.round(sec)));
+  };
+
   const saveRecentSearch = (term: string) => {
     const trimmed = term.trim();
     if (!trimmed) return;
@@ -72,36 +109,83 @@ export const SearchScreen = () => {
     });
   };
 
-  const handleSearch = async () => {
-    const q = query.trim();
-    if (!q) return;
-    saveRecentSearch(q);
+  const runSearch = async (normalized: string) => {
+    // inflight guard — handled by caller, but double-check
+    if (loading) return;
+    // dedup: skip if same as last successful query and we already have results
+    if (normalized.toLowerCase() === lastQueryRef.current.toLowerCase() && hasSearched && (subjectResults.length > 0 || questionResults.length > 0)) {
+      return;
+    }
     setLoading(true);
     setHasSearched(true);
+    setValidationError(null);
     try {
       const [subs, qs] = await Promise.all([
-        searchSubjects(q).catch(() => ({ subjects: [] })),
-        searchAllQuestions(q).catch(() => ({ questions: [] })),
+        searchSubjects(normalized).catch((e: any) => {
+          if (e instanceof ApiError && e.status === 429) throw e;
+          return { subjects: [] } as any;
+        }),
+        searchAllQuestions(normalized).catch((e: any) => {
+          if (e instanceof ApiError && e.status === 429) throw e;
+          return { questions: [] } as any;
+        }),
       ]);
-      
+
+      lastQueryRef.current = normalized;
+
       // If online results found, set them
       if ((subs.subjects && subs.subjects.length > 0) || (qs.questions && qs.questions.length > 0)) {
         setSubjectResults(subs.subjects || []);
         setQuestionResults(qs.questions || []);
       } else {
         // Fallback to local cache
-        const local = await Cache.searchLocalCache(q);
+        const local = await Cache.searchLocalCache(normalized);
         setSubjectResults(local.subjects.map((s: any) => ({ ...s, semester: { id: '', number: 0 } })));
         setQuestionResults(local.questions.map((qu: any) => ({ ...qu, subject: { id: '', name: '', semesterId: '' } })));
       }
-    } catch (e) {
-      // Complete offline fallback
-      const local = await Cache.searchLocalCache(q);
-      setSubjectResults(local.subjects.map((s: any) => ({ ...s, semester: { id: '', number: 0 } })));
-      setQuestionResults(local.questions.map((qu: any) => ({ ...qu, subject: { id: '', name: '', semesterId: '' } })));
+    } catch (e: any) {
+      // Surface 429 instead of hiding behind offline fallback
+      if (e instanceof ApiError && e.status === 429) {
+        const retry = e.retryAfterSec ?? 15;
+        applyServerRetryAfter(retry);
+        startCooldown(retry);
+        setValidationError(`Too many searches — try again in ${retry}s`);
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
+        return;
+      }
+      // Complete offline fallback for network errors
+      try {
+        const local = await Cache.searchLocalCache(normalized);
+        setSubjectResults(local.subjects.map((s: any) => ({ ...s, semester: { id: '', number: 0 } })));
+        setQuestionResults(local.questions.map((qu: any) => ({ ...qu, subject: { id: '', name: '', semesterId: '' } })));
+      } catch {
+        // keep empty
+      }
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSearch = async () => {
+    if (loading || cooldownSec > 0) return;
+
+    const norm = normalizeQuery(query);
+    if (!norm.ok) {
+      setValidationError(norm.error);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
+      return;
+    }
+
+    const bucket = consumeSearchToken();
+    if (!bucket.allowed) {
+      startCooldown(bucket.retryAfterSec);
+      setValidationError(`Slow down — try again in ${bucket.retryAfterSec}s`);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
+      return;
+    }
+
+    saveRecentSearch(norm.query);
+    await runSearch(norm.query);
   };
 
   const handleClear = () => {
@@ -109,29 +193,65 @@ export const SearchScreen = () => {
     setSubjectResults([]);
     setQuestionResults([]);
     setHasSearched(false);
+    setValidationError(null);
+    lastQueryRef.current = '';
   };
 
   const handleSuggestionPress = (term: string) => {
-    setQuery(term);
-    saveRecentSearch(term);
+    if (loading || cooldownSec > 0) return;
+    if (shouldDebounceTap()) return;
+
+    const norm = normalizeQuery(term);
+    if (!norm.ok) {
+      setValidationError(norm.error);
+      return;
+    }
+
+    const bucket = consumeSearchToken();
+    if (!bucket.allowed) {
+      startCooldown(bucket.retryAfterSec);
+      setValidationError(`Slow down — try again in ${bucket.retryAfterSec}s`);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
+      return;
+    }
+
+    setQuery(norm.query);
+    saveRecentSearch(norm.query);
     setLoading(true);
     setHasSearched(true);
+    setValidationError(null);
+
     Promise.all([
-      searchSubjects(term).catch(() => ({ subjects: [] })),
-      searchAllQuestions(term).catch(() => ({ questions: [] })),
+      searchSubjects(norm.query).catch((e: any) => {
+        if (e instanceof ApiError && e.status === 429) throw e;
+        return { subjects: [] } as any;
+      }),
+      searchAllQuestions(norm.query).catch((e: any) => {
+        if (e instanceof ApiError && e.status === 429) throw e;
+        return { questions: [] } as any;
+      }),
     ])
       .then(async ([subs, qs]) => {
+        lastQueryRef.current = norm.query;
         if ((subs.subjects && subs.subjects.length > 0) || (qs.questions && qs.questions.length > 0)) {
           setSubjectResults(subs.subjects || []);
           setQuestionResults(qs.questions || []);
         } else {
-          const local = await Cache.searchLocalCache(term);
+          const local = await Cache.searchLocalCache(norm.query);
           setSubjectResults(local.subjects.map((s: any) => ({ ...s, semester: { id: '', number: 0 } })));
           setQuestionResults(local.questions.map((qu: any) => ({ ...qu, subject: { id: '', name: '', semesterId: '' } })));
         }
       })
-      .catch(async () => {
-        const local = await Cache.searchLocalCache(term);
+      .catch(async (e: any) => {
+        if (e instanceof ApiError && e.status === 429) {
+          const retry = e.retryAfterSec ?? 15;
+          applyServerRetryAfter(retry);
+          startCooldown(retry);
+          setValidationError(`Too many searches — try again in ${retry}s`);
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
+          return;
+        }
+        const local = await Cache.searchLocalCache(norm.query);
         setSubjectResults(local.subjects.map((s: any) => ({ ...s, semester: { id: '', number: 0 } })));
         setQuestionResults(local.questions.map((qu: any) => ({ ...qu, subject: { id: '', name: '', semesterId: '' } })));
       })
@@ -153,7 +273,9 @@ export const SearchScreen = () => {
   ];
 
   const noResults =
-    hasSearched && !loading && subjectResults.length === 0 && questionResults.length === 0;
+    hasSearched && !loading && !validationError && cooldownSec === 0 && subjectResults.length === 0 && questionResults.length === 0;
+
+  const isInputDisabled = loading || cooldownSec > 0;
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -163,7 +285,7 @@ export const SearchScreen = () => {
           <Text style={styles.badgeText}>FIND ANY QUESTION OR TOPIC</Text>
           <Text style={styles.title}>Search</Text>
 
-          <View style={styles.searchBar}>
+          <View style={[styles.searchBar, isInputDisabled && styles.searchBarDisabled]}>
             <Feather
               name="search"
               size={16}
@@ -171,29 +293,45 @@ export const SearchScreen = () => {
               style={styles.searchIcon}
             />
             <TextInput
-              placeholder="Search subjects, questions, or topics..."
+              placeholder={cooldownSec > 0 ? `Cooldown ${cooldownSec}s...` : 'Search subjects, questions, or topics...'}
               placeholderTextColor={COLORS.textSubtle}
               value={query}
+              editable={!isInputDisabled}
               onChangeText={(text) => {
                 setQuery(text);
+                if (validationError) setValidationError(null);
                 if (!text) {
                   setHasSearched(false);
                   setSubjectResults([]);
                   setQuestionResults([]);
+                  lastQueryRef.current = '';
                 }
               }}
               onSubmitEditing={handleSearch}
               returnKeyType="search"
               autoCorrect={false}
-              style={styles.searchInput}
+              style={[styles.searchInput, isInputDisabled && { opacity: 0.6 }]}
             />
-            {query.length > 0 && !loading && (
+            {query.length > 0 && !loading && cooldownSec === 0 && (
               <TouchableOpacity onPress={handleClear} style={styles.clearBtn}>
                 <Feather name="x" size={15} color={COLORS.textMuted} />
               </TouchableOpacity>
             )}
             {loading && <ActivityIndicator size="small" color={COLORS.primary} style={{ marginLeft: 6 }} />}
+            {cooldownSec > 0 && !loading && <Feather name="clock" size={14} color={COLORS.textMuted} style={{ marginLeft: 6 }} />}
           </View>
+          {validationError && (
+            <View style={styles.validationRow}>
+              <Feather name="alert-circle" size={12} color="#DC2626" style={{ marginRight: 6 }} />
+              <Text style={styles.validationText}>{validationError}</Text>
+            </View>
+          )}
+          {cooldownSec > 0 && !validationError && (
+            <View style={styles.validationRow}>
+              <Feather name="clock" size={12} color={COLORS.textMuted} style={{ marginRight: 6 }} />
+              <Text style={styles.cooldownText}>Slow down — try again in {cooldownSec}s</Text>
+            </View>
+          )}
         </View>
       </View>
 
@@ -219,8 +357,9 @@ export const SearchScreen = () => {
                     {recentSearches.map((term, idx) => (
                       <TouchableOpacity
                         key={idx}
-                        style={styles.suggestedRow}
+                        style={[styles.suggestedRow, isInputDisabled && { opacity: 0.5 }]}
                         activeOpacity={0.7}
+                        disabled={isInputDisabled}
                         onPress={() => handleSuggestionPress(term)}
                       >
                         <View style={styles.suggestedRowLeft}>
@@ -241,8 +380,9 @@ export const SearchScreen = () => {
                 {activeSuggestions.map((term, idx) => (
                   <TouchableOpacity
                     key={idx}
-                    style={styles.suggestedRow}
+                    style={[styles.suggestedRow, isInputDisabled && { opacity: 0.5 }]}
                     activeOpacity={0.7}
+                    disabled={isInputDisabled}
                     onPress={() => handleSuggestionPress(term)}
                   >
                     <View style={styles.suggestedRowLeft}>
@@ -419,6 +559,10 @@ const styles = StyleSheet.create({
     marginTop: 12,
     height: 42,
   },
+  searchBarDisabled: {
+    opacity: 0.7,
+    backgroundColor: COLORS.cardSecondary,
+  },
   searchBarListening: {
     borderColor: COLORS.primary,
     backgroundColor: COLORS.primaryLight,
@@ -442,6 +586,23 @@ const styles = StyleSheet.create({
   },
   micBtnActive: {
     backgroundColor: COLORS.primary,
+  },
+  validationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  validationText: {
+    fontFamily: FONTS.mono,
+    fontSize: rf(11),
+    color: '#DC2626',
+    flex: 1,
+  },
+  cooldownText: {
+    fontFamily: FONTS.mono,
+    fontSize: rf(11),
+    color: COLORS.textMuted,
+    flex: 1,
   },
   scroll: {
     paddingHorizontal: 16,
@@ -623,5 +784,3 @@ const styles = StyleSheet.create({
     color: COLORS.textMuted,
   },
 });
-
-

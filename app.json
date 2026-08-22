@@ -31,11 +31,13 @@
           "data": [
             {
               "scheme": "https",
-              "host": "pyqdeck.in"
+              "host": "pyqdeck.in",
+              "pathPattern": "/.*/.*/.*/.*"
             },
             {
               "scheme": "https",
-              "host": "www.pyqdeck.in"
+              "host": "www.pyqdeck.in",
+              "pathPattern": "/.*/.*/.*/.*"
             }
           ],
           "category": [

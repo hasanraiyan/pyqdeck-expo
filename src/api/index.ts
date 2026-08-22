@@ -17,9 +17,11 @@ export const API_BASE_URL = 'https://api.pyqdeck.in/api/public';
 
 export class ApiError extends Error {
   status?: number;
-  constructor(message: string, status?: number) {
+  retryAfterSec?: number;
+  constructor(message: string, status?: number, retryAfterSec?: number) {
     super(message);
     this.status = status;
+    this.retryAfterSec = retryAfterSec;
     this.name = 'ApiError';
   }
 }
@@ -36,7 +38,9 @@ async function fetchApi<T>(path: string): Promise<T> {
     const res = await fetch(url);
     if (!res.ok) {
       const errData = await res.json().catch(() => ({ message: res.statusText }));
-      throw new ApiError(errData.message || `Request failed with status ${res.status}`, res.status);
+      const rawRetry = res.headers?.get?.('Retry-After');
+      const retryAfterSec = rawRetry ? Number(rawRetry) : undefined;
+      throw new ApiError(errData.message || `Request failed with status ${res.status}`, res.status, retryAfterSec);
     }
     return await res.json();
   } catch (err: any) {
@@ -55,7 +59,9 @@ async function postApi<T>(path: string, body: unknown): Promise<T> {
     });
     if (!res.ok) {
       const errData = await res.json().catch(() => ({ message: res.statusText }));
-      throw new ApiError(errData.message || `Request failed with status ${res.status}`, res.status);
+      const rawRetry = res.headers?.get?.('Retry-After');
+      const retryAfterSec = rawRetry ? Number(rawRetry) : undefined;
+      throw new ApiError(errData.message || `Request failed with status ${res.status}`, res.status, retryAfterSec);
     }
     return await res.json();
   } catch (err: any) {
