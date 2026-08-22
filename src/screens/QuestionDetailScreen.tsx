@@ -22,6 +22,7 @@ import {
   getSolution,
   getSimilarQuestions,
   getRepeatedQuestions,
+  voteSolution,
 } from '../api';
 import { QuestionSummary, Solution } from '../types';
 import { COLORS, FONTS } from '../theme/colors';
@@ -29,8 +30,11 @@ import { Badge, MarksBadge, AskAiBadge, YearBadge } from '../components/Badge';
 import { PrevNextNav } from '../components/PrevNextNav';
 import { SolutionSkeleton, SimilarQuestionSkeleton } from '../components/Skeleton';
 import { rf, cleanMarkdown } from '../utils/responsive';
+import { buildQuestionUrl } from '../utils/links';
 import { questionMarkdownStyles, solutionMarkdownStyles, markdownRules } from '../theme/markdownStyles';
 import { recordQuestionOpenedAndMaybeShowInterstitial } from '../utils/ads';
+import { getVoterId } from '../utils/voterId';
+import { getMyVote, setMyVote } from '../utils/votes';
 
 export const QuestionDetailScreen = () => {
   const insets = useSafeAreaInsets();
@@ -43,7 +47,7 @@ export const QuestionDetailScreen = () => {
     questionId,
     initialQuestion,
     initialSolution,
-    subjectName,
+    subjectName: paramSubjectName,
   } = route.params || {};
 
   const [question, setQuestion] = useState<QuestionSummary | null>(
@@ -52,6 +56,9 @@ export const QuestionDetailScreen = () => {
   const [solution, setSolution] = useState<Solution | null>(
     initialSolution || null
   );
+  // Deep links (see App.tsx's `linking` config) only carry semesterId/subjectId/
+  // year/questionId - no subjectName - so backfill it from getQuestion's response.
+  const [subjectName, setSubjectName] = useState<string | undefined>(paramSubjectName);
   const [paperQuestions, setPaperQuestions] = useState<QuestionSummary[]>([]);
   const [repeats, setRepeats] = useState<any[]>([]);
   const [similar, setSimilar] = useState<any[]>([]);
@@ -60,11 +67,24 @@ export const QuestionDetailScreen = () => {
   const [copied, setCopied] = useState(false);
   const [showSimilar, setShowSimilar] = useState(true);
   const [showRepeats, setShowRepeats] = useState(true);
+  const [myVote, setMyVoteState] = useState<1 | -1 | null>(null);
+  const [voteCounts, setVoteCounts] = useState({ upvotes: 0, downvotes: 0 });
 
   const currentYear = question?.year || year;
 
   useEffect(() => {
     recordQuestionOpenedAndMaybeShowInterstitial();
+  }, [questionId]);
+
+  useEffect(() => {
+    if (solution) {
+      setVoteCounts({ upvotes: solution.upvotes ?? 0, downvotes: solution.downvotes ?? 0 });
+    }
+  }, [solution]);
+
+  useEffect(() => {
+    if (!questionId) return;
+    getMyVote(questionId).then(setMyVoteState);
   }, [questionId]);
 
   useEffect(() => {
@@ -74,6 +94,9 @@ export const QuestionDetailScreen = () => {
           const res = await getQuestion(subjectId, questionId);
           if (res.questions && res.questions.length > 0) {
             setQuestion(res.questions[0]);
+          }
+          if (!paramSubjectName && res.subject?.name) {
+            setSubjectName(res.subject.name);
           }
         }
         if (!initialSolution) {
@@ -130,11 +153,37 @@ export const QuestionDetailScreen = () => {
   const handleShare = async () => {
     if (!question) return;
     try {
+      const url = buildQuestionUrl(semesterId, subjectId, question.year, questionId);
       await Share.share({
-        message: `${question.text}\n\n[PYQDeck - ${question.year}]`,
+        message: `${question.text}\n\n[PYQDeck - ${question.year}]\n${url}`,
       });
     } catch (e) {
       console.error(e);
+    }
+  };
+
+  // Tapping the already-active thumb retracts the vote (value 0). Updates
+  // counts/highlight optimistically and reverts on failure.
+  const handleVote = async (value: 1 | -1) => {
+    const nextValue: 1 | -1 | 0 = myVote === value ? 0 : value;
+    const prevVote = myVote;
+    const prevCounts = voteCounts;
+
+    const optimistic = { ...voteCounts };
+    if (prevVote) optimistic[prevVote === 1 ? 'upvotes' : 'downvotes'] -= 1;
+    if (nextValue !== 0) optimistic[nextValue === 1 ? 'upvotes' : 'downvotes'] += 1;
+    setVoteCounts(optimistic);
+    setMyVoteState(nextValue === 0 ? null : nextValue);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
+    try {
+      const voterId = await getVoterId();
+      const result = await voteSolution(subjectId, questionId, voterId, nextValue);
+      setVoteCounts(result);
+      await setMyVote(questionId, nextValue);
+    } catch (e) {
+      setVoteCounts(prevCounts);
+      setMyVoteState(prevVote);
     }
   };
 
@@ -288,6 +337,36 @@ export const QuestionDetailScreen = () => {
                   <Markdown style={solutionMarkdownStyles} rules={markdownRules}>
                     {cleanMarkdown(solution.content)}
                   </Markdown>
+                  <View style={styles.voteRow}>
+                    <TouchableOpacity
+                      style={styles.voteButton}
+                      activeOpacity={0.6}
+                      onPress={() => handleVote(1)}
+                    >
+                      <Feather
+                        name="thumbs-up"
+                        size={15}
+                        color={myVote === 1 ? COLORS.primary : COLORS.textMuted}
+                      />
+                      <Text style={[styles.voteCount, myVote === 1 && styles.voteCountActive]}>
+                        {voteCounts.upvotes}
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.voteButton}
+                      activeOpacity={0.6}
+                      onPress={() => handleVote(-1)}
+                    >
+                      <Feather
+                        name="thumbs-down"
+                        size={15}
+                        color={myVote === -1 ? COLORS.primary : COLORS.textMuted}
+                      />
+                      <Text style={[styles.voteCount, myVote === -1 && styles.voteCountActive]}>
+                        {voteCounts.downvotes}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
               ) : (
                 <SolutionSkeleton />
@@ -713,6 +792,31 @@ const styles = StyleSheet.create({
   },
   solutionBody: {
     paddingTop: 4,
+  },
+  voteRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    marginTop: 14,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderColor: COLORS.borderLight,
+  },
+  voteButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingVertical: 4,
+    paddingHorizontal: 6,
+  },
+  voteCount: {
+    fontFamily: FONTS.mono,
+    fontSize: 12,
+    color: COLORS.textMuted,
+    fontWeight: '600',
+  },
+  voteCountActive: {
+    color: COLORS.primary,
   },
   relatedSection: {
     marginTop: 16,

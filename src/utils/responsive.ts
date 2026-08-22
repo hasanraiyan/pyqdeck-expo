@@ -157,6 +157,14 @@ export const cleanMarkdown = (text: string | null | undefined): string => {
     .replace(/<hr\s*\/?>/gi, '\n\n---\n\n')
     .replace(/<br\s*\/?>/gi, '\n');
 
+  // Shield fenced/inline code (SQL, identifiers like `customer_data`) from the
+  // math/subscript rewriting below - `_id` etc. is code syntax, not LaTeX.
+  const codeBlocks: string[] = [];
+  formatted = formatted.replace(/```[\s\S]*?```|`[^`\n]+`/g, (block) => {
+    codeBlocks.push(block);
+    return `\uE000${codeBlocks.length - 1}\uE001`;
+  });
+
   // Convert display math $$...$$
   formatted = formatted.replace(/\$\$([\s\S]*?)\$\$/g, (_, math) => {
     return `\n\n\`$$ ${formatMathExpression(math)} $$\`\n\n`;
@@ -169,6 +177,9 @@ export const cleanMarkdown = (text: string | null | undefined): string => {
 
   // Convert remaining single LaTeX commands outside math blocks
   formatted = formatMathExpression(formatted);
+
+  // Restore shielded code verbatim
+  formatted = formatted.replace(/\uE000(\d+)\uE001/g, (_, i) => codeBlocks[Number(i)]);
 
   return formatted
     // Clean excessive blank line runs (> 2 newlines)

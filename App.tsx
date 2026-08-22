@@ -21,6 +21,23 @@ import { maybeRequestReview } from './src/utils/appReview';
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
+// Mirrors pyqdeck-frontend's /[semester]/[subject]/[year]/[questionId] route
+// (see app.json's Android App Links intentFilters + the site's
+// public/.well-known/assetlinks.json), so a shared question link opens
+// straight to that question whether the app is installed or not.
+const linking: any = {
+  prefixes: ['https://pyqdeck.in', 'https://www.pyqdeck.in'],
+  config: {
+    screens: {
+      Browse: {
+        screens: {
+          QuestionDetail: ':semesterId/:subjectId/:year/:questionId',
+        },
+      },
+    },
+  },
+};
+
 const commonScreenOptions = {
   headerStyle: {
     backgroundColor: COLORS.background,
@@ -139,7 +156,7 @@ function AppContent() {
   }, []);
 
   return (
-    <NavigationContainer>
+    <NavigationContainer linking={linking}>
       <StatusBar style="dark" />
       <Tab.Navigator
         screenOptions={{

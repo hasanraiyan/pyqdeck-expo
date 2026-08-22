@@ -46,6 +46,8 @@ export interface Solution {
   contentHtml: string;
   type: string;
   votes: number;
+  upvotes: number;
+  downvotes: number;
   isVerified: boolean | null;
 }
 
