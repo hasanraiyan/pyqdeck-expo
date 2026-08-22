@@ -18,6 +18,7 @@
     },
     "android": {
       "package": "app.hasanraiyan.pyqdeck",
+      "versionCode": 28,
       "adaptiveIcon": {
         "backgroundColor": "#faf7f4",
         "foregroundImage": "./assets/adaptive-icon.png"
