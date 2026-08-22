@@ -101,12 +101,21 @@ export const HomeScreen = () => {
               <Text style={styles.brandSubtitle}>BEU PYQ ARCHIVE</Text>
             </View>
           </View>
-          <TouchableOpacity
-            onPress={() => navigation.navigate('AllSubjects')}
-            style={styles.headerLink}
-          >
-            <Text style={styles.headerLinkText}>Subjects</Text>
-          </TouchableOpacity>
+          <View style={styles.headerActions}>
+            <TouchableOpacity
+              onPress={() => navigation.navigate('AllSubjects')}
+              style={styles.headerLink}
+            >
+              <Text style={styles.headerLinkText}>Subjects</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => navigation.navigate('Settings')}
+              style={styles.headerIconButton}
+              hitSlop={8}
+            >
+              <Feather name="settings" size={19} color={COLORS.textMuted} />
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
 
@@ -295,9 +304,18 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
     textTransform: 'uppercase',
   },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   headerLink: {
     paddingVertical: 4,
     paddingHorizontal: 8,
+  },
+  headerIconButton: {
+    paddingVertical: 4,
+    paddingHorizontal: 6,
+    marginLeft: 4,
   },
   headerLinkText: {
     fontSize: rf(13.5),

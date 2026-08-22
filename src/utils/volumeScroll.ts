@@ -2,6 +2,7 @@ import { useCallback, useRef } from 'react';
 import { DeviceEventEmitter, NativeModules, Platform } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getVolumeScrollEnabled } from './settings';
 
 type VolumeDirection = 'up' | 'down';
 
@@ -51,28 +52,37 @@ export function useVolumeScroll(
       const volumeModule = getModule();
       if (!volumeModule) return;
 
-      try {
-        volumeModule.setEnabled(true);
-      } catch {
-        return;
-      }
+      let cancelled = false;
+      let subscription: { remove: () => void } | null = null;
 
-      const subscription = DeviceEventEmitter.addListener(
-        'onVolumeButtonPress',
-        (direction: VolumeDirection) => {
-          try {
-            onPressRef.current(direction);
-          } catch {}
+      (async () => {
+        const enabled = await getVolumeScrollEnabled();
+        if (cancelled || !enabled) return;
 
-          if (!firstUseCheckedRef.current) {
-            firstUseCheckedRef.current = true;
-            notifyIfFirstUse(onFirstUseRef.current);
-          }
+        try {
+          volumeModule.setEnabled(true);
+        } catch {
+          return;
         }
-      );
+
+        subscription = DeviceEventEmitter.addListener(
+          'onVolumeButtonPress',
+          (direction: VolumeDirection) => {
+            try {
+              onPressRef.current(direction);
+            } catch {}
+
+            if (!firstUseCheckedRef.current) {
+              firstUseCheckedRef.current = true;
+              notifyIfFirstUse(onFirstUseRef.current);
+            }
+          }
+        );
+      })();
 
       return () => {
-        subscription.remove();
+        cancelled = true;
+        subscription?.remove();
         try {
           volumeModule.setEnabled(false);
         } catch {}
