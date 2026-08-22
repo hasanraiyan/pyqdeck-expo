@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -117,35 +117,16 @@ export const QuestionListScreen = () => {
       ? yearsList[currentYearIdx + 1]
       : null;
 
-  const QUESTIONS_PER_AD = 6;
-  type ListRow =
-    | { kind: 'question'; question: QuestionSummary }
-    | { kind: 'ad'; id: string };
-
-  const listData: ListRow[] = useMemo(() => {
-    const rows: ListRow[] = [];
-    questions.forEach((q, idx) => {
-      rows.push({ kind: 'question', question: q });
-      if ((idx + 1) % QUESTIONS_PER_AD === 0) {
-        rows.push({ kind: 'ad', id: `ad-${idx}` });
-      }
-    });
-    return rows;
-  }, [questions]);
-
   const renderItem = useCallback(
-    ({ item }: { item: ListRow }) => {
-      if (item.kind === 'ad') return <AdBanner />;
-      return (
-        <QuestionItem
-          question={item.question}
-          subjectId={subjectId}
-          semesterId={semesterId}
-          subjectName={subjectName}
-          hideYearBadge={Boolean(selectedYear)}
-        />
-      );
-    },
+    ({ item }: { item: QuestionSummary }) => (
+      <QuestionItem
+        question={item}
+        subjectId={subjectId}
+        semesterId={semesterId}
+        subjectName={subjectName}
+        hideYearBadge={Boolean(selectedYear)}
+      />
+    ),
     [subjectId, semesterId, subjectName, selectedYear]
   );
 
@@ -166,14 +147,15 @@ export const QuestionListScreen = () => {
 
   return (
     <View style={styles.container}>
+      <View style={styles.content}>
       <FlatList
         ref={listRef}
         onScroll={(e) => {
           scrollOffsetRef.current = e.nativeEvent.contentOffset.y;
         }}
         scrollEventThrottle={32}
-        data={listData}
-        keyExtractor={(item) => (item.kind === 'ad' ? item.id : item.question.questionId)}
+        data={questions}
+        keyExtractor={(item) => item.questionId}
         renderItem={renderItem}
         initialNumToRender={8}
         maxToRenderPerBatch={10}
@@ -300,6 +282,9 @@ export const QuestionListScreen = () => {
           ) : null
         }
       />
+      </View>
+
+      <AdBanner />
 
       {/* Filter Bottom Sheet Modal */}
       <Modal
@@ -412,6 +397,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.background,
+  },
+  content: {
+    flex: 1,
   },
   headerWrapper: {
     width: '100%',
