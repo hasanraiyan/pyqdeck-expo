@@ -1,4 +1,4 @@
-import { TestIds } from 'react-native-google-mobile-ads';
+import { TestIds } from '../utils/mobileAds';
 
 // Test unit IDs always fill and are safe to click, so dev/debug builds use
 // those and only release builds (__DEV__ === false) serve real ads.

@@ -33,6 +33,7 @@ import { rf, cleanMarkdown } from '../utils/responsive';
 import { buildQuestionUrl } from '../utils/links';
 import { questionMarkdownStyles, solutionMarkdownStyles, markdownRules } from '../theme/markdownStyles';
 import { recordQuestionOpenedAndMaybeShowInterstitial } from '../utils/ads';
+import { AdBanner } from '../components/AdBanner';
 import { getVoterId } from '../utils/voterId';
 import { getMyVote, setMyVote } from '../utils/votes';
 
@@ -210,7 +211,7 @@ export const QuestionDetailScreen = () => {
 
   return (
     <View style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scroll}>
+      <ScrollView style={styles.scrollFlex} contentContainerStyle={styles.scroll}>
         <View style={styles.centerWrapper}>
           {/* Breadcrumb / Paper info */}
           <View style={styles.metaRow}>
@@ -490,6 +491,8 @@ export const QuestionDetailScreen = () => {
           )}
         </View>
       </ScrollView>
+
+      <AdBanner />
     </View>
   );
 };
@@ -502,6 +505,9 @@ const styles = StyleSheet.create({
   centerLoading: {
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  scrollFlex: {
+    flex: 1,
   },
   scroll: {
     paddingHorizontal: 16,
