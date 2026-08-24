@@ -6,6 +6,12 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets, SafeAreaProvider } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { mobileAds } from './src/utils/mobileAds';
+import { navigationRef } from './src/utils/navigationRef';
+import {
+  registerForPushNotificationsAsync,
+  subscribeToNotificationResponses,
+  handleColdStartNotification,
+} from './src/utils/notifications';
 import { COLORS } from './src/theme/colors';
 import { HomeScreen } from './src/screens/HomeScreen';
 import { SubjectListScreen } from './src/screens/SubjectListScreen';
@@ -148,15 +154,23 @@ function AppContent() {
 
   useEffect(() => {
     mobileAds().initialize();
+    registerForPushNotificationsAsync();
+    const unsubscribe = subscribeToNotificationResponses();
 
     // Sequenced so a store-update prompt and a review prompt never show back to back.
     checkForStoreUpdate().finally(() => {
       maybeRequestReview();
     });
+
+    return unsubscribe;
   }, []);
 
   return (
-    <NavigationContainer linking={linking}>
+    <NavigationContainer
+      ref={navigationRef}
+      linking={linking}
+      onReady={handleColdStartNotification}
+    >
       <StatusBar style="dark" />
       <Tab.Navigator
         screenOptions={{
