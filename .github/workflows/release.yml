@@ -131,6 +131,8 @@ jobs:
 
       - name: 🔨 Build Release APK & AAB
         working-directory: android
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
         run: |
           BUILD_CHOICE="${{ github.event.inputs.build_type }}"
           if [ "$BUILD_CHOICE" = "apk" ]; then
