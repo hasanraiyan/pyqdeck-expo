@@ -12,12 +12,11 @@ import { useResponsive } from '../utils/responsive';
 const bannerSizeFor = (isTablet: boolean) =>
   isTablet ? BannerAdSize.LEADERBOARD : BannerAdSize.ANCHORED_ADAPTIVE_BANNER;
 
-// Temporary: surfaces ad load status directly in the UI instead of console
-// logs. __DEV__ is false in release APK builds (like the ones this repo's
-// GitHub Actions workflow produces), so console.warn never reaches anyone's
-// device log. Flip this to false once ads are confirmed working on a real
-// build - not meant to ship visible to real users.
-const AD_DEBUG_UI = true;
+// Debug-only: surfaces ad load status directly in the UI (console logs are
+// useless here since __DEV__ is false in release builds). Confirmed working
+// via on-device testing - off for the real Play Store build. Flip back to
+// true if ad behavior needs diagnosing again later.
+const AD_DEBUG_UI = false;
 
 // A single onAdFailedToLoad is often just transient no-fill, not a
 // permanent problem - retry a few times before giving up. 30s is Google's
