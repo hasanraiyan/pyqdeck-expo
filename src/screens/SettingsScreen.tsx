@@ -9,7 +9,7 @@ import { COLORS, FONTS } from '../theme/colors';
 import { SettingsRow } from '../components/SettingsRow';
 import { rf, verticalScale, useResponsive } from '../utils/responsive';
 import { getVolumeScrollEnabled, setVolumeScrollEnabled } from '../utils/settings';
-import { openStoreListing } from '../utils/appUpdate';
+import { openStoreListing, checkForUpdateInteractive } from '../utils/appUpdate';
 import * as Cache from '../db/cacheService';
 
 const WEBSITE_URL = 'https://pyqdeck.in';
@@ -29,6 +29,7 @@ export const SettingsScreen = () => {
   const [volumeScrollOn, setVolumeScrollOn] = useState(true);
   const [clearing, setClearing] = useState(false);
   const [cleared, setCleared] = useState(false);
+  const [checkingUpdate, setCheckingUpdate] = useState(false);
 
   useEffect(() => {
     if (Platform.OS === 'android') {
@@ -60,6 +61,29 @@ export const SettingsScreen = () => {
         },
       ]
     );
+  };
+
+  const handleCheckForUpdates = async () => {
+    setCheckingUpdate(true);
+    const result = await checkForUpdateInteractive();
+    setCheckingUpdate(false);
+
+    switch (result.status) {
+      case 'update-started':
+        Alert.alert('Update downloading', 'The update is downloading in the background - you\'ll be prompted to restart once it\'s ready.');
+        break;
+      case 'no-update':
+        Alert.alert('Up to date', 'You\'re already using the latest version.');
+        break;
+      case 'unsupported':
+        // No native in-app-update path available (iOS, web, or an old
+        // build) - fall back to the Play Store listing, same as before.
+        await openStoreListing();
+        break;
+      case 'failed':
+        Alert.alert('Couldn\'t check for updates', 'Please try again later.');
+        break;
+    }
   };
 
   const handleRate = async () => {
@@ -143,7 +167,13 @@ export const SettingsScreen = () => {
 
         <Text style={styles.sectionHeading}>ABOUT</Text>
         <View style={styles.card}>
-          <SettingsRow icon="refresh-cw" label="Check for updates" subtitle="Opens the Play Store listing" onPress={openStoreListing} />
+          <SettingsRow
+            icon="refresh-cw"
+            label="Check for updates"
+            subtitle="Downloads and installs updates without leaving the app"
+            onPress={checkingUpdate ? undefined : handleCheckForUpdates}
+            right={checkingUpdate ? <Text style={styles.statusText}>Checking…</Text> : undefined}
+          />
           <SettingsRow icon="globe" label="Website" onPress={() => openWeb('/')} />
           <SettingsRow icon="shield" label="Privacy Policy" onPress={() => openWeb('/privacy')} />
           <SettingsRow icon="info" label="About PyQdeck" onPress={() => openWeb('/about')} last />

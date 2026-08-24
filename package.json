@@ -21,12 +21,14 @@
     "punycode": "^2.3.1",
     "react": "19.2.3",
     "react-native": "0.86.2",
+    "react-native-device-info": "^15.0.2",
     "react-native-fit-image": "^1.5.5",
     "react-native-google-mobile-ads": "^16.0.0",
     "react-native-markdown-display": "^7.0.2",
     "react-native-safe-area-context": "^5.7.0",
     "react-native-screens": "^4.26.2",
-    "react-native-svg": "^15.15.4"
+    "react-native-svg": "^15.15.4",
+    "sp-react-native-in-app-updates": "^2.0.0"
   },
   "devDependencies": {
     "@types/react": "~19.2.2",
