@@ -19,6 +19,7 @@
     "android": {
       "package": "app.hasanraiyan.pyqdeck",
       "versionCode": 31,
+      "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "backgroundColor": "#faf7f4",
         "foregroundImage": "./assets/adaptive-icon.png"
@@ -60,7 +61,14 @@
         }
       ],
       "expo-font",
+      "expo-notifications",
       "./plugins/withVolumeScroll"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "b2dafabf-f248-4e73-a563-41cb2068367e"
+      }
+    },
+    "owner": "hasanraiyan"
   }
 }

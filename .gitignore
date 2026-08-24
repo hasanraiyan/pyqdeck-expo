@@ -33,6 +33,12 @@ yarn-error.*
 # local env files
 .env*.local
 
+# Firebase config - not truly secret (ships inside the compiled APK anyway),
+# but this repo is public and there's no reason to publish it either.
+# GitHub Actions writes it from the GOOGLE_SERVICES_JSON secret at build
+# time (see .github/workflows/release.yml).
+google-services.json
+
 # typescript
 *.tsbuildinfo
 

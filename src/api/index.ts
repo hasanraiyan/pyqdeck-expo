@@ -271,4 +271,7 @@ export const voteSolution = (
     { voterId, value }
   );
 
+export const registerPushToken = (token: string, platform: 'ios' | 'android') =>
+  postApi<{ success: boolean }>('/push-token', { token, platform });
+
 
