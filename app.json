@@ -19,6 +19,7 @@
     "android": {
       "package": "app.hasanraiyan.pyqdeck",
       "versionCode": 31,
+      "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "backgroundColor": "#faf7f4",
         "foregroundImage": "./assets/adaptive-icon.png"
