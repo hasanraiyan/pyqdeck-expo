@@ -31,6 +31,7 @@ type Status = 'unavailable' | 'loading' | 'loaded' | 'failed' | 'exhausted';
 export const AdBanner: React.FC = () => {
   const { isTablet } = useResponsive();
   const [status, setStatus] = useState<Status>(adsAvailable && BannerAd ? 'loading' : 'unavailable');
+  const [lastError, setLastError] = useState<string>('');
   const attemptRef = useRef(0);
   const retryTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -40,7 +41,12 @@ export const AdBanner: React.FC = () => {
     };
   }, []);
 
-  const handleFailedToLoad = () => {
+  const handleFailedToLoad = (error: Error) => {
+    // NativeError formats this as "[namespace/code] message" - e.g.
+    // "[banner/no-fill] ..." - the code is the actual diagnostic (no-fill,
+    // network-error, invalid-request, internal-error, etc), not a generic
+    // failure.
+    setLastError(error?.message || String(error));
     if (attemptRef.current >= MAX_RETRIES) {
       setStatus('exhausted');
       return;
@@ -57,14 +63,14 @@ export const AdBanner: React.FC = () => {
   if (status === 'failed') {
     return AD_DEBUG_UI ? (
       <DebugBadge
-        text={`ad failed to load, retrying in ${(RETRY_DELAY_MS * attemptRef.current) / 1000}s (attempt ${attemptRef.current}/${MAX_RETRIES})`}
+        text={`ad failed: ${lastError} - retrying in ${(RETRY_DELAY_MS * attemptRef.current) / 1000}s (attempt ${attemptRef.current}/${MAX_RETRIES})`}
       />
     ) : null;
   }
 
   if (status === 'exhausted') {
     return AD_DEBUG_UI ? (
-      <DebugBadge text={`ad failed to load after ${MAX_RETRIES} attempts (${AD_UNIT_IDS.banner})`} />
+      <DebugBadge text={`ad failed after ${MAX_RETRIES} attempts: ${lastError} (${AD_UNIT_IDS.banner})`} />
     ) : null;
   }
 
