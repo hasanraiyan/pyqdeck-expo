@@ -2,6 +2,15 @@ import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { BannerAd, BannerAdSize, adsAvailable } from '../utils/mobileAds';
 import { AD_UNIT_IDS } from '../config/ads';
+import { useResponsive } from '../utils/responsive';
+
+// ANCHORED_ADAPTIVE_BANNER spans the full device width - on a tablet
+// that's a very wide, uncommon banner slot with far fewer advertiser
+// creatives bidding on it than a standard fixed IAB size. LEADERBOARD
+// (728x90) is a normal desktop/tablet-web banner size with much broader
+// demand, so tablets get that instead while phones keep the adaptive size.
+const bannerSizeFor = (isTablet: boolean) =>
+  isTablet ? BannerAdSize.LEADERBOARD : BannerAdSize.ANCHORED_ADAPTIVE_BANNER;
 
 // Temporary: surfaces ad load status directly in the UI instead of console
 // logs. __DEV__ is false in release APK builds (like the ones this repo's
@@ -20,6 +29,7 @@ const RETRY_DELAY_MS = 30000;
 type Status = 'unavailable' | 'loading' | 'loaded' | 'failed' | 'exhausted';
 
 export const AdBanner: React.FC = () => {
+  const { isTablet } = useResponsive();
   const [status, setStatus] = useState<Status>(adsAvailable && BannerAd ? 'loading' : 'unavailable');
   const attemptRef = useRef(0);
   const retryTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -65,10 +75,12 @@ export const AdBanner: React.FC = () => {
 
   return (
     <View style={styles.container}>
-      {status === 'loading' && AD_DEBUG_UI && <DebugBadge text={`requesting ad (${AD_UNIT_IDS.banner})`} />}
+      {status === 'loading' && AD_DEBUG_UI && (
+        <DebugBadge text={`requesting ${bannerSizeFor(isTablet)} ad (${AD_UNIT_IDS.banner})`} />
+      )}
       <BannerAd
         unitId={AD_UNIT_IDS.banner}
-        size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER}
+        size={bannerSizeFor(isTablet)}
         onAdFailedToLoad={handleFailedToLoad}
         onAdLoaded={() => {
           attemptRef.current = 0;
