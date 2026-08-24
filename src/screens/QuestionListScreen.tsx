@@ -30,7 +30,7 @@ export const QuestionListScreen = () => {
   const insets = useSafeAreaInsets();
   const route = useRoute<any>();
   const navigation = useNavigation<any>();
-  const { isLandscape, isTablet, contentMaxWidth } = useResponsive();
+  const { contentMaxWidth } = useResponsive();
   const {
     semesterId,
     subjectId,
@@ -51,6 +51,25 @@ export const QuestionListScreen = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [filterModalVisible, setFilterModalVisible] = useState(false);
+  // Draft selections inside the filter sheet - chip taps only update these,
+  // not selectedYear/selectedChapter, so browsing the sheet (tapping
+  // several years/modules before deciding) doesn't fire an API call per
+  // tap. Only "Show Results" commits the draft and fetches once.
+  const [draftYear, setDraftYear] = useState<number | undefined>(selectedYear);
+  const [draftChapter, setDraftChapter] = useState<string | undefined>(selectedChapter);
+
+  const openFilterModal = () => {
+    setDraftYear(selectedYear);
+    setDraftChapter(selectedChapter);
+    setFilterModalVisible(true);
+  };
+
+  const applyFilters = () => {
+    setSelectedYear(draftYear);
+    setSelectedChapter(draftChapter);
+    fetchFilteredQuestions(draftYear, draftChapter);
+    setFilterModalVisible(false);
+  };
 
   const loadData = async (forceRefresh = false) => {
     try {
@@ -191,7 +210,7 @@ export const QuestionListScreen = () => {
                 </Text>
                 <TouchableOpacity
                   style={[styles.filterIconButton, hasActiveFilters && styles.filterIconButtonActive]}
-                  onPress={() => setFilterModalVisible(true)}
+                  onPress={openFilterModal}
                   activeOpacity={0.7}
                 >
                   <Feather
@@ -296,7 +315,12 @@ export const QuestionListScreen = () => {
         <TouchableWithoutFeedback onPress={() => setFilterModalVisible(false)}>
           <View style={styles.modalOverlay}>
             <TouchableWithoutFeedback>
-              <View style={[styles.modalContent, { paddingBottom: insets.bottom + 16 }]}>
+              <View
+                style={[
+                  styles.modalContent,
+                  { paddingBottom: insets.bottom + 16, maxWidth: contentMaxWidth, width: '100%', alignSelf: 'center' },
+                ]}
+              >
                 <View style={styles.modalHeader}>
                   <View>
                     <Text style={styles.modalTag}>FILTER QUESTIONS</Text>
@@ -318,13 +342,13 @@ export const QuestionListScreen = () => {
                         <Text style={styles.filterSectionTitle}>EXAM YEAR</Text>
                         <View style={styles.filterChipGrid}>
                           {meta.years.map((y) => {
-                            const active = selectedYear === y.year;
+                            const active = draftYear === y.year;
                             return (
                               <TouchableOpacity
                                 key={y.year}
                                 style={[styles.modalChip, active && styles.modalChipActive]}
                                 onPress={() => {
-                                  handleYearSelect(active ? undefined : y.year);
+                                  setDraftYear(active ? undefined : y.year);
                                 }}
                               >
                                 <Text style={[styles.modalChipText, active && styles.modalChipTextActive]}>
@@ -343,21 +367,21 @@ export const QuestionListScreen = () => {
                         <Text style={styles.filterSectionTitle}>MODULE / TOPIC</Text>
                         <View style={styles.filterChipGrid}>
                           <TouchableOpacity
-                            style={[styles.modalChip, !selectedChapter && styles.modalChipActive]}
-                            onPress={() => handleChapterSelect(undefined)}
+                            style={[styles.modalChip, !draftChapter && styles.modalChipActive]}
+                            onPress={() => setDraftChapter(undefined)}
                           >
-                            <Text style={[styles.modalChipText, !selectedChapter && styles.modalChipTextActive]}>
+                            <Text style={[styles.modalChipText, !draftChapter && styles.modalChipTextActive]}>
                               All Modules
                             </Text>
                           </TouchableOpacity>
                           {meta.chapters.map((c) => {
-                            const active = selectedChapter === c.chapter;
+                            const active = draftChapter === c.chapter;
                             return (
                               <TouchableOpacity
                                 key={c.chapter}
                                 style={[styles.modalChip, active && styles.modalChipActive]}
                                 onPress={() => {
-                                  handleChapterSelect(active ? undefined : c.chapter);
+                                  setDraftChapter(active ? undefined : c.chapter);
                                 }}
                               >
                                 <Text style={[styles.modalChipText, active && styles.modalChipTextActive]}>
@@ -372,11 +396,8 @@ export const QuestionListScreen = () => {
                   </ScrollView>
                 )}
 
-                <TouchableOpacity
-                  style={styles.applyFilterBtn}
-                  onPress={() => setFilterModalVisible(false)}
-                >
-                  <Text style={styles.applyFilterBtnText}>Show Results ({questions.length})</Text>
+                <TouchableOpacity style={styles.applyFilterBtn} onPress={applyFilters}>
+                  <Text style={styles.applyFilterBtnText}>Show Results</Text>
                 </TouchableOpacity>
               </View>
             </TouchableWithoutFeedback>

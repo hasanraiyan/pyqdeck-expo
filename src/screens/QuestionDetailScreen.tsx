@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -72,6 +72,7 @@ export const QuestionDetailScreen = () => {
   const [voteCounts, setVoteCounts] = useState({ upvotes: 0, downvotes: 0 });
 
   const currentYear = question?.year || year;
+  const scrollRef = useRef<ScrollView>(null);
 
   useEffect(() => {
     recordQuestionOpenedAndMaybeShowInterstitial();
@@ -125,6 +126,31 @@ export const QuestionDetailScreen = () => {
     };
     loadAll();
   }, [subjectId, questionId, currentYear]);
+
+  // Prev/Next-in-paper stays on this same screen instance (setParams, not
+  // push) so AdBanner never unmounts - rapid-fire next/next/next taps would
+  // otherwise fire a fresh ad request every time, which barely gives any
+  // single ad time to be seen and looks like ad-refresh abuse to AdMob.
+  // "Similar"/"repeated" question taps still use navigation.push below -
+  // those are genuine drill-downs into different content worth a fresh ad
+  // load and a real back-stack entry.
+  const goToQuestion = (q: QuestionSummary) => {
+    scrollRef.current?.scrollTo({ y: 0, animated: false });
+    setQuestion(q);
+    setSolution(null);
+    setRepeats([]);
+    setSimilar([]);
+    setShowSimilar(true);
+    setShowRepeats(true);
+    setCopied(false);
+    setLoading(false);
+    setLoadingRelated(true);
+    navigation.setParams({
+      questionId: q.questionId,
+      year: q.year,
+      initialQuestion: q,
+    });
+  };
 
   const openAiSearch = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -211,7 +237,7 @@ export const QuestionDetailScreen = () => {
 
   return (
     <View style={styles.container}>
-      <ScrollView style={styles.scrollFlex} contentContainerStyle={styles.scroll}>
+      <ScrollView ref={scrollRef} style={styles.scrollFlex} contentContainerStyle={styles.scroll}>
         <View style={styles.centerWrapper}>
           {/* Breadcrumb / Paper info */}
           <View style={styles.metaRow}>
@@ -453,15 +479,7 @@ export const QuestionDetailScreen = () => {
                             ? prevQuestion.qNumber
                             : `Q${prevQuestion.qNumber}`),
                         sublabel: 'Previous',
-                        onPress: () =>
-                          navigation.push('QuestionDetail', {
-                            subjectId,
-                            semesterId,
-                            year,
-                            questionId: prevQuestion.questionId,
-                            initialQuestion: prevQuestion,
-                            subjectName,
-                          }),
+                        onPress: () => goToQuestion(prevQuestion),
                       }
                     : null
                 }
@@ -474,15 +492,7 @@ export const QuestionDetailScreen = () => {
                             ? nextQuestion.qNumber
                             : `Q${nextQuestion.qNumber}`),
                         sublabel: 'Next',
-                        onPress: () =>
-                          navigation.push('QuestionDetail', {
-                            subjectId,
-                            semesterId,
-                            year,
-                            questionId: nextQuestion.questionId,
-                            initialQuestion: nextQuestion,
-                            subjectName,
-                          }),
+                        onPress: () => goToQuestion(nextQuestion),
                       }
                     : null
                 }

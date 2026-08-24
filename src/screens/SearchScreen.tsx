@@ -610,6 +610,7 @@ const styles = StyleSheet.create({
   },
   centerWrapper: {
     width: '100%',
+    alignSelf: 'center',
   },
   suggestedSection: {
     width: '100%',
