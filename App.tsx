@@ -23,6 +23,18 @@ import { SearchScreen } from './src/screens/SearchScreen';
 import { SettingsScreen } from './src/screens/SettingsScreen';
 import { checkForStoreUpdate } from './src/utils/appUpdate';
 import { maybeRequestReview } from './src/utils/appReview';
+import * as Sentry from '@sentry/react-native';
+
+// Crash/error monitoring only - deliberately not sendDefaultPii (would send
+// IP address etc, undisclosed in the Play Store Data Safety form) and no
+// Session Replay (separate, bigger data-collection footprint that also
+// isn't in that form and burns through the free tier's 50-replay/month cap
+// fast). Matches this app's anonymous-by-default pattern everywhere else.
+Sentry.init({
+  dsn: 'https://a3710bead072e5656e354d44d062719c@o4511315369197568.ingest.us.sentry.io/4511965378314240',
+  sendDefaultPii: false,
+  enableLogs: true,
+});
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -141,13 +153,13 @@ function SearchStack() {
   );
 }
 
-export default function App() {
+export default Sentry.wrap(function App() {
   return (
     <SafeAreaProvider>
       <AppContent />
     </SafeAreaProvider>
   );
-}
+});
 
 function AppContent() {
   const insets = useSafeAreaInsets();
@@ -211,7 +223,3 @@ function AppContent() {
     </NavigationContainer>
   );
 }
-
-
-
-
