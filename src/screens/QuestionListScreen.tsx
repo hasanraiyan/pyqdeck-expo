@@ -30,7 +30,7 @@ export const QuestionListScreen = () => {
   const insets = useSafeAreaInsets();
   const route = useRoute<any>();
   const navigation = useNavigation<any>();
-  const { isLandscape, isTablet, contentMaxWidth } = useResponsive();
+  const { contentMaxWidth } = useResponsive();
   const {
     semesterId,
     subjectId,
