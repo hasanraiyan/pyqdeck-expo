@@ -62,7 +62,15 @@
       ],
       "expo-font",
       "expo-notifications",
-      "./plugins/withVolumeScroll"
+      "./plugins/withVolumeScroll",
+      [
+        "@sentry/react-native/expo",
+        {
+          "url": "https://sentry.io/",
+          "project": "pyqdeck-expo",
+          "organization": "pyqdeck"
+        }
+      ]
     ],
     "extra": {
       "eas": {
