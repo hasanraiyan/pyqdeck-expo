@@ -296,7 +296,12 @@ export const QuestionListScreen = () => {
         <TouchableWithoutFeedback onPress={() => setFilterModalVisible(false)}>
           <View style={styles.modalOverlay}>
             <TouchableWithoutFeedback>
-              <View style={[styles.modalContent, { paddingBottom: insets.bottom + 16 }]}>
+              <View
+                style={[
+                  styles.modalContent,
+                  { paddingBottom: insets.bottom + 16, maxWidth: contentMaxWidth, width: '100%', alignSelf: 'center' },
+                ]}
+              >
                 <View style={styles.modalHeader}>
                   <View>
                     <Text style={styles.modalTag}>FILTER QUESTIONS</Text>

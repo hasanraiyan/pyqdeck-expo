@@ -18,9 +18,11 @@ import { COLORS, FONTS } from '../theme/colors';
 import { Skeleton } from '../components/Skeleton';
 import { Badge } from '../components/Badge';
 import { AdBanner } from '../components/AdBanner';
+import { useResponsive } from '../utils/responsive';
 
 export const AllSubjectsScreen = () => {
   const navigation = useNavigation<any>();
+  const { contentMaxWidth } = useResponsive();
   const [query, setQuery] = useState('');
   const [page, setPage] = useState(1);
   const [subjects, setSubjects] = useState<(SubjectSummary & { semester: Semester })[]>([]);
@@ -126,35 +128,37 @@ export const AllSubjectsScreen = () => {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.badgeText}>ALL SUBJECTS CATALOG</Text>
-        <Text style={styles.title}>Browse All Subjects</Text>
-        <Text style={styles.subtitle}>
-          {total} subject{total === 1 ? '' : 's'} across all 8 semesters.
-        </Text>
+        <View style={{ width: '100%', maxWidth: contentMaxWidth, alignSelf: 'center' }}>
+          <Text style={styles.badgeText}>ALL SUBJECTS CATALOG</Text>
+          <Text style={styles.title}>Browse All Subjects</Text>
+          <Text style={styles.subtitle}>
+            {total} subject{total === 1 ? '' : 's'} across all 8 semesters.
+          </Text>
 
-        <View style={styles.searchBar}>
-          <Feather name="search" size={16} color={COLORS.textMuted} style={styles.searchIcon} />
-          <TextInput
-            placeholder="Filter by subject name or code..."
-            placeholderTextColor={COLORS.textSubtle}
-            value={query}
-            onChangeText={(text) => {
-              setQuery(text);
-              if (!text) {
-                setPage(1);
-                loadData('', 1, false);
-              }
-            }}
-            onSubmitEditing={handleSearch}
-            returnKeyType="search"
-            style={styles.searchInput}
-          />
+          <View style={styles.searchBar}>
+            <Feather name="search" size={16} color={COLORS.textMuted} style={styles.searchIcon} />
+            <TextInput
+              placeholder="Filter by subject name or code..."
+              placeholderTextColor={COLORS.textSubtle}
+              value={query}
+              onChangeText={(text) => {
+                setQuery(text);
+                if (!text) {
+                  setPage(1);
+                  loadData('', 1, false);
+                }
+              }}
+              onSubmitEditing={handleSearch}
+              returnKeyType="search"
+              style={styles.searchInput}
+            />
+          </View>
         </View>
       </View>
 
       <View style={styles.content}>
         {loading && !refreshing ? (
-          <View style={{ padding: 16 }}>
+          <View style={{ padding: 16, width: '100%', maxWidth: contentMaxWidth, alignSelf: 'center' }}>
             {[1, 2, 3, 4, 5].map((i) => (
               <View key={i} style={styles.skeletonCard}>
                 <Skeleton width="40%" height={16} style={{ marginBottom: 8 }} />
@@ -173,7 +177,12 @@ export const AllSubjectsScreen = () => {
             removeClippedSubviews={Platform.OS === 'android'}
             onEndReached={handleEndReached}
             onEndReachedThreshold={0.5}
-            contentContainerStyle={{ paddingBottom: 24 }}
+            contentContainerStyle={{
+              paddingBottom: 24,
+              maxWidth: contentMaxWidth,
+              width: '100%',
+              alignSelf: 'center',
+            }}
             refreshControl={
               <RefreshControl
                 refreshing={refreshing}
