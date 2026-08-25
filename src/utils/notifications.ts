@@ -1,12 +1,21 @@
-import * as Notifications from 'expo-notifications';
+import { isRunningInExpoGo } from 'expo';
 import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 import { registerPushToken } from '../api';
 import { navigationRef } from './navigationRef';
 
+// Merely importing expo-notifications throws on Android in Expo Go (SDK 53+
+// removed remote push support there - see warnOfExpoGoPushUsage, which runs
+// as an import-time side effect, not from anything we call). A static
+// top-level `import` is hoisted and evaluated before any of our own guard
+// code runs, so the only way to avoid the crash is to never import the
+// module at all in Expo Go - hence the lazy `require` below instead.
+const isExpoGo = isRunningInExpoGo();
+const Notifications = isExpoGo ? null : (require('expo-notifications') as typeof import('expo-notifications'));
+
 // Foreground display behavior - without this, a notification that arrives
 // while the app is already open shows nothing at all.
-Notifications.setNotificationHandler({
+Notifications?.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowBanner: true,
     shouldShowList: true,
@@ -20,6 +29,11 @@ Notifications.setNotificationHandler({
 // this is unconditional - every device that grants permission gets
 // registered, there's no per-user opt-in beyond the OS permission prompt.
 export const registerForPushNotificationsAsync = async () => {
+  if (!Notifications) {
+    console.log('Skipping push notification registration - not supported in Expo Go, use a dev build.');
+    return;
+  }
+
   const { status: existingStatus } = await Notifications.getPermissionsAsync();
   let finalStatus = existingStatus;
   if (existingStatus !== 'granted') {
@@ -72,6 +86,8 @@ const navigateFromNotificationData = (data: unknown) => {
 // Handles a notification tapped while the JS runtime is already running.
 // Returns an unsubscribe function.
 export const subscribeToNotificationResponses = () => {
+  if (!Notifications) return () => {};
+
   const subscription = Notifications.addNotificationResponseReceivedListener((response) => {
     navigateFromNotificationData(response.notification.request.content.data);
   });
@@ -82,6 +98,8 @@ export const subscribeToNotificationResponses = () => {
 // navigationRef is actually ready (NavigationContainer's onReady), since
 // navigating before that is a no-op.
 export const handleColdStartNotification = async () => {
+  if (!Notifications) return;
+
   const response = await Notifications.getLastNotificationResponseAsync();
   navigateFromNotificationData(response?.notification.request.content.data);
 };
