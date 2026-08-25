@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -17,6 +17,7 @@ import { Semester } from '../types';
 import { COLORS, FONTS } from '../theme/colors';
 import { Skeleton } from '../components/Skeleton';
 import { rf, scale, verticalScale, useResponsive } from '../utils/responsive';
+import { yearNumberOf, YEAR_NUMBERS } from '../utils/year';
 
 export const HomeScreen = () => {
   const insets = useSafeAreaInsets();
@@ -84,6 +85,21 @@ export const HomeScreen = () => {
     setRefreshing(true);
     loadData(true);
   };
+
+  const yearsData = useMemo(
+    () =>
+      YEAR_NUMBERS.map((year) => {
+        const semestersInYear = semestersData.filter(
+          ({ semester }) => yearNumberOf(semester.number) === year
+        );
+        return {
+          year,
+          semesters: semestersInYear.map(({ semester }) => semester),
+          subjectCount: semestersInYear.reduce((sum, s) => sum + s.subjectCount, 0),
+        };
+      }),
+    [semestersData]
+  );
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -167,19 +183,19 @@ export const HomeScreen = () => {
               </View>
               <View style={styles.statChip}>
                 <Text style={styles.statItem}>
-                  <Text style={styles.statNumber}>8</Text> SEMESTERS
+                  <Text style={styles.statNumber}>4</Text> YEARS
                 </Text>
               </View>
             </View>
           </View>
 
-          {/* Semester Selection Section */}
+          {/* Year Selection Section */}
           <View style={styles.section}>
-            <Text style={styles.sectionHeading}>SELECT SEMESTER</Text>
+            <Text style={styles.sectionHeading}>SELECT YEAR</Text>
 
             {loading ? (
               <View style={styles.grid}>
-                {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+                {[1, 2, 3, 4].map((i) => (
                   <View
                     key={i}
                     style={[
@@ -195,11 +211,11 @@ export const HomeScreen = () => {
               </View>
             ) : (
               <View style={styles.grid}>
-                {semestersData.map(({ semester, subjectCount }) => {
+                {yearsData.map(({ year, semesters, subjectCount }) => {
                   const isComingSoon = subjectCount === 0;
                   return (
                     <TouchableOpacity
-                      key={semester.id}
+                      key={year}
                       style={[
                         styles.gridCard,
                         (isLandscape || isTablet) && { width: '23.5%' },
@@ -208,13 +224,14 @@ export const HomeScreen = () => {
                       activeOpacity={0.7}
                       onPress={() =>
                         navigation.navigate('SubjectList', {
-                          semesterId: semester.id,
-                          semesterNumber: semester.number,
+                          yearNumber: year,
+                          semesterIds: semesters.map((s) => s.id),
+                          semesterNumbers: semesters.map((s) => s.number),
                         })
                       }
                     >
                       <View style={styles.cardHeaderRow}>
-                        <Text style={styles.cardLabel}>SEMESTER</Text>
+                        <Text style={styles.cardLabel}>YEAR</Text>
                         {isComingSoon && (
                           <View style={styles.comingSoonTag}>
                             <Text style={styles.comingSoonTagText}>SOON</Text>
@@ -222,7 +239,7 @@ export const HomeScreen = () => {
                         )}
                       </View>
                       <Text style={[styles.cardSemesterNumber, isComingSoon && styles.cardSemesterNumberSoon]}>
-                        {semester.number}
+                        {year}
                       </Text>
                       <Text style={styles.cardSublabel}>
                         {isComingSoon

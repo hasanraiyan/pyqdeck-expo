@@ -87,7 +87,7 @@ function HomeStack() {
         name="SubjectList"
         component={SubjectListScreen}
         options={({ route }: any) => ({
-          title: `Semester ${route.params?.semesterNumber || ''}`,
+          title: `Year ${route.params?.yearNumber || ''}`,
         })}
       />
       <Stack.Screen

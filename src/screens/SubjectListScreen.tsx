@@ -24,16 +24,29 @@ export const SubjectListScreen = () => {
   const route = useRoute<any>();
   const navigation = useNavigation<any>();
   const { isLandscape, isTablet, contentMaxWidth } = useResponsive();
-  const { semesterId, semesterNumber } = route.params || {};
+  const { yearNumber, semesterIds, semesterNumbers } = route.params || {};
+  const isMultiSemester = Array.isArray(semesterIds) && semesterIds.length > 1;
 
-  const [subjects, setSubjects] = useState<SubjectSummary[]>([]);
+  const [subjects, setSubjects] = useState<(SubjectSummary & { semesterId: string; semesterNumber: number })[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
   const loadData = async () => {
     try {
-      const data = await getSubjects(semesterId);
-      setSubjects([...data].sort((a, b) => a.name.localeCompare(b.name)));
+      const results = await Promise.all(
+        (semesterIds as string[]).map(async (id: string, idx: number) => {
+          const data = await getSubjects(id);
+          return data.map((subject) => ({
+            ...subject,
+            semesterId: id,
+            semesterNumber: (semesterNumbers as number[])[idx],
+          }));
+        })
+      );
+      const merged = results
+        .flat()
+        .sort((a, b) => a.semesterNumber - b.semesterNumber || a.name.localeCompare(b.name));
+      setSubjects(merged);
     } catch (e) {
       console.error(e);
     } finally {
@@ -44,10 +57,10 @@ export const SubjectListScreen = () => {
 
   useEffect(() => {
     loadData();
-  }, [semesterId]);
+  }, [JSON.stringify(semesterIds)]);
 
   const renderSubjectItem = useCallback(
-    ({ item }: { item: SubjectSummary }) => {
+    ({ item }: { item: SubjectSummary & { semesterId: string; semesterNumber: number } }) => {
       const isComingSoon = item.questionCount === 0;
       return (
         <TouchableOpacity
@@ -56,8 +69,8 @@ export const SubjectListScreen = () => {
           disabled={isComingSoon}
           onPress={() =>
             navigation.navigate('SubjectDetail', {
-              semesterId,
-              semesterNumber,
+              semesterId: item.semesterId,
+              semesterNumber: item.semesterNumber,
               subjectId: item.id,
               subjectName: item.name,
               subjectCode: item.code,
@@ -65,22 +78,17 @@ export const SubjectListScreen = () => {
           }
         >
           <View style={styles.cardLeft}>
-            {item.code ? (
-              <View style={styles.codeRow}>
-                <Badge label={item.code} variant="secondary" />
-                {isComingSoon && (
-                  <View style={styles.cardSoonTag}>
-                    <Text style={styles.cardSoonTagText}>SOON</Text>
-                  </View>
-                )}
-              </View>
-            ) : isComingSoon ? (
-              <View style={[styles.codeRow, { marginBottom: 6 }]}>
+            <View style={styles.codeRow}>
+              {item.code ? <Badge label={item.code} variant="secondary" /> : null}
+              {isMultiSemester && (
+                <Badge label={`Sem ${item.semesterNumber}`} variant="outline" />
+              )}
+              {isComingSoon && (
                 <View style={styles.cardSoonTag}>
                   <Text style={styles.cardSoonTagText}>SOON</Text>
                 </View>
-              </View>
-            ) : null}
+              )}
+            </View>
             <Text style={[styles.subjectName, isComingSoon && styles.subjectNameSoon]}>
               {item.name}
             </Text>
@@ -96,13 +104,13 @@ export const SubjectListScreen = () => {
         </TouchableOpacity>
       );
     },
-    [semesterId, semesterNumber, navigation]
+    [isMultiSemester, navigation]
   );
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.badgeText}>SEMESTER {semesterNumber}</Text>
+        <Text style={styles.badgeText}>YEAR {yearNumber}</Text>
         <Text style={styles.title}>Subjects</Text>
         <Text style={styles.subtitle}>
           Select a subject to browse year-wise questions and practice by module.
@@ -149,7 +157,7 @@ export const SubjectListScreen = () => {
                 </View>
                 <Text style={styles.comingSoonTitle}>No subjects added yet</Text>
                 <Text style={styles.comingSoonDesc}>
-                  We are actively curating previous year questions for Semester {semesterNumber}. Check back soon or browse other active semesters.
+                  We are actively curating previous year questions for Year {yearNumber}. Check back soon or browse other active years.
                 </Text>
                 <TouchableOpacity
                   style={styles.browseAllBtn}
