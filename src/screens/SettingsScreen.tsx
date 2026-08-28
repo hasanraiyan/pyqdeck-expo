@@ -24,7 +24,7 @@ const browserOptions = {
 
 export const SettingsScreen = () => {
   const insets = useSafeAreaInsets();
-  const { contentMaxWidth } = useResponsive();
+  const { readMaxWidth, hPadding } = useResponsive();
 
   const [volumeScrollOn, setVolumeScrollOn] = useState(true);
   const [clearing, setClearing] = useState(false);
@@ -116,9 +116,12 @@ export const SettingsScreen = () => {
   return (
     <ScrollView
       style={styles.container}
-      contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 24 }]}
+      contentContainerStyle={[
+        styles.scroll,
+        { paddingBottom: insets.bottom + 24, paddingHorizontal: hPadding },
+      ]}
     >
-      <View style={[styles.centerWrapper, { maxWidth: contentMaxWidth }]}>
+      <View style={[styles.centerWrapper, { maxWidth: readMaxWidth }]}>
         {Platform.OS === 'android' && (
           <>
             <Text style={styles.sectionHeading}>READING</Text>
@@ -190,7 +193,6 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.background,
   },
   scroll: {
-    paddingHorizontal: 16,
     paddingTop: verticalScale(16),
   },
   centerWrapper: {

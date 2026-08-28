@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   StyleSheet,
   RefreshControl,
   ScrollView,
+  LayoutChangeEvent,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -22,7 +23,38 @@ import { yearNumberOf, YEAR_NUMBERS } from '../utils/year';
 export const HomeScreen = () => {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<any>();
-  const { isLandscape, isTablet, contentMaxWidth } = useResponsive();
+  const { width, bp, wideMaxWidth, hPadding } = useResponsive();
+
+  // Laptop and up gets a real two-column hero: the pitch on the left, the
+  // search box and stats stacked on the right. Below that there isn't enough
+  // width for two columns to beat one.
+  const heroTwoCol = bp({ phone: false, laptop: true });
+  // The CTA's button sits beside its text once there's room for both.
+  const ctaRow = bp({ phone: false, tablet: true });
+
+  const GRID_GAP = 12;
+  // The grid measures itself rather than deriving its width from the window.
+  // useWindowDimensions() reports window.innerWidth on web, which *includes*
+  // the vertical scrollbar (~15-20px) that the content box does not get - so
+  // window-derived card widths overflow and drop a card onto the next row.
+  // onLayout reports the box that actually exists, on native and web alike.
+  const [gridWidth, setGridWidth] = useState(0);
+  const onGridLayout = useCallback(
+    (e: LayoutChangeEvent) => setGridWidth(e.nativeEvent.layout.width),
+    []
+  );
+  // Before the first layout pass, estimate so the initial paint is close.
+  const trackWidth = gridWidth || Math.min(width - hPadding * 2, wideMaxWidth);
+  // There are exactly 4 year cards, so only 2 and 4 tile without leaving an
+  // orphan row - hence a width threshold rather than a per-breakpoint count.
+  // 640 is where 4-up stops squeezing the cards below ~150px.
+  const columns = trackWidth >= 640 ? 4 : 2;
+  const cardWidth = (trackWidth - GRID_GAP * (columns - 1)) / columns;
+
+  // Driven by the live hook, not the module-level rf() snapshot, so type
+  // actually reflows when a browser window is resized.
+  const heroTitleSize = bp({ phone: rf(27), tablet: rf(30), laptop: rf(34), desktop: rf(37) });
+  const heroSubtitleSize = bp({ phone: rf(13.5), laptop: rf(15) });
   const [semestersData, setSemestersData] = useState<
     { semester: Semester; subjectCount: number }[]
   >([]);
@@ -105,7 +137,14 @@ export const HomeScreen = () => {
     <View style={[styles.container, { paddingTop: insets.top }]}>
       {/* Site Header bar with Official PyQdeck Logo */}
       <View style={styles.siteHeader}>
-        <View style={styles.headerInner}>
+        {/* Capped to the same width as the content below, so on a wide screen
+            the brand lines up with the hero instead of hugging the viewport. */}
+        <View
+          style={[
+            styles.headerInner,
+            { maxWidth: wideMaxWidth, paddingHorizontal: hPadding },
+          ]}
+        >
           <View style={styles.brandRow}>
             <Image
               source={require('../../assets/app-icon.png')}
@@ -138,7 +177,7 @@ export const HomeScreen = () => {
       <ScrollView
         contentContainerStyle={[
           styles.scrollContent,
-          { paddingBottom: 24 },
+          { paddingBottom: 24, paddingHorizontal: hPadding },
         ]}
         refreshControl={
           <RefreshControl
@@ -148,43 +187,56 @@ export const HomeScreen = () => {
           />
         }
       >
-        <View style={[styles.centerWrapper, { maxWidth: contentMaxWidth }]}>
+        <View style={[styles.centerWrapper, { maxWidth: wideMaxWidth }]}>
           {/* Hero Section */}
-          <View style={styles.hero}>
-            <Text style={styles.heroTitle}>
-              BEU Previous Year{'\n'}Question Papers
-            </Text>
-            <Text style={styles.heroSubtitle}>
-              Previous-year exam question papers for Bihar Engineering University (BEU)
-              B.Tech students, sorted by semester, subject, and year.
-            </Text>
+          <View style={[styles.hero, heroTwoCol && styles.heroRow]}>
+            <View style={heroTwoCol ? styles.heroCopyCol : undefined}>
+              <Text style={[styles.heroTitle, { fontSize: heroTitleSize, lineHeight: heroTitleSize * 1.26 }]}>
+                {/* The forced break shapes the phone layout; on wider screens
+                    it would leave a short, ragged first line. */}
+                {heroTwoCol
+                  ? 'BEU Previous Year Question Papers'
+                  : 'BEU Previous Year\nQuestion Papers'}
+              </Text>
+              <Text
+                style={[
+                  styles.heroSubtitle,
+                  { fontSize: heroSubtitleSize, lineHeight: heroSubtitleSize * 1.5 },
+                ]}
+              >
+                Previous-year exam question papers for Bihar Engineering University (BEU)
+                B.Tech students, sorted by semester, subject, and year.
+              </Text>
+            </View>
 
-            {/* Quick Search Bar Shortcut */}
-            <TouchableOpacity
-              style={styles.heroSearchBox}
-              activeOpacity={0.75}
-              onPress={() => navigation.navigate('Search')}
-            >
-              <Feather name="search" size={16} color={COLORS.textMuted} />
-              <Text style={styles.heroSearchPlaceholder}>Search subjects, questions, theorems...</Text>
-            </TouchableOpacity>
+            <View style={heroTwoCol ? styles.heroAsideCol : undefined}>
+              {/* Quick Search Bar Shortcut */}
+              <TouchableOpacity
+                style={styles.heroSearchBox}
+                activeOpacity={0.75}
+                onPress={() => navigation.navigate('Search')}
+              >
+                <Feather name="search" size={16} color={COLORS.textMuted} />
+                <Text style={styles.heroSearchPlaceholder}>Search subjects, questions, theorems...</Text>
+              </TouchableOpacity>
 
-            {/* Stats Bar */}
-            <View style={styles.statsRow}>
-              <View style={styles.statChip}>
-                <Text style={styles.statItem}>
-                  <Text style={styles.statNumber}>{stats.subjects || '—'}</Text> SUBJECTS
-                </Text>
-              </View>
-              <View style={styles.statChip}>
-                <Text style={styles.statItem}>
-                  <Text style={styles.statNumber}>{stats.questions || '—'}</Text> QUESTIONS
-                </Text>
-              </View>
-              <View style={styles.statChip}>
-                <Text style={styles.statItem}>
-                  <Text style={styles.statNumber}>4</Text> YEARS
-                </Text>
+              {/* Stats Bar */}
+              <View style={styles.statsRow}>
+                <View style={styles.statChip}>
+                  <Text style={styles.statItem}>
+                    <Text style={styles.statNumber}>{stats.subjects || '—'}</Text> SUBJECTS
+                  </Text>
+                </View>
+                <View style={styles.statChip}>
+                  <Text style={styles.statItem}>
+                    <Text style={styles.statNumber}>{stats.questions || '—'}</Text> QUESTIONS
+                  </Text>
+                </View>
+                <View style={styles.statChip}>
+                  <Text style={styles.statItem}>
+                    <Text style={styles.statNumber}>4</Text> YEARS
+                  </Text>
+                </View>
               </View>
             </View>
           </View>
@@ -194,14 +246,11 @@ export const HomeScreen = () => {
             <Text style={styles.sectionHeading}>SELECT YEAR</Text>
 
             {loading ? (
-              <View style={styles.grid}>
+              <View style={[styles.grid, { gap: GRID_GAP }]} onLayout={onGridLayout}>
                 {[1, 2, 3, 4].map((i) => (
                   <View
                     key={i}
-                    style={[
-                      styles.gridCardSkeleton,
-                      (isLandscape || isTablet) && { width: '23.5%' },
-                    ]}
+                    style={[styles.gridCardSkeleton, { width: cardWidth }]}
                   >
                     <Skeleton width={50} height={10} style={{ marginBottom: 6 }} />
                     <Skeleton width={40} height={28} style={{ marginBottom: 6 }} />
@@ -210,7 +259,7 @@ export const HomeScreen = () => {
                 ))}
               </View>
             ) : (
-              <View style={styles.grid}>
+              <View style={[styles.grid, { gap: GRID_GAP }]} onLayout={onGridLayout}>
                 {yearsData.map(({ year, semesters, subjectCount }) => {
                   const isComingSoon = subjectCount === 0;
                   return (
@@ -218,7 +267,7 @@ export const HomeScreen = () => {
                       key={year}
                       style={[
                         styles.gridCard,
-                        (isLandscape || isTablet) && { width: '23.5%' },
+                        { width: cardWidth },
                         isComingSoon && styles.gridCardComingSoon,
                       ]}
                       activeOpacity={0.7}
@@ -254,15 +303,15 @@ export const HomeScreen = () => {
           </View>
 
           {/* Browse All Subjects CTA Card */}
-          <View style={styles.allSubjectsCta}>
-            <View style={styles.allSubjectsLeft}>
+          <View style={[styles.allSubjectsCta, ctaRow && styles.allSubjectsCtaRow]}>
+            <View style={[styles.allSubjectsLeft, ctaRow && styles.allSubjectsLeftRow]}>
               <Text style={styles.allSubjectsTag}>LOOKING FOR ONE SUBJECT?</Text>
               <Text style={styles.allSubjectsText}>
                 Search or browse all {stats.subjects || 'hundreds of'} subjects directly.
               </Text>
             </View>
             <TouchableOpacity
-              style={styles.allSubjectsButton}
+              style={[styles.allSubjectsButton, ctaRow && styles.allSubjectsButtonRow]}
               activeOpacity={0.7}
               onPress={() => navigation.navigate('AllSubjects')}
             >
@@ -292,7 +341,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
     paddingVertical: 14,
   },
   brandRow: {
@@ -340,7 +388,6 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   scrollContent: {
-    paddingHorizontal: 16,
     paddingTop: verticalScale(20),
     paddingBottom: 32,
     alignItems: 'center',
@@ -353,6 +400,19 @@ const styles = StyleSheet.create({
     paddingBottom: 22,
     borderBottomWidth: 1,
     borderColor: COLORS.borderDashed,
+  },
+  heroRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 40,
+  },
+  heroCopyCol: {
+    // Slightly greedier than the aside so the headline keeps the emphasis.
+    flex: 1.15,
+  },
+  heroAsideCol: {
+    flex: 1,
+    maxWidth: 400,
   },
   heroTitle: {
     fontFamily: FONTS.serif,
@@ -424,11 +484,12 @@ const styles = StyleSheet.create({
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    rowGap: 12,
+    // Cards carry an exact measured width and the container supplies the gap,
+    // so nothing should be redistributed - space-between would stretch a
+    // partly-filled last row.
+    justifyContent: 'flex-start',
   },
   gridCard: {
-    width: '48.5%',
     backgroundColor: COLORS.card,
     borderWidth: 1,
     borderColor: COLORS.border,
@@ -462,7 +523,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   gridCardSkeleton: {
-    width: '48.5%',
     backgroundColor: COLORS.card,
     borderWidth: 1,
     borderColor: COLORS.border,
@@ -503,8 +563,25 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     padding: 16,
   },
+  allSubjectsCtaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 24,
+  },
   allSubjectsLeft: {
     marginBottom: 12,
+  },
+  allSubjectsLeftRow: {
+    flex: 1,
+    marginBottom: 0,
+  },
+  allSubjectsButtonRow: {
+    // Stops the button stretching to the card's full height in row mode, and
+    // keeps it from eating the space the copy needs.
+    alignSelf: 'center',
+    flexShrink: 0,
+    gap: 10,
   },
   allSubjectsTag: {
     fontFamily: FONTS.mono,

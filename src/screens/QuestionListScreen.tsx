@@ -30,7 +30,7 @@ export const QuestionListScreen = () => {
   const insets = useSafeAreaInsets();
   const route = useRoute<any>();
   const navigation = useNavigation<any>();
-  const { contentMaxWidth } = useResponsive();
+  const { readMaxWidth } = useResponsive();
   const {
     semesterId,
     subjectId,
@@ -182,7 +182,7 @@ export const QuestionListScreen = () => {
         removeClippedSubviews={false}
         contentContainerStyle={{
           paddingBottom: 24,
-          maxWidth: contentMaxWidth,
+          maxWidth: readMaxWidth,
           width: '100%',
           alignSelf: 'center',
         }}
@@ -318,7 +318,7 @@ export const QuestionListScreen = () => {
               <View
                 style={[
                   styles.modalContent,
-                  { paddingBottom: insets.bottom + 16, maxWidth: contentMaxWidth, width: '100%', alignSelf: 'center' },
+                  { paddingBottom: insets.bottom + 16, maxWidth: readMaxWidth, width: '100%', alignSelf: 'center' },
                 ]}
               >
                 <View style={styles.modalHeader}>

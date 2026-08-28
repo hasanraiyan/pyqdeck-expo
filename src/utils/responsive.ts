@@ -9,6 +9,23 @@ const baseHeight = 812;
 export const isTablet = SCREEN_WIDTH >= 768;
 export const isSmallDevice = SCREEN_WIDTH < 360;
 
+// Width breakpoints. Only meaningful on web and tablets - a phone never
+// leaves 'phone' in portrait, and lands in 'tablet' at most in landscape.
+export const BREAKPOINTS = { tablet: 600, laptop: 1024, desktop: 1440 } as const;
+
+export type Breakpoint = 'phone' | 'tablet' | 'laptop' | 'desktop';
+
+/**
+ * Per-breakpoint values. Only `phone` is required; the rest cascade upward,
+ * so `{ phone: 2, laptop: 4 }` means 2 on phone AND tablet, 4 from laptop up.
+ */
+export interface BreakpointValues<T> {
+  phone: T;
+  tablet?: T;
+  laptop?: T;
+  desktop?: T;
+}
+
 export const useResponsive = () => {
   const { width, height } = useWindowDimensions();
   const isLandscape = width > height;
@@ -18,6 +35,25 @@ export const useResponsive = () => {
   const contentMaxWidth = isLandscape ? 860 : 720;
   const gridColumns = isLandscape ? (width > 900 ? 4 : 3) : (width > 600 ? 3 : 2);
 
+  const breakpoint: Breakpoint =
+    width >= BREAKPOINTS.desktop
+      ? 'desktop'
+      : width >= BREAKPOINTS.laptop
+        ? 'laptop'
+        : width >= BREAKPOINTS.tablet
+          ? 'tablet'
+          : 'phone';
+
+  // `??` rather than `||` so a deliberate `false` / `0` at one breakpoint
+  // isn't silently replaced by the smaller breakpoint's value.
+  function bp<T>(values: BreakpointValues<T>): T {
+    if (breakpoint === 'desktop')
+      return values.desktop ?? values.laptop ?? values.tablet ?? values.phone;
+    if (breakpoint === 'laptop') return values.laptop ?? values.tablet ?? values.phone;
+    if (breakpoint === 'tablet') return values.tablet ?? values.phone;
+    return values.phone;
+  }
+
   return {
     width,
     height,
@@ -26,6 +62,18 @@ export const useResponsive = () => {
     isSmallDevice: isSmall,
     contentMaxWidth,
     gridColumns,
+    breakpoint,
+    bp,
+    // Deliberately separate from contentMaxWidth: that one is a *reading*
+    // column (long prose at 1100px is unreadable), this one is for index and
+    // grid screens, where wide is the whole point.
+    wideMaxWidth: bp({ phone: 720, tablet: 900, laptop: 1100, desktop: 1240 }),
+    // The counterpart, for prose and forms: question text, solutions,
+    // settings rows. Caps out around 70-75 characters per line, which is
+    // where long-form text stays comfortable to read - growing this with the
+    // window would make those screens worse, not better.
+    readMaxWidth: bp({ phone: 720, tablet: 680, laptop: 720, desktop: 760 }),
+    hPadding: bp({ phone: 16, tablet: 24, laptop: 32, desktop: 40 }),
   };
 };
 

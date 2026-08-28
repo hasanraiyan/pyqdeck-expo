@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   RefreshControl,
+  LayoutChangeEvent,
 } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -22,12 +23,40 @@ export const SubjectDetailScreen = () => {
   const insets = useSafeAreaInsets();
   const route = useRoute<any>();
   const navigation = useNavigation<any>();
-  const { isLandscape, isTablet, contentMaxWidth } = useResponsive();
+  const { width, bp, wideMaxWidth, hPadding } = useResponsive();
   const { semesterId, subjectId, subjectName, subjectCode } = route.params || {};
 
   const [meta, setMeta] = useState<SubjectMeta | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+
+  // Both grids size off the measured wrapper, never off the window: on web
+  // useWindowDimensions() includes the ScrollView's scrollbar, and cards sized
+  // from it overflow their row and drop one onto the next line.
+  const [wrapperWidth, setWrapperWidth] = useState(0);
+  const onWrapperLayout = useCallback(
+    (e: LayoutChangeEvent) => setWrapperWidth(e.nativeEvent.layout.width),
+    []
+  );
+  const track = wrapperWidth || Math.min(width - hPadding * 2, wideMaxWidth);
+
+  // Unlike Home's fixed 4 years, a subject can have any number of papers, so
+  // the column count comes from how many ~190px cards fit - then capped to
+  // the number of years, so 3 papers fill the row instead of leaving a
+  // quarter of it blank.
+  const YEAR_GAP = 12;
+  const yearCount = meta?.years?.length || 4;
+  const yearColumns = Math.max(2, Math.min(Math.floor(track / 190) || 2, 4, yearCount));
+  const yearCardWidth = (track - YEAR_GAP * (yearColumns - 1)) / yearColumns;
+
+  // Module rows are text-heavy (name + count + chevron), so they get two
+  // columns at most - three would clip the longer chapter names.
+  const MODULE_GAP = 8;
+  const moduleColumns = bp({ phone: 1, tablet: 2 });
+  const moduleCardWidth =
+    moduleColumns > 1
+      ? (track - MODULE_GAP * (moduleColumns - 1)) / moduleColumns
+      : undefined;
 
   const loadData = async (forceRefresh = false) => {
     try {
@@ -53,7 +82,7 @@ export const SubjectDetailScreen = () => {
   return (
     <View style={styles.container}>
       <ScrollView
-        contentContainerStyle={[styles.scroll, { paddingBottom: 24 }]}
+        contentContainerStyle={[styles.scroll, { paddingBottom: 24, paddingHorizontal: hPadding }]}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -62,7 +91,10 @@ export const SubjectDetailScreen = () => {
           />
         }
       >
-        <View style={{ maxWidth: contentMaxWidth, width: '100%', alignSelf: 'center' }}>
+        <View
+          style={{ maxWidth: wideMaxWidth, width: '100%', alignSelf: 'center' }}
+          onLayout={onWrapperLayout}
+        >
           {/* Subject Header */}
           <View style={styles.header}>
             <View style={styles.badgeRow}>
@@ -82,22 +114,16 @@ export const SubjectDetailScreen = () => {
           <View style={styles.section}>
             <Text style={styles.sectionHeading}>QUESTION PAPERS BY YEAR</Text>
             {loading ? (
-              <View style={styles.grid}>
+              <View style={[styles.grid, { gap: YEAR_GAP }]}>
                 {[1, 2, 3, 4].map((i) => (
-                  <View
-                    key={i}
-                    style={[
-                      styles.yearCardSkeleton,
-                      (isLandscape || isTablet) && { width: '23.5%' },
-                    ]}
-                  >
+                  <View key={i} style={[styles.yearCardSkeleton, { width: yearCardWidth }]}>
                     <Skeleton width={60} height={24} style={{ marginBottom: 6 }} />
                     <Skeleton width={40} height={12} />
                   </View>
                 ))}
               </View>
             ) : meta?.years && meta.years.length > 0 ? (
-              <View style={styles.grid}>
+              <View style={[styles.grid, { gap: YEAR_GAP }]}>
                 {meta.years.map((y) => {
                   const isComingSoon = y.questionCount === 0;
                   return (
@@ -105,7 +131,7 @@ export const SubjectDetailScreen = () => {
                       key={y.year}
                       style={[
                         styles.yearCard,
-                        (isLandscape || isTablet) && { width: '23.5%' },
+                        { width: yearCardWidth },
                         isComingSoon && styles.cardComingSoon,
                       ]}
                       activeOpacity={0.7}
@@ -148,22 +174,29 @@ export const SubjectDetailScreen = () => {
         <View style={styles.section}>
           <Text style={styles.sectionHeading}>PRACTICE BY MODULE</Text>
           {loading ? (
-            <View style={styles.moduleList}>
+            <View style={[styles.moduleList, moduleColumns > 1 && styles.moduleListGrid]}>
               {[1, 2, 3].map((i) => (
-                <View key={i} style={styles.moduleCardSkeleton}>
+                <View
+                  key={i}
+                  style={[styles.moduleCardSkeleton, { width: moduleCardWidth }]}
+                >
                   <Skeleton width="60%" height={16} style={{ marginBottom: 6 }} />
                   <Skeleton width="30%" height={12} />
                 </View>
               ))}
             </View>
           ) : meta?.chapters && meta.chapters.length > 0 ? (
-            <View style={styles.moduleList}>
+            <View style={[styles.moduleList, moduleColumns > 1 && styles.moduleListGrid]}>
               {meta.chapters.map((ch, idx) => {
                 const isComingSoon = ch.questionCount === 0;
                 return (
                   <TouchableOpacity
                     key={idx}
-                    style={[styles.moduleCard, isComingSoon && styles.cardComingSoon]}
+                    style={[
+                      styles.moduleCard,
+                      { width: moduleCardWidth },
+                      isComingSoon && styles.cardComingSoon,
+                    ]}
                     activeOpacity={0.7}
                     onPress={() =>
                       navigation.navigate('QuestionList', {
@@ -265,11 +298,11 @@ const styles = StyleSheet.create({
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    rowGap: 12,
+    // Cards carry measured widths and the container supplies the gap, so a
+    // partly-filled last row must stay left-aligned rather than stretch.
+    justifyContent: 'flex-start',
   },
   yearCard: {
-    width: '48.5%',
     backgroundColor: COLORS.card,
     borderWidth: 1,
     borderColor: COLORS.border,
@@ -318,7 +351,6 @@ const styles = StyleSheet.create({
     color: COLORS.textMuted,
   },
   yearCardSkeleton: {
-    width: '48.5%',
     backgroundColor: COLORS.card,
     borderWidth: 1,
     borderColor: COLORS.border,
@@ -340,6 +372,10 @@ const styles = StyleSheet.create({
   },
   moduleList: {
     gap: 8,
+  },
+  moduleListGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
   },
   moduleCard: {
     flexDirection: 'row',

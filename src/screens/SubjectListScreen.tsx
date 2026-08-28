@@ -7,6 +7,7 @@ import {
   StyleSheet,
   RefreshControl,
   Platform,
+  LayoutChangeEvent,
 } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -23,9 +24,34 @@ export const SubjectListScreen = () => {
   const insets = useSafeAreaInsets();
   const route = useRoute<any>();
   const navigation = useNavigation<any>();
-  const { isLandscape, isTablet, contentMaxWidth } = useResponsive();
+  const { width, bp, wideMaxWidth, hPadding } = useResponsive();
   const { yearNumber, semesterIds, semesterNumbers } = route.params || {};
   const isMultiSemester = Array.isArray(semesterIds) && semesterIds.length > 1;
+
+  // A phone keeps the dense full-bleed row list - it's the right shape for a
+  // narrow column. Wider screens switch to a card grid, because a single row
+  // stretched to 1200px puts the subject name and its count at opposite ends
+  // of an empty band.
+  const columns = bp({ phone: 1, tablet: 2, laptop: 3 });
+  const isGrid = columns > 1;
+  const GAP = 12;
+  // The padding lives on the same box as the cap here (unlike HomeScreen,
+  // where an outer padded view wraps an inner capped one), so the cap has to
+  // include the padding for the usable width to come out the same on both
+  // screens - otherwise the two disagree by 2 x hPadding above wideMaxWidth.
+  const frameMaxWidth = wideMaxWidth + (isGrid ? hPadding * 2 : 0);
+  // Measured, not window-derived: on web useWindowDimensions() includes the
+  // vertical scrollbar that the content box doesn't get, and cards sized off
+  // it overflow their row by ~17px - enough to wrap one card per row away.
+  const [listWidth, setListWidth] = useState(0);
+  const onContentLayout = useCallback(
+    (e: LayoutChangeEvent) => setListWidth(e.nativeEvent.layout.width),
+    []
+  );
+  const trackWidth = listWidth || width;
+  const contentWidth =
+    Math.min(trackWidth, frameMaxWidth) - (isGrid ? hPadding * 2 : 0);
+  const cardWidth = isGrid ? (contentWidth - GAP * (columns - 1)) / columns : undefined;
 
   const [subjects, setSubjects] = useState<(SubjectSummary & { semesterId: string; semesterNumber: number })[]>([]);
   const [loading, setLoading] = useState(true);
@@ -64,7 +90,11 @@ export const SubjectListScreen = () => {
       const isComingSoon = item.questionCount === 0;
       return (
         <TouchableOpacity
-          style={[styles.card, isComingSoon && styles.cardComingSoon]}
+          style={[
+            styles.card,
+            isGrid && [styles.cardGrid, { width: cardWidth }],
+            isComingSoon && styles.cardComingSoon,
+          ]}
           activeOpacity={isComingSoon ? 1 : 0.7}
           disabled={isComingSoon}
           onPress={() =>
@@ -104,22 +134,31 @@ export const SubjectListScreen = () => {
         </TouchableOpacity>
       );
     },
-    [isMultiSemester, navigation]
+    [isMultiSemester, navigation, isGrid, cardWidth]
   );
 
   return (
     <View style={styles.container}>
+      {/* The bar stays full-bleed; its text is capped to the same width as the
+          list below so the heading doesn't hug the edge on a wide screen. */}
       <View style={styles.header}>
-        <Text style={styles.badgeText}>YEAR {yearNumber}</Text>
-        <Text style={styles.title}>Subjects</Text>
-        <Text style={styles.subtitle}>
-          Select a subject to browse year-wise questions and practice by module.
-        </Text>
+        <View
+          style={[
+            styles.headerInner,
+            { maxWidth: wideMaxWidth + hPadding * 2, paddingHorizontal: hPadding },
+          ]}
+        >
+          <Text style={styles.badgeText}>YEAR {yearNumber}</Text>
+          <Text style={styles.title}>Subjects</Text>
+          <Text style={styles.subtitle}>
+            Select a subject to browse year-wise questions and practice by module.
+          </Text>
+        </View>
       </View>
 
-      <View style={styles.content}>
+      <View style={styles.content} onLayout={onContentLayout}>
         {loading ? (
-          <View>
+          <View style={{ maxWidth: frameMaxWidth, width: '100%', alignSelf: 'center' }}>
             {[1, 2, 3, 4, 5, 6].map((i) => (
               <SubjectCardSkeleton key={i} />
             ))}
@@ -127,6 +166,13 @@ export const SubjectListScreen = () => {
         ) : (
           <FlatList
             data={subjects}
+            // FlatList caches its layout per column count, so it has to be
+            // remounted when that changes - otherwise rotating a tablet (or
+            // dragging a browser window across a breakpoint) leaves the old
+            // single-column layout behind.
+            key={columns}
+            numColumns={columns}
+            columnWrapperStyle={isGrid ? { gap: GAP } : undefined}
             keyExtractor={(item) => item.id}
             renderItem={renderSubjectItem}
             initialNumToRender={10}
@@ -135,7 +181,9 @@ export const SubjectListScreen = () => {
             removeClippedSubviews={Platform.OS === 'android'}
             contentContainerStyle={{
               paddingBottom: 24,
-              maxWidth: contentMaxWidth,
+              paddingTop: isGrid ? GAP : 0,
+              paddingHorizontal: isGrid ? hPadding : 0,
+              maxWidth: frameMaxWidth,
               width: '100%',
               alignSelf: 'center',
             }}
@@ -183,12 +231,15 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.background,
   },
   header: {
-    paddingHorizontal: 16,
     paddingTop: 16,
     paddingBottom: 16,
     borderBottomWidth: 1,
     borderColor: COLORS.borderDashed,
     backgroundColor: COLORS.card,
+    alignItems: 'center',
+  },
+  headerInner: {
+    width: '100%',
   },
   badgeText: {
     fontFamily: FONTS.mono,
@@ -224,6 +275,14 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border,
     paddingHorizontal: 16,
     paddingVertical: 14,
+  },
+  // Grid mode: a standalone bordered card rather than a full-bleed row with
+  // only a bottom rule.
+  cardGrid: {
+    borderWidth: 1,
+    borderBottomWidth: 1,
+    borderRadius: 4,
+    marginBottom: 12,
   },
   cardComingSoon: {
     backgroundColor: COLORS.cardSecondary,

@@ -33,7 +33,7 @@ import { COLORS, FONTS } from '../theme/colors';
 import { Badge, MarksBadge, AskAiBadge, YearBadge } from '../components/Badge';
 import { PrevNextNav } from '../components/PrevNextNav';
 import { SolutionSkeleton, SimilarQuestionSkeleton } from '../components/Skeleton';
-import { rf, cleanMarkdown } from '../utils/responsive';
+import { rf, cleanMarkdown, useResponsive } from '../utils/responsive';
 import { buildQuestionUrl } from '../utils/links';
 import { questionMarkdownStyles, solutionMarkdownStyles, markdownRules } from '../theme/markdownStyles';
 import { recordQuestionOpenedAndMaybeShowInterstitial } from '../utils/ads';
@@ -45,6 +45,7 @@ export const QuestionDetailScreen = () => {
   const insets = useSafeAreaInsets();
   const route = useRoute<any>();
   const navigation = useNavigation<any>();
+  const { readMaxWidth, hPadding } = useResponsive();
   const {
     subjectId,
     semesterId,
@@ -340,8 +341,12 @@ export const QuestionDetailScreen = () => {
 
   return (
     <View style={styles.container}>
-      <ScrollView ref={scrollRef} style={styles.scrollFlex} contentContainerStyle={styles.scroll}>
-        <View style={styles.centerWrapper}>
+      <ScrollView
+        ref={scrollRef}
+        style={styles.scrollFlex}
+        contentContainerStyle={[styles.scroll, { paddingHorizontal: hPadding }]}
+      >
+        <View style={[styles.centerWrapper, { maxWidth: readMaxWidth }]}>
           {/* Breadcrumb / Paper info */}
           <View style={styles.metaRow}>
             <Text style={styles.subjectText} numberOfLines={1}>
@@ -671,11 +676,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scroll: {
-    paddingHorizontal: 16,
     paddingTop: 4,
     paddingBottom: 24,
   },
   centerWrapper: {
+    // The cap comes from useResponsive().readMaxWidth at the call site; this
+    // stays as the fallback for any render before that resolves.
     maxWidth: 780,
     width: '100%',
     alignSelf: 'center',

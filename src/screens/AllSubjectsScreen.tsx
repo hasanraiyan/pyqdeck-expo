@@ -9,6 +9,7 @@ import {
   RefreshControl,
   ActivityIndicator,
   Platform,
+  LayoutChangeEvent,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
@@ -22,7 +23,27 @@ import { useResponsive } from '../utils/responsive';
 
 export const AllSubjectsScreen = () => {
   const navigation = useNavigation<any>();
-  const { contentMaxWidth } = useResponsive();
+  const { width, bp, wideMaxWidth, hPadding } = useResponsive();
+
+  // Same reasoning as SubjectListScreen: a phone keeps the dense full-bleed
+  // rows, wider screens get a card grid so a subject name and its count stop
+  // sitting at opposite ends of an empty band.
+  const columns = bp({ phone: 1, tablet: 2, laptop: 3 });
+  const isGrid = columns > 1;
+  const GAP = 12;
+  const frameMaxWidth = wideMaxWidth + (isGrid ? hPadding * 2 : 0);
+  // Measured, not window-derived - useWindowDimensions() on web includes the
+  // scrollbar the content box doesn't get.
+  const [listWidth, setListWidth] = useState(0);
+  const onContentLayout = useCallback(
+    (e: LayoutChangeEvent) => setListWidth(e.nativeEvent.layout.width),
+    []
+  );
+  const trackWidth = listWidth || width;
+  const contentWidth =
+    Math.min(trackWidth, frameMaxWidth) - (isGrid ? hPadding * 2 : 0);
+  const cardWidth = isGrid ? (contentWidth - GAP * (columns - 1)) / columns : undefined;
+
   const [query, setQuery] = useState('');
   const [page, setPage] = useState(1);
   const [subjects, setSubjects] = useState<(SubjectSummary & { semester: Semester })[]>([]);
@@ -85,7 +106,11 @@ export const AllSubjectsScreen = () => {
       const isComingSoon = item.questionCount === 0;
       return (
         <TouchableOpacity
-          style={[styles.card, isComingSoon && styles.cardComingSoon]}
+          style={[
+            styles.card,
+            isGrid && [styles.cardGrid, { width: cardWidth }],
+            isComingSoon && styles.cardComingSoon,
+          ]}
           activeOpacity={isComingSoon ? 1 : 0.7}
           disabled={isComingSoon}
           onPress={() =>
@@ -122,13 +147,20 @@ export const AllSubjectsScreen = () => {
         </TouchableOpacity>
       );
     },
-    [navigation]
+    [navigation, isGrid, cardWidth]
   );
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <View style={{ width: '100%', maxWidth: contentMaxWidth, alignSelf: 'center' }}>
+        <View
+          style={{
+            width: '100%',
+            maxWidth: wideMaxWidth + hPadding * 2,
+            paddingHorizontal: hPadding,
+            alignSelf: 'center',
+          }}
+        >
           <Text style={styles.badgeText}>ALL SUBJECTS CATALOG</Text>
           <Text style={styles.title}>Browse All Subjects</Text>
           <Text style={styles.subtitle}>
@@ -156,9 +188,16 @@ export const AllSubjectsScreen = () => {
         </View>
       </View>
 
-      <View style={styles.content}>
+      <View style={styles.content} onLayout={onContentLayout}>
         {loading && !refreshing ? (
-          <View style={{ padding: 16, width: '100%', maxWidth: contentMaxWidth, alignSelf: 'center' }}>
+          <View
+            style={{
+              padding: 16,
+              width: '100%',
+              maxWidth: frameMaxWidth,
+              alignSelf: 'center',
+            }}
+          >
             {[1, 2, 3, 4, 5].map((i) => (
               <View key={i} style={styles.skeletonCard}>
                 <Skeleton width="40%" height={16} style={{ marginBottom: 8 }} />
@@ -169,6 +208,11 @@ export const AllSubjectsScreen = () => {
         ) : (
           <FlatList
             data={subjects}
+            // FlatList caches layout per column count, so it must remount when
+            // that changes or a rotation leaves the old arrangement behind.
+            key={columns}
+            numColumns={columns}
+            columnWrapperStyle={isGrid ? { gap: GAP } : undefined}
             keyExtractor={(item) => item.id}
             renderItem={renderSubjectCard}
             initialNumToRender={10}
@@ -179,7 +223,9 @@ export const AllSubjectsScreen = () => {
             onEndReachedThreshold={0.5}
             contentContainerStyle={{
               paddingBottom: 24,
-              maxWidth: contentMaxWidth,
+              paddingTop: isGrid ? GAP : 0,
+              paddingHorizontal: isGrid ? hPadding : 0,
+              maxWidth: frameMaxWidth,
               width: '100%',
               alignSelf: 'center',
             }}
@@ -217,7 +263,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.background,
   },
   header: {
-    paddingHorizontal: 16,
+    alignItems: 'center',
     paddingTop: 16,
     paddingBottom: 16,
     borderBottomWidth: 1,
@@ -276,6 +322,12 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border,
     paddingHorizontal: 16,
     paddingVertical: 14,
+  },
+  // Grid mode: a standalone bordered card instead of a full-bleed row.
+  cardGrid: {
+    borderWidth: 1,
+    borderRadius: 4,
+    marginBottom: 12,
   },
   cardComingSoon: {
     backgroundColor: COLORS.cardSecondary,
