@@ -73,9 +73,7 @@ export const QuestionItem: React.FC<QuestionItemProps> = React.memo(({
   const handleShare = async () => {
     try {
       const url = buildQuestionUrl(semesterId, subjectId, question.year, question.questionId);
-      await Share.share({
-        message: `${question.text}\n\n[PYQDeck - ${question.year}]\n${url}`,
-      });
+      await Share.share({ message: url, url });
     } catch (e) {
       console.error(e);
     }

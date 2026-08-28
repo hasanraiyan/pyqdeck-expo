@@ -181,9 +181,7 @@ export const QuestionDetailScreen = () => {
     if (!question) return;
     try {
       const url = buildQuestionUrl(semesterId, subjectId, question.year, questionId);
-      await Share.share({
-        message: `${question.text}\n\n[PYQDeck - ${question.year}]\n${url}`,
-      });
+      await Share.share({ message: url, url });
     } catch (e) {
       console.error(e);
     }
@@ -322,13 +320,9 @@ export const QuestionDetailScreen = () => {
 
             {/* Action buttons */}
             <View style={styles.actionsRow}>
-              {question.hasSolution ? (
-                <View />
-              ) : (
-                <TouchableOpacity onPress={openAiSearch} activeOpacity={0.7}>
-                  <AskAiBadge />
-                </TouchableOpacity>
-              )}
+              <TouchableOpacity onPress={openAiSearch} activeOpacity={0.7}>
+                <AskAiBadge />
+              </TouchableOpacity>
 
               <View style={styles.actionButtonsRight}>
                 <TouchableOpacity style={styles.actionIconButton} onPress={handleCopy} activeOpacity={0.6}>
@@ -353,12 +347,7 @@ export const QuestionDetailScreen = () => {
           {/* Worked Solution */}
           {question.hasSolution && (
             <View style={styles.solutionSection}>
-              <View style={styles.solutionHeaderRow}>
-                <Text style={styles.solutionTitle}>WORKED SOLUTION</Text>
-                <TouchableOpacity onPress={openAiSearch} activeOpacity={0.7}>
-                  <AskAiBadge />
-                </TouchableOpacity>
-              </View>
+              <Text style={styles.solutionTitle}>WORKED SOLUTION</Text>
               {solution ? (
                 <View style={styles.solutionBody}>
                   <Markdown style={solutionMarkdownStyles} rules={markdownRules}>
@@ -805,6 +794,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: COLORS.primary,
     letterSpacing: 1.2,
+    marginBottom: 10,
   },
   solutionBody: {
     paddingTop: 4,

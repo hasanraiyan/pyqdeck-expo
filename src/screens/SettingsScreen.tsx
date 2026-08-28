@@ -170,7 +170,6 @@ export const SettingsScreen = () => {
           <SettingsRow
             icon="refresh-cw"
             label="Check for updates"
-            subtitle="Downloads and installs updates without leaving the app"
             onPress={checkingUpdate ? undefined : handleCheckForUpdates}
             right={checkingUpdate ? <Text style={styles.statusText}>Checking…</Text> : undefined}
           />
