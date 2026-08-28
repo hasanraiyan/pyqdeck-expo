@@ -1,12 +1,19 @@
 import React, { useEffect } from 'react';
+import { AppState, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { useSafeAreaInsets, SafeAreaProvider } from 'react-native-safe-area-context';
+import {
+  useSafeAreaInsets,
+  SafeAreaProvider,
+  SafeAreaInsetsContext,
+} from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { mobileAds } from './src/utils/mobileAds';
 import { navigationRef } from './src/utils/navigationRef';
+import * as Backend from './src/api/backend';
+import { BackendDebugBanner } from './src/components/BackendDebugBanner';
 import {
   registerForPushNotificationsAsync,
   subscribeToNotificationResponses,
@@ -169,15 +176,30 @@ function AppContent() {
     registerForPushNotificationsAsync();
     const unsubscribe = subscribeToNotificationResponses();
 
+    // Start backend selection alongside the rest of boot instead of letting
+    // the first screen's fetch trigger it, so the ping RTT overlaps app
+    // startup rather than delaying the first request.
+    void Backend.ready();
+
+    // A session that fell back to Render should climb back onto EC2 once it
+    // recovers. Returning to the foreground is the natural moment to look,
+    // and recheckIfStale() ignores brief tab-aways.
+    const appStateSub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') Backend.recheckIfStale();
+    });
+
     // Sequenced so a store-update prompt and a review prompt never show back to back.
     checkForStoreUpdate().finally(() => {
       maybeRequestReview();
     });
 
-    return unsubscribe;
+    return () => {
+      unsubscribe();
+      appStateSub.remove();
+    };
   }, []);
 
-  return (
+  const tree = (
     <NavigationContainer
       ref={navigationRef}
       linking={linking}
@@ -221,5 +243,20 @@ function AppContent() {
         />
       </Tab.Navigator>
     </NavigationContainer>
+  );
+
+  // Production renders exactly what it rendered before this banner existed.
+  if (!__DEV__) return tree;
+
+  // The banner eats the top safe-area inset itself, so the navigators below
+  // are handed top: 0 - otherwise every screen header would pad for a status
+  // bar that the banner is already sitting under.
+  return (
+    <View style={{ flex: 1, backgroundColor: COLORS.text }}>
+      <BackendDebugBanner />
+      <SafeAreaInsetsContext.Provider value={{ ...insets, top: 0 }}>
+        {tree}
+      </SafeAreaInsetsContext.Provider>
+    </View>
   );
 }

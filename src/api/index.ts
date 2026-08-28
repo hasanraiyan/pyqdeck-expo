@@ -12,8 +12,7 @@ import {
   RepeatedQuestionsResult,
 } from '../types';
 import * as Cache from '../db/cacheService';
-
-export const API_BASE_URL = 'https://api.pyqdeck.in/api/public';
+import * as Backend from './backend';
 
 export class ApiError extends Error {
   status?: number;
@@ -32,43 +31,59 @@ function trimName<T extends { name: string }>(item: T): T {
   return item.name === item.name.trim() ? item : { ...item, name: item.name.trim() };
 }
 
-async function fetchApi<T>(path: string): Promise<T> {
-  const url = `${API_BASE_URL}${path}`;
+// Every request resolves its origin at call time instead of closing over a
+// constant, which is what lets a failover move the whole app between
+// deployments without an APK update.
+async function request<T>(path: string, init?: RequestInit, isRetry = false): Promise<T> {
+  await Backend.ready();
+  const url = `${Backend.getApiBaseUrl()}${path}`;
+
   try {
-    const res = await fetch(url);
+    const res = await fetch(url, init);
+
     if (!res.ok) {
+      // 5xx means this origin is sick, so it's worth asking whether the other
+      // one is healthier. 4xx deliberately is not: a 404 for a missing
+      // question or a 429 from the rate limiter says nothing about the
+      // origin's health, and retrying a 429 elsewhere would dodge a limit the
+      // app is supposed to respect (and lose the Retry-After below).
+      if (res.status >= 500 && !isRetry && (await Backend.failover())) {
+        return request<T>(path, init, true);
+      }
+
       const errData = await res.json().catch(() => ({ message: res.statusText }));
       const rawRetry = res.headers?.get?.('Retry-After');
       const retryAfterSec = rawRetry ? Number(rawRetry) : undefined;
-      throw new ApiError(errData.message || `Request failed with status ${res.status}`, res.status, retryAfterSec);
+      throw new ApiError(
+        errData.message || `Request failed with status ${res.status}`,
+        res.status,
+        retryAfterSec
+      );
     }
+
     return await res.json();
   } catch (err: any) {
     if (err instanceof ApiError) throw err;
+
+    // Transport-level failure (DNS, refused, timeout) - the classic sign the
+    // origin is gone rather than unhappy. isRetry caps this at one extra
+    // attempt, so a genuinely offline device fails fast into the SQLite cache
+    // the callers below fall back on, instead of ping-ponging between origins.
+    if (!isRetry && (await Backend.failover())) {
+      return request<T>(path, init, true);
+    }
     throw new ApiError(err.message || 'Network error occurred');
   }
 }
 
-async function postApi<T>(path: string, body: unknown): Promise<T> {
-  const url = `${API_BASE_URL}${path}`;
-  try {
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
-    if (!res.ok) {
-      const errData = await res.json().catch(() => ({ message: res.statusText }));
-      const rawRetry = res.headers?.get?.('Retry-After');
-      const retryAfterSec = rawRetry ? Number(rawRetry) : undefined;
-      throw new ApiError(errData.message || `Request failed with status ${res.status}`, res.status, retryAfterSec);
-    }
-    return await res.json();
-  } catch (err: any) {
-    if (err instanceof ApiError) throw err;
-    throw new ApiError(err.message || 'Network error occurred');
-  }
-}
+const fetchApi = <T,>(path: string): Promise<T> => request<T>(path);
+
+const postApi = <T,>(path: string, body: unknown): Promise<T> =>
+  request<T>(path, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
 
 // -------------------------------------------------------------
 // CACHE-FIRST API ENDPOINTS WITH SILENT BACKGROUND REVALIDATION
