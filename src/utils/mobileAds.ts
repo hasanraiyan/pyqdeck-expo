@@ -12,7 +12,10 @@ try {
   mod = null;
 }
 
-export const adsAvailable = mod !== null;
+// Checks `default` rather than the module object: on web, metro.config.js
+// resolves this package to an empty module (it has no web build), so `mod` is
+// a truthy `{}` with none of the ads API on it. Native always has `default`.
+export const adsAvailable = mod?.default != null;
 
 export const mobileAds = mod?.default ?? (() => ({ initialize: async () => {} }));
 export const BannerAd = mod?.BannerAd ?? null;
