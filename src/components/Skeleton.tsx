@@ -103,12 +103,17 @@ export const SimilarQuestionSkeleton: React.FC = () => {
 
 export const SubjectCardSkeleton: React.FC = () => {
   return (
-    <View style={styles.cardSkeleton}>
-      <Skeleton width="60%" height={18} style={{ marginBottom: 8 }} />
-      <Skeleton width="40%" height={14} />
-      <View style={[styles.row, { marginTop: 12 }]}>
-        <Skeleton width={80} height={20} borderRadius={4} />
-        <Skeleton width={50} height={20} borderRadius={12} />
+    <View style={styles.subjectRowSkeleton}>
+      <View style={styles.subjectRowLeft}>
+        <View style={{ flexDirection: 'row', gap: 6, marginBottom: 4 }}>
+          <Skeleton width={48} height={18} borderRadius={4} />
+          <Skeleton width={56} height={18} borderRadius={4} />
+        </View>
+        <Skeleton width="75%" height={16} borderRadius={3} />
+      </View>
+      <View style={styles.subjectRowRight}>
+        <Skeleton width={36} height={12} borderRadius={3} />
+        <Skeleton width={16} height={16} borderRadius={8} />
       </View>
     </View>
   );
@@ -118,13 +123,24 @@ const styles = StyleSheet.create({
   skeleton: {
     backgroundColor: COLORS.border,
   },
-  cardSkeleton: {
+  subjectRowSkeleton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     backgroundColor: COLORS.card,
-    borderRadius: 8,
-    borderWidth: 1,
+    borderBottomWidth: 1,
     borderColor: COLORS.border,
-    padding: 16,
-    marginBottom: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+  },
+  subjectRowLeft: {
+    flex: 1,
+    paddingRight: 12,
+  },
+  subjectRowRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   row: {
     flexDirection: 'row',

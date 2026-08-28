@@ -119,8 +119,8 @@ export const SubjectListScreen = () => {
 
       <View style={styles.content}>
         {loading ? (
-          <View style={{ padding: 16 }}>
-            {[1, 2, 3, 4].map((i) => (
+          <View>
+            {[1, 2, 3, 4, 5, 6].map((i) => (
               <SubjectCardSkeleton key={i} />
             ))}
           </View>
