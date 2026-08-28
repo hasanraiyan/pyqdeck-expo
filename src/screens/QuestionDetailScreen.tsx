@@ -70,6 +70,12 @@ export const QuestionDetailScreen = () => {
   const [showRepeats, setShowRepeats] = useState(true);
   const [myVote, setMyVoteState] = useState<1 | -1 | null>(null);
   const [voteCounts, setVoteCounts] = useState({ upvotes: 0, downvotes: 0 });
+  const [isVoting, setIsVoting] = useState(false);
+  // Refs to avoid stale closures during rapid taps (see optimistic UI race fix)
+  const myVoteRef = useRef<1 | -1 | null>(null);
+  const voteCountsRef = useRef({ upvotes: 0, downvotes: 0 });
+  const pendingVoteRef = useRef<1 | -1 | 0 | null>(null);
+  const actionIdRef = useRef(0);
 
   const currentYear = question?.year || year;
   const scrollRef = useRef<ScrollView>(null);
@@ -88,6 +94,14 @@ export const QuestionDetailScreen = () => {
     if (!questionId) return;
     getMyVote(questionId).then(setMyVoteState);
   }, [questionId]);
+
+  // Keep refs in sync for stale-closure-free optimistic math
+  useEffect(() => {
+    myVoteRef.current = myVote;
+  }, [myVote]);
+  useEffect(() => {
+    voteCountsRef.current = voteCounts;
+  }, [voteCounts]);
 
   useEffect(() => {
     const loadAll = async () => {
@@ -187,29 +201,88 @@ export const QuestionDetailScreen = () => {
     }
   };
 
-  // Tapping the already-active thumb retracts the vote (value 0). Updates
-  // counts/highlight optimistically and reverts on failure.
-  const handleVote = async (value: 1 | -1) => {
-    const nextValue: 1 | -1 | 0 = myVote === value ? 0 : value;
-    const prevVote = myVote;
-    const prevCounts = voteCounts;
+  // YouTube-style: optimistic UI with lock + actionId to prevent race.
+  // Rapid taps (up/down/up in <300ms) previously used stale closures and
+  // concurrent $inc on the server -> negative counts. Now we: 1) block
+  // concurrent requests (isVoting), 2) coalesce last intent via pendingVoteRef,
+  // 3) ignore stale out-of-order responses via actionIdRef, 4) clamp to 0.
+  // Core executor: votes to explicit target (0=retract). Handles
+  // optimistic + actionId + clamp. Used by handleVote and coalesced retry.
+  const executeVote = async (nextValue: 1 | -1 | 0) => {
+    const actionId = ++actionIdRef.current;
+    const prevVote = myVoteRef.current;
+    const prevCounts = { ...voteCountsRef.current };
 
-    const optimistic = { ...voteCounts };
-    if (prevVote) optimistic[prevVote === 1 ? 'upvotes' : 'downvotes'] -= 1;
+    const optimistic = { ...prevCounts };
+    if (prevVote) optimistic[prevVote === 1 ? 'upvotes' : 'downvotes'] = Math.max(0, optimistic[prevVote === 1 ? 'upvotes' : 'downvotes'] - 1);
     if (nextValue !== 0) optimistic[nextValue === 1 ? 'upvotes' : 'downvotes'] += 1;
+
     setVoteCounts(optimistic);
+    voteCountsRef.current = optimistic;
     setMyVoteState(nextValue === 0 ? null : nextValue);
+    myVoteRef.current = nextValue === 0 ? null : nextValue;
+    setIsVoting(true);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
     try {
       const voterId = await getVoterId();
       const result = await voteSolution(subjectId, questionId, voterId, nextValue);
-      setVoteCounts(result);
+      if (actionId !== actionIdRef.current) return;
+      const clamped = { upvotes: Math.max(0, result.upvotes ?? 0), downvotes: Math.max(0, result.downvotes ?? 0) };
+      setVoteCounts(clamped);
+      voteCountsRef.current = clamped;
       await setMyVote(questionId, nextValue);
     } catch (e) {
+      if (actionId !== actionIdRef.current) return;
       setVoteCounts(prevCounts);
+      voteCountsRef.current = prevCounts;
       setMyVoteState(prevVote);
+      myVoteRef.current = prevVote;
+    } finally {
+      if (actionId !== actionIdRef.current) return;
+      setIsVoting(false);
+      if (pendingVoteRef.current !== null) {
+        const queued = pendingVoteRef.current;
+        pendingVoteRef.current = null;
+        executeVote(queued);
+      }
     }
+  };
+
+  const handleVote = async (value: 1 | -1) => {
+    if (isVoting) {
+      // Coalesce rapid taps to final desired state (YouTube pattern).
+      // Compute what the vote would be after applying this tap on top of
+      // the pending target (if any) or current optimistic vote.
+      const base: 1 | -1 | null = pendingVoteRef.current !== null
+        ? pendingVoteRef.current === 0 ? null : (pendingVoteRef.current as 1 | -1)
+        : myVoteRef.current;
+      const nextTarget: 1 | -1 | 0 = base === value ? 0 : value;
+      pendingVoteRef.current = nextTarget;
+      // Reflect coalesced intent instantly
+      const baseCounts = voteCountsRef.current;
+      // Undo base, apply nextTarget
+      const optimistic = { ...baseCounts };
+      if (base) optimistic[base === 1 ? 'upvotes' : 'downvotes'] = Math.max(0, optimistic[base === 1 ? 'upvotes' : 'downvotes'] - 1);
+      if (nextTarget !== 0) optimistic[nextTarget === 1 ? 'upvotes' : 'downvotes'] += 1;
+      // But baseCounts already reflects base, so we need delta between base and nextTarget
+      // Above already did base->nextTarget via baseCounts which is currently showing base.
+      // However baseCounts is currently showing previous optimistic (maybe not base if pending already).
+      // Simpler: recompute from displayed counts by adjusting.
+      // To avoid double-adjust, just set to nextTarget optimistically via delta:
+      // Since displayed counts = base, we can just do base->nextTarget.
+      // Our optimistic above already does that correctly if baseCounts == base.
+      // But baseCounts may be stale if we didn't update it for previous pending.
+      // So we need to ensure voteCountsRef tracks pending target's counts.
+      // We already updated it to reflect pending, so baseCounts is correctly base's counts.
+      setVoteCounts(optimistic);
+      voteCountsRef.current = optimistic;
+      setMyVoteState(nextTarget === 0 ? null : nextTarget);
+      myVoteRef.current = nextTarget === 0 ? null : nextTarget;
+      return;
+    }
+    const nextValue: 1 | -1 | 0 = myVoteRef.current === value ? 0 : value;
+    return executeVote(nextValue);
   };
 
   // Previous & Next navigation in the same paper
@@ -355,7 +428,7 @@ export const QuestionDetailScreen = () => {
                   </Markdown>
                   <View style={styles.voteRow}>
                     <TouchableOpacity
-                      style={styles.voteButton}
+                      style={[styles.voteButton, isVoting && { opacity: 0.6 }]}
                       activeOpacity={0.6}
                       onPress={() => handleVote(1)}
                     >
@@ -369,7 +442,7 @@ export const QuestionDetailScreen = () => {
                       </Text>
                     </TouchableOpacity>
                     <TouchableOpacity
-                      style={styles.voteButton}
+                      style={[styles.voteButton, isVoting && { opacity: 0.6 }]}
                       activeOpacity={0.6}
                       onPress={() => handleVote(-1)}
                     >
