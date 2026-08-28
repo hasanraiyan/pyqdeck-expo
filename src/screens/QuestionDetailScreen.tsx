@@ -459,38 +459,38 @@ export const QuestionDetailScreen = () => {
                     {cleanMarkdown(solution.content)}
                   </Markdown>
                   <View style={styles.voteRow}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+                      <TouchableOpacity
+                        style={[styles.voteButton, isVoting && { opacity: 0.6 }]}
+                        activeOpacity={0.6}
+                        onPress={() => handleVote(1)}
+                      >
+                        <Feather
+                          name="thumbs-up"
+                          size={15}
+                          color={myVote === 1 ? COLORS.primary : COLORS.textMuted}
+                        />
+                        <Text style={[styles.voteCount, myVote === 1 && styles.voteCountActive]}>
+                          {voteCounts.upvotes}
+                        </Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[styles.voteButton, isVoting && { opacity: 0.6 }]}
+                        activeOpacity={0.6}
+                        onPress={() => handleVote(-1)}
+                      >
+                        <Feather
+                          name="thumbs-down"
+                          size={15}
+                          color={myVote === -1 ? COLORS.primary : COLORS.textMuted}
+                        />
+                        <Text style={[styles.voteCount, myVote === -1 && styles.voteCountActive]}>
+                          {voteCounts.downvotes}
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
                     <TouchableOpacity
-                      style={[styles.voteButton, isVoting && { opacity: 0.6 }]}
-                      activeOpacity={0.6}
-                      onPress={() => handleVote(1)}
-                    >
-                      <Feather
-                        name="thumbs-up"
-                        size={15}
-                        color={myVote === 1 ? COLORS.primary : COLORS.textMuted}
-                      />
-                      <Text style={[styles.voteCount, myVote === 1 && styles.voteCountActive]}>
-                        {voteCounts.upvotes}
-                      </Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={[styles.voteButton, isVoting && { opacity: 0.6 }]}
-                      activeOpacity={0.6}
-                      onPress={() => handleVote(-1)}
-                    >
-                      <Feather
-                        name="thumbs-down"
-                        size={15}
-                        color={myVote === -1 ? COLORS.primary : COLORS.textMuted}
-                      />
-                      <Text style={[styles.voteCount, myVote === -1 && styles.voteCountActive]}>
-                        {voteCounts.downvotes}
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
-                  <View style={styles.reportRow}>
-                    <TouchableOpacity
-                      style={styles.reportBtn}
+                      style={[styles.reportBtn, reported && { opacity: 0.6 }]}
                       activeOpacity={0.6}
                       onPress={() => setShowReport(true)}
                       disabled={reported}
@@ -498,7 +498,6 @@ export const QuestionDetailScreen = () => {
                       <Feather name="flag" size={12} color={reported ? COLORS.primary : COLORS.textMuted} />
                       <Text style={[styles.reportText, reported && { color: COLORS.primary }]}>{reported ? 'Reported' : 'Report'}</Text>
                     </TouchableOpacity>
-                    {!reported && <Text style={styles.reportHint}>Wrong? Let us know</Text>}
                   </View>
                 </View>
               ) : (
@@ -965,7 +964,7 @@ const styles = StyleSheet.create({
   voteRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 14,
+    justifyContent: 'space-between',
     marginTop: 14,
     paddingTop: 12,
     borderTopWidth: 1,
