@@ -2,6 +2,7 @@ import { isRunningInExpoGo } from 'expo';
 import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 import { registerPushToken } from '../api';
+import { getVoterId } from './voterId';
 import { navigationRef } from './navigationRef';
 
 // Merely importing expo-notifications throws on Android in Expo Go (SDK 53+
@@ -57,7 +58,8 @@ export const registerForPushNotificationsAsync = async () => {
 
   try {
     const { data: token } = await Notifications.getExpoPushTokenAsync({ projectId });
-    await registerPushToken(token, Platform.OS === 'ios' ? 'ios' : 'android');
+    const voterId = await getVoterId().catch(() => undefined);
+    await registerPushToken(token, Platform.OS === 'ios' ? 'ios' : 'android', voterId);
   } catch (e) {
     console.error('Failed to register push token', e);
   }
@@ -65,11 +67,12 @@ export const registerForPushNotificationsAsync = async () => {
 
 // Deep-links into a question when a notification carrying
 // { subjectId, questionId } is tapped - matches the `data` payload shape
-// the admin send_notification MCP tool documents. A plain announcement
+// the admin send_notification MCP tool documents and the targeted
+// "your report was fixed" push (includes year). A plain announcement
 // (no data) just brings the app to the foreground, nothing to navigate to.
 const navigateFromNotificationData = (data: unknown) => {
   const payload = data as
-    | { subjectId?: string; questionId?: string; semesterId?: string; subjectName?: string }
+    | { subjectId?: string; questionId?: string; semesterId?: string; subjectName?: string; year?: number }
     | undefined;
   if (!payload?.subjectId || !payload?.questionId || !navigationRef.isReady()) return;
   navigationRef.navigate('Browse', {
@@ -79,6 +82,7 @@ const navigateFromNotificationData = (data: unknown) => {
       questionId: payload.questionId,
       semesterId: payload.semesterId,
       subjectName: payload.subjectName,
+      year: payload.year,
     },
   });
 };

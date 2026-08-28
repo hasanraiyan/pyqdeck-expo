@@ -283,7 +283,7 @@ export const reportSolution = (
     { voterId, reason, message }
   );
 
-export const registerPushToken = (token: string, platform: 'ios' | 'android') =>
-  postApi<{ success: boolean }>('/push-token', { token, platform });
+export const registerPushToken = (token: string, platform: 'ios' | 'android', voterId?: string) =>
+  postApi<{ success: boolean }>('/push-token', { token, platform, voterId });
 
 
