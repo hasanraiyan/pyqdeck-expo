@@ -9,6 +9,7 @@ import {
   TextInput,
   Modal,
   TouchableWithoutFeedback,
+  ScrollView,
 } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
@@ -332,6 +333,11 @@ export const QuestionItem: React.FC<QuestionItemProps> = React.memo(({
             <TouchableWithoutFeedback>
               <View style={[styles.reportSheet, { paddingBottom: 24 }]}>
                 <View style={styles.reportHandle} />
+                <ScrollView
+                  keyboardShouldPersistTaps="handled"
+                  showsVerticalScrollIndicator={false}
+                  bounces={false}
+                >
                 <Text style={styles.reportTitle}>Report solution</Text>
                 <Text style={styles.reportSubtitle}>What’s wrong? Anyone anonymous can report — DB only.</Text>
                 {(['incorrect','incomplete','formatting','other'] as const).map((r) => (
@@ -362,6 +368,7 @@ export const QuestionItem: React.FC<QuestionItemProps> = React.memo(({
                 <TouchableOpacity style={styles.reportCancelBtn} onPress={() => setShowReport(false)} activeOpacity={0.7}>
                   <Text style={styles.reportCancelText}>Cancel</Text>
                 </TouchableOpacity>
+                </ScrollView>
               </View>
             </TouchableWithoutFeedback>
           </View>
@@ -533,6 +540,10 @@ const styles = StyleSheet.create({
   },
   reportSheet: {
     backgroundColor: COLORS.card,
+    // Caps the sheet so the ScrollView inside has something to scroll within:
+    // with the keyboard up, the options + input + buttons are taller than the
+    // space left over on a normal phone.
+    maxHeight: '90%',
     borderTopLeftRadius: 12,
     borderTopRightRadius: 12,
     paddingHorizontal: 18,

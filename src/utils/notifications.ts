@@ -11,8 +11,16 @@ import { navigationRef } from './navigationRef';
 // top-level `import` is hoisted and evaluated before any of our own guard
 // code runs, so the only way to avoid the crash is to never import the
 // module at all in Expo Go - hence the lazy `require` below instead.
-const isExpoGo = isRunningInExpoGo();
-const Notifications = isExpoGo ? null : (require('expo-notifications') as typeof import('expo-notifications'));
+// Web is nulled out for a different reason than Expo Go, but with the same
+// answer: the web target is a layout preview of the Android app, and
+// expo-notifications there needs a `notification.vapidPublicKey` in app.json
+// that we deliberately don't configure. Without this guard every page load
+// logs a failed getExpoPushTokenAsync, and getLastNotificationResponseAsync
+// isn't implemented on web at all - an uncaught rejection each time.
+const isUnsupportedPlatform = isRunningInExpoGo() || Platform.OS === 'web';
+const Notifications = isUnsupportedPlatform
+  ? null
+  : (require('expo-notifications') as typeof import('expo-notifications'));
 
 // Foreground display behavior - without this, a notification that arrives
 // while the app is already open shows nothing at all.
@@ -31,7 +39,11 @@ Notifications?.setNotificationHandler({
 // registered, there's no per-user opt-in beyond the OS permission prompt.
 export const registerForPushNotificationsAsync = async () => {
   if (!Notifications) {
-    console.log('Skipping push notification registration - not supported in Expo Go, use a dev build.');
+    console.log(
+      Platform.OS === 'web'
+        ? 'Skipping push notification registration - not supported on the web preview build.'
+        : 'Skipping push notification registration - not supported in Expo Go, use a dev build.'
+    );
     return;
   }
 
