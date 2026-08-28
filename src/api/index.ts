@@ -271,6 +271,18 @@ export const voteSolution = (
     { voterId, value }
   );
 
+export const reportSolution = (
+  subjectId: string,
+  questionId: string,
+  voterId: string,
+  reason: 'incorrect' | 'incomplete' | 'formatting' | 'other',
+  message?: string
+) =>
+  postApi<{ id: string; status: string }>(
+    `/subjects/${subjectId}/questions/${encodeURIComponent(questionId)}/solution/report`,
+    { voterId, reason, message }
+  );
+
 export const registerPushToken = (token: string, platform: 'ios' | 'android') =>
   postApi<{ success: boolean }>('/push-token', { token, platform });
 

@@ -8,6 +8,9 @@ import {
   ActivityIndicator,
   Share,
   Linking,
+  TextInput,
+  Modal,
+  TouchableWithoutFeedback,
 } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -23,6 +26,7 @@ import {
   getSimilarQuestions,
   getRepeatedQuestions,
   voteSolution,
+  reportSolution,
 } from '../api';
 import { QuestionSummary, Solution } from '../types';
 import { COLORS, FONTS } from '../theme/colors';
@@ -76,6 +80,12 @@ export const QuestionDetailScreen = () => {
   const voteCountsRef = useRef({ upvotes: 0, downvotes: 0 });
   const pendingVoteRef = useRef<1 | -1 | 0 | null>(null);
   const actionIdRef = useRef(0);
+  // Report state (anyone anonymous can report, DB only)
+  const [showReport, setShowReport] = useState(false);
+  const [reportReason, setReportReason] = useState<'incorrect' | 'incomplete' | 'formatting' | 'other' | null>(null);
+  const [reportMsg, setReportMsg] = useState('');
+  const [reportSubmitting, setReportSubmitting] = useState(false);
+  const [reported, setReported] = useState(false);
 
   const currentYear = question?.year || year;
   const scrollRef = useRef<ScrollView>(null);
@@ -285,6 +295,28 @@ export const QuestionDetailScreen = () => {
     return executeVote(nextValue);
   };
 
+  const handleReportSubmit = async () => {
+    if (!reportReason || reportSubmitting) return;
+    if (reportReason === 'other' && reportMsg.trim().length < 4) return;
+    setReportSubmitting(true);
+    try {
+      const voterId = await getVoterId();
+      await reportSolution(subjectId, questionId, voterId, reportReason, reportMsg.trim() || undefined);
+      setReported(true);
+      setShowReport(false);
+      setReportReason(null);
+      setReportMsg('');
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch (e: any) {
+      const msg = e?.message?.includes('already reported') ? 'You have already reported this solution' : e?.message || 'Failed to report';
+      // simple alert via Haptics + could show toast; keep minimal
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      // reset to allow retry, but keep modal open
+    } finally {
+      setReportSubmitting(false);
+    }
+  };
+
   // Previous & Next navigation in the same paper
   const currentIndex = paperQuestions.findIndex(
     (q) => q.questionId === questionId
@@ -456,6 +488,18 @@ export const QuestionDetailScreen = () => {
                       </Text>
                     </TouchableOpacity>
                   </View>
+                  <View style={styles.reportRow}>
+                    <TouchableOpacity
+                      style={styles.reportBtn}
+                      activeOpacity={0.6}
+                      onPress={() => setShowReport(true)}
+                      disabled={reported}
+                    >
+                      <Feather name="flag" size={12} color={reported ? COLORS.primary : COLORS.textMuted} />
+                      <Text style={[styles.reportText, reported && { color: COLORS.primary }]}>{reported ? 'Reported' : 'Report'}</Text>
+                    </TouchableOpacity>
+                    {!reported && <Text style={styles.reportHint}>Wrong? Let us know</Text>}
+                  </View>
                 </View>
               ) : (
                 <SolutionSkeleton />
@@ -563,6 +607,52 @@ export const QuestionDetailScreen = () => {
           )}
         </View>
       </ScrollView>
+
+      <Modal visible={showReport} transparent animationType="slide" onRequestClose={() => setShowReport(false)}>
+        <TouchableWithoutFeedback onPress={() => setShowReport(false)}>
+          <View style={styles.reportOverlay}>
+            <TouchableWithoutFeedback>
+              <View style={[styles.reportSheet, { paddingBottom: 24 + 16 }]}>
+                <View style={styles.reportHandle} />
+                <Text style={styles.reportTitle}>Report solution</Text>
+                <Text style={styles.reportSubtitle}>What’s wrong? Anyone anonymous can report — DB only.</Text>
+                {(['incorrect','incomplete','formatting','other'] as const).map((r) => (
+                  <TouchableOpacity key={r} style={[styles.reportOption, reportReason===r && styles.reportOptionActive]} onPress={() => setReportReason(r)} activeOpacity={0.7}>
+                    <View style={[styles.radio, reportReason===r && styles.radioActive]}>
+                      {reportReason===r && <View style={styles.radioDot} />}
+                    </View>
+                    <Text style={[styles.reportOptionText, reportReason===r && styles.reportOptionTextActive]}>
+                      {r==='incorrect' ? 'Incorrect answer' : r==='incomplete' ? 'Incomplete explanation' : r==='formatting' ? 'Formatting / math issue' : 'Other'}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+                {reportReason && (
+                  <TextInput
+                    placeholder={reportReason==='other' ? 'Describe what is wrong (required)' : 'Optional details (max 500)'}
+                    placeholderTextColor={COLORS.textSubtle}
+                    value={reportMsg}
+                    onChangeText={setReportMsg}
+                    multiline
+                    maxLength={500}
+                    style={styles.reportInput}
+                  />
+                )}
+                <TouchableOpacity
+                  style={[styles.reportSubmitBtn, (!reportReason || (reportReason==='other' && reportMsg.trim().length<4) || reportSubmitting) && styles.reportSubmitBtnDisabled]}
+                  onPress={handleReportSubmit}
+                  disabled={!reportReason || (reportReason==='other' && reportMsg.trim().length<4) || reportSubmitting}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.reportSubmitText}>{reportSubmitting ? 'Submitting…' : 'Submit report'}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.reportCancelBtn} onPress={() => setShowReport(false)} activeOpacity={0.7}>
+                  <Text style={styles.reportCancelText}>Cancel</Text>
+                </TouchableOpacity>
+              </View>
+            </TouchableWithoutFeedback>
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
 
       <AdBanner />
     </View>
@@ -896,6 +986,146 @@ const styles = StyleSheet.create({
   },
   voteCountActive: {
     color: COLORS.primary,
+  },
+  reportRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 12,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderColor: COLORS.borderLight,
+  },
+  reportBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingVertical: 4,
+    paddingHorizontal: 4,
+  },
+  reportText: {
+    fontFamily: FONTS.mono,
+    fontSize: 12,
+    color: COLORS.textMuted,
+    fontWeight: '600',
+  },
+  reportHint: {
+    fontSize: 11,
+    color: COLORS.textSubtle,
+  },
+  reportOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    justifyContent: 'flex-end',
+  },
+  reportSheet: {
+    backgroundColor: COLORS.card,
+    borderTopLeftRadius: 12,
+    borderTopRightRadius: 12,
+    paddingHorizontal: 18,
+    paddingTop: 12,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  reportHandle: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: COLORS.border,
+    alignSelf: 'center',
+    marginBottom: 12,
+  },
+  reportTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: COLORS.text,
+    marginBottom: 4,
+  },
+  reportSubtitle: {
+    fontSize: 12.5,
+    color: COLORS.textMuted,
+    marginBottom: 14,
+  },
+  reportOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 6,
+    marginBottom: 8,
+  },
+  reportOptionActive: {
+    borderColor: COLORS.primary,
+    backgroundColor: COLORS.primaryLight,
+  },
+  radio: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    borderWidth: 1.5,
+    borderColor: COLORS.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  radioActive: {
+    borderColor: COLORS.primary,
+  },
+  radioDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: COLORS.primary,
+  },
+  reportOptionText: {
+    fontSize: 13,
+    color: COLORS.text,
+    fontWeight: '500',
+  },
+  reportOptionTextActive: {
+    color: COLORS.primary,
+    fontWeight: '600',
+  },
+  reportInput: {
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 13,
+    color: COLORS.text,
+    minHeight: 70,
+    textAlignVertical: 'top',
+    marginTop: 4,
+    marginBottom: 12,
+  },
+  reportSubmitBtn: {
+    backgroundColor: COLORS.primary,
+    borderRadius: 6,
+    paddingVertical: 12,
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  reportSubmitBtnDisabled: {
+    backgroundColor: COLORS.border,
+  },
+  reportSubmitText: {
+    fontFamily: FONTS.mono,
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#fff',
+  },
+  reportCancelBtn: {
+    paddingVertical: 12,
+    alignItems: 'center',
+    marginTop: 6,
+  },
+  reportCancelText: {
+    fontSize: 13,
+    color: COLORS.textMuted,
+    fontWeight: '600',
   },
   relatedSection: {
     marginTop: 16,
