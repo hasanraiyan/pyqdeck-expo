@@ -70,7 +70,8 @@
           "project": "pyqdeck-expo",
           "organization": "pyqdeck"
         }
-      ]
+      ],
+      "@sentry/react-native"
     ],
     "extra": {
       "eas": {
