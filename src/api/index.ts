@@ -340,25 +340,33 @@ const hasContent = (value: unknown): boolean => {
   return true;
 };
 
+const fetchAndCache = async <T,>(key: string, path: string): Promise<T> => {
+  const live = await fetchApi<T>(path);
+  await SylCache.write(key, live);
+  return live;
+};
+
 const syllabusRead = async <T,>(
   key: string,
   path: string,
   forceRefresh = false
 ): Promise<T> => {
   const cached = await SylCache.read<T>(key);
-  if (
-    cached != null &&
-    hasContent(cached) &&
-    !forceRefresh &&
-    (await SylCache.isFresh(key))
-  ) {
+
+  // A cache entry is only a reason to skip the network when it actually holds
+  // content - see hasContent above.
+  if (cached != null && hasContent(cached) && !forceRefresh) {
+    if (await SylCache.isFresh(key)) return cached;
+    // Stale but present: show it now, refresh behind it. A screen a day old is
+    // better than a spinner for a round-trip, and the background fetch fills
+    // the cache for next time. This is what makes the syllabus feel instant
+    // once a branch has been opened at all.
+    void fetchAndCache(key, path).catch(() => {});
     return cached;
   }
 
   try {
-    const live = await fetchApi<T>(path);
-    await SylCache.write(key, live);
-    return live;
+    return await fetchAndCache(key, path);
   } catch (e) {
     if (cached != null) return cached;
     throw e;

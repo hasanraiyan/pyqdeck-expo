@@ -12,7 +12,7 @@ import { useNavigation } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { COLORS, FONTS } from '../theme/colors';
-import { getBranches } from '../api';
+import { getBranches, getBranchSemesters } from '../api';
 import { Branch } from '../types/syllabus';
 import { ScreenError, ScreenEmpty } from '../components/ScreenState';
 import { BranchListSkeleton } from '../components/Skeletons';
@@ -46,6 +46,20 @@ export const BranchScreen = () => {
   useEffect(() => {
     void load();
   }, [load]);
+
+  // While the student is still reading this list, warm the semester screen for
+  // every branch that actually has one. The first tap into a branch then renders
+  // from cache instead of waiting on a round-trip - and this very first pass
+  // also warms the server's own caches, so the cold start never lands on a tap.
+  // Fire-and-forget: a slow branch must not block the list it is warming.
+  useEffect(() => {
+    if (!branches) return;
+    for (const b of branches) {
+      if (b.semesters && b.semesters.length > 0) {
+        void getBranchSemesters(b.id).catch(() => {});
+      }
+    }
+  }, [branches]);
 
   const onRefresh = async () => {
     setRefreshing(true);

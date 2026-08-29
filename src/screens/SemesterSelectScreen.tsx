@@ -11,7 +11,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import * as Haptics from 'expo-haptics';
 import { COLORS, FONTS } from '../theme/colors';
-import { getBranchSemesters } from '../api';
+import { getBranchSemesters, getBranchSemester } from '../api';
 import { BranchSemesters } from '../types/syllabus';
 import { getDoneCounts } from '../db/syllabusProgress';
 import { ScreenError, ScreenEmpty } from '../components/ScreenState';
@@ -54,6 +54,16 @@ export const SemesterSelectScreen = () => {
   useEffect(() => {
     void load();
   }, [load]);
+
+  // Prefetch each semester's subject sheet while the grid is on screen, so the
+  // overview opens from cache. Same read-through cache, same server, so this is
+  // cheap when warm - it only ever does real work on the first visit.
+  useEffect(() => {
+    if (!data) return;
+    for (const s of data.semesters) {
+      void getBranchSemester(branchId, s.semester).catch(() => {});
+    }
+  }, [data, branchId]);
 
   // Progress recomputes on focus so a topic you ticked in a subject shows up on
   // the semester card the moment you come back. One multiGet for the whole
