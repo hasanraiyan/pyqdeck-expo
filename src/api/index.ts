@@ -11,7 +11,14 @@ import {
   SimilarQuestionsResult,
   RepeatedQuestionsResult,
 } from '../types';
+import {
+  Branch,
+  BranchSemesters,
+  BranchSemester,
+  SyllabusSubject,
+} from '../types/syllabus';
 import * as Cache from '../db/cacheService';
+import * as SylCache from '../db/syllabusCache';
 import * as Backend from './backend';
 
 export class ApiError extends Error {
@@ -302,3 +309,82 @@ export const registerPushToken = (token: string, platform: 'ios' | 'android', vo
   postApi<{ success: boolean }>('/push-token', { token, platform, voterId });
 
 
+
+// -------------------------------------------------------------
+// SYLLABUS
+// -------------------------------------------------------------
+// Same cache-first shape as the archive endpoints above: serve a fresh cache
+// without touching the network, otherwise fetch and re-cache, and on any
+// failure fall back to whatever is cached however old it is. A student on a
+// train with no signal still gets their syllabus.
+
+/**
+ * Whether a cached value is worth serving without a network check. An empty
+ * array is truthy but is NOT content: it usually means the data was typed into
+ * the database after the last fetch, and serving it as fresh would hide the new
+ * rows for the whole TTL. Wrapper objects (branch-semesters, a semester's
+ * subjects) get the same rule - an empty list inside is treated as "nothing
+ * here yet". Such values still work as an offline fallback in the catch below,
+ * just never as a reason to skip the network.
+ */
+const hasContent = (value: unknown): boolean => {
+  if (value == null) return false;
+  if (Array.isArray(value)) return value.length > 0;
+  if (typeof value === 'object') {
+    const any = value as Record<string, unknown>;
+    if (Array.isArray(any.semesters)) return any.semesters.length > 0;
+    if (Array.isArray(any.subjects)) return any.subjects.length > 0;
+    if (Array.isArray(any.modules)) return any.modules.length > 0;
+    return true;
+  }
+  return true;
+};
+
+const syllabusRead = async <T,>(
+  key: string,
+  path: string,
+  forceRefresh = false
+): Promise<T> => {
+  const cached = await SylCache.read<T>(key);
+  if (
+    cached != null &&
+    hasContent(cached) &&
+    !forceRefresh &&
+    (await SylCache.isFresh(key))
+  ) {
+    return cached;
+  }
+
+  try {
+    const live = await fetchApi<T>(path);
+    await SylCache.write(key, live);
+    return live;
+  } catch (e) {
+    if (cached != null) return cached;
+    throw e;
+  }
+};
+
+export const getBranches = (forceRefresh = false) =>
+  syllabusRead<Branch[]>(SylCache.branchesKey(), '/syllabus/branches', forceRefresh);
+
+export const getBranchSemesters = (branch: string, forceRefresh = false) =>
+  syllabusRead<BranchSemesters>(
+    SylCache.semestersKey(branch),
+    `/syllabus/branches/${encodeURIComponent(branch)}/semesters`,
+    forceRefresh
+  );
+
+export const getBranchSemester = (branch: string, semester: number, forceRefresh = false) =>
+  syllabusRead<BranchSemester>(
+    SylCache.semesterKey(branch, semester),
+    `/syllabus/branches/${encodeURIComponent(branch)}/semesters/${semester}`,
+    forceRefresh
+  );
+
+export const getSyllabusSubject = (subject: string, forceRefresh = false) =>
+  syllabusRead<SyllabusSubject>(
+    SylCache.subjectKey(subject),
+    `/syllabus/subjects/${encodeURIComponent(subject)}`,
+    forceRefresh
+  );

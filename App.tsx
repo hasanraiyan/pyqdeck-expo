@@ -32,6 +32,7 @@ import { BranchScreen } from './src/screens/BranchScreen';
 import { SemesterSelectScreen } from './src/screens/SemesterSelectScreen';
 import { SyllabusOverviewScreen } from './src/screens/SyllabusOverviewScreen';
 import { SubjectSyllabusScreen } from './src/screens/SubjectSyllabusScreen';
+import { SyllabusTabIcon } from './src/components/SyllabusTabIcon';
 import { checkForStoreUpdate } from './src/utils/appUpdate';
 import { maybeRequestReview } from './src/utils/appReview';
 import * as Sentry from '@sentry/react-native';
@@ -270,8 +271,8 @@ function AppContent() {
           component={SyllabusStack}
           options={{
             tabBarLabel: 'Syllabus',
-            tabBarIcon: ({ color, size }) => (
-              <Feather name="check-square" size={size} color={color} />
+            tabBarIcon: ({ color, size, focused }) => (
+              <SyllabusTabIcon size={size} color={color} focused={focused} />
             ),
           }}
         />

@@ -1,11 +1,21 @@
-import React from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
+import React, { useCallback, useEffect, useState } from 'react';
+import {
+  View,
+  Text,
+  ScrollView,
+  TouchableOpacity,
+  StyleSheet,
+  RefreshControl,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { COLORS, FONTS } from '../theme/colors';
-import { BRANCHES, availableSemesters } from '../data/syllabus';
+import { getBranches } from '../api';
+import { Branch } from '../types/syllabus';
+import { ScreenError, ScreenEmpty } from '../components/ScreenState';
+import { BranchListSkeleton } from '../components/Skeletons';
 
 /**
  * The Syllabus tab opens here - "which branch" is the question that frames
@@ -20,54 +30,111 @@ export const BranchScreen = () => {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<any>();
 
+  const [branches, setBranches] = useState<Branch[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const load = useCallback(async (force = false) => {
+    try {
+      setError(null);
+      setBranches(await getBranches(force));
+    } catch (e: any) {
+      setError(e?.message || 'Could not load branches.');
+    }
+  }, []);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await load(true);
+    setRefreshing(false);
+  };
+
   const open = (branchId: string) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     navigation.navigate('SemesterSelect', { branchId });
   };
 
-  return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
-      <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + 28 }}>
-        <View style={styles.head}>
-          <Text style={styles.kicker}>PyQdeck · Syllabus</Text>
-          <Text style={styles.title}>Choose your branch</Text>
-          <Text style={styles.sub}>
-            Pick a branch to see its semesters, subjects and topic-by-topic syllabus.
-          </Text>
-        </View>
+  const header = (
+    <>
+      <View style={styles.head}>
+        <Text style={styles.kicker}>PyQdeck · Syllabus</Text>
+        <Text style={styles.title}>Choose your branch</Text>
+        <Text style={styles.sub}>
+          Pick a branch to see its semesters, subjects and topic-by-topic syllabus.
+        </Text>
+      </View>
 
+      {branches && branches.length > 0 && (
         <View style={styles.rule}>
           <Text style={styles.ruleText}>Branches</Text>
           <View style={styles.ruleLine} />
-          <Text style={styles.ruleText}>{BRANCHES.length}</Text>
+          <Text style={styles.ruleText}>{branches.length}</Text>
         </View>
+      )}
+    </>
+  );
 
-        {BRANCHES.map((b) => {
-          const sems = availableSemesters(b.id).length;
-          return (
-            <TouchableOpacity
-              key={b.id}
-              style={styles.row}
-              activeOpacity={0.6}
-              onPress={() => open(b.id)}
-            >
-              <View style={styles.codeBox}>
-                <Text style={styles.codeText}>{b.code}</Text>
-              </View>
+  if (!branches) {
+    return (
+      <View style={[styles.container, { paddingTop: insets.top }]}>
+        {header}
+        {error ? (
+          <ScreenError message={error} onRetry={() => load(true)} />
+        ) : (
+          <BranchListSkeleton />
+        )}
+      </View>
+    );
+  }
 
-              <View style={styles.rowBody}>
-                <Text style={styles.name}>{b.name}</Text>
-                <Text style={styles.meta}>
-                  {sems > 0
-                    ? `${sems} semester${sems === 1 ? '' : 's'} ready · ${b.subjectCount} subjects`
-                    : `${b.subjectCount} subjects · syllabus being typed up`}
-                </Text>
-              </View>
+  return (
+    <View style={[styles.container, { paddingTop: insets.top }]}>
+      <ScrollView
+        contentContainerStyle={{ paddingBottom: insets.bottom + 28 }}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={COLORS.primary}
+          />
+        }
+      >
+        {header}
 
-              <Feather name="chevron-right" size={18} color={COLORS.textSubtle} />
-            </TouchableOpacity>
-          );
-        })}
+        {branches.length === 0 ? (
+          <ScreenEmpty message="No branches have been added yet. Question papers are still available in the Browse tab." />
+        ) : (
+          branches.map((b) => {
+            const sems = b.semesters?.length ?? 0;
+            return (
+              <TouchableOpacity
+                key={b.id}
+                style={styles.row}
+                activeOpacity={0.6}
+                onPress={() => open(b.id)}
+              >
+                <View style={styles.codeBox}>
+                  <Text style={styles.codeText}>{b.code}</Text>
+                </View>
+
+                <View style={styles.rowBody}>
+                  <Text style={styles.name}>{b.name}</Text>
+                  <Text style={styles.meta}>
+                    {sems > 0
+                      ? `${sems} semester${sems === 1 ? '' : 's'} ready · ${b.subjectCount ?? 0} subjects`
+                      : 'Syllabus being typed up'}
+                  </Text>
+                </View>
+
+                <Feather name="chevron-right" size={18} color={COLORS.textSubtle} />
+              </TouchableOpacity>
+            );
+          })
+        )}
       </ScrollView>
     </View>
   );
@@ -95,8 +162,6 @@ const styles = StyleSheet.create({
   },
   sub: { fontSize: 13.5, color: COLORS.textMuted, marginTop: 6, lineHeight: 19 },
 
-  // A ruled heading rather than a filled bar - the sheet this borrows from has
-  // rules, not blocks.
   rule: {
     flexDirection: 'row',
     alignItems: 'center',

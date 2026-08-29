@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Platform } from 'react-native';
 import {
   Semester,
   SubjectSummary,
@@ -261,11 +262,27 @@ export const searchLocalCache = async (query: string) => {
 
 /**
  * Wipes all cached content (semesters, subjects, questions, solutions,
- * recent searches) - every cache key in this app is prefixed `pyq_`.
+ * recent searches) - every cache key in this app is prefixed `pyq_`, which
+ * also covers the syllabus cache (pyq_syl_* / pyq_cm_syl_*).
  * Leaves behavioral/preference keys (volume_scroll_*, interstitial_*,
  * review_prompt_*) untouched.
+ *
+ * On web AsyncStorage IS localStorage, but the driver's getAllKeys can miss
+ * keys its own getItem never stored, so sweep localStorage directly too -
+ * otherwise a web session keeps serving stale caches after "Clear" says done.
  */
 export async function clearAllCache(): Promise<void> {
+  if (Platform.OS === 'web') {
+    try {
+      const storage = (globalThis as any).localStorage;
+      if (storage) {
+        Object.keys(storage)
+          .filter((k) => k.startsWith('pyq_'))
+          .forEach((k) => storage.removeItem(k));
+      }
+    } catch {}
+  }
+
   const keys = await AsyncStorage.getAllKeys();
   const cacheKeys = keys.filter((k) => k.startsWith('pyq_'));
   if (cacheKeys.length > 0) {

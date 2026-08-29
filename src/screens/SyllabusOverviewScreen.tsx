@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -8,16 +8,19 @@ import {
   LayoutAnimation,
   Platform,
   UIManager,
+  RefreshControl,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import * as Haptics from 'expo-haptics';
 import { COLORS, FONTS } from '../theme/colors';
-import { getSemester } from '../data/syllabus';
-import { SyllabusSubject, topicCountOf } from '../types/syllabus';
+import { getBranchSemester } from '../api';
+import { BranchSemester, SyllabusSubjectSummary } from '../types/syllabus';
 import { getDoneCounts } from '../db/syllabusProgress';
 import { recordContentOpenedAndMaybeShowInterstitial } from '../utils/ads';
+import { ScreenError, ScreenEmpty } from '../components/ScreenState';
+import { SemesterTableSkeleton } from '../components/Skeletons';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -28,6 +31,9 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
  * subject against topics completed. This is the "main content" screen, so it
  * is where the interstitial is offered: once per open, and the shared
  * frequency cap in utils/ads decides whether one actually shows.
+ *
+ * Data comes from /syllabus/branches/:branch/semesters/:n, served through the
+ * read-through cache.
  */
 export const SyllabusOverviewScreen = () => {
   const insets = useSafeAreaInsets();
@@ -36,10 +42,9 @@ export const SyllabusOverviewScreen = () => {
   const branchId: string = route.params?.branchId ?? 'cse';
   const semesterNumber: number = route.params?.semester ?? 5;
 
-  const semester = useMemo(
-    () => getSemester(branchId, semesterNumber),
-    [branchId, semesterNumber]
-  );
+  const [data, setData] = useState<BranchSemester | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
   const [counts, setCounts] = useState<Record<string, number>>({});
   // Closed on arrival: the credit table is a term-planning reference, checked
   // once or twice a semester, while the subject list underneath is what the
@@ -53,34 +58,64 @@ export const SyllabusOverviewScreen = () => {
     void recordContentOpenedAndMaybeShowInterstitial();
   }, []);
 
+  const load = useCallback(
+    async (force = false) => {
+      try {
+        setError(null);
+        setData(await getBranchSemester(branchId, semesterNumber, force));
+      } catch (e: any) {
+        setError(e?.message || 'Could not load this semester.');
+      }
+    },
+    [branchId, semesterNumber]
+  );
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
   useFocusEffect(
     useCallback(() => {
       let alive = true;
-      if (!semester) return;
-      getDoneCounts(semester.subjects.map((s) => s.id)).then((c) => {
+      if (!data) return;
+      getDoneCounts(data.subjects.map((s) => s.id)).then((c) => {
         if (alive) setCounts(c);
       });
       return () => {
         alive = false;
       };
-    }, [semester])
+    }, [data])
   );
 
-  if (!semester) {
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await load(true);
+    setRefreshing(false);
+  };
+
+  if (!data) {
     return (
-      <View style={[styles.container, { paddingTop: insets.top + 40 }]}>
-        <Text style={styles.emptyText}>Syllabus for this semester has not been added yet.</Text>
+      <View style={[styles.container, { paddingTop: insets.top + 16 }]}>
+        <View style={styles.head}>
+          <Text style={styles.title}>Semester {semesterNumber} syllabus</Text>
+        </View>
+        {error ? (
+          <ScreenError message={error} onRetry={() => load(true)} />
+        ) : (
+          <SemesterTableSkeleton />
+        )}
       </View>
     );
   }
 
+  const semester = data;
   const theory = semester.subjects.filter((s) => s.kind === 'theory');
   const labs = semester.subjects.filter((s) => s.kind === 'lab');
-  const totalTopics = semester.subjects.reduce((n, s) => n + topicCountOf(s), 0);
+  const totalTopics = semester.subjects.reduce((n, s) => n + s.topicCount, 0);
   const totalDone = semester.subjects.reduce((n, s) => n + (counts[s.id] ?? 0), 0);
   const pct = totalTopics > 0 ? Math.round((totalDone / totalTopics) * 100) : 0;
 
-  const openSubject = (subject: SyllabusSubject) => {
+  const openSubject = (subject: SyllabusSubjectSummary) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     navigation.navigate('SubjectSyllabus', {
       branchId,
@@ -90,7 +125,7 @@ export const SyllabusOverviewScreen = () => {
     });
   };
 
-  const renderTable = (title: string, rows: SyllabusSubject[], unit: string) => {
+  const renderTable = (title: string, rows: SyllabusSubjectSummary[], unit: string) => {
     if (rows.length === 0) return null;
     return (
       <View key={title}>
@@ -100,9 +135,8 @@ export const SyllabusOverviewScreen = () => {
           <Text style={[styles.th, { width: 62, textAlign: 'right' }]}>Done</Text>
         </View>
         {rows.map((s) => {
-          const total = topicCountOf(s);
           const done = counts[s.id] ?? 0;
-          const w = total > 0 ? Math.round((done / total) * 100) : 0;
+          const w = s.topicCount > 0 ? Math.round((done / s.topicCount) * 100) : 0;
           return (
             <TouchableOpacity
               key={s.id}
@@ -115,13 +149,13 @@ export const SyllabusOverviewScreen = () => {
                 <Text style={styles.tnm}>{s.name}</Text>
                 <Text style={styles.tmeta}>
                   {s.kind === 'lab'
-                    ? `${total} ${unit}`
-                    : `${s.modules.length} modules · ${total} ${unit}`}
+                    ? `${s.topicCount} ${unit}`
+                    : `${s.moduleCount} modules · ${s.topicCount} ${unit}`}
                 </Text>
               </View>
               <View style={styles.tprog}>
                 <Text style={done > 0 ? styles.tfrac : styles.tfracZero}>
-                  {done} / {total}
+                  {done} / {s.topicCount}
                 </Text>
                 <View style={styles.bar}>
                   <View style={[styles.barFill, { width: `${w}%` }]} />
@@ -138,7 +172,6 @@ export const SyllabusOverviewScreen = () => {
   // syllabus; students read it to see how heavy the term is. Only rendered when
   // the data actually carries it - a table of blanks is worse than no table.
   const credited = semester.subjects.filter((s) => s.credits);
-  const totalCredits = credited.reduce((n, s) => n + (s.credits?.credits ?? 0), 0);
 
   const toggleCredits = () => {
     Haptics.selectionAsync();
@@ -158,39 +191,39 @@ export const SyllabusOverviewScreen = () => {
           />
           <Text style={styles.ruleText}>Credit structure</Text>
           <View style={styles.ruleLine} />
-          <Text style={styles.ruleTotal}>{totalCredits} credits</Text>
+          <Text style={styles.ruleTotal}>{semester.totalCredits} credits</Text>
         </TouchableOpacity>
 
         {!creditsOpen ? null : (
-        <View style={styles.ctable}>
-          <View style={styles.crHead}>
-            <Text style={[styles.cth, styles.cCourse]}>Course</Text>
-            <Text style={[styles.cth, styles.cNum]}>L</Text>
-            <Text style={[styles.cth, styles.cNum]}>T</Text>
-            <Text style={[styles.cth, styles.cNum]}>P</Text>
-            <Text style={[styles.cth, styles.cCred]}>C</Text>
-          </View>
-
-          {credited.map((s) => (
-            <View key={s.id} style={styles.crRow}>
-              <View style={styles.cCourse}>
-                <Text style={styles.cName} numberOfLines={1}>
-                  {s.name}
-                </Text>
-                <Text style={styles.cCode}>{s.code}</Text>
-              </View>
-              <Text style={[styles.cVal, styles.cNum]}>{s.credits!.l}</Text>
-              <Text style={[styles.cVal, styles.cNum]}>{s.credits!.t}</Text>
-              <Text style={[styles.cVal, styles.cNum]}>{s.credits!.p}</Text>
-              <Text style={[styles.cValStrong, styles.cCred]}>{s.credits!.credits}</Text>
+          <View style={styles.ctable}>
+            <View style={styles.crHead}>
+              <Text style={[styles.cth, styles.cCourse]}>Course</Text>
+              <Text style={[styles.cth, styles.cNum]}>L</Text>
+              <Text style={[styles.cth, styles.cNum]}>T</Text>
+              <Text style={[styles.cth, styles.cNum]}>P</Text>
+              <Text style={[styles.cth, styles.cCred]}>C</Text>
             </View>
-          ))}
 
-          <View style={styles.crTotal}>
-            <Text style={[styles.cTotalLabel, styles.cCourse]}>Total</Text>
-            <Text style={[styles.cValStrong, styles.cCred]}>{totalCredits}</Text>
+            {credited.map((s) => (
+              <View key={s.id} style={styles.crRow}>
+                <View style={styles.cCourse}>
+                  <Text style={styles.cName} numberOfLines={1}>
+                    {s.name}
+                  </Text>
+                  <Text style={styles.cCode}>{s.code}</Text>
+                </View>
+                <Text style={[styles.cVal, styles.cNum]}>{s.credits!.l}</Text>
+                <Text style={[styles.cVal, styles.cNum]}>{s.credits!.t}</Text>
+                <Text style={[styles.cVal, styles.cNum]}>{s.credits!.p}</Text>
+                <Text style={[styles.cValStrong, styles.cCred]}>{s.credits!.credits}</Text>
+              </View>
+            ))}
+
+            <View style={styles.crTotal}>
+              <Text style={[styles.cTotalLabel, styles.cCourse]}>Total</Text>
+              <Text style={[styles.cValStrong, styles.cCred]}>{semester.totalCredits}</Text>
+            </View>
           </View>
-        </View>
         )}
 
         {creditsOpen && (
@@ -204,8 +237,18 @@ export const SyllabusOverviewScreen = () => {
 
   return (
     <View style={styles.container}>
-      <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + 32 }}>
+      <ScrollView
+        contentContainerStyle={{ paddingBottom: insets.bottom + 32 }}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={COLORS.primary}
+          />
+        }
+      >
         <View style={styles.head}>
+          <Text style={styles.kicker}>{semester.branch.name}</Text>
           <Text style={styles.title}>Semester {semesterNumber} syllabus</Text>
           <View style={styles.headProg}>
             <View style={[styles.bar, { flex: 1 }]}>
@@ -222,8 +265,14 @@ export const SyllabusOverviewScreen = () => {
 
         {renderCreditTable()}
 
-        {renderTable('Theory subject', theory, 'topics')}
-        {renderTable('Laboratory', labs, 'experiments')}
+        {semester.subjects.length === 0 ? (
+          <ScreenEmpty message="No syllabus for this semester yet." />
+        ) : (
+          <>
+            {renderTable('Theory subject', theory, 'topics')}
+            {renderTable('Laboratory', labs, 'experiments')}
+          </>
+        )}
       </ScrollView>
     </View>
   );
@@ -231,13 +280,16 @@ export const SyllabusOverviewScreen = () => {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
-  emptyText: {
-    fontSize: 14,
-    color: COLORS.textMuted,
-    textAlign: 'center',
-    paddingHorizontal: 32,
-  },
   head: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 16 },
+  kicker: {
+    fontFamily: FONTS.mono,
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 1.5,
+    textTransform: 'uppercase',
+    color: COLORS.textSubtle,
+    marginBottom: 6,
+  },
   title: {
     fontFamily: FONTS.serif,
     fontSize: 25,

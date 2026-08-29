@@ -1,12 +1,21 @@
-import React, { useCallback, useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
+import React, { useCallback, useEffect, useState } from 'react';
+import {
+  View,
+  Text,
+  ScrollView,
+  TouchableOpacity,
+  StyleSheet,
+  RefreshControl,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import * as Haptics from 'expo-haptics';
 import { COLORS, FONTS } from '../theme/colors';
-import { BRANCHES, availableSemesters, getSemester } from '../data/syllabus';
-import { topicCountOf } from '../types/syllabus';
+import { getBranchSemesters } from '../api';
+import { BranchSemesters } from '../types/syllabus';
 import { getDoneCounts } from '../db/syllabusProgress';
+import { ScreenError, ScreenEmpty } from '../components/ScreenState';
+import { SemesterGridSkeleton } from '../components/Skeletons';
 
 /**
  * Semesters for the chosen branch - only the ones that actually have a syllabus
@@ -14,51 +23,102 @@ import { getDoneCounts } from '../db/syllabusProgress';
  * placeholders: a grid of "not added yet" cards makes a working screen look
  * broken, and there is nothing a student can do with a semester that isn't
  * there.
+ *
+ * Loads through the syllabus read-through cache, so a repeat visit renders from
+ * a day-old snapshot without touching the network, and an offline device still
+ * gets its grid.
  */
 export const SemesterSelectScreen = () => {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const branchId: string = route.params?.branchId ?? 'cse';
-  const branch = BRANCHES.find((b) => b.id === branchId);
 
+  const [data, setData] = useState<BranchSemesters | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
   const [progress, setProgress] = useState<Record<number, { done: number; total: number }>>({});
 
+  const load = useCallback(
+    async (force = false) => {
+      try {
+        setError(null);
+        setData(await getBranchSemesters(branchId, force));
+      } catch (e: any) {
+        setError(e?.message || 'Could not load semesters.');
+      }
+    },
+    [branchId]
+  );
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  // Progress recomputes on focus so a topic you ticked in a subject shows up on
+  // the semester card the moment you come back. One multiGet for the whole
+  // screen - the API hands back each semester's subject ids with the list.
   useFocusEffect(
     useCallback(() => {
       let alive = true;
-      (async () => {
+      if (!data) return;
+      getDoneCounts(data.semesters.flatMap((s) => s.subjectIds)).then((counts) => {
+        if (!alive) return;
         const next: Record<number, { done: number; total: number }> = {};
-        for (const n of availableSemesters(branchId)) {
-          const sem = getSemester(branchId, n);
-          if (!sem) continue;
-          const counts = await getDoneCounts(sem.subjects.map((s) => s.id));
-          next[n] = {
-            done: sem.subjects.reduce((acc, s) => acc + (counts[s.id] ?? 0), 0),
-            total: sem.subjects.reduce((acc, s) => acc + topicCountOf(s), 0),
+        for (const s of data.semesters) {
+          next[s.semester] = {
+            done: s.subjectIds.reduce((n, id) => n + (counts[id] ?? 0), 0),
+            total: s.topicCount,
           };
         }
-        if (alive) setProgress(next);
-      })();
+        setProgress(next);
+      });
       return () => {
         alive = false;
       };
-    }, [branchId])
+    }, [data])
   );
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await load(true);
+    setRefreshing(false);
+  };
 
   const open = (n: number) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     navigation.navigate('SyllabusOverview', { branchId, semester: n });
   };
 
-  const live = availableSemesters(branchId).sort((a, b) => a - b);
+  if (!data) {
+    return (
+      <View style={[styles.container, { paddingTop: insets.top }]}>
+        {error ? (
+          <ScreenError message={error} onRetry={() => load(true)} />
+        ) : (
+          <SemesterGridSkeleton />
+        )}
+      </View>
+    );
+  }
+
+  const live = data.semesters;
 
   return (
-    <View style={styles.container}>
-      <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + 28 }}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
+      <ScrollView
+        contentContainerStyle={{ paddingBottom: insets.bottom + 28 }}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={COLORS.primary}
+          />
+        }
+      >
         <View style={styles.head}>
-          <Text style={styles.kicker}>{branch?.code ?? branchId.toUpperCase()}</Text>
-          <Text style={styles.title}>{branch?.name ?? 'Semesters'}</Text>
+          <Text style={styles.kicker}>{data.branch.code}</Text>
+          <Text style={styles.title}>{data.branch.name}</Text>
           <Text style={styles.sub}>
             {live.length > 0
               ? 'Modules, topics and your progress for each semester.'
@@ -66,30 +126,32 @@ export const SemesterSelectScreen = () => {
           </Text>
         </View>
 
-        {live.length > 0 && (
+        {live.length === 0 ? (
+          <ScreenEmpty message="No syllabus has been typed up for this branch yet." />
+        ) : (
           <View style={styles.grid}>
-            {live.map((n) => {
-              const sem = getSemester(branchId, n)!;
-              const p = progress[n];
-              const pct = p && p.total > 0 ? Math.round((p.done / p.total) * 100) : 0;
-              const complete = p && p.total > 0 && p.done === p.total;
+            {live.map((s) => {
+              const total = progress[s.semester]?.total ?? s.topicCount;
+              const done = progress[s.semester]?.done ?? 0;
+              const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+              const complete = total > 0 && done === total;
               return (
                 <TouchableOpacity
-                  key={n}
+                  key={s.semester}
                   style={[styles.card, complete && styles.cardDone]}
                   activeOpacity={0.7}
-                  onPress={() => open(n)}
+                  onPress={() => open(s.semester)}
                 >
                   <Text style={styles.cardLabel}>Semester</Text>
-                  <Text style={styles.cardNum}>{n}</Text>
+                  <Text style={styles.cardNum}>{s.semester}</Text>
                   <Text style={styles.cardMeta}>
-                    {sem.subjects.length} subjects · {p ? p.total : '—'} topics
+                    {s.subjectCount} subjects · {total} topics
                   </Text>
                   <View style={styles.bar}>
                     <View style={[styles.barFill, { width: `${pct}%` }]} />
                   </View>
-                  <Text style={p && p.done > 0 ? styles.cardProg : styles.cardMeta}>
-                    {p ? (p.done > 0 ? `${p.done} of ${p.total} done` : 'Not started') : ' '}
+                  <Text style={done > 0 ? styles.cardProg : styles.cardMeta}>
+                    {done > 0 ? `${done} of ${total} done` : 'Not started'}
                   </Text>
                 </TouchableOpacity>
               );

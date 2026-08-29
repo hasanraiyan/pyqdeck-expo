@@ -1,20 +1,27 @@
 /**
  * Syllabus is a separate axis from the PYQ archive: PYQs are organized by
  * semester -> subject -> year, while the syllabus is branch -> semester ->
- * subject -> module -> topic. A student picks a branch once; everything
- * below it follows from that choice.
+ * subject -> module -> topic.
+ *
+ * Shapes mirror /api/public/syllabus/* exactly. Module and topic ids are
+ * server-side subdocument ids and are stable across a title being corrected,
+ * which is what makes them safe to key saved progress to.
  */
 
 export interface Branch {
   id: string;
   code: string;
   name: string;
-  subjectCount: number;
+  /** Semester numbers that have a syllabus. Present on the branch list. */
+  semesters?: number[];
+  subjectCount?: number;
 }
 
 export interface Topic {
   id: string;
   title: string;
+  /** Optional per-topic override for the Ask AI prompt. */
+  prompt?: string;
 }
 
 export interface SyllabusModule {
@@ -24,12 +31,6 @@ export interface SyllabusModule {
   topics: Topic[];
 }
 
-/**
- * Lecture / Tutorial / Practical hours per week and the credit weight, as
- * printed in the university's own syllabus document. Optional: older or
- * partially typed-up semesters may not carry it, and the screen leaves the
- * table out entirely rather than showing blanks.
- */
 export interface Credits {
   l: number;
   t: number;
@@ -37,21 +38,49 @@ export interface Credits {
   credits: number;
 }
 
-export interface SyllabusSubject {
+/** Row shape in a semester's subject list - counts rather than the tree. */
+export interface SyllabusSubjectSummary {
   id: string;
-  code: string;
+  code?: string;
   name: string;
-  credits?: Credits;
-  /** Lab subjects list experiments rather than modules; same shape, different word. */
   kind: 'theory' | 'lab';
-  modules: SyllabusModule[];
-  /** Set when this subject also exists in the PYQ archive, so we can link across. */
+  credits?: Credits;
   pyqSubjectId?: string;
+  moduleCount: number;
+  topicCount: number;
 }
 
-export interface SyllabusSemester {
-  number: number;
-  subjects: SyllabusSubject[];
+/** A subject with its full module and topic tree. */
+export interface SyllabusSubject {
+  id: string;
+  code?: string;
+  name: string;
+  kind: 'theory' | 'lab';
+  credits?: Credits;
+  pyqSubjectId?: string;
+  modules: SyllabusModule[];
+  semester?: number;
+  branch?: Branch;
+}
+
+export interface SemesterEntry {
+  semester: number;
+  subjectCount: number;
+  topicCount: number;
+  /** Slugs of the subjects in this semester, for local progress counting. */
+  subjectIds: string[];
+}
+
+export interface BranchSemesters {
+  branch: Branch;
+  semesters: SemesterEntry[];
+}
+
+export interface BranchSemester {
+  branch: Branch;
+  semester: number;
+  totalCredits: number;
+  subjects: SyllabusSubjectSummary[];
 }
 
 export const topicCountOf = (subject: SyllabusSubject) =>

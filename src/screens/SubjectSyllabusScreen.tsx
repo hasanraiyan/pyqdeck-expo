@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
   LayoutAnimation,
   Platform,
   UIManager,
+  RefreshControl,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRoute } from '@react-navigation/native';
@@ -16,10 +17,12 @@ import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import * as WebBrowser from 'expo-web-browser';
 import { COLORS, FONTS } from '../theme/colors';
-import { getSemester } from '../data/syllabus';
-import { SyllabusModule, Topic, topicCountOf } from '../types/syllabus';
+import { getSyllabusSubject } from '../api';
+import { SyllabusModule, SyllabusSubject, Topic, topicCountOf } from '../types/syllabus';
 import { getDoneTopics, saveDoneTopics } from '../db/syllabusProgress';
 import { AskAiBadge, DoneStamp } from '../components/Badge';
+import { ScreenError, ScreenEmpty } from '../components/ScreenState';
+import { SubjectSkeleton } from '../components/Skeletons';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -35,32 +38,53 @@ const topicKey = (moduleId: string, topicId: string) => `${moduleId}:${topicId}`
  * target, and Ask AI sits at the right in the app's hand-drawn AskAiBadge - the
  * same mark the question screen uses, which is what students already read as
  * "ask". Long titles wrap and the badge stays centred against them.
+ *
+ * Fetched whole via /syllabus/subjects/:slug, through the read-through cache.
  */
 export const SubjectSyllabusScreen = () => {
   const insets = useSafeAreaInsets();
   const route = useRoute<any>();
-  const { branchId = 'cse', semester = 5, subjectId } = route.params ?? {};
+  const { semester = 5, subjectId } = route.params ?? {};
 
-  const subject = useMemo(() => {
-    const sem = getSemester(branchId, semester);
-    return sem?.subjects.find((s) => s.id === subjectId) ?? null;
-  }, [branchId, semester, subjectId]);
-
+  const [subject, setSubject] = useState<SyllabusSubject | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
   const [done, setDone] = useState<Set<string>>(new Set());
   const [open, setOpen] = useState<Set<string>>(new Set());
 
+  const load = useCallback(
+    async (force = false) => {
+      if (!subjectId) return;
+      try {
+        setError(null);
+        const next = await getSyllabusSubject(subjectId, force);
+        setSubject(next);
+        // Progress is device-local and read in the same pass so a returning
+        // student sees their ticks immediately.
+        const d = await getDoneTopics(next.id);
+        setDone(d);
+        // Open the first module that still has unfinished topics - that is
+        // almost always where the student left off.
+        const firstOpen = next.modules.find((m) =>
+          m.topics.some((t) => !d.has(topicKey(m.id, t.id)))
+        );
+        setOpen(new Set([firstOpen?.id ?? next.modules[0]?.id].filter(Boolean) as string[]));
+      } catch (e: any) {
+        setError(e?.message || 'Could not load this subject.');
+      }
+    },
+    [subjectId]
+  );
+
   useEffect(() => {
-    if (!subject) return;
-    getDoneTopics(subject.id).then((d) => {
-      setDone(d);
-      // Open the first module that still has unfinished topics - that is
-      // almost always where the student left off.
-      const next = subject.modules.find((m) =>
-        m.topics.some((t) => !d.has(topicKey(m.id, t.id)))
-      );
-      setOpen(new Set([next?.id ?? subject.modules[0]?.id].filter(Boolean) as string[]));
-    });
-  }, [subject]);
+    void load();
+  }, [load]);
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await load(true);
+    setRefreshing(false);
+  };
 
   const toggleModule = useCallback((moduleId: string) => {
     Haptics.selectionAsync();
@@ -111,10 +135,22 @@ export const SubjectSyllabusScreen = () => {
     [subject, semester]
   );
 
+  if (!subjectId) {
+    return (
+      <View style={[styles.container, { paddingTop: insets.top + 16 }]}>
+        <ScreenEmpty message="No subject selected." />
+      </View>
+    );
+  }
+
   if (!subject) {
     return (
-      <View style={[styles.container, { paddingTop: 40 }]}>
-        <Text style={styles.emptyText}>This subject is not in the syllabus yet.</Text>
+      <View style={[styles.container, { paddingTop: insets.top + 16 }]}>
+        {error ? (
+          <ScreenError message={error} onRetry={() => load(true)} />
+        ) : (
+          <SubjectSkeleton />
+        )}
       </View>
     );
   }
@@ -192,7 +228,16 @@ export const SubjectSyllabusScreen = () => {
 
   return (
     <View style={styles.container}>
-      <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + 32 }}>
+      <ScrollView
+        contentContainerStyle={{ paddingBottom: insets.bottom + 32 }}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={COLORS.primary}
+          />
+        }
+      >
         <View style={styles.head}>
           <View style={styles.badgeRow}>
             <Text style={styles.code}>{subject.code}</Text>
@@ -216,7 +261,11 @@ export const SubjectSyllabusScreen = () => {
           </Text>
         </View>
 
-        {subject.modules.map(renderModule)}
+        {subject.modules.length === 0 ? (
+          <ScreenEmpty message="No modules have been typed up for this subject yet." />
+        ) : (
+          subject.modules.map(renderModule)
+        )}
       </ScrollView>
     </View>
   );
@@ -224,7 +273,6 @@ export const SubjectSyllabusScreen = () => {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
-  emptyText: { fontSize: 14, color: COLORS.textMuted, textAlign: 'center', paddingHorizontal: 32 },
   head: {
     paddingHorizontal: 16,
     paddingTop: 16,
