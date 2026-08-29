@@ -28,6 +28,10 @@ import { QuestionListScreen } from './src/screens/QuestionListScreen';
 import { QuestionDetailScreen } from './src/screens/QuestionDetailScreen';
 import { SearchScreen } from './src/screens/SearchScreen';
 import { SettingsScreen } from './src/screens/SettingsScreen';
+import { BranchScreen } from './src/screens/BranchScreen';
+import { SemesterSelectScreen } from './src/screens/SemesterSelectScreen';
+import { SyllabusOverviewScreen } from './src/screens/SyllabusOverviewScreen';
+import { SubjectSyllabusScreen } from './src/screens/SubjectSyllabusScreen';
 import { checkForStoreUpdate } from './src/utils/appUpdate';
 import { maybeRequestReview } from './src/utils/appReview';
 import * as Sentry from '@sentry/react-native';
@@ -122,6 +126,36 @@ function HomeStack() {
         name="Settings"
         component={SettingsScreen}
         options={{ title: 'Settings' }}
+      />
+    </Stack.Navigator>
+  );
+}
+
+/** Branch -> semester -> subjects -> topics, each its own screen. */
+function SyllabusStack() {
+  return (
+    <Stack.Navigator screenOptions={commonScreenOptions}>
+      <Stack.Screen
+        name="BranchRoot"
+        component={BranchScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="SemesterSelect"
+        component={SemesterSelectScreen}
+        options={({ route }: any) => ({
+          title: route.params?.branchId?.toUpperCase() || 'Semesters',
+        })}
+      />
+      <Stack.Screen
+        name="SyllabusOverview"
+        component={SyllabusOverviewScreen}
+        options={({ route }: any) => ({ title: `Semester ${route.params?.semester ?? ''}` })}
+      />
+      <Stack.Screen
+        name="SubjectSyllabus"
+        component={SubjectSyllabusScreen}
+        options={({ route }: any) => ({ title: route.params?.subjectName || 'Subject' })}
       />
     </Stack.Navigator>
   );
@@ -228,6 +262,16 @@ function AppContent() {
             tabBarLabel: 'Browse',
             tabBarIcon: ({ color, size }) => (
               <Feather name="book-open" size={size} color={color} />
+            ),
+          }}
+        />
+        <Tab.Screen
+          name="Syllabus"
+          component={SyllabusStack}
+          options={{
+            tabBarLabel: 'Syllabus',
+            tabBarIcon: ({ color, size }) => (
+              <Feather name="check-square" size={size} color={color} />
             ),
           }}
         />

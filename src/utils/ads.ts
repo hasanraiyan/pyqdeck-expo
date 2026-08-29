@@ -40,10 +40,16 @@ async function setState(key: string, value: string) {
 }
 
 /**
- * Call each time a question detail screen is opened. Shows a preloaded
- * interstitial every OPENS_BEFORE_SHOW opens, no more than once per COOLDOWN_MS.
+ * Call each time a content screen is opened - a question detail, or a syllabus
+ * for a semester. Shows a preloaded interstitial every OPENS_BEFORE_SHOW opens,
+ * no more than once per COOLDOWN_MS.
+ *
+ * The counter is shared across screen types on purpose: the cap exists to limit
+ * how often a student sees a full-screen ad, and that budget is per student,
+ * not per feature. A per-screen counter would multiply the ads by the number of
+ * screens that opt in, which is how an app ends up flagged for ad frequency.
  */
-export async function recordQuestionOpenedAndMaybeShowInterstitial() {
+export async function recordContentOpenedAndMaybeShowInterstitial() {
   try {
     const opens = Number((await getState(OPENS_KEY)) ?? '0') + 1;
 
@@ -69,3 +75,7 @@ export async function recordQuestionOpenedAndMaybeShowInterstitial() {
     // Never let an ad failure affect navigation.
   }
 }
+
+/** @deprecated Use recordContentOpenedAndMaybeShowInterstitial. */
+export const recordQuestionOpenedAndMaybeShowInterstitial =
+  recordContentOpenedAndMaybeShowInterstitial;

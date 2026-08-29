@@ -99,6 +99,29 @@ export const AskAiBadge: React.FC<{ label?: string }> = ({
   );
 };
 
+/**
+ * Companion to AskAiBadge in the same hand-drawn language: a grader's stamp
+ * that lands on a module once every topic in it is ticked. Rotated a couple of
+ * degrees because a stamp pressed by hand never lands square, which is the
+ * whole point of it not looking like a system checkmark.
+ */
+export const DoneStamp: React.FC<{ label?: string }> = ({ label = 'Done' }) => {
+  return (
+    <View style={styles.stampContainer}>
+      <Svg viewBox="0 0 88 30" style={StyleSheet.absoluteFill} fill="none">
+        <Path
+          d="M4 8C4 5 6 3 10 3L79 4C83 4 85 6 85 9L84 22C84 25 82 27 78 27L9 26C5 26 3 24 3 21Z"
+          stroke={COLORS.secondary}
+          strokeWidth="1.6"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </Svg>
+      <Text style={styles.stampText}>{label}</Text>
+    </View>
+  );
+};
+
 const styles = StyleSheet.create({
   badge: {
     paddingHorizontal: 8,
@@ -190,5 +213,20 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: COLORS.primary,
     letterSpacing: 0.3,
+  },
+  stampContainer: {
+    width: 62,
+    height: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    transform: [{ rotate: '-3deg' }],
+  },
+  stampText: {
+    fontSize: 9.5,
+    fontFamily: FONTS.mono,
+    fontWeight: '700',
+    color: COLORS.secondary,
+    letterSpacing: 1.4,
+    textTransform: 'uppercase',
   },
 });
