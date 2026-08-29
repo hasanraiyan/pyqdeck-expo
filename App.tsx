@@ -35,6 +35,7 @@ import { SubjectSyllabusScreen } from './src/screens/SubjectSyllabusScreen';
 import { SyllabusTabIcon } from './src/components/SyllabusTabIcon';
 import { checkForStoreUpdate } from './src/utils/appUpdate';
 import { maybeRequestReview } from './src/utils/appReview';
+import { isSyllabusEnabled } from './src/config/features';
 import * as Sentry from '@sentry/react-native';
 
 // Crash/error monitoring only - deliberately not sendDefaultPii (would send
@@ -266,16 +267,18 @@ function AppContent() {
             ),
           }}
         />
-        <Tab.Screen
-          name="Syllabus"
-          component={SyllabusStack}
-          options={{
-            tabBarLabel: 'Syllabus',
-            tabBarIcon: ({ color, size, focused }) => (
-              <SyllabusTabIcon size={size} color={color} focused={focused} />
-            ),
-          }}
-        />
+        {isSyllabusEnabled && (
+          <Tab.Screen
+            name="Syllabus"
+            component={SyllabusStack}
+            options={{
+              tabBarLabel: 'Syllabus',
+              tabBarIcon: ({ color, size, focused }) => (
+                <SyllabusTabIcon size={size} color={color} focused={focused} />
+              ),
+            }}
+          />
+        )}
         <Tab.Screen
           name="Search"
           component={SearchStack}
