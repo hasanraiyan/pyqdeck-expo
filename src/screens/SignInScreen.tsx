@@ -36,10 +36,6 @@ export const SignInScreen = ({ navigation, route }: any) => {
       {reason === 'ai' && (
         <View style={styles.notice}>
           <Text style={styles.noticeTitle}>Sign in to use Ask AI</Text>
-          <Text style={styles.noticeBody}>
-            Papers, solutions, syllabus and search stay free without an account. Only the AI
-            tutor needs one, so we can keep it running.
-          </Text>
         </View>
       )}
       <AuthView
@@ -65,11 +61,5 @@ const styles = StyleSheet.create({
     fontSize: rf(16),
     fontWeight: '600',
     color: COLORS.text,
-    marginBottom: 4,
-  },
-  noticeBody: {
-    fontSize: rf(13),
-    lineHeight: rf(19),
-    color: COLORS.textMuted,
   },
 });
