@@ -40,6 +40,7 @@ import { recordQuestionOpenedAndMaybeShowInterstitial } from '../utils/ads';
 import { AdBanner } from '../components/AdBanner';
 import { getVoterId } from '../utils/voterId';
 import { getMyVote, setMyVote } from '../utils/votes';
+import { useRequireAuth } from '../auth/useRequireAuth';
 
 export const QuestionDetailScreen = () => {
   const insets = useSafeAreaInsets();
@@ -76,6 +77,7 @@ export const QuestionDetailScreen = () => {
   const [myVote, setMyVoteState] = useState<1 | -1 | null>(null);
   const [voteCounts, setVoteCounts] = useState({ upvotes: 0, downvotes: 0 });
   const [isVoting, setIsVoting] = useState(false);
+  const { guard } = useRequireAuth();
   // Refs to avoid stale closures during rapid taps (see optimistic UI race fix)
   const myVoteRef = useRef<1 | -1 | null>(null);
   const voteCountsRef = useRef({ upvotes: 0, downvotes: 0 });
@@ -236,8 +238,7 @@ export const QuestionDetailScreen = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
     try {
-      const voterId = await getVoterId();
-      const result = await voteSolution(subjectId, questionId, voterId, nextValue);
+      const result = await voteSolution(subjectId, questionId, nextValue);
       if (actionId !== actionIdRef.current) return;
       const clamped = { upvotes: Math.max(0, result.upvotes ?? 0), downvotes: Math.max(0, result.downvotes ?? 0) };
       setVoteCounts(clamped);
@@ -260,7 +261,7 @@ export const QuestionDetailScreen = () => {
     }
   };
 
-  const handleVote = async (value: 1 | -1) => {
+  const performVote = async (value: 1 | -1) => {
     if (isVoting) {
       // Coalesce rapid taps to final desired state (YouTube pattern).
       // Compute what the vote would be after applying this tap on top of
@@ -294,6 +295,15 @@ export const QuestionDetailScreen = () => {
     }
     const nextValue: 1 | -1 | 0 = myVoteRef.current === value ? 0 : value;
     return executeVote(nextValue);
+  };
+
+  // Voting needs an account. guard() runs the vote straight away when signed
+  // in; otherwise it parks it, opens the sign-in sheet, and replays it once
+  // the user comes back - so the tap they made is the vote they get.
+  const handleVote = (value: 1 | -1) => {
+    guard(() => {
+      void performVote(value);
+    });
   };
 
   const handleReportSubmit = async () => {

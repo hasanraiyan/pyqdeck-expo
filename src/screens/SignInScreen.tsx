@@ -23,7 +23,11 @@ import { rf } from '../utils/responsive';
 export const SignInScreen = ({ navigation, route }: any) => {
   const insets = useSafeAreaInsets();
   const { isLoaded, isSignedIn } = useAuth();
+  // Why the sheet opened, so the heading names the thing the user just tried
+  // to do. Anything else (Settings -> Sign in) gets no heading at all.
   const reason = route?.params?.reason;
+  const heading =
+    reason === 'vote' ? 'Sign in to vote' : reason === 'ai' ? 'Sign in to use Ask AI' : null;
 
   // AuthView has no onSuccess callback - the documented pattern is to watch
   // auth state and close once the session lands.
@@ -33,9 +37,9 @@ export const SignInScreen = ({ navigation, route }: any) => {
 
   return (
     <View style={[styles.container, { paddingBottom: insets.bottom }]}>
-      {reason === 'ai' && (
+      {heading && (
         <View style={styles.notice}>
-          <Text style={styles.noticeTitle}>Sign in to use Ask AI</Text>
+          <Text style={styles.noticeTitle}>{heading}</Text>
         </View>
       )}
       <AuthView

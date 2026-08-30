@@ -19,6 +19,7 @@ import { useNavigation } from '@react-navigation/native';
 import Markdown from 'react-native-markdown-display';
 import { QuestionSummary, Solution } from '../types';
 import { getSolution, voteSolution, reportSolution } from '../api';
+import { useRequireAuth } from '../auth/useRequireAuth';
 import { getVoterId } from '../utils/voterId';
 import { getMyVote, setMyVote } from '../utils/votes';
 import { COLORS, FONTS } from '../theme/colors';
@@ -53,6 +54,7 @@ export const QuestionItem: React.FC<QuestionItemProps> = React.memo(({
   const [myVote, setMyVoteState] = useState<1 | -1 | null>(null);
   const [voteCounts, setVoteCounts] = useState({ upvotes: 0, downvotes: 0 });
   const [isVoting, setIsVoting] = useState(false);
+  const { guard } = useRequireAuth();
   const myVoteRef = useRef<1 | -1 | null>(null);
   const voteCountsRef = useRef({ upvotes: 0, downvotes: 0 });
   const pendingVoteRef = useRef<1 | -1 | 0 | null>(null);
@@ -144,8 +146,7 @@ export const QuestionItem: React.FC<QuestionItemProps> = React.memo(({
     setIsVoting(true);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     try {
-      const voterId = await getVoterId();
-      const result = await voteSolution(subjectId, question.questionId, voterId, nextValue);
+      const result = await voteSolution(subjectId, question.questionId, nextValue);
       if (actionId !== actionIdRef.current) return;
       const clamped = { upvotes: Math.max(0, result.upvotes ?? 0), downvotes: Math.max(0, result.downvotes ?? 0) };
       setVoteCounts(clamped);
@@ -168,7 +169,7 @@ export const QuestionItem: React.FC<QuestionItemProps> = React.memo(({
     }
   };
 
-  const handleVote = async (value: 1 | -1) => {
+  const performVote = async (value: 1 | -1) => {
     if (isVoting) {
       const base: 1 | -1 | null = pendingVoteRef.current !== null ? (pendingVoteRef.current === 0 ? null : (pendingVoteRef.current as 1 | -1)) : myVoteRef.current;
       const nextTarget: 1 | -1 | 0 = base === value ? 0 : value;
@@ -185,6 +186,15 @@ export const QuestionItem: React.FC<QuestionItemProps> = React.memo(({
     }
     const nextValue: 1 | -1 | 0 = myVoteRef.current === value ? 0 : value;
     return executeVote(nextValue);
+  };
+
+  // Voting needs an account. guard() runs the vote straight away when signed
+  // in; otherwise it parks it, opens the sign-in sheet, and replays it once
+  // the user comes back - so the tap they made is the vote they get.
+  const handleVote = (value: 1 | -1) => {
+    guard(() => {
+      void performVote(value);
+    });
   };
 
   const handleReportSubmit = async () => {

@@ -20,6 +20,7 @@ import {
 import * as Cache from '../db/cacheService';
 import * as SylCache from '../db/syllabusCache';
 import * as Backend from './backend';
+import { authHeader } from '../auth/token';
 
 export class ApiError extends Error {
   status?: number;
@@ -89,6 +90,17 @@ const postApi = <T,>(path: string, body: unknown): Promise<T> =>
   request<T>(path, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+
+// POST with the Clerk session token attached. Only for endpoints the server
+// gates behind requireSignIn - everything else deliberately stays anonymous.
+// Sends no Authorization header at all when signed out, so the server answers
+// with its own 401 rather than the client inventing one.
+const postApiAuthed = async <T,>(path: string, body: unknown): Promise<T> =>
+  request<T>(path, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...(await authHeader()) },
     body: JSON.stringify(body),
   });
 
@@ -282,15 +294,12 @@ export const getRepeatedQuestions = (subjectId: string, questionId: string, limi
     `/subjects/${subjectId}/questions/${encodeURIComponent(questionId)}/repeats?limit=${limit}`
   );
 
-export const voteSolution = (
-  subjectId: string,
-  questionId: string,
-  voterId: string,
-  value: 1 | -1 | 0
-) =>
-  postApi<{ upvotes: number; downvotes: number }>(
+// Requires a signed-in user. The server derives the voter identity from the
+// Clerk session, so no voterId is sent - passing one would be ignored.
+export const voteSolution = (subjectId: string, questionId: string, value: 1 | -1 | 0) =>
+  postApiAuthed<{ upvotes: number; downvotes: number }>(
     `/subjects/${subjectId}/questions/${encodeURIComponent(questionId)}/solution/vote`,
-    { voterId, value }
+    { value }
   );
 
 export const reportSolution = (

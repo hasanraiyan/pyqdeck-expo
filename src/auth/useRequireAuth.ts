@@ -1,32 +1,46 @@
-import { useCallback } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { useAuth } from '@clerk/expo';
 import { useNavigation } from '@react-navigation/native';
+import { setPendingAction, takePendingAction } from './pendingAction';
 
 /**
- * Gate for the handful of features that cost real money to serve (the AI
- * tutor). Everything else in this app - browsing papers, syllabus, search,
- * solutions - stays open to signed-out users and must never call this.
+ * Gate for the features that need an account - voting, and later the AI tutor.
+ * Everything else in this app (browsing papers, syllabus, search, reading
+ * solutions) stays open to signed-out users and must never call this.
  *
- * Returns a `guard(run)` that either runs the action straight away, or sends
- * the user to the sign-in sheet and drops the action. It deliberately does
- * NOT resume the action after a successful sign-in: the screens using this
- * re-render on `isSignedIn` anyway, so the user lands back on a screen whose
- * button now works, rather than having something fire under them.
+ * `guard(run)` either runs the action immediately, or parks it, sends the user
+ * to the sign-in sheet, and runs it once they come back signed in. That resume
+ * is the point: a student who taps upvote should end up having voted, not
+ * staring at a screen where their tap silently did nothing.
  */
 export const useRequireAuth = () => {
   const { isLoaded, isSignedIn } = useAuth();
   const navigation = useNavigation<any>();
+  const wasSignedIn = useRef(false);
+
+  // Fire the parked action on the signed-out -> signed-in edge only, so an
+  // already-signed-in screen mounting later never re-runs someone's old tap.
+  useEffect(() => {
+    if (!isLoaded) return;
+    if (isSignedIn && !wasSignedIn.current) {
+      // takePendingAction clears as it reads, so if several screens are
+      // mounted (a list behind a detail screen, say) only one of them runs it.
+      takePendingAction()?.();
+    }
+    wasSignedIn.current = !!isSignedIn;
+  }, [isLoaded, isSignedIn]);
 
   const guard = useCallback(
     (run: () => void) => {
       // Clerk not resolved yet - treat as signed out rather than blocking on
-      // it. A cold start where the token cache is still being read would
-      // otherwise make the button feel dead for a few hundred ms.
+      // it. A cold start still reading the token cache would otherwise make
+      // the button feel dead for a few hundred ms.
       if (isLoaded && isSignedIn) {
         run();
         return;
       }
-      navigation.navigate('SignIn', { reason: 'ai' });
+      setPendingAction(run);
+      navigation.navigate('SignIn', { reason: 'vote' });
     },
     [isLoaded, isSignedIn, navigation]
   );
