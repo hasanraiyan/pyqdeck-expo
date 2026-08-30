@@ -1,4 +1,5 @@
 import { getClerkInstance } from '@clerk/expo';
+import { clerkPublishableKey } from './publishableKey';
 
 /**
  * Reads the current Clerk session token from outside React, for the API layer.
@@ -13,9 +14,7 @@ import { getClerkInstance } from '@clerk/expo';
  */
 export const getAuthToken = async (): Promise<string | null> => {
   try {
-    const clerk = getClerkInstance({
-      publishableKey: process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY!,
-    });
+    const clerk = getClerkInstance({ publishableKey: clerkPublishableKey });
     return (await clerk.session?.getToken()) ?? null;
   } catch {
     // Clerk not initialised yet, or offline with nothing cached. The caller

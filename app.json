@@ -78,7 +78,8 @@
     "extra": {
       "eas": {
         "projectId": "b2dafabf-f248-4e73-a563-41cb2068367e"
-      }
+      },
+      "clerkPublishableKey": "pk_live_Y2xlcmsucHlxZGVjay5pbiQ"
     },
     "owner": "hasanraiyan"
   }

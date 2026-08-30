@@ -12,6 +12,7 @@ import {
 import { Feather } from '@expo/vector-icons';
 import { ClerkProvider } from '@clerk/expo';
 import { tokenCache } from '@clerk/expo/token-cache';
+import { clerkPublishableKey } from './src/auth/publishableKey';
 import { mobileAds } from './src/utils/mobileAds';
 import { navigationRef } from './src/utils/navigationRef';
 import * as Backend from './src/api/backend';
@@ -205,8 +206,16 @@ function SearchStack() {
 }
 
 // Publishable key must be passed explicitly rather than read inside the SDK:
-// env vars are not inlined inside node_modules in production builds.
-const clerkPublishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY!;
+// env vars are not inlined inside node_modules in production builds. See
+// src/auth/publishableKey.ts for why it falls back to app.json.
+if (!clerkPublishableKey) {
+  // Loud in dev, and Sentry catches it in production - but the app still
+  // boots below, because everything except Ask AI works signed out.
+  console.error(
+    '[auth] No Clerk publishable key (checked EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY ' +
+      'and app.json expo.extra.clerkPublishableKey). Sign-in will be unavailable.'
+  );
+}
 
 export default Sentry.wrap(function App() {
   return (
