@@ -5,6 +5,7 @@ import * as StoreReview from 'expo-store-review';
 import * as WebBrowser from 'expo-web-browser';
 import { Share } from 'react-native';
 import Constants from 'expo-constants';
+import { useAuth, useUser } from '@clerk/expo';
 import { COLORS, FONTS } from '../theme/colors';
 import { SettingsRow } from '../components/SettingsRow';
 import { rf, verticalScale, useResponsive } from '../utils/responsive';
@@ -22,9 +23,11 @@ const browserOptions = {
   enableBarCollapsing: true,
 };
 
-export const SettingsScreen = () => {
+export const SettingsScreen = ({ navigation }: any) => {
   const insets = useSafeAreaInsets();
   const { readMaxWidth, hPadding } = useResponsive();
+  const { isLoaded: authLoaded, isSignedIn, signOut } = useAuth();
+  const { user } = useUser();
 
   const [volumeScrollOn, setVolumeScrollOn] = useState(true);
   const [clearing, setClearing] = useState(false);
@@ -86,6 +89,13 @@ export const SettingsScreen = () => {
     }
   };
 
+  const handleSignOut = () => {
+    Alert.alert('Sign out?', 'You can keep using everything except Ask AI while signed out.', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Sign out', style: 'destructive', onPress: () => void signOut() },
+    ]);
+  };
+
   const handleRate = async () => {
     try {
       const available = await StoreReview.isAvailableAsync();
@@ -122,6 +132,35 @@ export const SettingsScreen = () => {
       ]}
     >
       <View style={[styles.centerWrapper, { maxWidth: readMaxWidth }]}>
+        {authLoaded && (
+          <>
+            <Text style={styles.sectionHeading}>ACCOUNT</Text>
+            <View style={styles.card}>
+              {isSignedIn ? (
+                <>
+                  <SettingsRow
+                    icon="user"
+                    label={user?.fullName || user?.primaryEmailAddress?.emailAddress || 'Signed in'}
+                    subtitle={
+                      user?.fullName ? user?.primaryEmailAddress?.emailAddress : undefined
+                    }
+                    right={<View />}
+                  />
+                  <SettingsRow icon="log-out" label="Sign out" onPress={handleSignOut} last />
+                </>
+              ) : (
+                <SettingsRow
+                  icon="log-in"
+                  label="Sign in"
+                  subtitle="Only needed for Ask AI - everything else is free without an account"
+                  onPress={() => navigation.navigate('SignIn')}
+                  last
+                />
+              )}
+            </View>
+          </>
+        )}
+
         {Platform.OS === 'android' && (
           <>
             <Text style={styles.sectionHeading}>READING</Text>

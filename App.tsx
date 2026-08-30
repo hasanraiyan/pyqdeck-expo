@@ -10,6 +10,8 @@ import {
   SafeAreaInsetsContext,
 } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
+import { ClerkProvider } from '@clerk/expo';
+import { tokenCache } from '@clerk/expo/token-cache';
 import { mobileAds } from './src/utils/mobileAds';
 import { navigationRef } from './src/utils/navigationRef';
 import * as Backend from './src/api/backend';
@@ -28,6 +30,7 @@ import { QuestionListScreen } from './src/screens/QuestionListScreen';
 import { QuestionDetailScreen } from './src/screens/QuestionDetailScreen';
 import { SearchScreen } from './src/screens/SearchScreen';
 import { SettingsScreen } from './src/screens/SettingsScreen';
+import { SignInScreen } from './src/screens/SignInScreen';
 import { BranchScreen } from './src/screens/BranchScreen';
 import { SemesterSelectScreen } from './src/screens/SemesterSelectScreen';
 import { SyllabusOverviewScreen } from './src/screens/SyllabusOverviewScreen';
@@ -129,6 +132,11 @@ function HomeStack() {
         component={SettingsScreen}
         options={{ title: 'Settings' }}
       />
+      <Stack.Screen
+        name="SignIn"
+        component={SignInScreen}
+        options={{ title: 'Sign in', presentation: 'modal' }}
+      />
     </Stack.Navigator>
   );
 }
@@ -196,11 +204,21 @@ function SearchStack() {
   );
 }
 
+// Publishable key must be passed explicitly rather than read inside the SDK:
+// env vars are not inlined inside node_modules in production builds.
+const clerkPublishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY!;
+
 export default Sentry.wrap(function App() {
   return (
-    <SafeAreaProvider>
-      <AppContent />
-    </SafeAreaProvider>
+    // ClerkProvider renders its children straight away - it does not hold the
+    // tree back while the token cache is read. That is deliberate and load
+    // bearing: every screen except the AI tutor works signed out, so auth must
+    // never sit on the critical path to first paint.
+    <ClerkProvider publishableKey={clerkPublishableKey} tokenCache={tokenCache}>
+      <SafeAreaProvider>
+        <AppContent />
+      </SafeAreaProvider>
+    </ClerkProvider>
   );
 });
 

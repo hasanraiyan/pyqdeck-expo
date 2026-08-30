@@ -71,7 +71,9 @@
           "organization": "pyqdeck"
         }
       ],
-      "@sentry/react-native"
+      "@sentry/react-native",
+      "@clerk/expo",
+      "expo-secure-store"
     ],
     "extra": {
       "eas": {
