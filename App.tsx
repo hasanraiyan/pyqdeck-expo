@@ -32,6 +32,7 @@ import { QuestionDetailScreen } from './src/screens/QuestionDetailScreen';
 import { SearchScreen } from './src/screens/SearchScreen';
 import { SettingsScreen } from './src/screens/SettingsScreen';
 import { SignInScreen } from './src/screens/SignInScreen';
+import { ManageAccountScreen } from './src/screens/ManageAccountScreen';
 import { BranchScreen } from './src/screens/BranchScreen';
 import { SemesterSelectScreen } from './src/screens/SemesterSelectScreen';
 import { SyllabusOverviewScreen } from './src/screens/SyllabusOverviewScreen';
@@ -132,6 +133,13 @@ function HomeStack() {
         name="Settings"
         component={SettingsScreen}
         options={{ title: 'Settings' }}
+      />
+      <Stack.Screen
+        name="ManageAccount"
+        component={ManageAccountScreen}
+        // Header hidden on purpose: UserProfileView brings its own navigation
+        // chrome and gets onHostBack to pop this route.
+        options={{ headerShown: false }}
       />
       <Stack.Screen
         name="SignIn"

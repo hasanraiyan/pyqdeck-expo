@@ -142,9 +142,11 @@ export const SettingsScreen = ({ navigation }: any) => {
                     icon="user"
                     label={user?.fullName || user?.primaryEmailAddress?.emailAddress || 'Signed in'}
                     subtitle={
-                      user?.fullName ? user?.primaryEmailAddress?.emailAddress : undefined
+                      user?.fullName
+                        ? user?.primaryEmailAddress?.emailAddress
+                        : 'Manage your account'
                     }
-                    right={<View />}
+                    onPress={() => navigation.navigate('ManageAccount')}
                   />
                   <SettingsRow icon="log-out" label="Sign out" onPress={handleSignOut} last />
                 </>
