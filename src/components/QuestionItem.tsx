@@ -20,7 +20,6 @@ import Markdown from 'react-native-markdown-display';
 import { QuestionSummary, Solution } from '../types';
 import { getSolution, voteSolution, reportSolution } from '../api';
 import { useRequireAuth } from '../auth/useRequireAuth';
-import { getVoterId } from '../utils/voterId';
 import { getMyVote, setMyVote } from '../utils/votes';
 import { COLORS, FONTS } from '../theme/colors';
 import { Badge, MarksBadge, AskAiBadge, YearBadge } from './Badge';
@@ -202,8 +201,7 @@ export const QuestionItem: React.FC<QuestionItemProps> = React.memo(({
     if (reportReason === 'other' && reportMsg.trim().length < 4) return;
     setReportSubmitting(true);
     try {
-      const voterId = await getVoterId();
-      await reportSolution(subjectId, question.questionId, voterId, reportReason, reportMsg.trim() || undefined);
+      await reportSolution(subjectId, question.questionId, reportReason, reportMsg.trim() || undefined);
       setReported(true);
       setShowReport(false);
       setReportReason(null);
@@ -322,7 +320,7 @@ export const QuestionItem: React.FC<QuestionItemProps> = React.memo(({
                         <Text style={[styles.voteCount, myVote === -1 && styles.voteCountActive]}>{voteCounts.downvotes}</Text>
                       </TouchableOpacity>
                     </View>
-                    <TouchableOpacity style={[styles.reportBtn, reported && { opacity: 0.6 }]} activeOpacity={0.6} onPress={() => setShowReport(true)} disabled={reported}>
+                    <TouchableOpacity style={[styles.reportBtn, reported && { opacity: 0.6 }]} activeOpacity={0.6} onPress={() => guard(() => setShowReport(true), 'report')} disabled={reported}>
                       <Feather name="flag" size={12} color={reported ? COLORS.primary : COLORS.textMuted} />
                       <Text style={[styles.reportText, reported && { color: COLORS.primary }]}>{reported ? 'Reported' : 'Report'}</Text>
                     </TouchableOpacity>

@@ -302,20 +302,26 @@ export const voteSolution = (subjectId: string, questionId: string, value: 1 | -
     { value }
   );
 
+// Requires a signed-in user, same as voting. The server derives the reporter
+// identity from the Clerk session, so no voterId is sent.
 export const reportSolution = (
   subjectId: string,
   questionId: string,
-  voterId: string,
   reason: 'incorrect' | 'incomplete' | 'formatting' | 'other',
   message?: string
 ) =>
-  postApi<{ id: string; status: string }>(
+  postApiAuthed<{ id: string; status: string }>(
     `/subjects/${subjectId}/questions/${encodeURIComponent(questionId)}/solution/report`,
-    { voterId, reason, message }
+    { reason, message }
   );
 
-export const registerPushToken = (token: string, platform: 'ios' | 'android', voterId?: string) =>
-  postApi<{ success: boolean }>('/push-token', { token, platform, voterId });
+// Sent authed so the server can key the token to the account when the user is
+// signed in - that link is what lets a "your report was fixed" push find them,
+// and it now reaches every device they use rather than only the one they
+// reported from. A signed-out device still registers fine (no Authorization
+// header, no identity) and keeps receiving broadcasts.
+export const registerPushToken = (token: string, platform: 'ios' | 'android') =>
+  postApiAuthed<{ success: boolean }>('/push-token', { token, platform });
 
 
 

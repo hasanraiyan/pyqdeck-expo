@@ -1,10 +1,10 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 /**
- * Syllabus progress is deliberately device-local. The app has no accounts, so
- * there is nowhere to sync a checklist to - and a student ticking off topics
- * does not want that gated behind a login. Same reasoning as the vote/report
- * voterId: local, anonymous, and nothing leaves the device.
+ * Syllabus progress is deliberately device-local. Accounts exist now, but only
+ * because voting and reporting need one - a student ticking off topics should
+ * not have to sign in, so this stays local, anonymous, and never leaves the
+ * device.
  */
 
 const DONE_PREFIX = 'syllabus_done_';

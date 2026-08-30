@@ -27,7 +27,13 @@ export const SignInScreen = ({ navigation, route }: any) => {
   // to do. Anything else (Settings -> Sign in) gets no heading at all.
   const reason = route?.params?.reason;
   const heading =
-    reason === 'vote' ? 'Sign in to vote' : reason === 'ai' ? 'Sign in to use Ask AI' : null;
+    reason === 'vote'
+      ? 'Sign in to vote'
+      : reason === 'report'
+        ? 'Sign in to report a solution'
+        : reason === 'ai'
+          ? 'Sign in to use Ask AI'
+          : null;
 
   // AuthView has no onSuccess callback - the documented pattern is to watch
   // auth state and close once the session lands.

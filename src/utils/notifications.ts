@@ -2,7 +2,6 @@ import { isRunningInExpoGo } from 'expo';
 import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 import { registerPushToken } from '../api';
-import { getVoterId } from './voterId';
 import { navigationRef } from './navigationRef';
 
 // Merely importing expo-notifications throws on Android in Expo Go (SDK 53+
@@ -70,8 +69,7 @@ export const registerForPushNotificationsAsync = async () => {
 
   try {
     const { data: token } = await Notifications.getExpoPushTokenAsync({ projectId });
-    const voterId = await getVoterId().catch(() => undefined);
-    await registerPushToken(token, Platform.OS === 'ios' ? 'ios' : 'android', voterId);
+    await registerPushToken(token, Platform.OS === 'ios' ? 'ios' : 'android');
   } catch (e) {
     console.error('Failed to register push token', e);
   }

@@ -38,7 +38,6 @@ import { buildQuestionUrl } from '../utils/links';
 import { questionMarkdownStyles, solutionMarkdownStyles, markdownRules } from '../theme/markdownStyles';
 import { recordQuestionOpenedAndMaybeShowInterstitial } from '../utils/ads';
 import { AdBanner } from '../components/AdBanner';
-import { getVoterId } from '../utils/voterId';
 import { getMyVote, setMyVote } from '../utils/votes';
 import { useRequireAuth } from '../auth/useRequireAuth';
 
@@ -311,8 +310,7 @@ export const QuestionDetailScreen = () => {
     if (reportReason === 'other' && reportMsg.trim().length < 4) return;
     setReportSubmitting(true);
     try {
-      const voterId = await getVoterId();
-      await reportSolution(subjectId, questionId, voterId, reportReason, reportMsg.trim() || undefined);
+      await reportSolution(subjectId, questionId, reportReason, reportMsg.trim() || undefined);
       setReported(true);
       setShowReport(false);
       setReportReason(null);
@@ -507,7 +505,7 @@ export const QuestionDetailScreen = () => {
                     <TouchableOpacity
                       style={[styles.reportBtn, reported && { opacity: 0.6 }]}
                       activeOpacity={0.6}
-                      onPress={() => setShowReport(true)}
+                      onPress={() => guard(() => setShowReport(true), 'report')}
                       disabled={reported}
                     >
                       <Feather name="flag" size={12} color={reported ? COLORS.primary : COLORS.textMuted} />

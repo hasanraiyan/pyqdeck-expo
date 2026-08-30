@@ -31,7 +31,7 @@ export const useRequireAuth = () => {
   }, [isLoaded, isSignedIn]);
 
   const guard = useCallback(
-    (run: () => void) => {
+    (run: () => void, reason: 'vote' | 'report' | 'ai' = 'vote') => {
       // Clerk not resolved yet - treat as signed out rather than blocking on
       // it. A cold start still reading the token cache would otherwise make
       // the button feel dead for a few hundred ms.
@@ -40,7 +40,7 @@ export const useRequireAuth = () => {
         return;
       }
       setPendingAction(run);
-      navigation.navigate('SignIn', { reason: 'vote' });
+      navigation.navigate('SignIn', { reason });
     },
     [isLoaded, isSignedIn, navigation]
   );

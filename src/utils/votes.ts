@@ -1,8 +1,10 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// Deliberately NOT `pyq_`-prefixed, same reasoning as voterId.ts - a cache
-// clear shouldn't make an already-cast vote appear unhighlighted while the
-// server still remembers it.
+// Deliberately NOT `pyq_`-prefixed: a cache clear shouldn't make an
+// already-cast vote appear unhighlighted while the server still remembers it.
+// This is only a local mirror of the highlight state - the vote itself now
+// lives against the user's account, so signing in elsewhere is the source of
+// truth, not this.
 const MY_VOTES_KEY = 'my_solution_votes';
 
 type VoteMap = Record<string, 1 | -1>;
