@@ -152,7 +152,6 @@ export const SettingsScreen = ({ navigation }: any) => {
                 <SettingsRow
                   icon="log-in"
                   label="Sign in"
-                  subtitle="Only needed for Ask AI - everything else is free without an account"
                   onPress={() => navigation.navigate('SignIn')}
                   last
                 />
