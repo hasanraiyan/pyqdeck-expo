@@ -61,6 +61,9 @@ export interface SyllabusSubject {
   modules: SyllabusModule[];
   semester?: number;
   branch?: Branch;
+  /** All branches this subject belongs to (shared common subjects have many) - kept internal, not shown to students. */
+  branches?: Branch[];
+  branchIds?: string[];
 }
 
 export interface SemesterEntry {
