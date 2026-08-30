@@ -136,7 +136,9 @@ function HomeStack() {
       <Stack.Screen
         name="SignIn"
         component={SignInScreen}
-        options={{ title: 'Sign in', presentation: 'modal' }}
+        // Not just "Sign in": AuthView runs Clerk's combined signInOrUp flow,
+        // so an unrecognised email creates the account on this same screen.
+        options={{ title: 'Sign in or sign up', presentation: 'modal' }}
       />
     </Stack.Navigator>
   );
