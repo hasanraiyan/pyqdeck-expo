@@ -42,7 +42,10 @@ export const SignInScreen = ({ navigation, route }: any) => {
   }, [isLoaded, isSignedIn, navigation]);
 
   return (
-    <View style={[styles.container, { paddingBottom: insets.bottom }]}>
+    // No React Navigation header on this route, so the status-bar inset has to
+    // be paid here or the heading sits underneath the clock. AuthView fills the
+    // rest and brings its own close button, which is the only dismiss control.
+    <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
       {heading && (
         <View style={styles.notice}>
           <Text style={styles.noticeTitle}>{heading}</Text>

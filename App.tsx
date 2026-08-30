@@ -55,6 +55,7 @@ Sentry.init({
 });
 
 const Stack = createNativeStackNavigator();
+const RootStack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
 // Mirrors pyqdeck-frontend's /[semester]/[subject]/[year]/[questionId] route
@@ -65,9 +66,15 @@ const linking: any = {
   prefixes: ['https://pyqdeck.in', 'https://www.pyqdeck.in'],
   config: {
     screens: {
-      Browse: {
+      // Nested under Tabs now that a root stack sits above the tab navigator,
+      // so the shipped Android App Links keep resolving.
+      Tabs: {
         screens: {
-          QuestionDetail: ':semesterId/:subjectId/:year/:questionId',
+          Browse: {
+            screens: {
+              QuestionDetail: ':semesterId/:subjectId/:year/:questionId',
+            },
+          },
         },
       },
     },
@@ -133,20 +140,6 @@ function HomeStack() {
         name="Settings"
         component={SettingsScreen}
         options={{ title: 'Settings' }}
-      />
-      <Stack.Screen
-        name="ManageAccount"
-        component={ManageAccountScreen}
-        // Header hidden on purpose: UserProfileView brings its own navigation
-        // chrome and gets onHostBack to pop this route.
-        options={{ headerShown: false }}
-      />
-      <Stack.Screen
-        name="SignIn"
-        component={SignInScreen}
-        // Not just "Sign in": AuthView runs Clerk's combined signInOrUp flow,
-        // so an unrecognised email creates the account on this same screen.
-        options={{ title: 'Sign in or sign up', presentation: 'modal' }}
       />
     </Stack.Navigator>
   );
@@ -272,14 +265,10 @@ function AppContent() {
     };
   }, []);
 
-  const tree = (
-    <NavigationContainer
-      ref={navigationRef}
-      linking={linking}
-      onReady={handleColdStartNotification}
-    >
-      <StatusBar style="dark" />
-      <Tab.Navigator
+  // The tab navigator, wrapped by the root stack below so the auth screens can
+  // sit above it rather than inside a tab.
+  const tabs = (
+    <Tab.Navigator
         screenOptions={{
           headerShown: false,
           tabBarStyle: {
@@ -326,7 +315,35 @@ function AppContent() {
             ),
           }}
         />
-      </Tab.Navigator>
+    </Tab.Navigator>
+  );
+
+  const tree = (
+    <NavigationContainer
+      ref={navigationRef}
+      linking={linking}
+      onReady={handleColdStartNotification}
+    >
+      <StatusBar style="dark" />
+      {/* Auth screens live on a root stack ABOVE the tab navigator, not inside
+          a tab's stack. Two reasons: they cover the tab bar and carry no header
+          of ours, so Clerk's own chrome (its close button, its titles) is the
+          only chrome on screen; and guard() can reach them from any tab. While
+          SignIn lived in HomeStack, voting from a Search-tab question had to
+          bounce through the Browse tab to find the route. */}
+      <RootStack.Navigator screenOptions={{ headerShown: false }}>
+        <RootStack.Screen name="Tabs">{() => tabs}</RootStack.Screen>
+        <RootStack.Screen
+          name="SignIn"
+          component={SignInScreen}
+          options={{ presentation: 'fullScreenModal' }}
+        />
+        <RootStack.Screen
+          name="ManageAccount"
+          component={ManageAccountScreen}
+          options={{ presentation: 'fullScreenModal' }}
+        />
+      </RootStack.Navigator>
     </NavigationContainer>
   );
 
