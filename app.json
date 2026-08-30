@@ -72,7 +72,12 @@
         }
       ],
       "@sentry/react-native",
-      "@clerk/expo",
+      [
+        "@clerk/expo",
+        {
+          "theme": "./clerk-theme.json"
+        }
+      ],
       "expo-secure-store"
     ],
     "extra": {
