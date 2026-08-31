@@ -135,7 +135,7 @@ const SUBSCRIPTS: Record<string, string> = {
   'v': 'ᵥ', 'x': 'ₓ',
 };
 
-const formatMathExpression = (expr: string): string => {
+export const formatMathExpression = (expr: string): string => {
   return expr
     // Common LaTeX symbols
     .replace(/\\theta/gi, 'θ')

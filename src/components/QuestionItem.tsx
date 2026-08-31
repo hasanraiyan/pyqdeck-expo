@@ -24,6 +24,7 @@ import { getMyVote, setMyVote } from '../utils/votes';
 import { COLORS, FONTS } from '../theme/colors';
 import { Badge, MarksBadge, AskAiBadge, YearBadge } from './Badge';
 import { SolutionSkeleton } from './Skeleton';
+import { InlineMathText } from './InlineMathText';
 import { cleanMarkdown } from '../utils/responsive';
 import { buildQuestionUrl } from '../utils/links';
 import { questionMarkdownStyles, solutionMarkdownStyles, markdownRules } from '../theme/markdownStyles';
@@ -238,7 +239,9 @@ export const QuestionItem: React.FC<QuestionItemProps> = React.memo(({
             {question.qNumber ? (
               <Text style={styles.qNumber}>{question.qNumber}. </Text>
             ) : null}
-            {question.textPreview || question.text}
+            {/* Math-aware preview: textPreview may carry $…$ / \(…\) LaTeX that a
+                plain Text would show as raw source. */}
+            <InlineMathText content={question.textPreview || question.text} />
           </Text>
         </View>
         <View style={styles.headerRight}>
