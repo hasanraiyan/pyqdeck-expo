@@ -1,4 +1,4 @@
-﻿name: Build Android Release
+name: Build Android Release
 
 on:
   workflow_dispatch:
@@ -42,7 +42,7 @@ jobs:
           java-version: '17'
 
       - name: 📱 Setup Android SDK
-        uses: android-actions/setup-android@v3
+        uses: android-actions/setup-android@v4
 
       - name: 🔢 Bump Android versionCode (release builds only)
         id: version
