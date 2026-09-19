@@ -38,6 +38,12 @@ const performUpdateCheck = async (): Promise<UpdateCheckResult> => {
     return { status: 'unsupported' };
   }
 
+  // Play Core In-App Updates requires the app to be installed from Google Play.
+  // In development, this always throws ERROR_APP_NOT_OWNED (-10).
+  if (__DEV__) {
+    return { status: 'no-update' };
+  }
+
   try {
     const inAppUpdates = new SpInAppUpdates(false);
     const currentVersion = Constants.expoConfig?.version;
@@ -50,7 +56,16 @@ const performUpdateCheck = async (): Promise<UpdateCheckResult> => {
 
     await inAppUpdates.startUpdate({ updateType: IAUUpdateKind.FLEXIBLE });
     return { status: 'update-started' };
-  } catch (e) {
+  } catch (e: any) {
+    const errMsg = e?.message || String(e);
+    if (
+      errMsg.includes('ERROR_APP_NOT_OWNED') ||
+      errMsg.includes('-10') ||
+      errMsg.includes('not owned by any user')
+    ) {
+      // Sideloaded or non-Play install (e.g. adb or local test builds)
+      return { status: 'unsupported' };
+    }
     console.error('In-app update check failed', e);
     return { status: 'failed' };
   }
