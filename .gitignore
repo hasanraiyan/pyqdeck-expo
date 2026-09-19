@@ -50,3 +50,7 @@ google-services.json
 builds/
 
 .env.local
+
+# goldie store assets (generated) and raw screenshots dropped in for import
+goldie/out/
+images/
