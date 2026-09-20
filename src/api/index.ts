@@ -328,32 +328,9 @@ export const registerPushToken = (token: string, platform: 'ios' | 'android') =>
 // -------------------------------------------------------------
 // SYLLABUS
 // -------------------------------------------------------------
-// Same cache-first shape as the archive endpoints above: serve a fresh cache
-// without touching the network, otherwise fetch and re-cache, and on any
-// failure fall back to whatever is cached however old it is. A student on a
-// train with no signal still gets their syllabus.
-
-/**
- * Whether a cached value is worth serving without a network check. An empty
- * array is truthy but is NOT content: it usually means the data was typed into
- * the database after the last fetch, and serving it as fresh would hide the new
- * rows for the whole TTL. Wrapper objects (branch-semesters, a semester's
- * subjects) get the same rule - an empty list inside is treated as "nothing
- * here yet". Such values still work as an offline fallback in the catch below,
- * just never as a reason to skip the network.
- */
-const hasContent = (value: unknown): boolean => {
-  if (value == null) return false;
-  if (Array.isArray(value)) return value.length > 0;
-  if (typeof value === 'object') {
-    const any = value as Record<string, unknown>;
-    if (Array.isArray(any.semesters)) return any.semesters.length > 0;
-    if (Array.isArray(any.subjects)) return any.subjects.length > 0;
-    if (Array.isArray(any.modules)) return any.modules.length > 0;
-    return true;
-  }
-  return true;
-};
+// Network-first (see syllabusRead below): always try live, AsyncStorage is
+// only the offline fallback. A student on a train with no signal still gets
+// whatever was last fetched, however old.
 
 const fetchAndCache = async <T,>(key: string, path: string): Promise<T> => {
   const live = await fetchApi<T>(path);
@@ -361,61 +338,45 @@ const fetchAndCache = async <T,>(key: string, path: string): Promise<T> => {
   return live;
 };
 
-const syllabusRead = async <T,>(
-  key: string,
-  path: string,
-  forceRefresh = false
-): Promise<T> => {
-  // Dev builds always hit the network: an admin editing syllabus content
-  // while testing the app should see it land without a manual pull-to-
-  // refresh fighting the 24h cache below. Production keeps the cache - that
-  // is what makes the syllabus feel instant for a real student.
-  if (__DEV__) forceRefresh = true;
-
-  const cached = await SylCache.read<T>(key);
-
-  // A cache entry is only a reason to skip the network when it actually holds
-  // content - see hasContent above.
-  if (cached != null && hasContent(cached) && !forceRefresh) {
-    if (await SylCache.isFresh(key)) return cached;
-    // Stale but present: show it now, refresh behind it. A screen a day old is
-    // better than a spinner for a round-trip, and the background fetch fills
-    // the cache for next time. This is what makes the syllabus feel instant
-    // once a branch has been opened at all.
-    void fetchAndCache(key, path).catch(() => {});
-    return cached;
-  }
-
+// Network-first: the syllabus payload is lean enough (notes are fetched
+// separately, on demand - see getTopicNotes below) that there's no real cost
+// to always hitting the network, and it means an admin's edit shows up for
+// every install - a real student's included, not just a __DEV__ bundle -
+// without waiting out a cache TTL. AsyncStorage is kept purely as an offline
+// fallback: a student with no signal still gets whatever was last fetched.
+const syllabusRead = async <T,>(key: string, path: string): Promise<T> => {
   try {
     return await fetchAndCache(key, path);
   } catch (e) {
+    const cached = await SylCache.read<T>(key);
     if (cached != null) return cached;
     throw e;
   }
 };
 
-export const getBranches = (forceRefresh = false) =>
-  syllabusRead<Branch[]>(SylCache.branchesKey(), '/syllabus/branches', forceRefresh);
+// forceRefresh is kept on these signatures for callers (e.g. pull-to-refresh)
+// but is a no-op now that syllabusRead is always network-first - it's just
+// not worth touching every call site for a parameter that no longer changes
+// behavior.
+export const getBranches = (_forceRefresh = false) =>
+  syllabusRead<Branch[]>(SylCache.branchesKey(), '/syllabus/branches');
 
-export const getBranchSemesters = (branch: string, forceRefresh = false) =>
+export const getBranchSemesters = (branch: string, _forceRefresh = false) =>
   syllabusRead<BranchSemesters>(
     SylCache.semestersKey(branch),
-    `/syllabus/branches/${encodeURIComponent(branch)}/semesters`,
-    forceRefresh
+    `/syllabus/branches/${encodeURIComponent(branch)}/semesters`
   );
 
-export const getBranchSemester = (branch: string, semester: number, forceRefresh = false) =>
+export const getBranchSemester = (branch: string, semester: number, _forceRefresh = false) =>
   syllabusRead<BranchSemester>(
     SylCache.semesterKey(branch, semester),
-    `/syllabus/branches/${encodeURIComponent(branch)}/semesters/${semester}`,
-    forceRefresh
+    `/syllabus/branches/${encodeURIComponent(branch)}/semesters/${semester}`
   );
 
-export const getSyllabusSubject = (subject: string, forceRefresh = false) =>
+export const getSyllabusSubject = (subject: string, _forceRefresh = false) =>
   syllabusRead<SyllabusSubject>(
     SylCache.subjectKey(subject),
-    `/syllabus/subjects/${encodeURIComponent(subject)}`,
-    forceRefresh
+    `/syllabus/subjects/${encodeURIComponent(subject)}`
   );
 
 // Deliberately not part of getSyllabusSubject's payload - a subject screen
