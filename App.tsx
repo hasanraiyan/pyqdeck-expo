@@ -119,7 +119,9 @@ function HomeStack() {
       <Stack.Screen
         name="SubjectDetail"
         component={SubjectDetailScreen}
-        options={{ title: '' }}
+        options={({ route }: any) => ({
+          title: route.params?.subjectName || 'Subject',
+        })}
       />
       <Stack.Screen
         name="QuestionList"
@@ -183,7 +185,9 @@ function SearchStack() {
       <Stack.Screen
         name="SubjectDetail"
         component={SubjectDetailScreen}
-        options={{ title: '' }}
+        options={({ route }: any) => ({
+          title: route.params?.subjectName || 'Subject',
+        })}
       />
       <Stack.Screen
         name="QuestionList"

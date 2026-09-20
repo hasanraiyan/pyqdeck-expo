@@ -1,6 +1,17 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, Switch, Alert, Platform, StyleSheet } from 'react-native';
+import {
+  View,
+  Text,
+  ScrollView,
+  Switch,
+  Alert,
+  Platform,
+  StyleSheet,
+  TouchableOpacity,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Feather } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
 import * as StoreReview from 'expo-store-review';
 import * as WebBrowser from 'expo-web-browser';
 import { Share } from 'react-native';
@@ -49,6 +60,10 @@ export const SettingsScreen = ({ navigation }: any) => {
   }, []);
 
   const toggleOldUi = async (value: boolean) => {
+    if (value === oldUiOn) return;
+    try {
+      await Haptics.selectionAsync();
+    } catch {}
     setOldUiOn(value);
     await setOldUiEnabled(value);
   };
@@ -175,39 +190,82 @@ export const SettingsScreen = ({ navigation }: any) => {
           </>
         )}
 
-        <Text style={styles.sectionHeading}>DISPLAY & READING</Text>
-        <View style={styles.card}>
-          <SettingsRow
-            icon="layout"
-            label="Enable classic / old UI"
-            subtitle="Use classic card skeleton layout for question lists"
-            last={Platform.OS !== 'android'}
-            right={
-              <Switch
-                value={oldUiOn}
-                onValueChange={toggleOldUi}
-                trackColor={{ true: COLORS.primary, false: COLORS.border }}
-                thumbColor={COLORS.card}
-              />
-            }
-          />
-          {Platform.OS === 'android' && (
-            <SettingsRow
-              icon="volume-2"
-              label="Scroll with volume buttons"
-              subtitle="Move between questions with hardware volume keys"
-              last
-              right={
-                <Switch
-                  value={volumeScrollOn}
-                  onValueChange={toggleVolumeScroll}
-                  trackColor={{ true: COLORS.primary, false: COLORS.border }}
-                  thumbColor={COLORS.card}
+        <Text style={styles.sectionHeading}>QUESTION READING LAYOUT</Text>
+        <View style={styles.modeContainer}>
+          {/* Accordion Mode Card */}
+          <TouchableOpacity
+            style={[styles.modeCard, !oldUiOn && styles.modeCardActive]}
+            activeOpacity={0.75}
+            onPress={() => toggleOldUi(false)}
+          >
+            <View style={styles.modeCardHeader}>
+              <View style={[styles.modeIconBox, !oldUiOn && styles.modeIconBoxActive]}>
+                <Feather
+                  name="list"
+                  size={15}
+                  color={!oldUiOn ? COLORS.primary : COLORS.textMuted}
                 />
-              }
-            />
-          )}
+              </View>
+              <View style={[styles.radioCircle, !oldUiOn && styles.radioCircleActive]}>
+                {!oldUiOn && <View style={styles.radioDot} />}
+              </View>
+            </View>
+            <Text style={[styles.modeTitle, !oldUiOn && styles.modeTitleActive]}>
+              Accordion
+            </Text>
+            <Text style={styles.modeSubtitle}>
+              Tap to expand and view questions
+            </Text>
+          </TouchableOpacity>
+
+          {/* Card Mode Card */}
+          <TouchableOpacity
+            style={[styles.modeCard, oldUiOn && styles.modeCardActive]}
+            activeOpacity={0.75}
+            onPress={() => toggleOldUi(true)}
+          >
+            <View style={styles.modeCardHeader}>
+              <View style={[styles.modeIconBox, oldUiOn && styles.modeIconBoxActive]}>
+                <Feather
+                  name="layout"
+                  size={15}
+                  color={oldUiOn ? COLORS.primary : COLORS.textMuted}
+                />
+              </View>
+              <View style={[styles.radioCircle, oldUiOn && styles.radioCircleActive]}>
+                {oldUiOn && <View style={styles.radioDot} />}
+              </View>
+            </View>
+            <Text style={[styles.modeTitle, oldUiOn && styles.modeTitleActive]}>
+              Cards
+            </Text>
+            <Text style={styles.modeSubtitle}>
+              Always show questions as open cards
+            </Text>
+          </TouchableOpacity>
         </View>
+
+        {Platform.OS === 'android' && (
+          <>
+            <Text style={styles.sectionHeading}>CONTROLS</Text>
+            <View style={styles.card}>
+              <SettingsRow
+                icon="volume-2"
+                label="Scroll with volume buttons"
+                subtitle="Move between questions with hardware volume keys"
+                last
+                right={
+                  <Switch
+                    value={volumeScrollOn}
+                    onValueChange={toggleVolumeScroll}
+                    trackColor={{ true: COLORS.primary, false: COLORS.border }}
+                    thumbColor={COLORS.card}
+                  />
+                }
+              />
+            </View>
+          </>
+        )}
 
         <Text style={styles.sectionHeading}>DATA</Text>
         <View style={styles.card}>
@@ -291,5 +349,75 @@ const styles = StyleSheet.create({
     color: COLORS.textSubtle,
     textAlign: 'center',
     marginTop: 24,
+  },
+  modeContainer: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 4,
+  },
+  modeCard: {
+    flex: 1,
+    backgroundColor: COLORS.card,
+    borderRadius: 8,
+    borderWidth: 1.5,
+    borderColor: COLORS.border,
+    padding: 13,
+  },
+  modeCardActive: {
+    borderColor: COLORS.primary,
+    backgroundColor: '#ffffff',
+  },
+  modeCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  modeIconBox: {
+    width: 30,
+    height: 30,
+    borderRadius: 6,
+    backgroundColor: COLORS.cardSecondary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: COLORS.borderLight,
+  },
+  modeIconBoxActive: {
+    backgroundColor: COLORS.primaryLight,
+    borderColor: COLORS.primaryBorder,
+  },
+  radioCircle: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    borderWidth: 1.5,
+    borderColor: COLORS.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  radioCircleActive: {
+    borderColor: COLORS.primary,
+  },
+  radioDot: {
+    width: 9,
+    height: 9,
+    borderRadius: 4.5,
+    backgroundColor: COLORS.primary,
+  },
+  modeTitle: {
+    fontFamily: FONTS.serif,
+    fontSize: rf(13.5),
+    fontWeight: '700',
+    color: COLORS.text,
+    marginBottom: 4,
+  },
+  modeTitleActive: {
+    color: COLORS.primary,
+  },
+  modeSubtitle: {
+    fontSize: rf(10.5),
+    color: COLORS.textMuted,
+    lineHeight: rf(14.5),
   },
 });
