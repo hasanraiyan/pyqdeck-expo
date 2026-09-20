@@ -37,6 +37,7 @@ import { BranchScreen } from './src/screens/BranchScreen';
 import { SemesterSelectScreen } from './src/screens/SemesterSelectScreen';
 import { SyllabusOverviewScreen } from './src/screens/SyllabusOverviewScreen';
 import { SubjectSyllabusScreen } from './src/screens/SubjectSyllabusScreen';
+import { TopicNotesScreen } from './src/screens/TopicNotesScreen';
 import { SyllabusTabIcon } from './src/components/SyllabusTabIcon';
 import { checkForStoreUpdate } from './src/utils/appUpdate';
 import { maybeRequestReview } from './src/utils/appReview';
@@ -170,6 +171,11 @@ function SyllabusStack() {
         name="SubjectSyllabus"
         component={SubjectSyllabusScreen}
         options={({ route }: any) => ({ title: route.params?.subjectName || 'Subject' })}
+      />
+      <Stack.Screen
+        name="TopicNotes"
+        component={TopicNotesScreen}
+        options={({ route }: any) => ({ title: route.params?.topic?.title || 'Notes' })}
       />
     </Stack.Navigator>
   );

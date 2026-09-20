@@ -5,24 +5,22 @@ import {
   ScrollView,
   TouchableOpacity,
   StyleSheet,
-  Linking,
   LayoutAnimation,
   Platform,
   UIManager,
   RefreshControl,
+  ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useRoute } from '@react-navigation/native';
+import { useRoute, useNavigation } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import * as WebBrowser from 'expo-web-browser';
 import { COLORS, FONTS } from '../theme/colors';
 import { getSyllabusSubject } from '../api';
 import { SyllabusModule, SyllabusSubject, Topic, topicCountOf } from '../types/syllabus';
 import { getDoneTopics, saveDoneTopics } from '../db/syllabusProgress';
-import { AskAiBadge, DoneStamp } from '../components/Badge';
+import { DoneStamp } from '../components/Badge';
 import { ScreenError, ScreenEmpty } from '../components/ScreenState';
-import { SubjectSkeleton } from '../components/Skeletons';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -35,15 +33,17 @@ const topicKey = (moduleId: string, topicId: string) => `${moduleId}:${topicId}`
  * A subject's syllabus: modules collapse and expand, topics sit inside them.
  *
  * A topic is one line: the tick and title take the left as a single large hit
- * target, and Ask AI sits at the right in the app's hand-drawn AskAiBadge - the
- * same mark the question screen uses, which is what students already read as
- * "ask". Long titles wrap and the badge stays centred against them.
+ * target, and a notes icon sits at the right - tapping it opens
+ * TopicNotesScreen, the topic's markdown+LaTeX study writeup (with an
+ * Ask AI fallback for topics that don't have one yet). Long titles wrap and
+ * the icon stays centred against them.
  *
  * Fetched whole via /syllabus/subjects/:slug, through the read-through cache.
  */
 export const SubjectSyllabusScreen = () => {
   const insets = useSafeAreaInsets();
   const route = useRoute<any>();
+  const navigation = useNavigation<any>();
   const { semester = 5, subjectId } = route.params ?? {};
 
   const [subject, setSubject] = useState<SyllabusSubject | null>(null);
@@ -115,29 +115,22 @@ export const SubjectSyllabusScreen = () => {
     [subject]
   );
 
-  const askAi = useCallback(
-    async (topic: Topic) => {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-      const prompt = `Explain "${topic.title}" from the ${subject?.name ?? ''} syllabus for a B.Tech semester ${semester} exam, with the key points an examiner looks for.`;
-      const url = `https://hasanraiyan.me/coursify?search_ai=${encodeURIComponent(prompt)}&send=true`;
-      try {
-        await WebBrowser.openBrowserAsync(url, {
-          toolbarColor: COLORS.card,
-          controlsColor: COLORS.primary,
-          secondaryToolbarColor: COLORS.background,
-          showTitle: true,
-          enableBarCollapsing: true,
-        });
-      } catch {
-        Linking.openURL(url).catch(() => {});
-      }
+  const openTopicNotes = useCallback(
+    (topic: Topic) => {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      navigation.navigate('TopicNotes', {
+        topic,
+        subjectId,
+        subjectName: subject?.name,
+        semester,
+      });
     },
-    [subject, semester]
+    [navigation, subject, subjectId, semester]
   );
 
   if (!subjectId) {
     return (
-      <View style={[styles.container, { paddingTop: insets.top + 16 }]}>
+      <View style={styles.centerContainer}>
         <ScreenEmpty message="No subject selected." />
       </View>
     );
@@ -145,11 +138,11 @@ export const SubjectSyllabusScreen = () => {
 
   if (!subject) {
     return (
-      <View style={[styles.container, { paddingTop: insets.top + 16 }]}>
+      <View style={styles.centerContainer}>
         {error ? (
           <ScreenError message={error} onRetry={() => load(true)} />
         ) : (
-          <SubjectSkeleton />
+          <ActivityIndicator size="large" color={COLORS.primary} />
         )}
       </View>
     );
@@ -212,12 +205,12 @@ export const SubjectSyllabusScreen = () => {
                 </TouchableOpacity>
 
                 <TouchableOpacity
-                  style={[styles.askBtn, isDone && styles.askBtnDone]}
-                  onPress={() => askAi(t)}
+                  style={[styles.notesBtn, isDone && styles.notesBtnDone]}
+                  onPress={() => openTopicNotes(t)}
                   activeOpacity={0.7}
-                  accessibilityLabel={`Ask AI about ${t.title}`}
+                  accessibilityLabel={`Open notes for ${t.title}`}
                 >
-                  <AskAiBadge />
+                  <Feather name="file-text" size={17} color={COLORS.primary} />
                 </TouchableOpacity>
               </View>
             );
@@ -273,6 +266,12 @@ export const SubjectSyllabusScreen = () => {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
+  centerContainer: {
+    flex: 1,
+    backgroundColor: COLORS.background,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   head: {
     paddingHorizontal: 16,
     paddingTop: 16,
@@ -355,12 +354,8 @@ const styles = StyleSheet.create({
     paddingRight: 8,
     paddingVertical: 11,
   },
-  // AskAiBadge draws its oval inset ~4px inside its own 76px box, so the box
-  // sits slightly wider than the ink. The negative right margin pulls that
-  // dead space back so the drawn line, not the box, lines up with the row's
-  // right edge.
-  askBtn: { marginRight: -4 },
-  askBtnDone: { opacity: 0.4 },
+  notesBtn: { padding: 8, marginRight: -8 },
+  notesBtnDone: { opacity: 0.4 },
   bubble: {
     width: 20,
     height: 20,

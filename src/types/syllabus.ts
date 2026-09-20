@@ -22,6 +22,8 @@ export interface Topic {
   title: string;
   /** Optional per-topic override for the Ask AI prompt. */
   prompt?: string;
+  /** Markdown (LaTeX allowed) study notes for this topic, if an admin wrote any. */
+  notes?: string;
 }
 
 export interface SyllabusModule {

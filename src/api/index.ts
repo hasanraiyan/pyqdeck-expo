@@ -411,3 +411,15 @@ export const getSyllabusSubject = (subject: string, forceRefresh = false) =>
     `/syllabus/subjects/${encodeURIComponent(subject)}`,
     forceRefresh
   );
+
+// Deliberately not part of getSyllabusSubject's payload - a subject screen
+// renders every topic in the tree at once, so bundling every topic's notes
+// into that one fetch would make it slow for a subject whose notes most
+// students never open. Fetched only when a topic's notes screen is opened,
+// and NOT cached (unlike the rest of the syllabus) - an admin can revise a
+// topic's notes at any time and a student should never be stuck reading a
+// stale AsyncStorage copy.
+export const getTopicNotes = (subject: string, topicId: string) =>
+  fetchApi<{ id: string; title: string; notes: string }>(
+    `/syllabus/subjects/${encodeURIComponent(subject)}/topics/${encodeURIComponent(topicId)}/notes`
+  );

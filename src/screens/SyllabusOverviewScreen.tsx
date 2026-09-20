@@ -9,6 +9,7 @@ import {
   Platform,
   UIManager,
   RefreshControl,
+  ActivityIndicator,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -20,7 +21,6 @@ import { BranchSemester, SyllabusSubjectSummary } from '../types/syllabus';
 import { getDoneCounts } from '../db/syllabusProgress';
 import { recordContentOpenedAndMaybeShowInterstitial } from '../utils/ads';
 import { ScreenError, ScreenEmpty } from '../components/ScreenState';
-import { SemesterTableSkeleton } from '../components/Skeletons';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -95,14 +95,11 @@ export const SyllabusOverviewScreen = () => {
 
   if (!data) {
     return (
-      <View style={[styles.container, { paddingTop: insets.top + 16 }]}>
-        <View style={styles.head}>
-          <Text style={styles.title}>Semester {semesterNumber} syllabus</Text>
-        </View>
+      <View style={styles.centerContainer}>
         {error ? (
           <ScreenError message={error} onRetry={() => load(true)} />
         ) : (
-          <SemesterTableSkeleton />
+          <ActivityIndicator size="large" color={COLORS.primary} />
         )}
       </View>
     );
@@ -280,6 +277,12 @@ export const SyllabusOverviewScreen = () => {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
+  centerContainer: {
+    flex: 1,
+    backgroundColor: COLORS.background,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   head: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 16 },
   kicker: {
     fontFamily: FONTS.mono,
