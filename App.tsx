@@ -90,6 +90,7 @@ const commonScreenOptions = {
     fontWeight: '600' as const,
   },
   headerShadowVisible: false,
+  headerBackTitleVisible: false,
   contentStyle: {
     backgroundColor: COLORS.background,
   },
@@ -118,9 +119,7 @@ function HomeStack() {
       <Stack.Screen
         name="SubjectDetail"
         component={SubjectDetailScreen}
-        options={({ route }: any) => ({
-          title: route.params?.subjectName || 'Subject',
-        })}
+        options={{ title: '' }}
       />
       <Stack.Screen
         name="QuestionList"
@@ -184,9 +183,7 @@ function SearchStack() {
       <Stack.Screen
         name="SubjectDetail"
         component={SubjectDetailScreen}
-        options={({ route }: any) => ({
-          title: route.params?.subjectName || 'Subject',
-        })}
+        options={{ title: '' }}
       />
       <Stack.Screen
         name="QuestionList"

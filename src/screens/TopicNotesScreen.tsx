@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, ActivityIndicator, TouchableOpacity, Linking } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Linking } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
@@ -15,6 +15,7 @@ import { solutionMarkdownStyles, markdownRules } from '../theme/markdownStyles';
 import { ScreenEmpty } from '../components/ScreenState';
 import { AdBanner } from '../components/AdBanner';
 import { PrevNextNav } from '../components/PrevNextNav';
+import { WaveLoader } from '../components/WaveLoader';
 
 /** Same namespacing as SubjectSyllabusScreen's topicKey - must stay identical, the two screens read/write the same AsyncStorage key. */
 const topicKey = (moduleId: string, topicId: string) => `${moduleId}:${topicId}`;
@@ -166,15 +167,18 @@ export const TopicNotesScreen = () => {
 
   return (
     <View style={styles.container}>
+      {/* Wave Loader positioned just below the navigation header */}
+      {loading && (
+        <View style={styles.topLoaderBar}>
+          <WaveLoader color={COLORS.primary} />
+        </View>
+      )}
+
       <ScrollView
         ref={scrollRef}
         contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 32 }]}
       >
-        {loading ? (
-          <View style={styles.loading}>
-            <ActivityIndicator size="large" color={COLORS.primary} />
-          </View>
-        ) : notes ? (
+        {loading ? null : notes ? (
           <View style={styles.notesBody}>
             <Markdown style={solutionMarkdownStyles} rules={markdownRules}>
               {cleanMarkdown(notes)}
@@ -242,11 +246,13 @@ const styles = StyleSheet.create({
   scroll: { padding: 16 },
   notesBody: { paddingBottom: 8 },
   navSection: { marginTop: 18 },
-  loading: {
+  topLoaderBar: {
+    paddingVertical: 2,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderColor: COLORS.borderLight,
+    backgroundColor: COLORS.background,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 24,
-    paddingVertical: 80,
   },
   empty: {
     alignItems: 'center',
