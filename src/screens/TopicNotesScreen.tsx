@@ -4,7 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRoute } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
 import Markdown from 'react-native-markdown-display';
-import { COLORS, FONTS } from '../theme/colors';
+import { COLORS } from '../theme/colors';
 import { Topic } from '../types/syllabus';
 import { getTopicNotes } from '../api';
 import { cleanMarkdown } from '../utils/responsive';
@@ -26,11 +26,9 @@ import { ScreenEmpty } from '../components/ScreenState';
 export const TopicNotesScreen = () => {
   const insets = useSafeAreaInsets();
   const route = useRoute<any>();
-  const { topic, subjectId, subjectName } = (route.params ?? {}) as {
+  const { topic, subjectId } = (route.params ?? {}) as {
     topic: Topic;
     subjectId?: string;
-    subjectName?: string;
-    semester?: number;
   };
 
   const [notes, setNotes] = useState<string | undefined>(topic?.notes);
@@ -70,11 +68,6 @@ export const TopicNotesScreen = () => {
   return (
     <View style={styles.container}>
       <ScrollView contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 32 }]}>
-        <View style={styles.head}>
-          {subjectName ? <Text style={styles.subjectText}>{subjectName}</Text> : null}
-          <Text style={styles.title}>{topic.title}</Text>
-        </View>
-
         {loading ? (
           <View style={styles.empty}>
             <ActivityIndicator size="small" color={COLORS.primary} />
@@ -107,28 +100,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   scroll: { padding: 16 },
-  head: {
-    paddingBottom: 16,
-    marginBottom: 12,
-    borderBottomWidth: 1,
-    borderColor: COLORS.borderDashed,
-  },
-  subjectText: {
-    fontFamily: FONTS.mono,
-    fontSize: 11,
-    color: COLORS.textSubtle,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-    marginBottom: 6,
-  },
-  title: {
-    fontFamily: FONTS.serif,
-    fontSize: 22,
-    fontStyle: 'italic',
-    color: COLORS.text,
-    lineHeight: 28,
-    letterSpacing: -0.5,
-  },
   notesBody: { paddingBottom: 8 },
   empty: {
     alignItems: 'center',
