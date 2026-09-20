@@ -286,39 +286,36 @@ export const markdownRules = {
     // Check if it's display math: `$$ ... $$`
     if (raw.startsWith('$$ ') && raw.endsWith(' $$')) {
       const mathExpr = raw.slice(3, -3).trim();
+      // code_inline is an INLINE token - markdown-it renders it as a child
+      // of the paragraph's Text, so returning a View here (as the block
+      // rules like fence/table safely do) nests a View inside a Text, which
+      // RN does not support: the outer box gets a visible size from its own
+      // fixed padding/border, but the inner Text's layout doesn't measure
+      // correctly inside it on Android, so the math text renders invisibly.
+      // A single Text with the box styling applied directly avoids that.
       return (
-        <View
+        <Text
           key={node.key}
-          style={{
-            backgroundColor: COLORS.primaryLight,
-            borderWidth: 1,
-            borderColor: COLORS.primaryBorder,
-            borderRadius: 6,
-            paddingVertical: 10,
-            paddingHorizontal: 14,
-            marginVertical: 8,
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          {/* A bare horizontal ScrollView with no width constraint can
-              collapse to zero height on some Android RN versions, hiding the
-              text entirely - these expressions are short, so it just wraps
-              instead of scrolling. */}
-          <Text
-            style={{
+          style={[
+            inheritedStyles,
+            {
               fontFamily: FONTS.serif,
               fontStyle: 'italic',
               fontSize: rf(15),
               color: COLORS.primary,
               fontWeight: '600',
               letterSpacing: 0.5,
-              textAlign: 'center',
-            }}
-          >
-            {mathExpr}
-          </Text>
-        </View>
+              backgroundColor: COLORS.primaryLight,
+              borderWidth: 1,
+              borderColor: COLORS.primaryBorder,
+              borderRadius: 6,
+              paddingHorizontal: 14,
+              paddingVertical: 10,
+            },
+          ]}
+        >
+          {mathExpr}
+        </Text>
       );
     }
 
