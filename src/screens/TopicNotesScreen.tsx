@@ -135,8 +135,8 @@ export const TopicNotesScreen = () => {
         contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 32 }]}
       >
         {loading ? (
-          <View style={styles.empty}>
-            <ActivityIndicator size="small" color={COLORS.primary} />
+          <View style={styles.loading}>
+            <ActivityIndicator size="large" color={COLORS.primary} />
           </View>
         ) : notes ? (
           <View style={styles.notesBody}>
@@ -206,6 +206,12 @@ const styles = StyleSheet.create({
   scroll: { padding: 16 },
   notesBody: { paddingBottom: 8 },
   navSection: { marginTop: 18 },
+  loading: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+    paddingVertical: 80,
+  },
   empty: {
     alignItems: 'center',
     justifyContent: 'center',
