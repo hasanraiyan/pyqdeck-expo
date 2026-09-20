@@ -121,10 +121,8 @@ export const TopicNotesScreen = () => {
             </Text>
           </View>
         )}
-      </ScrollView>
 
-      {subjectId && moduleId && (
-        <View style={[styles.footer, { paddingBottom: insets.bottom + 12 }]}>
+        {!loading && subjectId && moduleId && (
           <TouchableOpacity
             style={[styles.completeBtn, done && styles.completeBtnDone]}
             onPress={toggleDone}
@@ -141,8 +139,8 @@ export const TopicNotesScreen = () => {
               {done ? 'Marked as complete' : 'Mark as complete'}
             </Text>
           </TouchableOpacity>
-        </View>
-      )}
+        )}
+      </ScrollView>
     </View>
   );
 };
@@ -169,18 +167,12 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     maxWidth: 260,
   },
-  footer: {
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderColor: COLORS.borderDashed,
-    backgroundColor: COLORS.background,
-  },
   completeBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
+    marginTop: 20,
     paddingVertical: 13,
     borderRadius: 8,
     borderWidth: 1.5,
