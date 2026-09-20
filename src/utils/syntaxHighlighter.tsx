@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import { Text, TextStyle } from 'react-native';
 import { COLORS, FONTS } from '../theme/colors';
 import { rf } from './responsive';
@@ -20,7 +20,14 @@ const KEYWORDS_BY_LANG: Record<string, RegExp> = {
 
 export const tokenizeCode = (code: string, language?: string): Token[] => {
   const lang = (language || '').toLowerCase().trim();
-  const keywordRegex = KEYWORDS_BY_LANG[lang] || KEYWORDS_BY_LANG.c;
+  const keywordRegex = KEYWORDS_BY_LANG[lang];
+
+  // If no recognized programming language is specified (e.g. ascii, text, plain, or untagged),
+  // return plain text without applying keyword, type, or comment regexes.
+  // This preserves exact monospace column alignment for ASCII diagrams and plain text blocks.
+  if (!keywordRegex) {
+    return [{ type: 'text', value: code }];
+  }
 
   const tokens: Token[] = [];
   const lines = code.split('\n');
@@ -115,10 +122,23 @@ export const HighlightedCode: React.FC<{ code: string; language?: string; style?
   language,
   style,
 }) => {
+  const lang = (language || '').toLowerCase().trim();
+  const keywordRegex = KEYWORDS_BY_LANG[lang];
+
+  // For ASCII diagrams, plain text, or untagged code blocks, render as a single Text element
+  // with no nested token nodes or font-weight changes.
+  if (!keywordRegex) {
+    return (
+      <Text style={[{ alignSelf: 'flex-start' }, style]}>
+        {code}
+      </Text>
+    );
+  }
+
   const tokens = tokenizeCode(code, language);
 
   return (
-    <Text style={style}>
+    <Text style={[{ alignSelf: 'flex-start' }, style]}>
       {tokens.map((token, index) => (
         <Text key={index} style={tokenStyles[token.type]}>
           {token.value}

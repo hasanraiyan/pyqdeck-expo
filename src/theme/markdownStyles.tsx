@@ -243,38 +243,25 @@ export const CodeBlockComponent: React.FC<{ content: string; language?: string }
         </TouchableOpacity>
       </View>
 
-      {isProgLang ? (
-        <View style={{ padding: 12 }}>
+      <ScrollView
+        horizontal
+        nestedScrollEnabled
+        showsHorizontalScrollIndicator={true}
+        contentContainerStyle={{ padding: 12, minWidth: '100%' }}
+      >
+        <View style={{ alignSelf: 'flex-start' }}>
           <HighlightedCode
             code={content}
             language={lang}
             style={{
               fontFamily: FONTS.mono,
-              fontSize: rf(12),
-              lineHeight: rf(18),
+              fontSize: rf(11.5),
+              lineHeight: rf(16.5),
               color: COLORS.text,
             }}
           />
         </View>
-      ) : (
-        <ScrollView
-          horizontal
-          nestedScrollEnabled
-          showsHorizontalScrollIndicator={true}
-          contentContainerStyle={{ padding: 12, minWidth: '100%' }}
-        >
-          <HighlightedCode
-            code={content}
-            language={lang}
-            style={{
-              fontFamily: FONTS.mono,
-              fontSize: rf(12),
-              lineHeight: rf(18),
-              color: COLORS.text,
-            }}
-          />
-        </ScrollView>
-      )}
+      </ScrollView>
     </View>
   );
 };

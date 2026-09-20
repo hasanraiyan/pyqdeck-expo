@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
+import { Feather } from '@expo/vector-icons';
 import { COLORS, FONTS } from '../theme/colors';
 
 interface BadgeProps {
@@ -94,6 +95,40 @@ export const AskAiBadge: React.FC<{ label?: string }> = ({
       <View style={styles.askAiInner}>
         <Text style={styles.askAiSparkle}>✦</Text>
         <Text style={styles.askAiText}>{label}</Text>
+      </View>
+    </View>
+  );
+};
+
+// Hand-drawn / stamped Show Solution action badge companion to AskAiBadge
+export const ShowSolnBadge: React.FC<{
+  isOpen?: boolean;
+  loading?: boolean;
+  label?: string;
+}> = ({ isOpen = false, loading = false, label }) => {
+  const displayLabel = label || (loading ? 'Loading...' : isOpen ? 'Hide Soln' : 'Show Soln');
+  return (
+    <View style={styles.showSolnContainer}>
+      <Svg
+        viewBox="0 0 100 34"
+        style={StyleSheet.absoluteFill}
+        fill="none"
+        preserveAspectRatio="none"
+      >
+        <Path
+          d="M6 17C4 8 16 4 50 4C84 4 96 8 94 17C92 26 84 30 50 30C16 30 8 26 6 17Z"
+          stroke={COLORS.secondary}
+          strokeWidth="1.8"
+          strokeLinecap="round"
+        />
+      </Svg>
+      <View style={styles.showSolnInner}>
+        <Feather
+          name={isOpen ? 'eye-off' : 'eye'}
+          size={11}
+          color={COLORS.secondary}
+        />
+        <Text style={styles.showSolnText}>{displayLabel}</Text>
       </View>
     </View>
   );
@@ -212,6 +247,24 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.mono,
     fontWeight: '700',
     color: COLORS.primary,
+    letterSpacing: 0.3,
+  },
+  showSolnContainer: {
+    height: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 13,
+  },
+  showSolnInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4.5,
+  },
+  showSolnText: {
+    fontSize: 10.5,
+    fontFamily: FONTS.mono,
+    fontWeight: '700',
+    color: COLORS.secondary,
     letterSpacing: 0.3,
   },
   stampContainer: {

@@ -30,7 +30,7 @@ import {
 } from '../api';
 import { QuestionSummary, Solution } from '../types';
 import { COLORS, FONTS } from '../theme/colors';
-import { Badge, MarksBadge, AskAiBadge, YearBadge } from '../components/Badge';
+import { Badge, MarksBadge, AskAiBadge, YearBadge, ShowSolnBadge } from '../components/Badge';
 import { PrevNextNav } from '../components/PrevNextNav';
 import { SolutionSkeleton, SimilarQuestionSkeleton } from '../components/Skeleton';
 import { rf, cleanMarkdown, useResponsive } from '../utils/responsive';
@@ -45,7 +45,7 @@ export const QuestionDetailScreen = () => {
   const insets = useSafeAreaInsets();
   const route = useRoute<any>();
   const navigation = useNavigation<any>();
-  const { readMaxWidth, hPadding } = useResponsive();
+  const { readMaxWidth, hPadding, isTablet } = useResponsive();
   const {
     subjectId,
     semesterId,
@@ -62,6 +62,7 @@ export const QuestionDetailScreen = () => {
   const [solution, setSolution] = useState<Solution | null>(
     initialSolution || null
   );
+  const [showSolution, setShowSolution] = useState(true);
   // Deep links (see App.tsx's `linking` config) only carry semesterId/subjectId/
   // year/questionId - no subjectName - so backfill it from getQuestion's response.
   const [subjectName, setSubjectName] = useState<string | undefined>(paramSubjectName);
@@ -438,32 +439,62 @@ export const QuestionDetailScreen = () => {
 
             {/* Action buttons */}
             <View style={styles.actionsRow}>
-              <TouchableOpacity onPress={openAiSearch} activeOpacity={0.7}>
-                <AskAiBadge />
-              </TouchableOpacity>
-
-              <View style={styles.actionButtonsRight}>
-                <TouchableOpacity style={styles.actionIconButton} onPress={handleCopy} activeOpacity={0.6}>
-                  <Feather
-                    name={copied ? 'check' : 'copy'}
-                    size={15}
-                    color={copied ? COLORS.primary : COLORS.textMuted}
-                  />
-                  <Text style={[styles.actionIconLabel, copied && { color: COLORS.primary }]}>
-                    {copied ? 'Copied' : 'Copy'}
-                  </Text>
+              <View style={styles.actionButtonsLeft}>
+                <TouchableOpacity onPress={openAiSearch} activeOpacity={0.7}>
+                  <AskAiBadge />
                 </TouchableOpacity>
 
-                <TouchableOpacity style={styles.actionIconButton} onPress={handleShare} activeOpacity={0.6}>
-                  <Feather name="share-2" size={15} color={COLORS.textMuted} />
-                  <Text style={styles.actionIconLabel}>Share</Text>
+                {(question?.hasSolution || Boolean(solution)) && (
+                  <TouchableOpacity
+                    onPress={() => {
+                      Haptics.selectionAsync();
+                      setShowSolution((prev) => !prev);
+                    }}
+                    activeOpacity={0.7}
+                  >
+                    <ShowSolnBadge
+                      isOpen={showSolution}
+                    />
+                  </TouchableOpacity>
+                )}
+              </View>
+
+              <View style={styles.actionButtonsRight}>
+                <TouchableOpacity
+                  style={styles.actionIconButton}
+                  onPress={handleCopy}
+                  activeOpacity={0.6}
+                  accessibilityLabel={copied ? 'Copied' : 'Copy question text'}
+                  hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
+                >
+                  <Feather
+                    name={copied ? 'check' : 'copy'}
+                    size={16}
+                    color={copied ? COLORS.primary : COLORS.textMuted}
+                  />
+                  {isTablet && (
+                    <Text style={[styles.actionIconLabel, copied && { color: COLORS.primary }]}>
+                      {copied ? 'Copied' : 'Copy'}
+                    </Text>
+                  )}
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.actionIconButton}
+                  onPress={handleShare}
+                  activeOpacity={0.6}
+                  accessibilityLabel="Share question"
+                  hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
+                >
+                  <Feather name="share-2" size={16} color={COLORS.textMuted} />
+                  {isTablet && <Text style={styles.actionIconLabel}>Share</Text>}
                 </TouchableOpacity>
               </View>
             </View>
           </View>
 
           {/* Worked Solution */}
-          {question.hasSolution && (
+          {showSolution && (question?.hasSolution || Boolean(solution)) && (
             <View style={styles.solutionSection}>
               <Text style={styles.solutionTitle}>WORKED SOLUTION</Text>
               {solution ? (
@@ -809,6 +840,11 @@ const styles = StyleSheet.create({
     paddingTop: 12,
     borderTopWidth: 1,
     borderColor: COLORS.borderLight,
+  },
+  actionButtonsLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
   },
   actionButtonsRight: {
     flexDirection: 'row',

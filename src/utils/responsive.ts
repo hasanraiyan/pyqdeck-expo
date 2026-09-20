@@ -135,7 +135,7 @@ const SUBSCRIPTS: Record<string, string> = {
   'v': 'ᵥ', 'x': 'ₓ',
 };
 
-export const formatMathExpression = (expr: string): string => {
+export const formatLatexSymbols = (expr: string): string => {
   return expr
     // Common LaTeX symbols
     .replace(/\\theta/gi, 'θ')
@@ -176,7 +176,11 @@ export const formatMathExpression = (expr: string): string => {
     // Text blocks \text{...} -> ...
     .replace(/\\text\{([^}]+)\}/gi, '$1')
     .replace(/\\mathrm\{([^}]+)\}/gi, '$1')
-    .replace(/\\mathbf\{([^}]+)\}/gi, '$1')
+    .replace(/\\mathbf\{([^}]+)\}/gi, '$1');
+};
+
+export const formatMathExpression = (expr: string): string => {
+  return formatLatexSymbols(expr)
     // Superscripts x^{2} or x^2
     .replace(/\^{([^}]+)}/g, (_, p1) =>
       p1.split('').map((c: string) => SUPERSCRIPTS[c] || c).join('')
@@ -229,8 +233,9 @@ export const cleanMarkdown = (text: string | null | undefined): string => {
         : `\`$ ${formatMathExpression(inline)} $\``
   );
 
-  // Convert remaining single LaTeX commands outside math blocks
-  formatted = formatMathExpression(formatted);
+  // Convert remaining standalone LaTeX symbols outside math blocks, but DO NOT
+  // run underscore/caret subscripting on regular prose, snake_case, or ASCII art.
+  formatted = formatLatexSymbols(formatted);
 
   // Restore shielded code verbatim
   formatted = formatted.replace(/\uE000(\d+)\uE001/g, (_, i) => codeBlocks[Number(i)]);

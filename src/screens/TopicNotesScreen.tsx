@@ -1,9 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, ActivityIndicator, TouchableOpacity } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, ActivityIndicator, TouchableOpacity, Linking } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+import * as WebBrowser from 'expo-web-browser';
 import Markdown from 'react-native-markdown-display';
 import { COLORS, FONTS } from '../theme/colors';
 import { Topic } from '../types/syllabus';
@@ -47,10 +48,11 @@ export const TopicNotesScreen = () => {
   const insets = useSafeAreaInsets();
   const route = useRoute<any>();
   const navigation = useNavigation<any>();
-  const { topic, subjectId, moduleId, notesList } = (route.params ?? {}) as {
+  const { topic, subjectId, moduleId, notesList, subjectName } = (route.params ?? {}) as {
     topic: Topic;
     subjectId?: string;
     moduleId?: string;
+    subjectName?: string;
     notesList?: NotesListEntry[];
   };
   const scrollRef = useRef<ScrollView>(null);
@@ -59,6 +61,39 @@ export const TopicNotesScreen = () => {
   const [loading, setLoading] = useState(Boolean(subjectId && topic?.id));
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
+
+  const openYouTubeSearch = () => {
+    if (!topic?.title) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    const query = subjectName ? `${topic.title} ${subjectName} lecture` : `${topic.title} lecture`;
+    const url = `https://www.google.com/search?q=${encodeURIComponent(query + ' site:youtube.com')}&tbm=vid`;
+    WebBrowser.openBrowserAsync(url, {
+      toolbarColor: COLORS.card,
+      controlsColor: COLORS.primary,
+      secondaryToolbarColor: COLORS.background,
+      showTitle: true,
+      enableBarCollapsing: true,
+    }).catch(() => {
+      Linking.openURL(url).catch((err) => console.warn('Could not open video search:', err));
+    });
+  };
+
+  useEffect(() => {
+    if (!topic?.title) return;
+    navigation.setOptions({
+      headerRight: () => (
+        <TouchableOpacity
+          onPress={openYouTubeSearch}
+          activeOpacity={0.7}
+          style={{ padding: 8, marginRight: -4 }}
+          accessibilityLabel={`Search YouTube for ${topic.title}`}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          <Feather name="youtube" size={20} color="#e02424" />
+        </TouchableOpacity>
+      ),
+    });
+  }, [navigation, topic?.title, subjectName]);
 
   useEffect(() => {
     if (!subjectId || !topic?.id) return;

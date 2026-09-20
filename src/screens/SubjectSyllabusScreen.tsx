@@ -10,11 +10,13 @@ import {
   UIManager,
   RefreshControl,
   ActivityIndicator,
+  Linking,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRoute, useNavigation, useFocusEffect } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+import * as WebBrowser from 'expo-web-browser';
 import { COLORS, FONTS } from '../theme/colors';
 import { getSyllabusSubject } from '../api';
 import { SyllabusModule, SyllabusSubject, Topic, topicCountOf } from '../types/syllabus';
@@ -155,6 +157,31 @@ export const SubjectSyllabusScreen = () => {
     [navigation, subject, subjectId]
   );
 
+  const openYouTubeSearch = useCallback(
+    async (topicTitle: string) => {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      // Using Google Video search with site:youtube.com prevents Android/iOS OS App Link intent
+      // from intercepting youtube.com and forcing open the native YouTube app.
+      // This ensures the in-app browser sheet loads inside the app so the student never leaves the ecosystem.
+      const query = subject?.name ? `${topicTitle} ${subject.name} lecture` : `${topicTitle} lecture`;
+      const url = `https://www.google.com/search?q=${encodeURIComponent(query + ' site:youtube.com')}&tbm=vid`;
+      try {
+        await WebBrowser.openBrowserAsync(url, {
+          toolbarColor: COLORS.card,
+          controlsColor: COLORS.primary,
+          secondaryToolbarColor: COLORS.background,
+          showTitle: true,
+          enableBarCollapsing: true,
+        });
+      } catch {
+        Linking.openURL(url).catch((err) => {
+          console.warn('Could not open video search:', err);
+        });
+      }
+    },
+    [subject]
+  );
+
   if (!subjectId) {
     return (
       <View style={styles.centerContainer}>
@@ -230,20 +257,37 @@ export const SubjectSyllabusScreen = () => {
                   </Text>
                 </TouchableOpacity>
 
-                {(t.hasNotes || __DEV__) && (
+                <View style={styles.actionsWrap}>
                   <TouchableOpacity
-                    style={[styles.notesBtn, isDone && styles.notesBtnDone]}
-                    onPress={() => openTopicNotes(m, t)}
+                    style={[styles.actionBtn, isDone && styles.actionBtnDone]}
+                    onPress={() => openYouTubeSearch(t.title)}
                     activeOpacity={0.7}
-                    accessibilityLabel={`Open notes for ${t.title}`}
+                    accessibilityLabel={`Search YouTube for ${t.title}`}
+                    hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
                   >
                     <Feather
-                      name="file-text"
-                      size={17}
-                      color={t.hasNotes ? COLORS.primary : COLORS.textSubtle}
+                      name="youtube"
+                      size={18}
+                      color="#e02424"
                     />
                   </TouchableOpacity>
-                )}
+
+                  {(t.hasNotes || __DEV__) && (
+                    <TouchableOpacity
+                      style={[styles.actionBtn, isDone && styles.actionBtnDone]}
+                      onPress={() => openTopicNotes(m, t)}
+                      activeOpacity={0.7}
+                      accessibilityLabel={`Open notes for ${t.title}`}
+                      hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
+                    >
+                      <Feather
+                        name="file-text"
+                        size={17}
+                        color={t.hasNotes ? COLORS.primary : COLORS.textSubtle}
+                      />
+                    </TouchableOpacity>
+                  )}
+                </View>
               </View>
             );
           })}
@@ -380,8 +424,16 @@ const styles = StyleSheet.create({
     paddingRight: 8,
     paddingVertical: 11,
   },
-  notesBtn: { padding: 8, marginRight: -8 },
-  notesBtnDone: { opacity: 0.4 },
+  actionsWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginRight: -4,
+  },
+  actionBtn: {
+    padding: 8,
+  },
+  actionBtnDone: { opacity: 0.4 },
   bubble: {
     width: 20,
     height: 20,

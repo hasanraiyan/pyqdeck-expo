@@ -22,10 +22,10 @@ import { getSolution, voteSolution, reportSolution } from '../api';
 import { useRequireAuth } from '../auth/useRequireAuth';
 import { getMyVote, setMyVote } from '../utils/votes';
 import { COLORS, FONTS } from '../theme/colors';
-import { Badge, MarksBadge, AskAiBadge, YearBadge } from './Badge';
+import { Badge, MarksBadge, AskAiBadge, YearBadge, ShowSolnBadge } from './Badge';
 import { SolutionSkeleton } from './Skeleton';
 import { InlineMathText } from './InlineMathText';
-import { cleanMarkdown } from '../utils/responsive';
+import { cleanMarkdown, isTablet } from '../utils/responsive';
 import { buildQuestionUrl } from '../utils/links';
 import { questionMarkdownStyles, solutionMarkdownStyles, markdownRules } from '../theme/markdownStyles';
 
@@ -66,24 +66,31 @@ export const QuestionItem: React.FC<QuestionItemProps> = React.memo(({
   const [reportSubmitting, setReportSubmitting] = useState(false);
   const [reported, setReported] = useState(false);
 
+  const [showSolution, setShowSolution] = useState(false);
+
   // Expanding a question only reveals the question text - the solution is a
   // separate server fetch, and most opens are just "read the question", so
   // auto-fetching it on every expand would hit the server for solutions
-  // nobody looks at. handleShowSolution below is the explicit, user-driven
-  // trigger for that fetch.
+  // nobody looks at. handleToggleSolution below is the explicit, user-driven
+  // trigger next to Ask AI.
   const toggleExpand = () => {
     Haptics.selectionAsync();
     setExpanded((prev) => !prev);
   };
 
-  const handleShowSolution = async () => {
-    if (loadingSolution || solution) return;
+  const handleToggleSolution = async () => {
+    if (solution) {
+      Haptics.selectionAsync();
+      setShowSolution((prev) => !prev);
+      return;
+    }
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setLoadingSolution(true);
     setSolutionError(false);
     try {
       const sol = await getSolution(subjectId, question.questionId);
       setSolution(sol);
+      setShowSolution(true);
     } catch (e) {
       console.error('Failed to load solution', e);
       setSolutionError(true);
@@ -290,76 +297,101 @@ export const QuestionItem: React.FC<QuestionItemProps> = React.memo(({
           )}
 
           <View style={styles.actionsRow}>
-            <TouchableOpacity onPress={handleAskAi} activeOpacity={0.7}>
-              <AskAiBadge />
-            </TouchableOpacity>
-
-            <View style={styles.actionButtonsRight}>
-              <TouchableOpacity style={styles.actionIconButton} onPress={handleCopy} activeOpacity={0.6}>
-                <Feather
-                  name={copied ? 'check' : 'copy'}
-                  size={15}
-                  color={copied ? COLORS.primary : COLORS.textMuted}
-                />
-                <Text style={[styles.actionIconLabel, copied && { color: COLORS.primary }]}>
-                  {copied ? 'Copied' : 'Copy'}
-                </Text>
+            <View style={styles.actionButtonsLeft}>
+              <TouchableOpacity onPress={handleAskAi} activeOpacity={0.7}>
+                <AskAiBadge />
               </TouchableOpacity>
 
-              <TouchableOpacity style={styles.actionIconButton} onPress={handleShare} activeOpacity={0.6}>
-                <Feather name="share-2" size={15} color={COLORS.textMuted} />
-                <Text style={styles.actionIconLabel}>Share</Text>
+              {(question.hasSolution || Boolean(solution)) && (
+                <TouchableOpacity
+                  onPress={handleToggleSolution}
+                  activeOpacity={0.7}
+                  disabled={loadingSolution}
+                >
+                  <ShowSolnBadge
+                    isOpen={showSolution && Boolean(solution)}
+                    loading={loadingSolution}
+                  />
+                </TouchableOpacity>
+              )}
+            </View>
+
+            <View style={styles.actionButtonsRight}>
+              <TouchableOpacity
+                style={styles.actionIconButton}
+                onPress={handleCopy}
+                activeOpacity={0.6}
+                accessibilityLabel={copied ? 'Copied' : 'Copy question text'}
+                hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
+              >
+                <Feather
+                  name={copied ? 'check' : 'copy'}
+                  size={16}
+                  color={copied ? COLORS.primary : COLORS.textMuted}
+                />
+                {isTablet && (
+                  <Text style={[styles.actionIconLabel, copied && { color: COLORS.primary }]}>
+                    {copied ? 'Copied' : 'Copy'}
+                  </Text>
+                )}
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.actionIconButton}
+                onPress={handleShare}
+                activeOpacity={0.6}
+                accessibilityLabel="Share question"
+                hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
+              >
+                <Feather name="share-2" size={16} color={COLORS.textMuted} />
+                {isTablet && <Text style={styles.actionIconLabel}>Share</Text>}
               </TouchableOpacity>
             </View>
           </View>
 
-          {question.hasSolution && (
+          {showSolution && solution && (
             <View style={styles.solutionSection}>
               <Text style={styles.solutionTitle}>WORKED SOLUTION</Text>
-              {solution ? (
-                <View style={styles.solutionBody}>
-                  <Markdown style={solutionMarkdownStyles} rules={markdownRules}>
-                    {cleanMarkdown(solution.content)}
-                  </Markdown>
-                  <View style={styles.voteRow}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
-                      <TouchableOpacity style={[styles.voteButton, isVoting && { opacity: 0.6 }]} activeOpacity={0.6} onPress={() => handleVote(1)}>
-                        <Feather name="thumbs-up" size={14} color={myVote === 1 ? COLORS.primary : COLORS.textMuted} />
-                        <Text style={[styles.voteCount, myVote === 1 && styles.voteCountActive]}>{voteCounts.upvotes}</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity style={[styles.voteButton, isVoting && { opacity: 0.6 }]} activeOpacity={0.6} onPress={() => handleVote(-1)}>
-                        <Feather name="thumbs-down" size={14} color={myVote === -1 ? COLORS.primary : COLORS.textMuted} />
-                        <Text style={[styles.voteCount, myVote === -1 && styles.voteCountActive]}>{voteCounts.downvotes}</Text>
-                      </TouchableOpacity>
-                    </View>
-                    <TouchableOpacity style={[styles.reportBtn, reported && { opacity: 0.6 }]} activeOpacity={0.6} onPress={() => guard(() => setShowReport(true), 'report')} disabled={reported}>
-                      <Feather name="flag" size={12} color={reported ? COLORS.primary : COLORS.textMuted} />
-                      <Text style={[styles.reportText, reported && { color: COLORS.primary }]}>{reported ? 'Reported' : 'Report'}</Text>
+              <View style={styles.solutionBody}>
+                <Markdown style={solutionMarkdownStyles} rules={markdownRules}>
+                  {cleanMarkdown(solution.content)}
+                </Markdown>
+                <View style={styles.voteRow}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+                    <TouchableOpacity style={[styles.voteButton, isVoting && { opacity: 0.6 }]} activeOpacity={0.6} onPress={() => handleVote(1)}>
+                      <Feather name="thumbs-up" size={14} color={myVote === 1 ? COLORS.primary : COLORS.textMuted} />
+                      <Text style={[styles.voteCount, myVote === 1 && styles.voteCountActive]}>{voteCounts.upvotes}</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={[styles.voteButton, isVoting && { opacity: 0.6 }]} activeOpacity={0.6} onPress={() => handleVote(-1)}>
+                      <Feather name="thumbs-down" size={14} color={myVote === -1 ? COLORS.primary : COLORS.textMuted} />
+                      <Text style={[styles.voteCount, myVote === -1 && styles.voteCountActive]}>{voteCounts.downvotes}</Text>
                     </TouchableOpacity>
                   </View>
+                  <TouchableOpacity style={[styles.reportBtn, reported && { opacity: 0.6 }]} activeOpacity={0.6} onPress={() => guard(() => setShowReport(true), 'report')} disabled={reported}>
+                    <Feather name="flag" size={12} color={reported ? COLORS.primary : COLORS.textMuted} />
+                    <Text style={[styles.reportText, reported && { color: COLORS.primary }]}>{reported ? 'Reported' : 'Report'}</Text>
+                  </TouchableOpacity>
                 </View>
-              ) : loadingSolution ? (
-                <SolutionSkeleton />
-              ) : solutionError ? (
-                <TouchableOpacity
-                  style={styles.showSolutionBtn}
-                  onPress={handleShowSolution}
-                  activeOpacity={0.7}
-                >
-                  <Feather name="refresh-cw" size={14} color={COLORS.primary} />
-                  <Text style={styles.showSolutionBtnText}>Failed to load - tap to retry</Text>
-                </TouchableOpacity>
-              ) : (
-                <TouchableOpacity
-                  style={styles.showSolutionBtn}
-                  onPress={handleShowSolution}
-                  activeOpacity={0.7}
-                >
-                  <Feather name="eye" size={14} color={COLORS.primary} />
-                  <Text style={styles.showSolutionBtnText}>Show Solution</Text>
-                </TouchableOpacity>
-              )}
+              </View>
             </View>
+          )}
+
+          {loadingSolution && (
+            <View style={styles.solutionSection}>
+              <Text style={styles.solutionTitle}>WORKED SOLUTION</Text>
+              <SolutionSkeleton />
+            </View>
+          )}
+
+          {solutionError && (
+            <TouchableOpacity
+              style={styles.solutionErrorBtn}
+              onPress={handleToggleSolution}
+              activeOpacity={0.7}
+            >
+              <Feather name="refresh-cw" size={13} color={COLORS.primary} />
+              <Text style={styles.solutionErrorText}>Could not load solution — tap to retry</Text>
+            </TouchableOpacity>
           )}
         </View>
       )}
@@ -492,6 +524,11 @@ const styles = StyleSheet.create({
     paddingTop: 12,
     borderTopWidth: 1,
     borderColor: COLORS.borderLight,
+  },
+  actionButtonsLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
   },
   actionButtonsRight: {
     flexDirection: 'row',
@@ -687,22 +724,22 @@ const styles = StyleSheet.create({
     color: COLORS.textMuted,
     fontWeight: '600',
   },
-  showSolutionBtn: {
+  solutionErrorBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 7,
-    paddingVertical: 11,
+    gap: 6,
+    paddingVertical: 10,
+    marginTop: 12,
     borderRadius: 6,
-    borderWidth: 1.5,
-    borderColor: COLORS.primary,
-    backgroundColor: COLORS.card,
+    backgroundColor: COLORS.cardSecondary,
+    borderWidth: 1,
+    borderColor: COLORS.border,
   },
-  showSolutionBtnText: {
+  solutionErrorText: {
     fontFamily: FONTS.mono,
-    fontSize: 12.5,
-    fontWeight: '700',
+    fontSize: 12,
+    fontWeight: '600',
     color: COLORS.primary,
-    letterSpacing: 0.3,
   },
 });
