@@ -46,7 +46,7 @@ export const SubjectSyllabusScreen = () => {
   const insets = useSafeAreaInsets();
   const route = useRoute<any>();
   const navigation = useNavigation<any>();
-  const { semester = 5, subjectId } = route.params ?? {};
+  const { subjectId } = route.params ?? {};
 
   const [subject, setSubject] = useState<SyllabusSubject | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -126,16 +126,27 @@ export const SubjectSyllabusScreen = () => {
 
   const openTopicNotes = useCallback(
     (moduleId: string, topic: Topic) => {
+      if (!subject) return;
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      // Flattened in module -> topic order, notes-only - this is what lets
+      // TopicNotesScreen offer prev/next across every topic that has notes,
+      // the same way QuestionDetailScreen steps through a paper. Only id and
+      // title travel here; the notes body itself is fetched per-topic on
+      // demand, same as the initial open.
+      const notesList = subject.modules.flatMap((m) =>
+        m.topics
+          .filter((t) => t.hasNotes)
+          .map((t) => ({ id: t.id, title: t.title, moduleId: m.id }))
+      );
       navigation.navigate('TopicNotes', {
         topic,
         moduleId,
         subjectId,
-        subjectName: subject?.name,
-        semester,
+        subjectName: subject.name,
+        notesList,
       });
     },
-    [navigation, subject, subjectId, semester]
+    [navigation, subject, subjectId]
   );
 
   if (!subjectId) {

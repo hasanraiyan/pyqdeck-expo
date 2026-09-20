@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useRoute } from '@react-navigation/native';
+import { useRoute, useNavigation } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import Markdown from 'react-native-markdown-display';
@@ -13,9 +13,12 @@ import { cleanMarkdown } from '../utils/responsive';
 import { solutionMarkdownStyles, markdownRules } from '../theme/markdownStyles';
 import { ScreenEmpty } from '../components/ScreenState';
 import { AdBanner } from '../components/AdBanner';
+import { PrevNextNav } from '../components/PrevNextNav';
 
 /** Same namespacing as SubjectSyllabusScreen's topicKey - must stay identical, the two screens read/write the same AsyncStorage key. */
 const topicKey = (moduleId: string, topicId: string) => `${moduleId}:${topicId}`;
+
+type NotesListEntry = { id: string; title: string; moduleId: string };
 
 /**
  * Per-topic study notes: the markdown+LaTeX writeup an admin can attach to a
@@ -29,19 +32,28 @@ const topicKey = (moduleId: string, topicId: string) => `${moduleId}:${topicId}`
  * fetched live, uncached, every time this screen opens, so an admin's edit
  * shows up immediately rather than behind the syllabus's day-long cache.
  *
- * The mark-complete button at the bottom writes to the same device-local
- * "done" storage SubjectSyllabusScreen's tick uses - reading the notes is as
- * much a sign of having covered a topic as ticking it there, so this is
- * just a second place to flip the same bit.
+ * The mark-complete button writes to the same device-local "done" storage
+ * SubjectSyllabusScreen's tick uses - reading the notes is as much a sign of
+ * having covered a topic as ticking it there, so this is just a second place
+ * to flip the same bit.
+ *
+ * Prev/Next steps through every topic that has notes in the subject (the
+ * flattened `notesList` SubjectSyllabusScreen builds), the same way
+ * QuestionDetailScreen steps through a paper: via setParams rather than a
+ * fresh push, so this screen instance (and its AdBanner) stays mounted
+ * instead of a fresh ad load firing on every tap.
  */
 export const TopicNotesScreen = () => {
   const insets = useSafeAreaInsets();
   const route = useRoute<any>();
-  const { topic, subjectId, moduleId } = (route.params ?? {}) as {
+  const navigation = useNavigation<any>();
+  const { topic, subjectId, moduleId, notesList } = (route.params ?? {}) as {
     topic: Topic;
     subjectId?: string;
     moduleId?: string;
+    notesList?: NotesListEntry[];
   };
+  const scrollRef = useRef<ScrollView>(null);
 
   const [notes, setNotes] = useState<string | undefined>(topic?.notes);
   const [loading, setLoading] = useState(Boolean(subjectId && topic?.id));
@@ -93,6 +105,21 @@ export const TopicNotesScreen = () => {
     await saveDoneTopics(subjectId, doneSet);
   };
 
+  const currentIndex = notesList?.findIndex((t) => t.id === topic?.id) ?? -1;
+  const prevEntry = notesList && currentIndex > 0 ? notesList[currentIndex - 1] : null;
+  const nextEntry =
+    notesList && currentIndex >= 0 && currentIndex < notesList.length - 1
+      ? notesList[currentIndex + 1]
+      : null;
+
+  const goToTopic = (entry: NotesListEntry) => {
+    scrollRef.current?.scrollTo({ y: 0, animated: false });
+    navigation.setParams({
+      topic: { id: entry.id, title: entry.title },
+      moduleId: entry.moduleId,
+    });
+  };
+
   if (!topic) {
     return (
       <View style={styles.centerContainer}>
@@ -103,7 +130,10 @@ export const TopicNotesScreen = () => {
 
   return (
     <View style={styles.container}>
-      <ScrollView contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 32 }]}>
+      <ScrollView
+        ref={scrollRef}
+        contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 32 }]}
+      >
         {loading ? (
           <View style={styles.empty}>
             <ActivityIndicator size="small" color={COLORS.primary} />
@@ -141,6 +171,23 @@ export const TopicNotesScreen = () => {
             </Text>
           </TouchableOpacity>
         )}
+
+        {(prevEntry || nextEntry) && (
+          <View style={styles.navSection}>
+            <PrevNextNav
+              prev={
+                prevEntry
+                  ? { label: prevEntry.title, sublabel: 'Previous topic', onPress: () => goToTopic(prevEntry) }
+                  : null
+              }
+              next={
+                nextEntry
+                  ? { label: nextEntry.title, sublabel: 'Next topic', onPress: () => goToTopic(nextEntry) }
+                  : null
+              }
+            />
+          </View>
+        )}
       </ScrollView>
 
       <AdBanner />
@@ -158,6 +205,7 @@ const styles = StyleSheet.create({
   },
   scroll: { padding: 16 },
   notesBody: { paddingBottom: 8 },
+  navSection: { marginTop: 18 },
   empty: {
     alignItems: 'center',
     justifyContent: 'center',
