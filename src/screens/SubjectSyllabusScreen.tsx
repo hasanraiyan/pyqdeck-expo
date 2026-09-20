@@ -33,10 +33,12 @@ const topicKey = (moduleId: string, topicId: string) => `${moduleId}:${topicId}`
  * A subject's syllabus: modules collapse and expand, topics sit inside them.
  *
  * A topic is one line: the tick and title take the left as a single large hit
- * target, and a notes icon sits at the right - tapping it opens
- * TopicNotesScreen, the topic's markdown+LaTeX study writeup (with an
- * Ask AI fallback for topics that don't have one yet). Long titles wrap and
- * the icon stays centred against them.
+ * target. A notes icon sits at the right only when the topic actually has
+ * notes (topic.hasNotes, a cheap flag the subject payload always carries -
+ * see syllabusService.js's topicOut) - tapping it opens TopicNotesScreen,
+ * the topic's markdown+LaTeX study writeup. No icon for a topic without
+ * notes is deliberate: a button that opens an empty page is worse UX than no
+ * button at all. Long titles wrap and the icon stays centred against them.
  *
  * Fetched whole via /syllabus/subjects/:slug, through the read-through cache.
  */
@@ -63,12 +65,8 @@ export const SubjectSyllabusScreen = () => {
         // student sees their ticks immediately.
         const d = await getDoneTopics(next.id);
         setDone(d);
-        // Open the first module that still has unfinished topics - that is
-        // almost always where the student left off.
-        const firstOpen = next.modules.find((m) =>
-          m.topics.some((t) => !d.has(topicKey(m.id, t.id)))
-        );
-        setOpen(new Set([firstOpen?.id ?? next.modules[0]?.id].filter(Boolean) as string[]));
+        // Keep all modules collapsed by default; user taps to expand.
+        setOpen(new Set());
       } catch (e: any) {
         setError(e?.message || 'Could not load this subject.');
       }
@@ -204,14 +202,16 @@ export const SubjectSyllabusScreen = () => {
                   </Text>
                 </TouchableOpacity>
 
-                <TouchableOpacity
-                  style={[styles.notesBtn, isDone && styles.notesBtnDone]}
-                  onPress={() => openTopicNotes(t)}
-                  activeOpacity={0.7}
-                  accessibilityLabel={`Open notes for ${t.title}`}
-                >
-                  <Feather name="file-text" size={17} color={COLORS.primary} />
-                </TouchableOpacity>
+                {t.hasNotes && (
+                  <TouchableOpacity
+                    style={[styles.notesBtn, isDone && styles.notesBtnDone]}
+                    onPress={() => openTopicNotes(t)}
+                    activeOpacity={0.7}
+                    accessibilityLabel={`Open notes for ${t.title}`}
+                  >
+                    <Feather name="file-text" size={17} color={COLORS.primary} />
+                  </TouchableOpacity>
+                )}
               </View>
             );
           })}

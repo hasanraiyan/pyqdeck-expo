@@ -24,6 +24,8 @@ export interface Topic {
   prompt?: string;
   /** Markdown (LaTeX allowed) study notes for this topic, if an admin wrote any. */
   notes?: string;
+  /** Whether this topic has notes, without paying for the notes body itself - the subject fetch always carries this. */
+  hasNotes?: boolean;
 }
 
 export interface SyllabusModule {
