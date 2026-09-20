@@ -172,7 +172,6 @@ export const SubjectSyllabusScreen = () => {
   const total = topicCountOf(subject);
   const doneCount = done.size;
   const pct = total > 0 ? Math.round((doneCount / total) * 100) : 0;
-  const unit = subject.kind === 'lab' ? 'experiments' : 'topics';
 
   const renderModule = (m: SyllabusModule) => {
     const expanded = open.has(m.id);
@@ -270,11 +269,6 @@ export const SubjectSyllabusScreen = () => {
               {doneCount} / {total}
             </Text>
           </View>
-          <Text style={styles.sub}>
-            {doneCount === total && total > 0
-              ? `All ${total} ${unit} marked done.`
-              : `${total - doneCount} ${unit} left.`}
-          </Text>
         </View>
 
         {subject.modules.length === 0 ? (
@@ -332,7 +326,6 @@ const styles = StyleSheet.create({
   },
   headProg: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 12 },
   headFrac: { fontFamily: FONTS.mono, fontSize: 11, fontWeight: '600', color: COLORS.secondary },
-  sub: { fontSize: 12.5, color: COLORS.textMuted, marginTop: 6 },
 
   modHead: {
     flexDirection: 'row',
