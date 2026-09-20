@@ -12,7 +12,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useRoute, useNavigation } from '@react-navigation/native';
+import { useRoute, useNavigation, useFocusEffect } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { COLORS, FONTS } from '../theme/colors';
@@ -78,6 +78,17 @@ export const SubjectSyllabusScreen = () => {
     void load();
   }, [load]);
 
+  // Re-read done topics (not a full network refetch) whenever this screen
+  // regains focus - marking a topic complete from TopicNotesScreen writes
+  // straight to the same AsyncStorage key, and this is what picks that up
+  // on the way back without a pull-to-refresh.
+  useFocusEffect(
+    useCallback(() => {
+      if (!subject) return;
+      void getDoneTopics(subject.id).then(setDone);
+    }, [subject])
+  );
+
   const onRefresh = async () => {
     setRefreshing(true);
     await load(true);
@@ -114,10 +125,11 @@ export const SubjectSyllabusScreen = () => {
   );
 
   const openTopicNotes = useCallback(
-    (topic: Topic) => {
+    (moduleId: string, topic: Topic) => {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       navigation.navigate('TopicNotes', {
         topic,
+        moduleId,
         subjectId,
         subjectName: subject?.name,
         semester,
@@ -205,7 +217,7 @@ export const SubjectSyllabusScreen = () => {
                 {t.hasNotes && (
                   <TouchableOpacity
                     style={[styles.notesBtn, isDone && styles.notesBtnDone]}
-                    onPress={() => openTopicNotes(t)}
+                    onPress={() => openTopicNotes(m.id, t)}
                     activeOpacity={0.7}
                     accessibilityLabel={`Open notes for ${t.title}`}
                   >
