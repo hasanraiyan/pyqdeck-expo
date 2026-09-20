@@ -9,6 +9,7 @@ import {
   RefreshControl,
   Modal,
   TouchableWithoutFeedback,
+  Platform,
 } from 'react-native';
 import { useRoute, useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -153,7 +154,7 @@ export const QuestionListScreen = () => {
           subjectId={subjectId}
           semesterId={semesterId}
           subjectName={subjectName}
-          hideYearBadge={Boolean(selectedYear)}
+          hideYearBadge={false}
         />
       ) : (
         <QuestionItem
@@ -161,10 +162,10 @@ export const QuestionListScreen = () => {
           subjectId={subjectId}
           semesterId={semesterId}
           subjectName={subjectName}
-          hideYearBadge={Boolean(selectedYear)}
+          hideYearBadge={false}
         />
       ),
-    [isOldUi, subjectId, semesterId, subjectName, selectedYear]
+    [isOldUi, subjectId, semesterId, subjectName]
   );
 
   const hasActiveFilters = Boolean(selectedChapter || selectedYear);

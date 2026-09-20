@@ -9,3 +9,8 @@ export const isSyllabusEnabled = true;
  * Enabled on clerk-auth branch.
  */
 export const isAuthEnabled = false;
+
+/**
+ * Ask AI - enable/disable Ask AI buttons across the app.
+ */
+export const isAiEnabled = true;

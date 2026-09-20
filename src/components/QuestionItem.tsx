@@ -28,6 +28,7 @@ import { InlineMathText } from './InlineMathText';
 import { cleanMarkdown, isTablet } from '../utils/responsive';
 import { buildQuestionUrl } from '../utils/links';
 import { questionMarkdownStyles, solutionMarkdownStyles, markdownRules } from '../theme/markdownStyles';
+import { isAiEnabled } from '../config/features';
 
 interface QuestionItemProps {
   question: QuestionSummary;
@@ -298,9 +299,11 @@ export const QuestionItem: React.FC<QuestionItemProps> = React.memo(({
 
           <View style={styles.actionsRow}>
             <View style={styles.actionButtonsLeft}>
-              <TouchableOpacity onPress={handleAskAi} activeOpacity={0.7}>
-                <AskAiBadge />
-              </TouchableOpacity>
+              {isAiEnabled && (
+                <TouchableOpacity onPress={handleAskAi} activeOpacity={0.7}>
+                  <AskAiBadge />
+                </TouchableOpacity>
+              )}
 
               {(question.hasSolution || Boolean(solution)) && (
                 <TouchableOpacity

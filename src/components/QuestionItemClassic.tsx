@@ -27,6 +27,7 @@ import { cleanMarkdown } from '../utils/responsive';
 import { buildQuestionUrl } from '../utils/links';
 import { questionMarkdownStyles, solutionMarkdownStyles, markdownRules } from '../theme/markdownStyles';
 import { COLORS, FONTS } from '../theme/colors';
+import { isAiEnabled } from '../config/features';
 
 interface QuestionItemClassicProps {
   question: QuestionSummary;
@@ -251,17 +252,25 @@ export const QuestionItemClassic: React.FC<QuestionItemClassicProps> = React.mem
 
   return (
     <View style={styles.card}>
-      {/* Top Meta Row */}
+      {/* Top Meta Row: Year on the LEFT side, Q Number & Marks on the RIGHT side */}
       <View style={styles.headerRow}>
-        <View style={styles.badgesCluster}>
+        <View style={styles.leftCluster}>
           {!hideYearBadge && question.year ? (
             <YearBadge year={question.year} variant="teal" />
           ) : null}
+        </View>
 
-          <QNumBadge
-            qNum={question.qNumber || question.questionId}
-            variant="primary"
-          />
+        <View style={styles.rightCluster}>
+          <TouchableOpacity
+            onPress={handleOpenDetail}
+            activeOpacity={0.7}
+            hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+          >
+            <QNumBadge
+              qNum={question.qNumber || question.questionId}
+              variant="primary"
+            />
+          </TouchableOpacity>
 
           {question.marks ? (
             <MarksBadge marks={question.marks} />
@@ -281,15 +290,17 @@ export const QuestionItemClassic: React.FC<QuestionItemClassicProps> = React.mem
         </View>
       )}
 
-      {/* Question Body */}
+      {/* Question Body - tap anywhere to open detail */}
       <TouchableOpacity
-        activeOpacity={0.85}
+        activeOpacity={0.8}
         onPress={handleOpenDetail}
         style={styles.bodyPressable}
       >
-        <Markdown style={questionMarkdownStyles} rules={markdownRules}>
-          {cleanMarkdown(question.text)}
-        </Markdown>
+        <View pointerEvents="none">
+          <Markdown style={questionMarkdownStyles} rules={markdownRules}>
+            {cleanMarkdown(question.text)}
+          </Markdown>
+        </View>
       </TouchableOpacity>
 
       {/* Bottom Action Footer */}
@@ -329,20 +340,36 @@ export const QuestionItemClassic: React.FC<QuestionItemClassicProps> = React.mem
             <Feather name="share-2" size={16} color={COLORS.textMuted} />
           </TouchableOpacity>
 
+          <TouchableOpacity
+            style={styles.iconButton}
+            onPress={handleOpenDetail}
+            activeOpacity={0.6}
+            accessibilityLabel="Open question detail screen"
+            hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
+          >
+            <Feather name="maximize-2" size={15} color={COLORS.textMuted} />
+          </TouchableOpacity>
+
           {(question.hasSolution || Boolean(solution)) && (
             <TouchableOpacity
               onPress={handleToggleSolution}
               activeOpacity={0.7}
+              disabled={loadingSolution}
               style={{ marginLeft: 4 }}
             >
-              <ShowSolnBadge isOpen={showSolution} />
+              <ShowSolnBadge
+                isOpen={showSolution && Boolean(solution)}
+                loading={loadingSolution}
+              />
             </TouchableOpacity>
           )}
         </View>
 
-        <TouchableOpacity onPress={handleAskAi} activeOpacity={0.7}>
-          <AskAiBadge />
-        </TouchableOpacity>
+        {isAiEnabled && (
+          <TouchableOpacity onPress={handleAskAi} activeOpacity={0.7}>
+            <AskAiBadge />
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* Inline Solution (if user tapped Show Soln) */}
@@ -450,11 +477,19 @@ export const QuestionItemClassic: React.FC<QuestionItemClassicProps> = React.mem
                   {(['incorrect', 'incomplete', 'formatting', 'other'] as const).map((r) => (
                     <TouchableOpacity
                       key={r}
-                      style={[styles.reportOption, reportReason === r && styles.reportOptionActive]}
+                      style={[
+                        styles.reportOption,
+                        reportReason === r && styles.reportOptionActive,
+                      ]}
                       onPress={() => setReportReason(r)}
                       activeOpacity={0.7}
                     >
-                      <View style={[styles.radio, reportReason === r && styles.radioActive]}>
+                      <View
+                        style={[
+                          styles.radio,
+                          reportReason === r && styles.radioActive,
+                        ]}
+                      >
                         {reportReason === r && <View style={styles.radioDot} />}
                       </View>
                       <Text
@@ -464,49 +499,47 @@ export const QuestionItemClassic: React.FC<QuestionItemClassicProps> = React.mem
                         ]}
                       >
                         {r === 'incorrect'
-                          ? 'Incorrect answer'
+                          ? 'Incorrect solution or math error'
                           : r === 'incomplete'
-                          ? 'Incomplete explanation'
+                          ? 'Incomplete solution (missing steps)'
                           : r === 'formatting'
-                          ? 'Formatting / math issue'
-                          : 'Other'}
+                          ? 'Poor formatting / unreadable formulas'
+                          : 'Other issue'}
                       </Text>
                     </TouchableOpacity>
                   ))}
-                  {reportReason && (
+                  {reportReason === 'other' && (
                     <TextInput
-                      placeholder={
-                        reportReason === 'other'
-                          ? 'Describe what is wrong (required)'
-                          : 'Optional details (max 500)'
-                      }
-                      placeholderTextColor={COLORS.textSubtle}
                       style={styles.reportInput}
-                      multiline
-                      maxLength={500}
+                      placeholder="Describe what needs fixing…"
+                      placeholderTextColor={COLORS.textMuted}
                       value={reportMsg}
                       onChangeText={setReportMsg}
+                      multiline
+                      maxLength={300}
                     />
                   )}
                   <TouchableOpacity
                     style={[
                       styles.reportSubmitBtn,
                       (!reportReason ||
-                        (reportReason === 'other' && reportMsg.trim().length < 4) ||
-                        reportSubmitting) &&
+                        reportSubmitting ||
+                        (reportReason === 'other' && reportMsg.trim().length < 4)) &&
                         styles.reportSubmitBtnDisabled,
                     ]}
+                    onPress={handleReportSubmit}
                     disabled={
                       !reportReason ||
-                      (reportReason === 'other' && reportMsg.trim().length < 4) ||
-                      reportSubmitting
+                      reportSubmitting ||
+                      (reportReason === 'other' && reportMsg.trim().length < 4)
                     }
-                    onPress={handleReportSubmit}
                     activeOpacity={0.8}
                   >
-                    <Text style={styles.reportSubmitText}>
-                      {reportSubmitting ? 'Submitting…' : 'Submit report'}
-                    </Text>
+                    {reportSubmitting ? (
+                      <ActivityIndicator size="small" color="#fff" />
+                    ) : (
+                      <Text style={styles.reportSubmitText}>Submit report</Text>
+                    )}
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={styles.reportCancelBtn}
@@ -528,7 +561,7 @@ export const QuestionItemClassic: React.FC<QuestionItemClassicProps> = React.mem
 const styles = StyleSheet.create({
   card: {
     backgroundColor: COLORS.card,
-    borderRadius: 12,
+    borderRadius: 14,
     borderWidth: 1,
     borderColor: COLORS.border,
     marginHorizontal: 16,
@@ -543,40 +576,14 @@ const styles = StyleSheet.create({
     paddingTop: 12,
     paddingBottom: 8,
   },
-  badgesCluster: {
+  leftCluster: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  rightCluster: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-  },
-  pillBadge: {
-    paddingHorizontal: 9,
-    paddingVertical: 3,
-    borderRadius: 12,
-    borderWidth: 1,
-    backgroundColor: COLORS.cardSecondary,
-  },
-  pillText: {
-    fontFamily: FONTS.mono,
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  yearPill: {
-    borderColor: COLORS.secondary,
-  },
-  yearPillText: {
-    color: COLORS.secondary,
-  },
-  qNumPill: {
-    borderColor: COLORS.border,
-  },
-  qNumPillText: {
-    color: COLORS.text,
-  },
-  marksPill: {
-    borderColor: COLORS.border,
-  },
-  marksPillText: {
-    color: COLORS.textMuted,
   },
   moduleStrip: {
     flexDirection: 'row',

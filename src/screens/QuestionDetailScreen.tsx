@@ -40,6 +40,7 @@ import { recordQuestionOpenedAndMaybeShowInterstitial } from '../utils/ads';
 import { AdBanner } from '../components/AdBanner';
 import { getMyVote, setMyVote } from '../utils/votes';
 import { useRequireAuth } from '../auth/useRequireAuth';
+import { isAiEnabled } from '../config/features';
 
 export const QuestionDetailScreen = () => {
   const insets = useSafeAreaInsets();
@@ -477,9 +478,11 @@ export const QuestionDetailScreen = () => {
             {/* Action buttons */}
             <View style={styles.actionsRow}>
               <View style={styles.actionButtonsLeft}>
-                <TouchableOpacity onPress={openAiSearch} activeOpacity={0.7}>
-                  <AskAiBadge />
-                </TouchableOpacity>
+                {isAiEnabled && (
+                  <TouchableOpacity onPress={openAiSearch} activeOpacity={0.7}>
+                    <AskAiBadge />
+                  </TouchableOpacity>
+                )}
 
                 {(question?.hasSolution || Boolean(solution) || loadingSolution) && (
                   <TouchableOpacity
