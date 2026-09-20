@@ -9,7 +9,12 @@ import { useAuth, useUser } from '@clerk/expo';
 import { COLORS, FONTS } from '../theme/colors';
 import { SettingsRow } from '../components/SettingsRow';
 import { rf, verticalScale, useResponsive } from '../utils/responsive';
-import { getVolumeScrollEnabled, setVolumeScrollEnabled } from '../utils/settings';
+import {
+  getVolumeScrollEnabled,
+  setVolumeScrollEnabled,
+  getOldUiEnabled,
+  setOldUiEnabled,
+} from '../utils/settings';
 import { openStoreListing, checkForUpdateInteractive } from '../utils/appUpdate';
 import * as Cache from '../db/cacheService';
 import { isAuthEnabled } from '../config/features';
@@ -31,15 +36,22 @@ export const SettingsScreen = ({ navigation }: any) => {
   const { user } = useUser();
 
   const [volumeScrollOn, setVolumeScrollOn] = useState(true);
+  const [oldUiOn, setOldUiOn] = useState(false);
   const [clearing, setClearing] = useState(false);
   const [cleared, setCleared] = useState(false);
   const [checkingUpdate, setCheckingUpdate] = useState(false);
 
   useEffect(() => {
+    getOldUiEnabled().then(setOldUiOn);
     if (Platform.OS === 'android') {
       getVolumeScrollEnabled().then(setVolumeScrollOn);
     }
   }, []);
+
+  const toggleOldUi = async (value: boolean) => {
+    setOldUiOn(value);
+    await setOldUiEnabled(value);
+  };
 
   const toggleVolumeScroll = async (value: boolean) => {
     setVolumeScrollOn(value);
@@ -163,27 +175,39 @@ export const SettingsScreen = ({ navigation }: any) => {
           </>
         )}
 
-        {Platform.OS === 'android' && (
-          <>
-            <Text style={styles.sectionHeading}>READING</Text>
-            <View style={styles.card}>
-              <SettingsRow
-                icon="volume-2"
-                label="Scroll with volume buttons"
-                subtitle="Move between questions with hardware volume keys"
-                last
-                right={
-                  <Switch
-                    value={volumeScrollOn}
-                    onValueChange={toggleVolumeScroll}
-                    trackColor={{ true: COLORS.primary, false: COLORS.border }}
-                    thumbColor={COLORS.card}
-                  />
-                }
+        <Text style={styles.sectionHeading}>DISPLAY & READING</Text>
+        <View style={styles.card}>
+          <SettingsRow
+            icon="layout"
+            label="Enable classic / old UI"
+            subtitle="Use classic card skeleton layout for question lists"
+            last={Platform.OS !== 'android'}
+            right={
+              <Switch
+                value={oldUiOn}
+                onValueChange={toggleOldUi}
+                trackColor={{ true: COLORS.primary, false: COLORS.border }}
+                thumbColor={COLORS.card}
               />
-            </View>
-          </>
-        )}
+            }
+          />
+          {Platform.OS === 'android' && (
+            <SettingsRow
+              icon="volume-2"
+              label="Scroll with volume buttons"
+              subtitle="Move between questions with hardware volume keys"
+              last
+              right={
+                <Switch
+                  value={volumeScrollOn}
+                  onValueChange={toggleVolumeScroll}
+                  trackColor={{ true: COLORS.primary, false: COLORS.border }}
+                  thumbColor={COLORS.card}
+                />
+              }
+            />
+          )}
+        </View>
 
         <Text style={styles.sectionHeading}>DATA</Text>
         <View style={styles.card}>

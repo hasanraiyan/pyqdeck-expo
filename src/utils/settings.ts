@@ -20,3 +20,21 @@ export async function setVolumeScrollEnabled(value: boolean): Promise<void> {
     await AsyncStorage.setItem(VOLUME_SCROLL_ENABLED_KEY, value ? '1' : '0');
   } catch {}
 }
+
+const OLD_UI_ENABLED_KEY = 'old_ui_enabled';
+
+export async function getOldUiEnabled(): Promise<boolean> {
+  try {
+    const raw = await AsyncStorage.getItem(OLD_UI_ENABLED_KEY);
+    return raw === '1';
+  } catch {
+    return false;
+  }
+}
+
+export async function setOldUiEnabled(value: boolean): Promise<void> {
+  try {
+    await AsyncStorage.setItem(OLD_UI_ENABLED_KEY, value ? '1' : '0');
+  } catch {}
+}
+

@@ -134,6 +134,39 @@ export const ShowSolnBadge: React.FC<{
   );
 };
 
+// Hand-drawn / stamped Question Number badge (e.g. Q1a, 1(a))
+export const QNumBadge: React.FC<{
+  qNum: string | number | null | undefined;
+  variant?: 'primary' | 'secondary' | 'muted';
+}> = ({ qNum, variant = 'primary' }) => {
+  if (!qNum) return null;
+  const strokeColor =
+    variant === 'secondary'
+      ? COLORS.secondary
+      : variant === 'muted'
+      ? COLORS.textMuted
+      : COLORS.primary;
+
+  return (
+    <View style={styles.qNumContainer}>
+      <Svg
+        viewBox="0 0 100 34"
+        style={StyleSheet.absoluteFill}
+        fill="none"
+        preserveAspectRatio="none"
+      >
+        <Path
+          d="M6 17C4 8 16 4 50 4C84 4 96 8 94 17C92 26 84 30 50 30C16 30 8 26 6 17Z"
+          stroke={strokeColor}
+          strokeWidth="1.8"
+          strokeLinecap="round"
+        />
+      </Svg>
+      <Text style={[styles.qNumText, { color: strokeColor }]}>{qNum}</Text>
+    </View>
+  );
+};
+
 /**
  * Companion to AskAiBadge in the same hand-drawn language: a grader's stamp
  * that lands on a module once every topic in it is ticked. Rotated a couple of
@@ -219,6 +252,20 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   yearBadgeText: {
+    fontSize: 11.5,
+    fontFamily: FONTS.mono,
+    fontWeight: '700',
+    lineHeight: 16,
+    letterSpacing: 0.2,
+  },
+  qNumContainer: {
+    minWidth: 42,
+    height: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 8,
+  },
+  qNumText: {
     fontSize: 11.5,
     fontFamily: FONTS.mono,
     fontWeight: '700',

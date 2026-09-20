@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import React, { useEffect, useState, useCallback, useRef, useLayoutEffect } from 'react';
 import {
   View,
   Text,
@@ -10,19 +10,21 @@ import {
   Modal,
   TouchableWithoutFeedback,
 } from 'react-native';
-import { useRoute, useNavigation } from '@react-navigation/native';
+import { useRoute, useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { getSubjectMeta, getQuestions } from '../api';
 import { SubjectMeta, QuestionSummary } from '../types';
 import { COLORS, FONTS } from '../theme/colors';
 import { QuestionItem } from '../components/QuestionItem';
+import { QuestionItemClassic } from '../components/QuestionItemClassic';
 import { QuestionSkeleton } from '../components/Skeleton';
 import { PrevNextNav } from '../components/PrevNextNav';
 import { AdBanner } from '../components/AdBanner';
 import { VolumeScrollHint } from '../components/VolumeScrollHint';
 import { rf, verticalScale, useResponsive } from '../utils/responsive';
 import { useVolumeScroll } from '../utils/volumeScroll';
+import { getOldUiEnabled } from '../utils/settings';
 
 const VOLUME_SCROLL_STEP = 320;
 
@@ -51,6 +53,13 @@ export const QuestionListScreen = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [filterModalVisible, setFilterModalVisible] = useState(false);
+  const [isOldUi, setIsOldUi] = useState(false);
+
+  useFocusEffect(
+    useCallback(() => {
+      getOldUiEnabled().then(setIsOldUi);
+    }, [])
+  );
   // Draft selections inside the filter sheet - chip taps only update these,
   // not selectedYear/selectedChapter, so browsing the sheet (tapping
   // several years/modules before deciding) doesn't fire an API call per
@@ -137,19 +146,50 @@ export const QuestionListScreen = () => {
       : null;
 
   const renderItem = useCallback(
-    ({ item }: { item: QuestionSummary }) => (
-      <QuestionItem
-        question={item}
-        subjectId={subjectId}
-        semesterId={semesterId}
-        subjectName={subjectName}
-        hideYearBadge={Boolean(selectedYear)}
-      />
-    ),
-    [subjectId, semesterId, subjectName, selectedYear]
+    ({ item }: { item: QuestionSummary }) =>
+      isOldUi ? (
+        <QuestionItemClassic
+          question={item}
+          subjectId={subjectId}
+          semesterId={semesterId}
+          subjectName={subjectName}
+          hideYearBadge={Boolean(selectedYear)}
+        />
+      ) : (
+        <QuestionItem
+          question={item}
+          subjectId={subjectId}
+          semesterId={semesterId}
+          subjectName={subjectName}
+          hideYearBadge={Boolean(selectedYear)}
+        />
+      ),
+    [isOldUi, subjectId, semesterId, subjectName, selectedYear]
   );
 
   const hasActiveFilters = Boolean(selectedChapter || selectedYear);
+
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerRight: () => (
+        <TouchableOpacity
+          style={[styles.headerFilterBtn, hasActiveFilters && styles.headerFilterBtnActive]}
+          onPress={openFilterModal}
+          activeOpacity={0.7}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          <Feather
+            name="sliders"
+            size={14}
+            color={hasActiveFilters ? COLORS.primary : COLORS.text}
+          />
+          <Text style={[styles.headerFilterText, hasActiveFilters && styles.headerFilterTextActive]}>
+            Filter
+          </Text>
+        </TouchableOpacity>
+      ),
+    });
+  }, [navigation, hasActiveFilters, openFilterModal]);
 
   const listRef = useRef<FlatList>(null);
   const scrollOffsetRef = useRef(0);
@@ -198,66 +238,6 @@ export const QuestionListScreen = () => {
         }
         ListHeaderComponent={
           <View style={styles.headerWrapper}>
-            {/* Header */}
-            <View style={styles.header}>
-              <View style={styles.headerTopRow}>
-                <Text style={styles.yearTag} numberOfLines={1}>
-                  {selectedYear
-                    ? `${selectedYear} QUESTION PAPER`
-                    : selectedChapter
-                    ? `${selectedChapter.toUpperCase()} QUESTIONS`
-                    : 'ALL QUESTIONS'}
-                </Text>
-                <TouchableOpacity
-                  style={[styles.filterIconButton, hasActiveFilters && styles.filterIconButtonActive]}
-                  onPress={openFilterModal}
-                  activeOpacity={0.7}
-                >
-                  <Feather
-                    name="sliders"
-                    size={14}
-                    color={hasActiveFilters ? COLORS.primary : COLORS.text}
-                  />
-                  <Text style={[styles.filterIconText, hasActiveFilters && styles.filterIconTextActive]}>
-                    Filter
-                  </Text>
-                </TouchableOpacity>
-              </View>
-
-              <Text style={styles.title}>{meta?.name || subjectName}</Text>
-              <Text style={styles.subtitle}>
-                {questions.length} question{questions.length === 1 ? '' : 's'}
-                {selectedYear && selectedChapter
-                  ? ` in ${selectedYear} for ${selectedChapter}.`
-                  : selectedYear
-                  ? ` in the ${selectedYear} paper.`
-                  : selectedChapter
-                  ? ` across all years for ${selectedChapter}.`
-                  : ' across all papers.'}
-              </Text>
-
-              {/* Active Filter summary pills */}
-              {(selectedYear || selectedChapter) && (
-                <View style={styles.activePillsRow}>
-                  {selectedYear ? (
-                    <View style={styles.activePill}>
-                      <Text style={styles.activePillText}>{selectedYear}</Text>
-                    </View>
-                  ) : null}
-                  {selectedChapter ? (
-                    <View style={styles.activePill}>
-                      <Text style={styles.activePillText} numberOfLines={1}>
-                        {selectedChapter}
-                      </Text>
-                      <TouchableOpacity onPress={() => handleChapterSelect(undefined)}>
-                        <Feather name="x" size={12} color={COLORS.textMuted} />
-                      </TouchableOpacity>
-                    </View>
-                  ) : null}
-                </View>
-              )}
-            </View>
-
             {loading && (
               <View>
                 {[1, 2, 3, 4, 5, 6].map((i) => (
@@ -424,91 +404,32 @@ const styles = StyleSheet.create({
   },
   headerWrapper: {
     width: '100%',
+    paddingTop: 10,
   },
-  header: {
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 14,
-    borderBottomWidth: 1,
-    borderColor: COLORS.borderDashed,
+  headerFilterBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingVertical: 5,
+    paddingHorizontal: 9,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.cardSecondary,
+    marginRight: 6,
+  },
+  headerFilterBtnActive: {
+    borderColor: COLORS.primary,
     backgroundColor: COLORS.card,
   },
-  headerTopRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 4,
-  },
-  yearTag: {
-    flex: 1,
+  headerFilterText: {
     fontFamily: FONTS.mono,
-    fontSize: rf(10.5),
-    color: COLORS.primary,
+    fontSize: rf(11.5),
     fontWeight: '700',
-    letterSpacing: 1.5,
-    paddingRight: 8,
-  },
-  filterIconButton: {
-    flexShrink: 0,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    backgroundColor: COLORS.background,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: 4,
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-  },
-  filterIconButtonActive: {
-    backgroundColor: COLORS.primaryLight,
-    borderColor: COLORS.primary,
-  },
-  filterIconText: {
-    fontFamily: FONTS.mono,
-    fontSize: rf(11),
-    fontWeight: '600',
     color: COLORS.text,
   },
-  filterIconTextActive: {
+  headerFilterTextActive: {
     color: COLORS.primary,
-  },
-  title: {
-    fontFamily: FONTS.serif,
-    fontSize: rf(24),
-    fontStyle: 'italic',
-    fontWeight: '400',
-    color: COLORS.text,
-    lineHeight: rf(30),
-    letterSpacing: -0.5,
-  },
-  subtitle: {
-    fontSize: rf(12.5),
-    color: COLORS.textMuted,
-    marginTop: 4,
-  },
-  activePillsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
-    marginTop: 10,
-  },
-  activePill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    backgroundColor: COLORS.cardSecondary,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: 3,
-    paddingVertical: 3,
-    paddingHorizontal: 7,
-  },
-  activePillText: {
-    fontFamily: FONTS.mono,
-    fontSize: rf(10.5),
-    color: COLORS.text,
-    fontWeight: '600',
   },
   footerNavWrapper: {
     width: '100%',
