@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   View,
   Text,
@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   ScrollView,
   StyleSheet,
-  ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -17,7 +16,7 @@ import { searchAllQuestions, searchSubjects, listAllSubjects, ApiError } from '.
 import * as Cache from '../db/cacheService';
 import { COLORS, FONTS } from '../theme/colors';
 import { Badge, MarksBadge, YearBadge } from '../components/Badge';
-import { Skeleton } from '../components/Skeleton';
+import { WaveLoader } from '../components/WaveLoader';
 import { rf, verticalScale, useResponsive } from '../utils/responsive';
 import { normalizeQuery, consumeSearchToken, shouldDebounceTap, applyServerRetryAfter } from '../utils/searchGuard';
 
@@ -36,6 +35,26 @@ export const SearchScreen = () => {
   const [hasSearched, setHasSearched] = useState(false);
   const [cooldownSec, setCooldownSec] = useState(0);
   const [validationError, setValidationError] = useState<string | null>(null);
+  const [filter, setFilter] = useState<'all' | 'solution' | '7marks'>('all');
+
+  const filteredQuestions = useMemo(() => {
+    if (filter === 'solution') {
+      return questionResults.filter((q) => q.hasSolution);
+    }
+    if (filter === '7marks') {
+      return questionResults.filter((q) => (q.marks || 0) >= 7);
+    }
+    return questionResults;
+  }, [questionResults, filter]);
+
+  const solutionCount = useMemo(
+    () => questionResults.filter((q) => q.hasSolution).length,
+    [questionResults]
+  );
+  const highMarksCount = useMemo(
+    () => questionResults.filter((q) => (q.marks || 0) >= 7).length,
+    [questionResults]
+  );
 
   const cooldownTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const lastQueryRef = useRef<string>('');
@@ -322,7 +341,7 @@ export const SearchScreen = () => {
                 <Feather name="x" size={15} color={COLORS.textMuted} />
               </TouchableOpacity>
             )}
-            {loading && <ActivityIndicator size="small" color={COLORS.primary} style={{ marginLeft: 6 }} />}
+
             {cooldownSec > 0 && !loading && <Feather name="clock" size={14} color={COLORS.textMuted} style={{ marginLeft: 6 }} />}
           </View>
           {validationError && (
@@ -336,6 +355,37 @@ export const SearchScreen = () => {
               <Feather name="clock" size={12} color={COLORS.textMuted} style={{ marginRight: 6 }} />
               <Text style={styles.cooldownText}>Slow down — try again in {cooldownSec}s</Text>
             </View>
+          )}
+          {hasSearched && !loading && questionResults.length > 0 && (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.filterChipsScroll}
+            >
+              {(['all', 'solution', '7marks'] as const).map((f) => {
+                const label =
+                  f === 'all'
+                    ? `All (${questionResults.length})`
+                    : f === 'solution'
+                    ? `With Solution (${solutionCount})`
+                    : `7+ Marks (${highMarksCount})`;
+                const active = filter === f;
+                return (
+                  <TouchableOpacity
+                    key={f}
+                    style={[styles.filterChip, active && styles.filterChipActive]}
+                    onPress={() => {
+                      Haptics.selectionAsync();
+                      setFilter(f);
+                    }}
+                  >
+                    <Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>
+                      {label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
           )}
         </View>
       </View>
@@ -401,15 +451,8 @@ export const SearchScreen = () => {
             </View>
           )}
           {loading ? (
-            <View style={{ paddingVertical: 12 }}>
-              <Skeleton width={120} height={14} style={{ marginBottom: 12 }} />
-              {[1, 2, 3, 4].map((i) => (
-                <View key={i} style={styles.resultCardSkeleton}>
-                  <Skeleton width="40%" height={12} style={{ marginBottom: 6 }} />
-                  <Skeleton width="85%" height={16} style={{ marginBottom: 8 }} />
-                  <Skeleton width="30%" height={14} />
-                </View>
-              ))}
+            <View style={styles.loaderBox}>
+              <WaveLoader color={COLORS.primary} dotSize={7} />
             </View>
           ) : null}
 
@@ -466,10 +509,10 @@ export const SearchScreen = () => {
           {!loading && questionResults.length > 0 && (
             <View style={styles.section}>
               <Text style={styles.sectionHeading}>
-                QUESTIONS ({questionResults.length})
+                QUESTIONS ({filteredQuestions.length}{filter !== 'all' ? ` of ${questionResults.length}` : ''})
               </Text>
               <View style={{ gap: 10 }}>
-                {questionResults.map((q) => (
+                {filteredQuestions.map((q) => (
                   <TouchableOpacity
                     key={`${q.subject?.id || 's'}-${q.questionId}`}
                     style={styles.questionResultCard}
@@ -765,13 +808,38 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
     lineHeight: 15,
   },
-  resultCardSkeleton: {
-    backgroundColor: COLORS.card,
+  loaderBox: {
+    paddingVertical: 48,
+    alignItems: 'center',
+  },
+  filterChipsScroll: {
+    flexDirection: 'row',
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+  },
+  filterChip: {
+    height: 30,
+    paddingHorizontal: 12,
+    borderRadius: 15,
     borderWidth: 1,
     borderColor: COLORS.border,
-    borderRadius: 4,
-    padding: 14,
-    marginBottom: 10,
+    backgroundColor: COLORS.card,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  filterChipActive: {
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
+  },
+  filterChipText: {
+    fontFamily: FONTS.mono,
+    fontSize: rf(11.5),
+    color: COLORS.textSubtle,
+    letterSpacing: 0.3,
+  },
+  filterChipTextActive: {
+    color: '#fff',
   },
   emptyContainer: {
     paddingVertical: 48,
