@@ -301,20 +301,23 @@ export const markdownRules = {
             justifyContent: 'center',
           }}
         >
-          <ScrollView horizontal nestedScrollEnabled showsHorizontalScrollIndicator={false}>
-            <Text
-              style={{
-                fontFamily: FONTS.serif,
-                fontStyle: 'italic',
-                fontSize: rf(15),
-                color: COLORS.primary,
-                fontWeight: '600',
-                letterSpacing: 0.5,
-              }}
-            >
-              {mathExpr}
-            </Text>
-          </ScrollView>
+          {/* A bare horizontal ScrollView with no width constraint can
+              collapse to zero height on some Android RN versions, hiding the
+              text entirely - these expressions are short, so it just wraps
+              instead of scrolling. */}
+          <Text
+            style={{
+              fontFamily: FONTS.serif,
+              fontStyle: 'italic',
+              fontSize: rf(15),
+              color: COLORS.primary,
+              fontWeight: '600',
+              letterSpacing: 0.5,
+              textAlign: 'center',
+            }}
+          >
+            {mathExpr}
+          </Text>
         </View>
       );
     }
