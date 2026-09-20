@@ -172,7 +172,7 @@ export const TopicNotesScreen = () => {
           </TouchableOpacity>
         )}
 
-        {(prevEntry || nextEntry) && (
+        {!loading && (prevEntry || nextEntry) && (
           <View style={styles.navSection}>
             <PrevNextNav
               prev={
