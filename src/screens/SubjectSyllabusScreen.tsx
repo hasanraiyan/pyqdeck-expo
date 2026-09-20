@@ -40,6 +40,11 @@ const topicKey = (moduleId: string, topicId: string) => `${moduleId}:${topicId}`
  * notes is deliberate: a button that opens an empty page is worse UX than no
  * button at all. Long titles wrap and the icon stays centred against them.
  *
+ * __DEV__ shows the icon for every topic regardless of hasNotes (dimmed for
+ * ones without notes) - lets whoever is testing jump straight into
+ * TopicNotesScreen and exercise the fetch/empty-state path without an admin
+ * having to write a note first. Real installs keep the hasNotes gate.
+ *
  * Fetched whole via /syllabus/subjects/:slug, through the read-through cache.
  */
 export const SubjectSyllabusScreen = () => {
@@ -225,14 +230,18 @@ export const SubjectSyllabusScreen = () => {
                   </Text>
                 </TouchableOpacity>
 
-                {t.hasNotes && (
+                {(t.hasNotes || __DEV__) && (
                   <TouchableOpacity
                     style={[styles.notesBtn, isDone && styles.notesBtnDone]}
                     onPress={() => openTopicNotes(m, t)}
                     activeOpacity={0.7}
                     accessibilityLabel={`Open notes for ${t.title}`}
                   >
-                    <Feather name="file-text" size={17} color={COLORS.primary} />
+                    <Feather
+                      name="file-text"
+                      size={17}
+                      color={t.hasNotes ? COLORS.primary : COLORS.textSubtle}
+                    />
                   </TouchableOpacity>
                 )}
               </View>
