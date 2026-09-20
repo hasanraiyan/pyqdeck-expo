@@ -50,6 +50,7 @@ export const QuestionItem: React.FC<QuestionItemProps> = React.memo(({
   const [expanded, setExpanded] = useState(false);
   const [solution, setSolution] = useState<Solution | null>(null);
   const [loadingSolution, setLoadingSolution] = useState(false);
+  const [solutionError, setSolutionError] = useState(false);
   const [copied, setCopied] = useState(false);
   const [myVote, setMyVoteState] = useState<1 | -1 | null>(null);
   const [voteCounts, setVoteCounts] = useState({ upvotes: 0, downvotes: 0 });
@@ -65,21 +66,29 @@ export const QuestionItem: React.FC<QuestionItemProps> = React.memo(({
   const [reportSubmitting, setReportSubmitting] = useState(false);
   const [reported, setReported] = useState(false);
 
-  const toggleExpand = async () => {
+  // Expanding a question only reveals the question text - the solution is a
+  // separate server fetch, and most opens are just "read the question", so
+  // auto-fetching it on every expand would hit the server for solutions
+  // nobody looks at. handleShowSolution below is the explicit, user-driven
+  // trigger for that fetch.
+  const toggleExpand = () => {
     Haptics.selectionAsync();
-    const willExpand = !expanded;
-    setExpanded(willExpand);
+    setExpanded((prev) => !prev);
+  };
 
-    if (willExpand && question.hasSolution && !solution && !loadingSolution) {
-      setLoadingSolution(true);
-      try {
-        const sol = await getSolution(subjectId, question.questionId);
-        setSolution(sol);
-      } catch (e) {
-        console.error('Failed to load solution', e);
-      } finally {
-        setLoadingSolution(false);
-      }
+  const handleShowSolution = async () => {
+    if (loadingSolution || solution) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setLoadingSolution(true);
+    setSolutionError(false);
+    try {
+      const sol = await getSolution(subjectId, question.questionId);
+      setSolution(sol);
+    } catch (e) {
+      console.error('Failed to load solution', e);
+      setSolutionError(true);
+    } finally {
+      setLoadingSolution(false);
     }
   };
 
@@ -331,8 +340,24 @@ export const QuestionItem: React.FC<QuestionItemProps> = React.memo(({
                 </View>
               ) : loadingSolution ? (
                 <SolutionSkeleton />
+              ) : solutionError ? (
+                <TouchableOpacity
+                  style={styles.showSolutionBtn}
+                  onPress={handleShowSolution}
+                  activeOpacity={0.7}
+                >
+                  <Feather name="refresh-cw" size={14} color={COLORS.primary} />
+                  <Text style={styles.showSolutionBtnText}>Failed to load - tap to retry</Text>
+                </TouchableOpacity>
               ) : (
-                <Text style={styles.loadingText}>Failed to load solution.</Text>
+                <TouchableOpacity
+                  style={styles.showSolutionBtn}
+                  onPress={handleShowSolution}
+                  activeOpacity={0.7}
+                >
+                  <Feather name="eye" size={14} color={COLORS.primary} />
+                  <Text style={styles.showSolutionBtnText}>Show Solution</Text>
+                </TouchableOpacity>
               )}
             </View>
           )}
@@ -662,9 +687,22 @@ const styles = StyleSheet.create({
     color: COLORS.textMuted,
     fontWeight: '600',
   },
-  loadingText: {
-    fontSize: 13,
-    color: COLORS.textMuted,
-    fontStyle: 'italic',
+  showSolutionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 7,
+    paddingVertical: 11,
+    borderRadius: 6,
+    borderWidth: 1.5,
+    borderColor: COLORS.primary,
+    backgroundColor: COLORS.card,
+  },
+  showSolutionBtnText: {
+    fontFamily: FONTS.mono,
+    fontSize: 12.5,
+    fontWeight: '700',
+    color: COLORS.primary,
+    letterSpacing: 0.3,
   },
 });
