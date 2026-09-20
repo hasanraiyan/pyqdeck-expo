@@ -17,7 +17,7 @@ import { Branch, BranchSemesters } from '../types/syllabus';
 import { getDoneCounts } from '../db/syllabusProgress';
 import { getSelectedBranch, setSelectedBranch } from '../utils/settings';
 import { ScreenError, ScreenEmpty } from '../components/ScreenState';
-import { SemesterGridSkeleton } from '../components/Skeletons';
+import { WaveLoader } from '../components/WaveLoader';
 
 export const SemesterSelectScreen = () => {
   const insets = useSafeAreaInsets();
@@ -215,8 +215,8 @@ export const SemesterSelectScreen = () => {
 
         {/* Loading / Error / Empty States */}
         {!data && !error && (
-          <View style={{ marginTop: 12 }}>
-            <SemesterGridSkeleton />
+          <View style={styles.loaderContainer}>
+            <WaveLoader color={COLORS.primary} dotSize={6} />
           </View>
         )}
 
@@ -425,5 +425,10 @@ const styles = StyleSheet.create({
   barFill: {
     height: '100%',
     backgroundColor: COLORS.secondary,
+  },
+  loaderContainer: {
+    paddingVertical: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

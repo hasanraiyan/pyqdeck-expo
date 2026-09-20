@@ -10,15 +10,17 @@ import {
   LayoutChangeEvent,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
 import { getSemesters, getSubjects } from '../api';
 import { getCachedSemesters, getCachedSubjects, saveCachedSemesters } from '../db/cacheService';
 import { Semester } from '../types';
 import { COLORS, FONTS } from '../theme/colors';
-import { Skeleton } from '../components/Skeleton';
+import { WaveLoader } from '../components/WaveLoader';
 import { rf, scale, verticalScale, useResponsive } from '../utils/responsive';
 import { yearNumberOf, YEAR_NUMBERS } from '../utils/year';
+import { getRecentStudies, RecentStudy } from '../utils/recentStudy';
 
 export const HomeScreen = () => {
   const insets = useSafeAreaInsets();
@@ -61,6 +63,21 @@ export const HomeScreen = () => {
   const [stats, setStats] = useState({ subjects: 0, questions: 0 });
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [recentStudies, setRecentStudies] = useState<RecentStudy[]>([]);
+
+  useFocusEffect(
+    useCallback(() => {
+      let isCurrent = true;
+      getRecentStudies().then((studies) => {
+        if (isCurrent) {
+          setRecentStudies(studies);
+        }
+      });
+      return () => {
+        isCurrent = false;
+      };
+    }, [])
+  );
 
   const loadData = async (isManualRefresh = false) => {
     // 1. Instant 0ms load from cache if available
@@ -241,22 +258,122 @@ export const HomeScreen = () => {
             </View>
           </View>
 
+          {/* Jump Back In Section */}
+          {recentStudies.length > 0 && (
+            <View style={styles.recentSection}>
+              <View style={styles.recentHeaderRow}>
+                <View style={styles.recentTitleWrap}>
+                  <Feather name="zap" size={13} color={COLORS.primary} />
+                  <Text style={styles.recentHeading}>JUMP BACK IN</Text>
+                </View>
+              </View>
+
+              {recentStudies.length === 1 ? (
+                <TouchableOpacity
+                  style={[styles.recentCard, styles.recentCardFull]}
+                  activeOpacity={0.7}
+                  onPress={() => {
+                    const item = recentStudies[0];
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    if (item.year) {
+                      navigation.navigate('QuestionList', {
+                        semesterId: item.semesterId,
+                        subjectId: item.subjectId,
+                        subjectName: item.subjectName,
+                        subjectCode: item.subjectCode,
+                        initialYear: item.year,
+                      });
+                    } else {
+                      navigation.navigate('SubjectDetail', {
+                        semesterId: item.semesterId,
+                        subjectId: item.subjectId,
+                        subjectName: item.subjectName,
+                        subjectCode: item.subjectCode,
+                      });
+                    }
+                  }}
+                >
+                  <View style={styles.recentTopRow}>
+                    <Text style={styles.recentCode} numberOfLines={1}>
+                      {recentStudies[0].subjectCode ||
+                        `SEM ${recentStudies[0].semesterId?.replace(/\D/g, '') || ''}`}
+                    </Text>
+                    {recentStudies[0].year ? (
+                      <View style={styles.recentYearBadge}>
+                        <Text style={styles.recentYearText}>{recentStudies[0].year} Paper</Text>
+                      </View>
+                    ) : null}
+                  </View>
+                  <Text style={[styles.recentSubjectName, styles.recentSubjectNameFull]} numberOfLines={1}>
+                    {recentStudies[0].subjectName}
+                  </Text>
+                  <View style={styles.recentActionRow}>
+                    <Text style={styles.recentResumeText}>Resume studying</Text>
+                    <Feather name="arrow-right" size={11} color={COLORS.primary} />
+                  </View>
+                </TouchableOpacity>
+              ) : (
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.recentScrollContent}
+                >
+                  {recentStudies.map((item) => (
+                    <TouchableOpacity
+                      key={item.subjectId}
+                      style={styles.recentCard}
+                      activeOpacity={0.7}
+                      onPress={() => {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                        if (item.year) {
+                          navigation.navigate('QuestionList', {
+                            semesterId: item.semesterId,
+                            subjectId: item.subjectId,
+                            subjectName: item.subjectName,
+                            subjectCode: item.subjectCode,
+                            initialYear: item.year,
+                          });
+                        } else {
+                          navigation.navigate('SubjectDetail', {
+                            semesterId: item.semesterId,
+                            subjectId: item.subjectId,
+                            subjectName: item.subjectName,
+                            subjectCode: item.subjectCode,
+                          });
+                        }
+                      }}
+                    >
+                      <View style={styles.recentTopRow}>
+                        <Text style={styles.recentCode} numberOfLines={1}>
+                          {item.subjectCode || `SEM ${item.semesterId?.replace(/\D/g, '') || ''}`}
+                        </Text>
+                        {item.year ? (
+                          <View style={styles.recentYearBadge}>
+                            <Text style={styles.recentYearText}>{item.year}</Text>
+                          </View>
+                        ) : null}
+                      </View>
+                      <Text style={styles.recentSubjectName} numberOfLines={1}>
+                        {item.subjectName}
+                      </Text>
+                      <View style={styles.recentActionRow}>
+                        <Text style={styles.recentResumeText}>Resume studying</Text>
+                        <Feather name="arrow-right" size={11} color={COLORS.primary} />
+                      </View>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              )}
+            </View>
+          )}
+
           {/* Year Selection Section */}
           <View style={styles.section}>
             <Text style={styles.sectionHeading}>SELECT YEAR</Text>
 
             {loading ? (
-              <View style={[styles.grid, { gap: GRID_GAP }]} onLayout={onGridLayout}>
-                {[1, 2, 3, 4].map((i) => (
-                  <View
-                    key={i}
-                    style={[styles.gridCardSkeleton, { width: cardWidth }]}
-                  >
-                    <Skeleton width={50} height={10} style={{ marginBottom: 6 }} />
-                    <Skeleton width={40} height={28} style={{ marginBottom: 6 }} />
-                    <Skeleton width={60} height={10} />
-                  </View>
-                ))}
+              <View style={styles.loaderContainer}>
+                <WaveLoader color={COLORS.primary} dotSize={6} />
               </View>
             ) : (
               <View style={[styles.grid, { gap: GRID_GAP }]} onLayout={onGridLayout}>
@@ -522,13 +639,96 @@ const styles = StyleSheet.create({
     color: COLORS.textSubtle,
     fontWeight: '700',
   },
-  gridCardSkeleton: {
+  recentSection: {
+    marginTop: 20,
+  },
+  recentHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  recentTitleWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  recentHeading: {
+    fontFamily: FONTS.mono,
+    fontSize: rf(11),
+    fontWeight: '700',
+    color: COLORS.textSubtle,
+    letterSpacing: 1.5,
+    includeFontPadding: false,
+  },
+  recentScrollContent: {
+    gap: 10,
+    paddingRight: 16,
+  },
+  recentCard: {
+    width: 205,
     backgroundColor: COLORS.card,
     borderWidth: 1,
     borderColor: COLORS.border,
+    borderRadius: 6,
+    padding: 12,
+    gap: 5,
+  },
+  recentCardFull: {
+    width: '100%',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+  },
+  recentTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  recentCode: {
+    fontFamily: FONTS.mono,
+    fontSize: rf(10),
+    fontWeight: '700',
+    color: COLORS.textSubtle,
+    letterSpacing: 0.5,
+    flex: 1,
+    marginRight: 6,
+  },
+  recentYearBadge: {
+    backgroundColor: COLORS.primaryLight,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
     borderRadius: 4,
-    paddingVertical: verticalScale(18),
-    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: COLORS.primaryBorder,
+  },
+  recentYearText: {
+    fontFamily: FONTS.mono,
+    fontSize: rf(9.5),
+    fontWeight: '700',
+    color: COLORS.primary,
+  },
+  recentSubjectName: {
+    fontFamily: FONTS.serif,
+    fontSize: rf(14),
+    fontWeight: '600',
+    color: COLORS.text,
+  },
+  recentSubjectNameFull: {
+    fontSize: rf(16),
+  },
+  recentActionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 2,
+  },
+  recentResumeText: {
+    fontFamily: FONTS.mono,
+    fontSize: rf(10.5),
+    fontWeight: '600',
+    color: COLORS.primary,
+  },
+  loaderContainer: {
+    paddingVertical: 36,
     alignItems: 'center',
     justifyContent: 'center',
   },

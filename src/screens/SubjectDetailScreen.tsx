@@ -14,10 +14,11 @@ import { Feather } from '@expo/vector-icons';
 import { getSubjectMeta } from '../api';
 import { SubjectMeta } from '../types';
 import { COLORS, FONTS } from '../theme/colors';
-import { Skeleton } from '../components/Skeleton';
+import { WaveLoader } from '../components/WaveLoader';
 import { Badge } from '../components/Badge';
 import { AdBanner } from '../components/AdBanner';
 import { useResponsive } from '../utils/responsive';
+import { recordRecentStudy } from '../utils/recentStudy';
 
 export const SubjectDetailScreen = () => {
   const insets = useSafeAreaInsets();
@@ -62,6 +63,14 @@ export const SubjectDetailScreen = () => {
     try {
       const data = await getSubjectMeta(subjectId, forceRefresh);
       setMeta(data);
+      if (data) {
+        void recordRecentStudy({
+          subjectId,
+          subjectName: data.name || subjectName,
+          semesterId,
+          subjectCode: data.code || subjectCode,
+        });
+      }
     } catch (e) {
       console.error(e);
     } finally {
@@ -114,13 +123,8 @@ export const SubjectDetailScreen = () => {
           <View style={styles.section}>
             <Text style={styles.sectionHeading}>QUESTION PAPERS BY YEAR</Text>
             {loading ? (
-              <View style={[styles.grid, { gap: YEAR_GAP }]}>
-                {[1, 2, 3, 4].map((i) => (
-                  <View key={i} style={[styles.yearCardSkeleton, { width: yearCardWidth }]}>
-                    <Skeleton width={60} height={24} style={{ marginBottom: 6 }} />
-                    <Skeleton width={40} height={12} />
-                  </View>
-                ))}
+              <View style={styles.loaderBox}>
+                <WaveLoader color={COLORS.primary} dotSize={6} />
               </View>
             ) : meta?.years && meta.years.length > 0 ? (
               <View style={[styles.grid, { gap: YEAR_GAP }]}>
@@ -171,22 +175,11 @@ export const SubjectDetailScreen = () => {
         </View>
 
         {/* Modules / Chapters Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionHeading}>PRACTICE BY MODULE</Text>
-          {loading ? (
-            <View style={[styles.moduleList, moduleColumns > 1 && styles.moduleListGrid]}>
-              {[1, 2, 3].map((i) => (
-                <View
-                  key={i}
-                  style={[styles.moduleCardSkeleton, { width: moduleCardWidth }]}
-                >
-                  <Skeleton width="60%" height={16} style={{ marginBottom: 6 }} />
-                  <Skeleton width="30%" height={12} />
-                </View>
-              ))}
-            </View>
-          ) : meta?.chapters && meta.chapters.length > 0 ? (
-            <View style={[styles.moduleList, moduleColumns > 1 && styles.moduleListGrid]}>
+        {!loading && (
+          <View style={styles.section}>
+            <Text style={styles.sectionHeading}>PRACTICE BY MODULE</Text>
+            {meta?.chapters && meta.chapters.length > 0 ? (
+              <View style={[styles.moduleList, moduleColumns > 1 && styles.moduleListGrid]}>
               {meta.chapters.map((ch, idx) => {
                 const isComingSoon = ch.questionCount === 0;
                 return (
@@ -234,7 +227,8 @@ export const SubjectDetailScreen = () => {
             </View>
           )}
         </View>
-        </View>
+        )}
+      </View>
       </ScrollView>
       <AdBanner />
     </View>
@@ -350,13 +344,10 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: COLORS.textMuted,
   },
-  yearCardSkeleton: {
-    backgroundColor: COLORS.card,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: 4,
-    paddingVertical: 16,
-    paddingHorizontal: 14,
+  loaderBox: {
+    paddingVertical: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   yearNumber: {
     fontFamily: FONTS.serif,
@@ -386,14 +377,6 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border,
     borderRadius: 4,
     paddingVertical: 13,
-    paddingHorizontal: 14,
-  },
-  moduleCardSkeleton: {
-    backgroundColor: COLORS.card,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: 4,
-    paddingVertical: 14,
     paddingHorizontal: 14,
   },
   moduleLeft: {

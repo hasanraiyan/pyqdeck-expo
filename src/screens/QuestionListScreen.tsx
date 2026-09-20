@@ -27,6 +27,7 @@ import { VolumeScrollHint } from '../components/VolumeScrollHint';
 import { rf, verticalScale, useResponsive } from '../utils/responsive';
 import { useVolumeScroll } from '../utils/volumeScroll';
 import { getOldUiEnabled } from '../utils/settings';
+import { recordRecentStudy } from '../utils/recentStudy';
 
 const VOLUME_SCROLL_STEP = 320;
 
@@ -103,6 +104,16 @@ export const QuestionListScreen = () => {
         forceRefresh
       );
       setQuestions(questionsData.questions);
+
+      if (metaData) {
+        void recordRecentStudy({
+          subjectId,
+          subjectName: metaData.name || subjectName,
+          semesterId,
+          subjectCode: metaData.code || subjectCode,
+          year: queryYear,
+        });
+      }
     } catch (e) {
       console.error(e);
     } finally {
@@ -135,6 +146,13 @@ export const QuestionListScreen = () => {
     setSelectedYear(year);
     listRef.current?.scrollToOffset({ offset: 0, animated: false });
     fetchFilteredQuestions(year, selectedChapter);
+    void recordRecentStudy({
+      subjectId,
+      subjectName: meta?.name || subjectName,
+      semesterId,
+      subjectCode: meta?.code || subjectCode,
+      year,
+    });
   };
 
   const handleChapterSelect = (chapter?: string) => {
