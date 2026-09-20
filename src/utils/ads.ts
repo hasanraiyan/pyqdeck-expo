@@ -5,8 +5,8 @@ import { AD_UNIT_IDS } from '../config/ads';
 
 const OPENS_KEY = 'interstitial_opens_since_last_shown';
 const LAST_SHOWN_KEY = 'interstitial_last_shown_at';
-const OPENS_BEFORE_SHOW = 3;
-const COOLDOWN_MS = 60 * 1000;
+const OPENS_BEFORE_SHOW = 4;
+const COOLDOWN_MS = 120 * 1000; // 2 minutes minimum cooldown between interstitials
 
 let interstitial: ReturnType<typeof InterstitialAdType.createForAdRequest> | null = null;
 let loaded = false;
