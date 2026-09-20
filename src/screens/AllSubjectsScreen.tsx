@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   StyleSheet,
   RefreshControl,
-  ActivityIndicator,
   Platform,
   LayoutChangeEvent,
 } from 'react-native';
@@ -19,6 +18,7 @@ import { COLORS, FONTS } from '../theme/colors';
 import { Skeleton } from '../components/Skeleton';
 import { Badge } from '../components/Badge';
 import { AdBanner } from '../components/AdBanner';
+import { WaveLoader } from '../components/WaveLoader';
 import { useResponsive } from '../utils/responsive';
 
 export const AllSubjectsScreen = () => {
@@ -244,7 +244,7 @@ export const AllSubjectsScreen = () => {
             ListFooterComponent={
               loadingMore ? (
                 <View style={styles.loadingMoreFooter}>
-                  <ActivityIndicator size="small" color={COLORS.primary} />
+                  <WaveLoader color={COLORS.primary} dotSize={5} />
                   <Text style={styles.loadingMoreText}>Loading more subjects...</Text>
                 </View>
               ) : null

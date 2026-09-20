@@ -9,7 +9,6 @@ import {
   Platform,
   UIManager,
   RefreshControl,
-  ActivityIndicator,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -21,6 +20,7 @@ import { BranchSemester, SyllabusSubjectSummary } from '../types/syllabus';
 import { getDoneCounts } from '../db/syllabusProgress';
 import { recordContentOpenedAndMaybeShowInterstitial } from '../utils/ads';
 import { ScreenError, ScreenEmpty } from '../components/ScreenState';
+import { WaveLoader } from '../components/WaveLoader';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -99,7 +99,7 @@ export const SyllabusOverviewScreen = () => {
         {error ? (
           <ScreenError message={error} onRetry={() => load(true)} />
         ) : (
-          <ActivityIndicator size="large" color={COLORS.primary} />
+          <WaveLoader color={COLORS.primary} dotSize={6} />
         )}
       </View>
     );

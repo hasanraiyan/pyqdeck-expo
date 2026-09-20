@@ -4,7 +4,6 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
-  ActivityIndicator,
   Share,
   TextInput,
   Modal,
@@ -23,7 +22,7 @@ import { useRequireAuth } from '../auth/useRequireAuth';
 import { getMyVote, setMyVote } from '../utils/votes';
 import { COLORS, FONTS } from '../theme/colors';
 import { Badge, MarksBadge, AskAiBadge, YearBadge, ShowSolnBadge } from './Badge';
-import { SolutionSkeleton } from './Skeleton';
+import { WaveLoader } from './WaveLoader';
 import { InlineMathText } from './InlineMathText';
 import { cleanMarkdown, isTablet } from '../utils/responsive';
 import { buildQuestionUrl } from '../utils/links';
@@ -382,7 +381,9 @@ export const QuestionItem: React.FC<QuestionItemProps> = React.memo(({
           {loadingSolution && (
             <View style={styles.solutionSection}>
               <Text style={styles.solutionTitle}>WORKED SOLUTION</Text>
-              <SolutionSkeleton />
+              <View style={{ paddingVertical: 12, alignItems: 'center' }}>
+                <WaveLoader color={COLORS.primary} dotSize={5} />
+              </View>
             </View>
           )}
 

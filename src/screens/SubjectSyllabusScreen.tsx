@@ -9,7 +9,6 @@ import {
   Platform,
   UIManager,
   RefreshControl,
-  ActivityIndicator,
   Linking,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -23,6 +22,7 @@ import { SyllabusModule, SyllabusSubject, Topic, topicCountOf } from '../types/s
 import { getDoneTopics, saveDoneTopics } from '../db/syllabusProgress';
 import { DoneStamp } from '../components/Badge';
 import { ScreenError, ScreenEmpty } from '../components/ScreenState';
+import { WaveLoader } from '../components/WaveLoader';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -196,7 +196,7 @@ export const SubjectSyllabusScreen = () => {
         {error ? (
           <ScreenError message={error} onRetry={() => load(true)} />
         ) : (
-          <ActivityIndicator size="large" color={COLORS.primary} />
+          <WaveLoader color={COLORS.primary} dotSize={6} />
         )}
       </View>
     );

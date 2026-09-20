@@ -5,7 +5,6 @@ import {
   ScrollView,
   TouchableOpacity,
   StyleSheet,
-  ActivityIndicator,
   Share,
   Linking,
   TextInput,
@@ -42,6 +41,7 @@ import { AdBanner } from '../components/AdBanner';
 import { getMyVote, setMyVote } from '../utils/votes';
 import { useRequireAuth } from '../auth/useRequireAuth';
 import { isAiEnabled } from '../config/features';
+import { WaveLoader } from '../components/WaveLoader';
 
 export const QuestionDetailScreen = () => {
   const insets = useSafeAreaInsets();
@@ -406,7 +406,7 @@ export const QuestionDetailScreen = () => {
   if (loading || !question) {
     return (
       <View style={[styles.container, styles.centerLoading]}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
+        <WaveLoader color={COLORS.primary} dotSize={6} />
       </View>
     );
   }
@@ -728,12 +728,9 @@ export const QuestionDetailScreen = () => {
                   </View>
                 </View>
               ) : loadingSolution ? (
-                <View>
-                  <View style={styles.loadingRow}>
-                    <ActivityIndicator size="small" color={COLORS.primary} />
-                    <Text style={styles.loadingText}>Loading solution…</Text>
-                  </View>
-                  <SolutionSkeleton />
+                <View style={{ paddingVertical: 14, alignItems: 'center' }}>
+                  <WaveLoader color={COLORS.primary} dotSize={5} />
+                  <Text style={[styles.loadingText, { marginTop: 4 }]}>Loading solution…</Text>
                 </View>
               ) : solutionError ? (
                 <TouchableOpacity
