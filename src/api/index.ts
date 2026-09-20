@@ -366,6 +366,12 @@ const syllabusRead = async <T,>(
   path: string,
   forceRefresh = false
 ): Promise<T> => {
+  // Dev builds always hit the network: an admin editing syllabus content
+  // while testing the app should see it land without a manual pull-to-
+  // refresh fighting the 24h cache below. Production keeps the cache - that
+  // is what makes the syllabus feel instant for a real student.
+  if (__DEV__) forceRefresh = true;
+
   const cached = await SylCache.read<T>(key);
 
   // A cache entry is only a reason to skip the network when it actually holds
