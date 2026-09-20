@@ -420,15 +420,17 @@ export const QuestionDetailScreen = () => {
       >
         <View style={[styles.centerWrapper, { maxWidth: readMaxWidth }]}>
           {/* Breadcrumb / Paper info */}
-          <View style={styles.metaRow}>
-            <Text style={styles.subjectText} numberOfLines={1}>
-              {subjectName || 'Subject'}
-              {question.chapter ? ` • ${question.chapter}` : ''}
-            </Text>
-          </View>
+          {!isOldUi && (
+            <View style={styles.metaRow}>
+              <Text style={styles.subjectText} numberOfLines={1}>
+                {subjectName || 'Subject'}
+                {question.chapter ? ` • ${question.chapter}` : ''}
+              </Text>
+            </View>
+          )}
 
           {/* Question Card */}
-          <View style={styles.questionCard}>
+          <View style={[styles.questionCard, isOldUi && styles.questionCardClassic]}>
             {/* Top row inside card: Q-Number on left, Year & Marks badge on right */}
             {isOldUi ? (
               <>
@@ -519,28 +521,29 @@ export const QuestionDetailScreen = () => {
                 </View>
                 <View style={styles.repeatYearsRow}>
                   <Text style={styles.repeatAlertDesc}>Also appeared in: </Text>
-                  {repeats
-                    .slice()
-                    .sort((a, b) => b.year - a.year)
-                    .map((item, idx, arr) => (
-                      <TouchableOpacity
-                        key={`${item.questionId || idx}`}
-                        onPress={() =>
-                          navigation.push('QuestionDetail', {
-                            subjectId: item.subject?.id || subjectId,
-                            semesterId: item.subject?.semesterId || semesterId,
-                            year: item.year,
-                            questionId: item.questionId,
-                            initialQuestion: item,
-                            subjectName: item.subject?.name || subjectName,
-                          })
-                        }
-                        style={styles.repeatYearLink}
-                      >
-                        <Text style={styles.repeatYearLinkText}>{item.year}</Text>
-                        {idx < arr.length - 1 ? <Text style={styles.repeatComma}>, </Text> : null}
-                      </TouchableOpacity>
-                    ))}
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
+                    {repeats
+                      .slice()
+                      .sort((a, b) => b.year - a.year)
+                      .map((item, idx) => (
+                        <TouchableOpacity
+                          key={`${item.questionId || idx}`}
+                          onPress={() =>
+                            navigation.push('QuestionDetail', {
+                              subjectId: item.subject?.id || subjectId,
+                              semesterId: item.subject?.semesterId || semesterId,
+                              year: item.year,
+                              questionId: item.questionId,
+                              initialQuestion: item,
+                              subjectName: item.subject?.name || subjectName,
+                            })
+                          }
+                          activeOpacity={0.7}
+                        >
+                          <YearBadge year={item.year} variant="primary" />
+                        </TouchableOpacity>
+                      ))}
+                  </View>
                 </View>
               </View>
             )}
@@ -803,7 +806,7 @@ export const QuestionDetailScreen = () => {
                             {item.chapter || item.subject?.name || subjectName}
                           </Text>
                           <View style={styles.similarBadgeGroup}>
-                            <Badge label={item.year} variant="secondary" />
+                            <YearBadge year={item.year} />
                             <MarksBadge marks={item.marks} />
                           </View>
                         </View>
@@ -953,12 +956,18 @@ const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 16,
   },
+  questionCardClassic: {
+    paddingTop: 10,
+    paddingHorizontal: 14,
+    paddingBottom: 14,
+    borderRadius: 14,
+  },
   qNumRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 10,
-    paddingBottom: 8,
+    marginBottom: 8,
+    paddingBottom: 6,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.borderLight,
   },
@@ -966,8 +975,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 10,
-    paddingBottom: 8,
+    marginBottom: 6,
+    paddingBottom: 2,
   },
   qNumRightGroup: {
     flexDirection: 'row',
@@ -982,10 +991,10 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderBottomWidth: 1,
     borderColor: COLORS.borderLight,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    marginHorizontal: -16,
-    marginBottom: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    marginHorizontal: -14,
+    marginBottom: 8,
   },
   detailModuleText: {
     fontFamily: FONTS.mono,

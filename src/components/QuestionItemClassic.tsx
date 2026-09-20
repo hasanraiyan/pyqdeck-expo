@@ -1,15 +1,10 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
   StyleSheet,
-  ActivityIndicator,
   Share,
-  TextInput,
-  Modal,
-  TouchableWithoutFeedback,
-  ScrollView,
 } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
@@ -17,15 +12,11 @@ import * as WebBrowser from 'expo-web-browser';
 import { Feather, FontAwesome } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import Markdown from 'react-native-markdown-display';
-import { QuestionSummary, Solution } from '../types';
-import { getSolution, voteSolution, reportSolution } from '../api';
-import { useRequireAuth } from '../auth/useRequireAuth';
-import { getMyVote, setMyVote } from '../utils/votes';
-import { AskAiBadge, ShowSolnBadge, YearBadge, MarksBadge, QNumBadge } from './Badge';
-import { SolutionSkeleton } from './Skeleton';
+import { QuestionSummary } from '../types';
+import { AskAiBadge, YearBadge, MarksBadge, QNumBadge } from './Badge';
 import { cleanMarkdown } from '../utils/responsive';
 import { buildQuestionUrl } from '../utils/links';
-import { questionMarkdownStyles, solutionMarkdownStyles, markdownRules } from '../theme/markdownStyles';
+import { questionMarkdownStyles, markdownRules } from '../theme/markdownStyles';
 import { COLORS, FONTS } from '../theme/colors';
 import { isAiEnabled } from '../config/features';
 
@@ -45,63 +36,7 @@ export const QuestionItemClassic: React.FC<QuestionItemClassicProps> = React.mem
   hideYearBadge = false,
 }) => {
   const navigation = useNavigation<any>();
-  const [solution, setSolution] = useState<Solution | null>(null);
-  const [loadingSolution, setLoadingSolution] = useState(false);
-  const [solutionError, setSolutionError] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [showSolution, setShowSolution] = useState(false);
-
-  // Voting & reporting
-  const [myVote, setMyVoteState] = useState<1 | -1 | null>(null);
-  const [voteCounts, setVoteCounts] = useState({ upvotes: 0, downvotes: 0 });
-  const [isVoting, setIsVoting] = useState(false);
-  const { guard } = useRequireAuth();
-  const myVoteRef = useRef<1 | -1 | null>(null);
-  const voteCountsRef = useRef({ upvotes: 0, downvotes: 0 });
-  const pendingVoteRef = useRef<1 | -1 | 0 | null>(null);
-  const actionIdRef = useRef(0);
-
-  const [showReport, setShowReport] = useState(false);
-  const [reportReason, setReportReason] = useState<'incorrect' | 'incomplete' | 'formatting' | 'other' | null>(null);
-  const [reportMsg, setReportMsg] = useState('');
-  const [reportSubmitting, setReportSubmitting] = useState(false);
-  const [reported, setReported] = useState(false);
-
-  const handleToggleSolution = async () => {
-    if (solution) {
-      Haptics.selectionAsync();
-      setShowSolution((prev) => !prev);
-      return;
-    }
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setLoadingSolution(true);
-    setSolutionError(false);
-    try {
-      const sol = await getSolution(subjectId, question.questionId);
-      setSolution(sol);
-      setShowSolution(true);
-    } catch (e) {
-      console.error('Failed to load solution', e);
-      setSolutionError(true);
-    } finally {
-      setLoadingSolution(false);
-    }
-  };
-
-  useEffect(() => {
-    if (solution) setVoteCounts({ upvotes: solution.upvotes ?? 0, downvotes: solution.downvotes ?? 0 });
-  }, [solution]);
-
-  useEffect(() => {
-    if (showSolution && question.questionId) getMyVote(question.questionId).then(setMyVoteState);
-  }, [showSolution, question.questionId]);
-
-  useEffect(() => {
-    myVoteRef.current = myVote;
-  }, [myVote]);
-  useEffect(() => {
-    voteCountsRef.current = voteCounts;
-  }, [voteCounts]);
 
   const handleCopy = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -154,90 +89,6 @@ export const QuestionItemClassic: React.FC<QuestionItemClassicProps> = React.mem
     }
   };
 
-  const executeVote = async (nextValue: 1 | -1 | 0) => {
-    const actionId = ++actionIdRef.current;
-    const prevVote = myVoteRef.current;
-    const prevCounts = { ...voteCountsRef.current };
-    const optimistic = { ...prevCounts };
-    if (prevVote) optimistic[prevVote === 1 ? 'upvotes' : 'downvotes'] = Math.max(0, optimistic[prevVote === 1 ? 'upvotes' : 'downvotes'] - 1);
-    if (nextValue !== 0) optimistic[nextValue === 1 ? 'upvotes' : 'downvotes'] += 1;
-    setVoteCounts(optimistic);
-    voteCountsRef.current = optimistic;
-    setMyVoteState(nextValue === 0 ? null : nextValue);
-    myVoteRef.current = nextValue === 0 ? null : nextValue;
-    setIsVoting(true);
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    try {
-      const result = await voteSolution(subjectId, question.questionId, nextValue);
-      if (actionId !== actionIdRef.current) return;
-      const clamped = { upvotes: Math.max(0, result.upvotes ?? 0), downvotes: Math.max(0, result.downvotes ?? 0) };
-      setVoteCounts(clamped);
-      voteCountsRef.current = clamped;
-      await setMyVote(question.questionId, nextValue);
-    } catch {
-      if (actionId !== actionIdRef.current) return;
-      setVoteCounts(prevCounts);
-      voteCountsRef.current = prevCounts;
-      setMyVoteState(prevVote);
-      myVoteRef.current = prevVote;
-    } finally {
-      if (actionId !== actionIdRef.current) return;
-      setIsVoting(false);
-      if (pendingVoteRef.current !== null) {
-        const queued = pendingVoteRef.current;
-        pendingVoteRef.current = null;
-        executeVote(queued);
-      }
-    }
-  };
-
-  const performVote = async (value: 1 | -1) => {
-    if (isVoting) {
-      const base: 1 | -1 | null = pendingVoteRef.current !== null ? (pendingVoteRef.current === 0 ? null : (pendingVoteRef.current as 1 | -1)) : myVoteRef.current;
-      const nextTarget: 1 | -1 | 0 = base === value ? 0 : value;
-      pendingVoteRef.current = nextTarget;
-      const baseCounts = voteCountsRef.current;
-      const optimistic = { ...baseCounts };
-      if (base) optimistic[base === 1 ? 'upvotes' : 'downvotes'] = Math.max(0, optimistic[base === 1 ? 'upvotes' : 'downvotes'] - 1);
-      if (nextTarget !== 0) optimistic[nextTarget === 1 ? 'upvotes' : 'downvotes'] += 1;
-      setVoteCounts(optimistic);
-      voteCountsRef.current = optimistic;
-      setMyVoteState(nextTarget === 0 ? null : nextTarget);
-      myVoteRef.current = nextTarget === 0 ? null : nextTarget;
-      return;
-    }
-    const nextValue: 1 | -1 | 0 = myVoteRef.current === value ? 0 : value;
-    return executeVote(nextValue);
-  };
-
-  const handleVote = (value: 1 | -1) => {
-    guard(() => {
-      void performVote(value);
-    });
-  };
-
-  const handleReportSubmit = async () => {
-    if (!reportReason || reportSubmitting) return;
-    if (reportReason === 'other' && reportMsg.trim().length < 4) return;
-    setReportSubmitting(true);
-    try {
-      await reportSolution(
-        subjectId,
-        question.questionId,
-        reportReason,
-        reportMsg.trim() || undefined
-      );
-      setReported(true);
-      setShowReport(false);
-      setReportReason(null);
-      setReportMsg('');
-    } catch {
-      // keep modal open to let user retry
-    } finally {
-      setReportSubmitting(false);
-    }
-  };
-
   const handleOpenDetail = () => {
     navigation.navigate('QuestionDetail', {
       subjectId,
@@ -245,14 +96,13 @@ export const QuestionItemClassic: React.FC<QuestionItemClassicProps> = React.mem
       year: question.year,
       questionId: question.questionId,
       initialQuestion: question,
-      initialSolution: solution,
       subjectName,
     });
   };
 
   return (
     <View style={styles.card}>
-      {/* Top Meta Row: Year on the LEFT side, Q Number & Marks on the RIGHT side */}
+      {/* Top Meta Row: Year on LEFT, Q Number & Marks on RIGHT */}
       <View style={styles.headerRow}>
         <View style={styles.leftCluster}>
           {!hideYearBadge && question.year ? (
@@ -303,7 +153,7 @@ export const QuestionItemClassic: React.FC<QuestionItemClassicProps> = React.mem
         </View>
       </TouchableOpacity>
 
-      {/* Bottom Action Footer */}
+      {/* Bottom Action Footer: Google, Copy, Share on left; Ask AI on right */}
       <View style={styles.footerRow}>
         <View style={styles.footerActionsLeft}>
           <TouchableOpacity
@@ -349,20 +199,6 @@ export const QuestionItemClassic: React.FC<QuestionItemClassicProps> = React.mem
           >
             <Feather name="maximize-2" size={15} color={COLORS.textMuted} />
           </TouchableOpacity>
-
-          {(question.hasSolution || Boolean(solution)) && (
-            <TouchableOpacity
-              onPress={handleToggleSolution}
-              activeOpacity={0.7}
-              disabled={loadingSolution}
-              style={{ marginLeft: 4 }}
-            >
-              <ShowSolnBadge
-                isOpen={showSolution && Boolean(solution)}
-                loading={loadingSolution}
-              />
-            </TouchableOpacity>
-          )}
         </View>
 
         {isAiEnabled && (
@@ -371,189 +207,6 @@ export const QuestionItemClassic: React.FC<QuestionItemClassicProps> = React.mem
           </TouchableOpacity>
         )}
       </View>
-
-      {/* Inline Solution (if user tapped Show Soln) */}
-      {showSolution && solution && (
-        <View style={styles.solutionSection}>
-          <Text style={styles.solutionTitle}>WORKED SOLUTION</Text>
-          <View style={styles.solutionBody}>
-            <Markdown style={solutionMarkdownStyles} rules={markdownRules}>
-              {cleanMarkdown(solution.content)}
-            </Markdown>
-            <View style={styles.voteRow}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
-                <TouchableOpacity
-                  style={[styles.voteButton, isVoting && { opacity: 0.6 }]}
-                  activeOpacity={0.6}
-                  onPress={() => handleVote(1)}
-                >
-                  <Feather
-                    name="thumbs-up"
-                    size={14}
-                    color={myVote === 1 ? COLORS.primary : COLORS.textMuted}
-                  />
-                  <Text style={[styles.voteCount, myVote === 1 && styles.voteCountActive]}>
-                    {voteCounts.upvotes}
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.voteButton, isVoting && { opacity: 0.6 }]}
-                  activeOpacity={0.6}
-                  onPress={() => handleVote(-1)}
-                >
-                  <Feather
-                    name="thumbs-down"
-                    size={14}
-                    color={myVote === -1 ? COLORS.primary : COLORS.textMuted}
-                  />
-                  <Text style={[styles.voteCount, myVote === -1 && styles.voteCountActive]}>
-                    {voteCounts.downvotes}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-              <TouchableOpacity
-                style={[styles.reportBtn, reported && { opacity: 0.6 }]}
-                activeOpacity={0.6}
-                onPress={() => guard(() => setShowReport(true), 'report')}
-                disabled={reported}
-              >
-                <Feather
-                  name="flag"
-                  size={12}
-                  color={reported ? COLORS.primary : COLORS.textMuted}
-                />
-                <Text style={[styles.reportText, reported && { color: COLORS.primary }]}>
-                  {reported ? 'Reported' : 'Report'}
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      )}
-
-      {showSolution && loadingSolution && (
-        <View style={styles.solutionSection}>
-          <Text style={styles.solutionTitle}>WORKED SOLUTION</Text>
-          <View style={styles.loadingRow}>
-            <ActivityIndicator size="small" color={COLORS.primary} />
-            <Text style={styles.loadingText}>Loading solution…</Text>
-          </View>
-          <SolutionSkeleton />
-        </View>
-      )}
-
-      {showSolution && solutionError && (
-        <TouchableOpacity
-          style={styles.solutionErrorBtn}
-          onPress={handleToggleSolution}
-          activeOpacity={0.7}
-        >
-          <Feather name="refresh-cw" size={13} color={COLORS.primary} />
-          <Text style={styles.solutionErrorText}>Could not load solution — tap to retry</Text>
-        </TouchableOpacity>
-      )}
-
-      {/* Report Modal */}
-      <Modal
-        visible={showReport}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setShowReport(false)}
-      >
-        <TouchableWithoutFeedback onPress={() => setShowReport(false)}>
-          <View style={styles.reportOverlay}>
-            <TouchableWithoutFeedback>
-              <View style={[styles.reportSheet, { paddingBottom: 24 }]}>
-                <View style={styles.reportHandle} />
-                <ScrollView
-                  keyboardShouldPersistTaps="handled"
-                  showsVerticalScrollIndicator={false}
-                  bounces={false}
-                >
-                  <Text style={styles.reportTitle}>Report solution</Text>
-                  <Text style={styles.reportSubtitle}>
-                    What’s wrong? Anyone anonymous can report — DB only.
-                  </Text>
-                  {(['incorrect', 'incomplete', 'formatting', 'other'] as const).map((r) => (
-                    <TouchableOpacity
-                      key={r}
-                      style={[
-                        styles.reportOption,
-                        reportReason === r && styles.reportOptionActive,
-                      ]}
-                      onPress={() => setReportReason(r)}
-                      activeOpacity={0.7}
-                    >
-                      <View
-                        style={[
-                          styles.radio,
-                          reportReason === r && styles.radioActive,
-                        ]}
-                      >
-                        {reportReason === r && <View style={styles.radioDot} />}
-                      </View>
-                      <Text
-                        style={[
-                          styles.reportOptionText,
-                          reportReason === r && styles.reportOptionTextActive,
-                        ]}
-                      >
-                        {r === 'incorrect'
-                          ? 'Incorrect solution or math error'
-                          : r === 'incomplete'
-                          ? 'Incomplete solution (missing steps)'
-                          : r === 'formatting'
-                          ? 'Poor formatting / unreadable formulas'
-                          : 'Other issue'}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                  {reportReason === 'other' && (
-                    <TextInput
-                      style={styles.reportInput}
-                      placeholder="Describe what needs fixing…"
-                      placeholderTextColor={COLORS.textMuted}
-                      value={reportMsg}
-                      onChangeText={setReportMsg}
-                      multiline
-                      maxLength={300}
-                    />
-                  )}
-                  <TouchableOpacity
-                    style={[
-                      styles.reportSubmitBtn,
-                      (!reportReason ||
-                        reportSubmitting ||
-                        (reportReason === 'other' && reportMsg.trim().length < 4)) &&
-                        styles.reportSubmitBtnDisabled,
-                    ]}
-                    onPress={handleReportSubmit}
-                    disabled={
-                      !reportReason ||
-                      reportSubmitting ||
-                      (reportReason === 'other' && reportMsg.trim().length < 4)
-                    }
-                    activeOpacity={0.8}
-                  >
-                    {reportSubmitting ? (
-                      <ActivityIndicator size="small" color="#fff" />
-                    ) : (
-                      <Text style={styles.reportSubmitText}>Submit report</Text>
-                    )}
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.reportCancelBtn}
-                    onPress={() => setShowReport(false)}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={styles.reportCancelText}>Cancel</Text>
-                  </TouchableOpacity>
-                </ScrollView>
-              </View>
-            </TouchableWithoutFeedback>
-          </View>
-        </TouchableWithoutFeedback>
-      </Modal>
     </View>
   );
 });
@@ -619,210 +272,11 @@ const styles = StyleSheet.create({
   footerActionsLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 16,
   },
   iconButton: {
     padding: 4,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  solutionSection: {
-    backgroundColor: COLORS.cardSecondary,
-    borderTopWidth: 1,
-    borderColor: COLORS.border,
-    padding: 14,
-  },
-  solutionTitle: {
-    fontFamily: FONTS.mono,
-    fontSize: 10.5,
-    fontWeight: '700',
-    color: COLORS.primary,
-    letterSpacing: 1.1,
-    marginBottom: 8,
-  },
-  solutionBody: {
-    paddingTop: 2,
-  },
-  voteRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: 12,
-    paddingTop: 10,
-    borderTopWidth: 1,
-    borderColor: COLORS.borderLight,
-  },
-  voteButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    paddingVertical: 4,
-    paddingHorizontal: 6,
-  },
-  voteCount: {
-    fontFamily: FONTS.mono,
-    fontSize: 12,
-    color: COLORS.textMuted,
-    fontWeight: '600',
-  },
-  voteCountActive: {
-    color: COLORS.primary,
-  },
-  reportBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-  },
-  reportText: {
-    fontFamily: FONTS.mono,
-    fontSize: 11,
-    color: COLORS.textMuted,
-  },
-  loadingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginTop: 4,
-    marginBottom: 8,
-  },
-  loadingText: {
-    fontFamily: FONTS.mono,
-    fontSize: 12,
-    color: COLORS.textMuted,
-  },
-  solutionErrorBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 10,
-    marginHorizontal: 14,
-    marginBottom: 12,
-    borderRadius: 6,
-    backgroundColor: COLORS.cardSecondary,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  solutionErrorText: {
-    fontFamily: FONTS.mono,
-    fontSize: 12,
-    fontWeight: '600',
-    color: COLORS.primary,
-  },
-  reportOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'flex-end',
-  },
-  reportSheet: {
-    backgroundColor: COLORS.card,
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    paddingHorizontal: 20,
-    paddingTop: 12,
-    maxHeight: '85%',
-  },
-  reportHandle: {
-    width: 36,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: COLORS.border,
-    alignSelf: 'center',
-    marginBottom: 16,
-  },
-  reportTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: COLORS.text,
-    marginBottom: 4,
-  },
-  reportSubtitle: {
-    fontSize: 12,
-    color: COLORS.textMuted,
-    marginBottom: 14,
-  },
-  reportOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 11,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: COLORS.borderLight,
-    marginBottom: 8,
-    backgroundColor: COLORS.cardSecondary,
-  },
-  reportOptionActive: {
-    borderColor: COLORS.primary,
-    backgroundColor: COLORS.card,
-  },
-  radio: {
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    borderWidth: 1.5,
-    borderColor: COLORS.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 10,
-  },
-  radioActive: {
-    borderColor: COLORS.primary,
-  },
-  radioDot: {
-    width: 9,
-    height: 9,
-    borderRadius: 4.5,
-    backgroundColor: COLORS.primary,
-  },
-  reportOptionText: {
-    fontSize: 13,
-    color: COLORS.text,
-    fontWeight: '500',
-  },
-  reportOptionTextActive: {
-    color: COLORS.primary,
-    fontWeight: '600',
-  },
-  reportInput: {
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 13,
-    color: COLORS.text,
-    minHeight: 70,
-    textAlignVertical: 'top',
-    marginTop: 4,
-    marginBottom: 12,
-  },
-  reportSubmitBtn: {
-    backgroundColor: COLORS.primary,
-    borderRadius: 6,
-    paddingVertical: 12,
-    alignItems: 'center',
-    marginTop: 4,
-  },
-  reportSubmitBtnDisabled: {
-    backgroundColor: COLORS.border,
-  },
-  reportSubmitText: {
-    fontFamily: FONTS.mono,
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#fff',
-  },
-  reportCancelBtn: {
-    paddingVertical: 12,
-    alignItems: 'center',
-    marginTop: 6,
-  },
-  reportCancelText: {
-    fontSize: 13,
-    color: COLORS.textMuted,
-    fontWeight: '600',
   },
 });
