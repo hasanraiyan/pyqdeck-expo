@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef } from 'react';
 import { useAuth } from '@clerk/expo';
 import { useNavigation } from '@react-navigation/native';
 import { setPendingAction, takePendingAction } from './pendingAction';
+import { isAuthEnabled } from '../config/features';
 
 /**
  * Gate for the features that need an account - voting, and later the AI tutor.
@@ -32,6 +33,14 @@ export const useRequireAuth = () => {
 
   const guard = useCallback(
     (run: () => void, reason: 'vote' | 'report' | 'ai' = 'vote') => {
+      // If auth is disabled (e.g. for Play Store review), do not launch the SignIn sheet.
+      if (!isAuthEnabled) {
+        if (reason === 'report') {
+          run();
+        }
+        return;
+      }
+
       // Clerk not resolved yet - treat as signed out rather than blocking on
       // it. A cold start still reading the token cache would otherwise make
       // the button feel dead for a few hundred ms.

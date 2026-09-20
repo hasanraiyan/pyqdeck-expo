@@ -12,6 +12,7 @@ import { rf, verticalScale, useResponsive } from '../utils/responsive';
 import { getVolumeScrollEnabled, setVolumeScrollEnabled } from '../utils/settings';
 import { openStoreListing, checkForUpdateInteractive } from '../utils/appUpdate';
 import * as Cache from '../db/cacheService';
+import { isAuthEnabled } from '../config/features';
 
 const WEBSITE_URL = 'https://pyqdeck.in';
 
@@ -132,7 +133,7 @@ export const SettingsScreen = ({ navigation }: any) => {
       ]}
     >
       <View style={[styles.centerWrapper, { maxWidth: readMaxWidth }]}>
-        {authLoaded && (
+        {isAuthEnabled && authLoaded && (
           <>
             <Text style={styles.sectionHeading}>ACCOUNT</Text>
             <View style={styles.card}>

@@ -108,9 +108,6 @@ export const SyllabusOverviewScreen = () => {
   const semester = data;
   const theory = semester.subjects.filter((s) => s.kind === 'theory');
   const labs = semester.subjects.filter((s) => s.kind === 'lab');
-  const totalTopics = semester.subjects.reduce((n, s) => n + s.topicCount, 0);
-  const totalDone = semester.subjects.reduce((n, s) => n + (counts[s.id] ?? 0), 0);
-  const pct = totalTopics > 0 ? Math.round((totalDone / totalTopics) * 100) : 0;
 
   const openSubject = (subject: SyllabusSubjectSummary) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -247,17 +244,6 @@ export const SyllabusOverviewScreen = () => {
         <View style={styles.head}>
           <Text style={styles.kicker}>{semester.branch.name}</Text>
           <Text style={styles.title}>Semester {semesterNumber} syllabus</Text>
-          <View style={styles.headProg}>
-            <View style={[styles.bar, { flex: 1 }]}>
-              <View style={[styles.barFill, { width: `${pct}%` }]} />
-            </View>
-            <Text style={styles.headFrac}>
-              {totalDone} / {totalTopics}
-            </Text>
-          </View>
-          <Text style={styles.sub}>
-            Topics you have marked done, across every subject this semester.
-          </Text>
         </View>
 
         {renderCreditTable()}
@@ -301,14 +287,6 @@ const styles = StyleSheet.create({
     lineHeight: 31,
     letterSpacing: -0.5,
   },
-  headProg: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 12 },
-  headFrac: {
-    fontFamily: FONTS.mono,
-    fontSize: 11,
-    fontWeight: '600',
-    color: COLORS.secondary,
-  },
-  sub: { fontSize: 12.5, color: COLORS.textMuted, marginTop: 6, lineHeight: 18 },
   creditBlock: { paddingBottom: 18 },
   rule: {
     flexDirection: 'row',
