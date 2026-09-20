@@ -232,7 +232,7 @@ export const SyllabusOverviewScreen = () => {
   return (
     <View style={styles.container}>
       <ScrollView
-        contentContainerStyle={{ paddingBottom: insets.bottom + 32 }}
+        contentContainerStyle={{ paddingBottom: insets.bottom + 32, paddingTop: 12 }}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -241,11 +241,6 @@ export const SyllabusOverviewScreen = () => {
           />
         }
       >
-        <View style={styles.head}>
-          <Text style={styles.kicker}>{semester.branch.name}</Text>
-          <Text style={styles.title}>Semester {semesterNumber} syllabus</Text>
-        </View>
-
         {renderCreditTable()}
 
         {semester.subjects.length === 0 ? (
@@ -268,24 +263,6 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.background,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  head: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 16 },
-  kicker: {
-    fontFamily: FONTS.mono,
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 1.5,
-    textTransform: 'uppercase',
-    color: COLORS.textSubtle,
-    marginBottom: 6,
-  },
-  title: {
-    fontFamily: FONTS.serif,
-    fontSize: 25,
-    fontStyle: 'italic',
-    color: COLORS.text,
-    lineHeight: 31,
-    letterSpacing: -0.5,
   },
   creditBlock: { paddingBottom: 18 },
   rule: {

@@ -14,6 +14,7 @@ import {
 import { useRoute, useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
 import { getSubjectMeta, getQuestions } from '../api';
 import { SubjectMeta, QuestionSummary } from '../types';
 import { COLORS, FONTS } from '../theme/colors';
@@ -129,7 +130,10 @@ export const QuestionListScreen = () => {
   }, [subjectId, initialYear, initialChapter]);
 
   const handleYearSelect = (year?: number) => {
+    if (year === selectedYear) return;
+    Haptics.selectionAsync();
     setSelectedYear(year);
+    listRef.current?.scrollToOffset({ offset: 0, animated: false });
     fetchFilteredQuestions(year, selectedChapter);
   };
 
@@ -219,7 +223,43 @@ export const QuestionListScreen = () => {
   return (
     <View style={styles.container}>
       <View style={styles.content}>
-      <FlatList
+        {meta?.years && meta.years.length > 0 && (
+          <View style={styles.yearBarWrapper}>
+            <View style={[styles.yearBarInner, { maxWidth: readMaxWidth }]}>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.yearBarScroll}
+              >
+                <TouchableOpacity
+                  style={[styles.yearChip, !selectedYear && styles.yearChipActive]}
+                  onPress={() => handleYearSelect(undefined)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.yearChipText, !selectedYear && styles.yearChipTextActive]}>
+                    All
+                  </Text>
+                </TouchableOpacity>
+                {meta.years.map((y) => {
+                  const active = selectedYear === y.year;
+                  return (
+                    <TouchableOpacity
+                      key={y.year}
+                      style={[styles.yearChip, active && styles.yearChipActive]}
+                      onPress={() => handleYearSelect(y.year)}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={[styles.yearChipText, active && styles.yearChipTextActive]}>
+                        {y.year}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+            </View>
+          </View>
+        )}
+        <FlatList
         ref={listRef}
         onScroll={(e) => {
           scrollOffsetRef.current = e.nativeEvent.contentOffset.y;
@@ -416,6 +456,45 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+  },
+  yearBarWrapper: {
+    width: '100%',
+    backgroundColor: COLORS.background,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: COLORS.border,
+    alignItems: 'center',
+  },
+  yearBarInner: {
+    width: '100%',
+  },
+  yearBarScroll: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+  },
+  yearChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 6,
+    backgroundColor: COLORS.card,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  yearChipActive: {
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
+  },
+  yearChipText: {
+    fontFamily: FONTS.mono,
+    fontSize: rf(11.5),
+    fontWeight: '600',
+    color: COLORS.textMuted,
+  },
+  yearChipTextActive: {
+    color: '#ffffff',
+    fontWeight: '700',
   },
   centerContainer: {
     flex: 1,
