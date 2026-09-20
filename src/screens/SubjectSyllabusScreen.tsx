@@ -18,7 +18,7 @@ import * as Haptics from 'expo-haptics';
 import * as WebBrowser from 'expo-web-browser';
 import { COLORS, FONTS } from '../theme/colors';
 import { getSyllabusSubject } from '../api';
-import { SyllabusModule, SyllabusSubject, Topic, topicCountOf } from '../types/syllabus';
+import { SyllabusModule, SyllabusSubject, Topic } from '../types/syllabus';
 import { getDoneTopics, saveDoneTopics } from '../db/syllabusProgress';
 import { DoneStamp } from '../components/Badge';
 import { ScreenError, ScreenEmpty } from '../components/ScreenState';
@@ -202,10 +202,6 @@ export const SubjectSyllabusScreen = () => {
     );
   }
 
-  const total = topicCountOf(subject);
-  const doneCount = done.size;
-  const pct = total > 0 ? Math.round((doneCount / total) * 100) : 0;
-
   const renderModule = (m: SyllabusModule) => {
     const expanded = open.has(m.id);
     const mDone = m.topics.filter((t) => done.has(topicKey(m.id, t.id))).length;
@@ -298,7 +294,7 @@ export const SubjectSyllabusScreen = () => {
   return (
     <View style={styles.container}>
       <ScrollView
-        contentContainerStyle={{ paddingBottom: insets.bottom + 32 }}
+        contentContainerStyle={{ paddingBottom: insets.bottom + 32, paddingTop: 10 }}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -307,24 +303,6 @@ export const SubjectSyllabusScreen = () => {
           />
         }
       >
-        <View style={styles.head}>
-          <View style={styles.badgeRow}>
-            <Text style={styles.code}>{subject.code}</Text>
-            <Text style={styles.kindTag}>
-              {subject.kind === 'lab' ? 'Laboratory' : 'Theory'}
-            </Text>
-          </View>
-          <Text style={styles.title}>{subject.name}</Text>
-          <View style={styles.headProg}>
-            <View style={[styles.bar, { flex: 1 }]}>
-              <View style={[styles.barFill, { width: `${pct}%` }]} />
-            </View>
-            <Text style={styles.headFrac}>
-              {doneCount} / {total}
-            </Text>
-          </View>
-        </View>
-
         {subject.modules.length === 0 ? (
           <ScreenEmpty message="No modules have been typed up for this subject yet." />
         ) : (
@@ -343,44 +321,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  head: {
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 18,
-    borderBottomWidth: 1,
-    borderColor: COLORS.borderDashed,
-  },
-  badgeRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
-  code: {
-    fontFamily: FONTS.mono,
-    fontSize: 11,
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-    color: COLORS.textSubtle,
-  },
-  kindTag: {
-    fontFamily: FONTS.mono,
-    fontSize: 10.5,
-    fontWeight: '600',
-    color: COLORS.textMuted,
-    backgroundColor: COLORS.cardSecondary,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-  },
-  title: {
-    fontFamily: FONTS.serif,
-    fontSize: 25,
-    fontStyle: 'italic',
-    color: COLORS.text,
-    lineHeight: 31,
-    letterSpacing: -0.5,
-  },
-  headProg: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 12 },
-  headFrac: { fontFamily: FONTS.mono, fontSize: 11, fontWeight: '600', color: COLORS.secondary },
-
   modHead: {
     flexDirection: 'row',
     alignItems: 'center',
