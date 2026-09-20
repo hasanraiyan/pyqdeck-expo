@@ -60,7 +60,6 @@ export const HomeScreen = () => {
   const [semestersData, setSemestersData] = useState<
     { semester: Semester; subjectCount: number }[]
   >([]);
-  const [stats, setStats] = useState({ subjects: 0, questions: 0 });
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [recentStudies, setRecentStudies] = useState<RecentStudy[]>([]);
@@ -91,8 +90,6 @@ export const HomeScreen = () => {
           })
         );
         setSemestersData(cachedWithCounts);
-        const totalSub = cachedWithCounts.reduce((sum, item) => sum + item.subjectCount, 0);
-        setStats((prev) => ({ ...prev, subjects: totalSub }));
         setLoading(false);
       }
     }
@@ -100,15 +97,11 @@ export const HomeScreen = () => {
     // 2. Fetch fresh data from API
     try {
       const semesters = await getSemesters(isManualRefresh);
-      let totalQuestions = 0;
-      let totalSubjects = 0;
 
       const withCounts = await Promise.all(
         semesters.map(async (sem) => {
           try {
             const subs = await getSubjects(sem.id, isManualRefresh);
-            totalSubjects += subs.length;
-            totalQuestions += subs.reduce((n, s) => n + s.questionCount, 0);
             return { semester: sem, subjectCount: subs.length };
           } catch {
             return { semester: sem, subjectCount: 0 };
@@ -117,7 +110,6 @@ export const HomeScreen = () => {
       );
 
       setSemestersData(withCounts);
-      setStats({ subjects: totalSubjects, questions: totalQuestions });
     } catch (e) {
       console.error(e);
     } finally {
@@ -236,25 +228,6 @@ export const HomeScreen = () => {
                 <Feather name="search" size={16} color={COLORS.textMuted} />
                 <Text style={styles.heroSearchPlaceholder}>Search subjects, questions, theorems...</Text>
               </TouchableOpacity>
-
-              {/* Stats Bar */}
-              <View style={styles.statsRow}>
-                <View style={styles.statChip}>
-                  <Text style={styles.statItem}>
-                    <Text style={styles.statNumber}>{stats.subjects || '—'}</Text> SUBJECTS
-                  </Text>
-                </View>
-                <View style={styles.statChip}>
-                  <Text style={styles.statItem}>
-                    <Text style={styles.statNumber}>{stats.questions || '—'}</Text> QUESTIONS
-                  </Text>
-                </View>
-                <View style={styles.statChip}>
-                  <Text style={styles.statItem}>
-                    <Text style={styles.statNumber}>4</Text> YEARS
-                  </Text>
-                </View>
-              </View>
             </View>
           </View>
 
@@ -424,7 +397,7 @@ export const HomeScreen = () => {
             <View style={[styles.allSubjectsLeft, ctaRow && styles.allSubjectsLeftRow]}>
               <Text style={styles.allSubjectsTag}>LOOKING FOR ONE SUBJECT?</Text>
               <Text style={styles.allSubjectsText}>
-                Search or browse all {stats.subjects || 'hundreds of'} subjects directly.
+                Search or browse all hundreds of subjects directly.
               </Text>
             </View>
             <TouchableOpacity
@@ -562,30 +535,6 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.sans,
     fontSize: rf(13),
     color: COLORS.textMuted,
-  },
-  statsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginTop: 16,
-  },
-  statChip: {
-    backgroundColor: COLORS.card,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: 4,
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-  },
-  statItem: {
-    fontFamily: FONTS.mono,
-    fontSize: rf(10.5),
-    color: COLORS.textMuted,
-    letterSpacing: 0.8,
-  },
-  statNumber: {
-    color: COLORS.text,
-    fontWeight: '700',
   },
   section: {
     marginTop: 24,
