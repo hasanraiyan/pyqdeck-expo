@@ -19,7 +19,7 @@ import { SubjectMeta, QuestionSummary } from '../types';
 import { COLORS, FONTS } from '../theme/colors';
 import { QuestionItem } from '../components/QuestionItem';
 import { QuestionItemClassic } from '../components/QuestionItemClassic';
-import { QuestionSkeleton } from '../components/Skeleton';
+import { WaveLoader } from '../components/WaveLoader';
 import { PrevNextNav } from '../components/PrevNextNav';
 import { AdBanner } from '../components/AdBanner';
 import { VolumeScrollHint } from '../components/VolumeScrollHint';
@@ -33,7 +33,8 @@ export const QuestionListScreen = () => {
   const insets = useSafeAreaInsets();
   const route = useRoute<any>();
   const navigation = useNavigation<any>();
-  const { readMaxWidth } = useResponsive();
+  const { readMaxWidth, bp } = useResponsive();
+  const showFilterText = bp({ phone: false, tablet: true });
   const {
     semesterId,
     subjectId,
@@ -174,23 +175,33 @@ export const QuestionListScreen = () => {
     navigation.setOptions({
       headerRight: () => (
         <TouchableOpacity
-          style={[styles.headerFilterBtn, hasActiveFilters && styles.headerFilterBtnActive]}
+          style={[
+            styles.headerFilterBtn,
+            !showFilterText && styles.headerFilterBtnIconOnly,
+            hasActiveFilters && styles.headerFilterBtnActive,
+          ]}
           onPress={openFilterModal}
           activeOpacity={0.7}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          accessibilityLabel="Filter questions"
         >
           <Feather
             name="sliders"
-            size={14}
+            size={15}
             color={hasActiveFilters ? COLORS.primary : COLORS.text}
           />
-          <Text style={[styles.headerFilterText, hasActiveFilters && styles.headerFilterTextActive]}>
-            Filter
-          </Text>
+          {showFilterText && (
+            <Text style={[styles.headerFilterText, hasActiveFilters && styles.headerFilterTextActive]}>
+              Filter
+            </Text>
+          )}
+          {hasActiveFilters && !showFilterText && (
+            <View style={styles.activeFilterDot} />
+          )}
         </TouchableOpacity>
       ),
     });
-  }, [navigation, hasActiveFilters, openFilterModal]);
+  }, [navigation, hasActiveFilters, openFilterModal, showFilterText]);
 
   const listRef = useRef<FlatList>(null);
   const scrollOffsetRef = useRef(0);
@@ -221,12 +232,15 @@ export const QuestionListScreen = () => {
         maxToRenderPerBatch={10}
         windowSize={5}
         removeClippedSubviews={false}
-        contentContainerStyle={{
-          paddingBottom: 24,
-          maxWidth: readMaxWidth,
-          width: '100%',
-          alignSelf: 'center',
-        }}
+        contentContainerStyle={[
+          {
+            paddingBottom: 24,
+            maxWidth: readMaxWidth,
+            width: '100%',
+            alignSelf: 'center',
+          },
+          questions.length === 0 && { flexGrow: 1 },
+        ]}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -238,22 +252,22 @@ export const QuestionListScreen = () => {
           />
         }
         ListHeaderComponent={
-          <View style={styles.headerWrapper}>
-            {loading && (
-              <View>
-                {[1, 2, 3, 4, 5, 6].map((i) => (
-                  <QuestionSkeleton key={i} />
-                ))}
-              </View>
-            )}
-          </View>
+          loading && questions.length > 0 ? (
+            <View style={styles.headerLoaderWrapper}>
+              <WaveLoader color={COLORS.primary} dotSize={5} />
+            </View>
+          ) : null
         }
         ListEmptyComponent={
-          !loading ? (
+          loading ? (
+            <View style={styles.centerContainer}>
+              <WaveLoader color={COLORS.primary} dotSize={7} />
+            </View>
+          ) : (
             <View style={styles.emptyState}>
               <Text style={styles.emptyText}>No questions found for this selection.</Text>
             </View>
-          ) : null
+          )
         }
         ListFooterComponent={
           !loading && (prevYear || nextYear) ? (
@@ -403,9 +417,16 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
   },
-  headerWrapper: {
-    width: '100%',
-    paddingTop: 10,
+  centerContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 48,
+  },
+  headerLoaderWrapper: {
+    paddingVertical: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   headerFilterBtn: {
     flexDirection: 'row',
@@ -419,9 +440,26 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.cardSecondary,
     marginRight: 6,
   },
+  headerFilterBtnIconOnly: {
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+    position: 'relative',
+    gap: 0,
+  },
   headerFilterBtnActive: {
     borderColor: COLORS.primary,
     backgroundColor: COLORS.card,
+  },
+  activeFilterDot: {
+    position: 'absolute',
+    top: -3,
+    right: -3,
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
+    backgroundColor: COLORS.primary,
+    borderWidth: 1.5,
+    borderColor: COLORS.cardSecondary,
   },
   headerFilterText: {
     fontFamily: FONTS.mono,
