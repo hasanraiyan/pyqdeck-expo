@@ -213,15 +213,21 @@ export const cleanMarkdown = (text: string | null | undefined): string => {
     return `\uE000${codeBlocks.length - 1}\uE001`;
   });
 
-  // Convert display math $$...$$
-  formatted = formatted.replace(/\$\$([\s\S]*?)\$\$/g, (_, math) => {
-    return `\n\n\`$$ ${formatMathExpression(math)} $$\`\n\n`;
-  });
-
-  // Convert inline math $...$
-  formatted = formatted.replace(/\$([^\$\n]+)\$/g, (_, math) => {
-    return `\`$ ${formatMathExpression(math)} $\``;
-  });
+  // Convert display math $$...$$ and inline math $...$ in a single pass.
+  // Doing these as two separate .replace() calls (display first, then
+  // inline) meant the inline pass re-scanned the *already-converted* output
+  // - the backticks and $$ that display math had just inserted were not
+  // shielded, so the inline regex partially re-matched them and produced
+  // corrupted, nested-backtick output (e.g. `` `$`$ E=mc^2 $`$` ``). One
+  // pass with $$...$$ tried before $...$ in the alternation (so it wins at
+  // any position where both could start) avoids that entirely.
+  formatted = formatted.replace(
+    /\$\$([\s\S]*?)\$\$|\$([^\$\n]+)\$/g,
+    (_, display, inline) =>
+      display !== undefined
+        ? `\n\n\`$$ ${formatMathExpression(display)} $$\`\n\n`
+        : `\`$ ${formatMathExpression(inline)} $\``
+  );
 
   // Convert remaining single LaTeX commands outside math blocks
   formatted = formatMathExpression(formatted);
