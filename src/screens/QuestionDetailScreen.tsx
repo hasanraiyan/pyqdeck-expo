@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -62,7 +62,9 @@ export const QuestionDetailScreen = () => {
   const [solution, setSolution] = useState<Solution | null>(
     initialSolution || null
   );
-  const [showSolution, setShowSolution] = useState(true);
+  const [loadingSolution, setLoadingSolution] = useState(false);
+  const [solutionError, setSolutionError] = useState(false);
+  const [showSolution, setShowSolution] = useState(false);
   // Deep links (see App.tsx's `linking` config) only carry semesterId/subjectId/
   // year/questionId - no subjectName - so backfill it from getQuestion's response.
   const [subjectName, setSubjectName] = useState<string | undefined>(paramSubjectName);
@@ -116,6 +118,36 @@ export const QuestionDetailScreen = () => {
     voteCountsRef.current = voteCounts;
   }, [voteCounts]);
 
+  const loadSolution = useCallback(
+    async (targetSubjectId: string = subjectId, targetQuestionId: string = questionId) => {
+      if (!targetSubjectId || !targetQuestionId) return;
+      setLoadingSolution(true);
+      setSolutionError(false);
+      try {
+        const sol = await getSolution(targetSubjectId, targetQuestionId);
+        setSolution(sol);
+      } catch (e) {
+        console.error('Failed to load solution', e);
+        setSolutionError(true);
+      } finally {
+        setLoadingSolution(false);
+      }
+    },
+    [subjectId, questionId]
+  );
+
+  const handleToggleSolution = () => {
+    if (solution) {
+      Haptics.selectionAsync();
+      setShowSolution((prev) => !prev);
+      return;
+    }
+    if (loadingSolution) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setShowSolution(true);
+    void loadSolution();
+  };
+
   useEffect(() => {
     const loadAll = async () => {
       try {
@@ -128,9 +160,10 @@ export const QuestionDetailScreen = () => {
             setSubjectName(res.subject.name);
           }
         }
-        if (!initialSolution) {
-          const sol = await getSolution(subjectId, questionId).catch(() => null);
-          setSolution(sol);
+        if (initialSolution && (!initialSolution.questionId || initialSolution.questionId === questionId)) {
+          setSolution(initialSolution);
+          setLoadingSolution(false);
+          setSolutionError(false);
         }
         const [repData, simData, paperData] = await Promise.all([
           getRepeatedQuestions(subjectId, questionId).catch(() => ({ questions: [] })),
@@ -152,7 +185,7 @@ export const QuestionDetailScreen = () => {
       }
     };
     loadAll();
-  }, [subjectId, questionId, currentYear]);
+  }, [subjectId, questionId, currentYear, loadSolution]);
 
   // Prev/Next-in-paper stays on this same screen instance (setParams, not
   // push) so AdBanner never unmounts - rapid-fire next/next/next taps would
@@ -165,6 +198,9 @@ export const QuestionDetailScreen = () => {
     scrollRef.current?.scrollTo({ y: 0, animated: false });
     setQuestion(q);
     setSolution(null);
+    setShowSolution(false);
+    setLoadingSolution(false);
+    setSolutionError(false);
     setRepeats([]);
     setSimilar([]);
     setShowSimilar(true);
@@ -176,6 +212,7 @@ export const QuestionDetailScreen = () => {
       questionId: q.questionId,
       year: q.year,
       initialQuestion: q,
+      initialSolution: null,
     });
   };
 
@@ -444,12 +481,9 @@ export const QuestionDetailScreen = () => {
                   <AskAiBadge />
                 </TouchableOpacity>
 
-                {(question?.hasSolution || Boolean(solution)) && (
+                {(question?.hasSolution || Boolean(solution) || loadingSolution) && (
                   <TouchableOpacity
-                    onPress={() => {
-                      Haptics.selectionAsync();
-                      setShowSolution((prev) => !prev);
-                    }}
+                    onPress={handleToggleSolution}
                     activeOpacity={0.7}
                   >
                     <ShowSolnBadge
@@ -494,7 +528,7 @@ export const QuestionDetailScreen = () => {
           </View>
 
           {/* Worked Solution */}
-          {showSolution && (question?.hasSolution || Boolean(solution)) && (
+          {showSolution && (question?.hasSolution || Boolean(solution) || loadingSolution) && (
             <View style={styles.solutionSection}>
               <Text style={styles.solutionTitle}>WORKED SOLUTION</Text>
               {solution ? (
@@ -544,8 +578,32 @@ export const QuestionDetailScreen = () => {
                     </TouchableOpacity>
                   </View>
                 </View>
+              ) : loadingSolution ? (
+                <View>
+                  <View style={styles.loadingRow}>
+                    <ActivityIndicator size="small" color={COLORS.primary} />
+                    <Text style={styles.loadingText}>Loading solution…</Text>
+                  </View>
+                  <SolutionSkeleton />
+                </View>
+              ) : solutionError ? (
+                <TouchableOpacity
+                  style={styles.solutionErrorBtn}
+                  onPress={handleToggleSolution}
+                  activeOpacity={0.7}
+                >
+                  <Feather name="refresh-cw" size={13} color={COLORS.primary} />
+                  <Text style={styles.solutionErrorText}>Could not load solution — tap to retry</Text>
+                </TouchableOpacity>
               ) : (
-                <SolutionSkeleton />
+                <TouchableOpacity
+                  style={styles.solutionErrorBtn}
+                  onPress={handleToggleSolution}
+                  activeOpacity={0.7}
+                >
+                  <Feather name="refresh-cw" size={13} color={COLORS.primary} />
+                  <Text style={styles.solutionErrorText}>Tap to load solution</Text>
+                </TouchableOpacity>
               )}
             </View>
           )}
@@ -1016,6 +1074,36 @@ const styles = StyleSheet.create({
   },
   solutionBody: {
     paddingTop: 4,
+  },
+  loadingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 6,
+    marginBottom: 8,
+  },
+  loadingText: {
+    fontFamily: FONTS.mono,
+    fontSize: 12,
+    color: COLORS.textMuted,
+  },
+  solutionErrorBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 10,
+    marginTop: 12,
+    borderRadius: 6,
+    backgroundColor: COLORS.cardSecondary,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  solutionErrorText: {
+    fontFamily: FONTS.mono,
+    fontSize: 12,
+    fontWeight: '600',
+    color: COLORS.primary,
   },
   voteRow: {
     flexDirection: 'row',
