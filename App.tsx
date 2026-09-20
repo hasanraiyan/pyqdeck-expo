@@ -175,7 +175,7 @@ function SyllabusStack() {
       <Stack.Screen
         name="TopicNotes"
         component={TopicNotesScreen}
-        options={({ route }: any) => ({ title: route.params?.topic?.title || 'Notes' })}
+        options={({ route }: any) => ({ title: route.params?.moduleName || 'Notes' })}
       />
     </Stack.Navigator>
   );

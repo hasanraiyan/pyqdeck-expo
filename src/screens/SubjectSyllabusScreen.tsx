@@ -125,7 +125,7 @@ export const SubjectSyllabusScreen = () => {
   );
 
   const openTopicNotes = useCallback(
-    (moduleId: string, topic: Topic) => {
+    (module: SyllabusModule, topic: Topic) => {
       if (!subject) return;
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       // Flattened in module -> topic order, notes-only - this is what lets
@@ -136,11 +136,12 @@ export const SubjectSyllabusScreen = () => {
       const notesList = subject.modules.flatMap((m) =>
         m.topics
           .filter((t) => t.hasNotes)
-          .map((t) => ({ id: t.id, title: t.title, moduleId: m.id }))
+          .map((t) => ({ id: t.id, title: t.title, moduleId: m.id, moduleName: m.title }))
       );
       navigation.navigate('TopicNotes', {
         topic,
-        moduleId,
+        moduleId: module.id,
+        moduleName: module.title,
         subjectId,
         subjectName: subject.name,
         notesList,
@@ -227,7 +228,7 @@ export const SubjectSyllabusScreen = () => {
                 {t.hasNotes && (
                   <TouchableOpacity
                     style={[styles.notesBtn, isDone && styles.notesBtnDone]}
-                    onPress={() => openTopicNotes(m.id, t)}
+                    onPress={() => openTopicNotes(m, t)}
                     activeOpacity={0.7}
                     accessibilityLabel={`Open notes for ${t.title}`}
                   >

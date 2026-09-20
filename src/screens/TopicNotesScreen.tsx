@@ -18,7 +18,7 @@ import { PrevNextNav } from '../components/PrevNextNav';
 /** Same namespacing as SubjectSyllabusScreen's topicKey - must stay identical, the two screens read/write the same AsyncStorage key. */
 const topicKey = (moduleId: string, topicId: string) => `${moduleId}:${topicId}`;
 
-type NotesListEntry = { id: string; title: string; moduleId: string };
+type NotesListEntry = { id: string; title: string; moduleId: string; moduleName: string };
 
 /**
  * Per-topic study notes: the markdown+LaTeX writeup an admin can attach to a
@@ -117,6 +117,7 @@ export const TopicNotesScreen = () => {
     navigation.setParams({
       topic: { id: entry.id, title: entry.title },
       moduleId: entry.moduleId,
+      moduleName: entry.moduleName,
     });
   };
 
