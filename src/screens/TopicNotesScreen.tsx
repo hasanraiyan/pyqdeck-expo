@@ -12,6 +12,7 @@ import { getDoneTopics, saveDoneTopics } from '../db/syllabusProgress';
 import { cleanMarkdown } from '../utils/responsive';
 import { solutionMarkdownStyles, markdownRules } from '../theme/markdownStyles';
 import { ScreenEmpty } from '../components/ScreenState';
+import { AdBanner } from '../components/AdBanner';
 
 /** Same namespacing as SubjectSyllabusScreen's topicKey - must stay identical, the two screens read/write the same AsyncStorage key. */
 const topicKey = (moduleId: string, topicId: string) => `${moduleId}:${topicId}`;
@@ -141,6 +142,8 @@ export const TopicNotesScreen = () => {
           </TouchableOpacity>
         )}
       </ScrollView>
+
+      <AdBanner />
     </View>
   );
 };
