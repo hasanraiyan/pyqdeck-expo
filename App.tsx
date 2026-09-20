@@ -33,7 +33,6 @@ import { SearchScreen } from './src/screens/SearchScreen';
 import { SettingsScreen } from './src/screens/SettingsScreen';
 import { SignInScreen } from './src/screens/SignInScreen';
 import { ManageAccountScreen } from './src/screens/ManageAccountScreen';
-import { BranchScreen } from './src/screens/BranchScreen';
 import { SemesterSelectScreen } from './src/screens/SemesterSelectScreen';
 import { SyllabusOverviewScreen } from './src/screens/SyllabusOverviewScreen';
 import { SubjectSyllabusScreen } from './src/screens/SubjectSyllabusScreen';
@@ -146,21 +145,14 @@ function HomeStack() {
   );
 }
 
-/** Branch -> semester -> subjects -> topics, each its own screen. */
+/** Syllabus: unified branches + semesters root -> subjects -> topics */
 function SyllabusStack() {
   return (
     <Stack.Navigator screenOptions={commonScreenOptions}>
       <Stack.Screen
-        name="BranchRoot"
-        component={BranchScreen}
-        options={{ headerShown: false }}
-      />
-      <Stack.Screen
-        name="SemesterSelect"
+        name="SyllabusRoot"
         component={SemesterSelectScreen}
-        options={({ route }: any) => ({
-          title: route.params?.branchId?.toUpperCase() || 'Semesters',
-        })}
+        options={{ headerShown: false }}
       />
       <Stack.Screen
         name="SyllabusOverview"

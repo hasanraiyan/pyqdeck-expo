@@ -38,3 +38,19 @@ export async function setOldUiEnabled(value: boolean): Promise<void> {
   } catch {}
 }
 
+const SELECTED_BRANCH_KEY = 'selected_syllabus_branch';
+
+export async function getSelectedBranch(): Promise<string> {
+  try {
+    const raw = await AsyncStorage.getItem(SELECTED_BRANCH_KEY);
+    return raw || 'cse';
+  } catch {
+    return 'cse';
+  }
+}
+
+export async function setSelectedBranch(branchId: string): Promise<void> {
+  try {
+    await AsyncStorage.setItem(SELECTED_BRANCH_KEY, branchId);
+  } catch {}
+}
