@@ -150,7 +150,8 @@ export const SettingsScreen = ({ navigation }: any) => {
     } catch {}
   };
 
-  const version = Constants.expoConfig?.version;
+  const version = Constants.expoConfig?.version || '1.0.1';
+  const versionCode = Constants.expoConfig?.android?.versionCode;
 
   return (
     <ScrollView
@@ -322,7 +323,11 @@ export const SettingsScreen = ({ navigation }: any) => {
           <SettingsRow icon="info" label="About PyQdeck" onPress={() => openWeb('/about')} last />
         </View>
 
-        {version ? <Text style={styles.versionText}>PyQdeck v{version}</Text> : null}
+        {version ? (
+          <Text style={styles.versionText}>
+            PyQdeck v{version}{versionCode ? ` (${versionCode})` : ''}
+          </Text>
+        ) : null}
       </View>
     </ScrollView>
   );
