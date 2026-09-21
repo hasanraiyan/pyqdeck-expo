@@ -405,23 +405,25 @@ export const HomeScreen = () => {
             )}
           </View>
 
-          {/* Browse All Subjects CTA Card */}
-          <View style={[styles.allSubjectsCta, ctaRow && styles.allSubjectsCtaRow]}>
-            <View style={[styles.allSubjectsLeft, ctaRow && styles.allSubjectsLeftRow]}>
-              <Text style={styles.allSubjectsTag}>LOOKING FOR ONE SUBJECT?</Text>
-              <Text style={styles.allSubjectsText}>
-                Search or browse all hundreds of subjects directly.
-              </Text>
+          {/* Browse All Subjects CTA Card (hidden while loading) */}
+          {!loading && (
+            <View style={[styles.allSubjectsCta, ctaRow && styles.allSubjectsCtaRow]}>
+              <View style={[styles.allSubjectsLeft, ctaRow && styles.allSubjectsLeftRow]}>
+                <Text style={styles.allSubjectsTag}>LOOKING FOR ONE SUBJECT?</Text>
+                <Text style={styles.allSubjectsText}>
+                  Search or browse all hundreds of subjects directly.
+                </Text>
+              </View>
+              <TouchableOpacity
+                style={[styles.allSubjectsButton, ctaRow && styles.allSubjectsButtonRow]}
+                activeOpacity={0.7}
+                onPress={() => navigation.navigate('AllSubjects')}
+              >
+                <Text style={styles.allSubjectsButtonText}>Browse all subjects</Text>
+                <Feather name="arrow-right" size={15} color={COLORS.text} />
+              </TouchableOpacity>
             </View>
-            <TouchableOpacity
-              style={[styles.allSubjectsButton, ctaRow && styles.allSubjectsButtonRow]}
-              activeOpacity={0.7}
-              onPress={() => navigation.navigate('AllSubjects')}
-            >
-              <Text style={styles.allSubjectsButtonText}>Browse all subjects</Text>
-              <Feather name="arrow-right" size={15} color={COLORS.text} />
-            </TouchableOpacity>
-          </View>
+          )}
         </View>
       </ScrollView>
     </View>

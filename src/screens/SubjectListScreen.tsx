@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -10,7 +10,7 @@ import {
   LayoutChangeEvent,
 } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { getSubjects } from '../api';
@@ -22,134 +22,39 @@ import { AdBanner } from '../components/AdBanner';
 import { useResponsive } from '../utils/responsive';
 import { semesterNumbersForYear } from '../utils/year';
 
-export const SubjectListScreen = () => {
-  const insets = useSafeAreaInsets();
-  const route = useRoute<any>();
-  const navigation = useNavigation<any>();
-  const { width, bp, wideMaxWidth, hPadding } = useResponsive();
-  const { yearNumber, semesterIds, semesterNumbers: passedSemNumbers } = route.params || {};
+const Tab = createMaterialTopTabNavigator();
 
-  const availableSemesters = useMemo<number[]>(() => {
-    if (Array.isArray(passedSemNumbers) && passedSemNumbers.length > 0) {
-      return passedSemNumbers;
-    }
-    if (yearNumber) {
-      return semesterNumbersForYear(yearNumber);
-    }
-    return [];
-  }, [passedSemNumbers, yearNumber]);
+interface SemesterTabContentProps {
+  semesterNumber: number;
+  subjects: (SubjectSummary & { semesterId: string; semesterNumber: number })[];
+  loading: boolean;
+  refreshing: boolean;
+  onRefresh: () => void;
+  isGrid: boolean;
+  columns: number;
+  cardWidth?: number;
+  frameMaxWidth: number;
+  GAP: number;
+  hPadding: number;
+  yearNumber: number;
+  navigation: any;
+}
 
-  const [selectedSemesterNumber, setSelectedSemesterNumber] = useState<number | null>(() => {
-    if (Array.isArray(passedSemNumbers) && passedSemNumbers.length > 0) {
-      return passedSemNumbers[0];
-    }
-    if (yearNumber) {
-      return semesterNumbersForYear(yearNumber)[0];
-    }
-    return null;
-  });
-
-  const listRef = useRef<FlatList>(null);
-  const isMultiSemester = availableSemesters.length > 1;
-
-  useEffect(() => {
-    if (availableSemesters.length > 0) {
-      if (selectedSemesterNumber === null || !availableSemesters.includes(selectedSemesterNumber)) {
-        setSelectedSemesterNumber(availableSemesters[0]);
-      }
-    }
-  }, [availableSemesters]);
-
-  // A phone keeps the dense full-bleed row list - it's the right shape for a
-  // narrow column. Wider screens switch to a card grid, because a single row
-  // stretched to 1200px puts the subject name and its count at opposite ends
-  // of an empty band.
-  const columns = bp({ phone: 1, tablet: 2, laptop: 3 });
-  const isGrid = columns > 1;
-  const GAP = 12;
-  // The padding lives on the same box as the cap here (unlike HomeScreen,
-  // where an outer padded view wraps an inner capped one), so the cap has to
-  // include the padding for the usable width to come out the same on both
-  // screens - otherwise the two disagree by 2 x hPadding above wideMaxWidth.
-  const frameMaxWidth = wideMaxWidth + (isGrid ? hPadding * 2 : 0);
-  // Measured, not window-derived: on web useWindowDimensions() includes the
-  // vertical scrollbar that the content box doesn't get, and cards sized off
-  // it overflow their row by ~17px - enough to wrap one card per row away.
-  const [listWidth, setListWidth] = useState(0);
-  const onContentLayout = useCallback(
-    (e: LayoutChangeEvent) => setListWidth(e.nativeEvent.layout.width),
-    []
-  );
-  const trackWidth = listWidth || width;
-  const contentWidth =
-    Math.min(trackWidth, frameMaxWidth) - (isGrid ? hPadding * 2 : 0);
-  const cardWidth = isGrid ? (contentWidth - GAP * (columns - 1)) / columns : undefined;
-
-  const [subjects, setSubjects] = useState<(SubjectSummary & { semesterId: string; semesterNumber: number })[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-
-  const loadData = async () => {
-    if (!semesterIds || !Array.isArray(semesterIds)) {
-      setLoading(false);
-      return;
-    }
-    try {
-      const results = await Promise.all(
-        (semesterIds as string[]).map(async (id: string, idx: number) => {
-          const data = await getSubjects(id);
-          const semNum = availableSemesters[idx] ?? (yearNumber ? yearNumber * 2 - 1 + idx : 1);
-          return data.map((subject) => ({
-            ...subject,
-            semesterId: id,
-            semesterNumber: semNum,
-          }));
-        })
-      );
-      const merged = results
-        .flat()
-        .sort((a, b) => a.semesterNumber - b.semesterNumber || a.name.localeCompare(b.name));
-      setSubjects(merged);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  };
-
-  useEffect(() => {
-    loadData();
-  }, [JSON.stringify(semesterIds)]);
-
-  const filteredSubjects = useMemo(() => {
-    if (availableSemesters.length <= 1 || selectedSemesterNumber === null) {
-      return subjects;
-    }
-    return subjects.filter((s) => s.semesterNumber === selectedSemesterNumber);
-  }, [subjects, selectedSemesterNumber, availableSemesters.length]);
-
-  const semCounts = useMemo(() => {
-    const counts: Record<number, number> = {};
-    for (const num of availableSemesters) {
-      counts[num] = 0;
-    }
-    for (const s of subjects) {
-      if (counts[s.semesterNumber] !== undefined) {
-        counts[s.semesterNumber]++;
-      }
-    }
-    return counts;
-  }, [subjects, availableSemesters]);
-
-  const handleSelectSemester = useCallback((semNum: number) => {
-    if (selectedSemesterNumber !== semNum) {
-      void Haptics.selectionAsync().catch(() => {});
-      setSelectedSemesterNumber(semNum);
-      listRef.current?.scrollToOffset({ offset: 0, animated: false });
-    }
-  }, [selectedSemesterNumber]);
-
+const SemesterTabContent = ({
+  semesterNumber,
+  subjects,
+  loading,
+  refreshing,
+  onRefresh,
+  isGrid,
+  columns,
+  cardWidth,
+  frameMaxWidth,
+  GAP,
+  hPadding,
+  yearNumber,
+  navigation,
+}: SemesterTabContentProps) => {
   const renderSubjectItem = useCallback(
     ({ item }: { item: SubjectSummary & { semesterId: string; semesterNumber: number } }) => {
       const isComingSoon = item.questionCount === 0;
@@ -200,154 +105,259 @@ export const SubjectListScreen = () => {
   );
 
   return (
-    <View style={styles.container}>
-      {/* The bar stays full-bleed; its text is capped to the same width as the
-          list below so the heading doesn't hug the edge on a wide screen. */}
-      <View style={styles.header}>
-        <View
-          style={[
-            styles.headerInner,
-            { maxWidth: wideMaxWidth + hPadding * 2, paddingHorizontal: hPadding },
-          ]}
-        >
-          <Text style={styles.badgeText}>YEAR {yearNumber}</Text>
-          <Text style={styles.title}>Subjects</Text>
-          <Text style={styles.subtitle}>
-            Select a subject to browse year-wise questions and practice by module.
-          </Text>
+    <View style={styles.tabContent}>
+      {loading ? (
+        <View style={{ maxWidth: frameMaxWidth, width: '100%', alignSelf: 'center', paddingTop: 8 }}>
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <SubjectCardSkeleton key={i} />
+          ))}
         </View>
-      </View>
+      ) : (
+        <FlatList
+          data={subjects}
+          key={columns}
+          numColumns={columns}
+          columnWrapperStyle={isGrid ? { gap: GAP } : undefined}
+          keyExtractor={(item) => item.id}
+          renderItem={renderSubjectItem}
+          initialNumToRender={10}
+          maxToRenderPerBatch={10}
+          windowSize={5}
+          removeClippedSubviews={Platform.OS === 'android'}
+          contentContainerStyle={{
+            paddingBottom: 24,
+            paddingTop: isGrid ? GAP : 0,
+            paddingHorizontal: isGrid ? hPadding : 0,
+            maxWidth: frameMaxWidth,
+            width: '100%',
+            alignSelf: 'center',
+          }}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor={COLORS.primary}
+            />
+          }
+          ListEmptyComponent={
+            <View style={styles.comingSoonContainer}>
+              <View style={styles.comingSoonBadge}>
+                <Feather name="clock" size={14} color={COLORS.primary} />
+                <Text style={styles.comingSoonBadgeText}>COMING SOON</Text>
+              </View>
+              <Text style={styles.comingSoonTitle}>
+                {`No Semester ${semesterNumber} subjects yet`}
+              </Text>
+              <Text style={styles.comingSoonDesc}>
+                {`We are actively curating previous year questions for Semester ${semesterNumber}. Check back soon or switch semesters.`}
+              </Text>
+              <TouchableOpacity
+                style={styles.browseAllBtn}
+                activeOpacity={0.7}
+                onPress={() => navigation.navigate('AllSubjects')}
+              >
+                <Text style={styles.browseAllBtnText}>Browse all available subjects</Text>
+                <Feather name="arrow-right" size={14} color={COLORS.text} />
+              </TouchableOpacity>
+            </View>
+          }
+        />
+      )}
+    </View>
+  );
+};
 
-      {/* Top Navigation Tabs for Semesters (e.g. Sem 5 and Sem 6) */}
-      {availableSemesters.length > 1 && (
-        <View style={styles.tabBarWrapper}>
-          <View
-            style={[
-              styles.tabBarInner,
-              {
-                maxWidth: frameMaxWidth,
-                paddingHorizontal: isGrid ? hPadding : 16,
-              },
-            ]}
-          >
-            <View style={styles.segmentedControl}>
-              {availableSemesters.map((semNum) => {
-                const isSelected = selectedSemesterNumber === semNum;
-                const count = semCounts[semNum] ?? 0;
-                return (
-                  <TouchableOpacity
-                    key={semNum}
-                    style={[styles.segmentBtn, isSelected && styles.segmentBtnActive]}
-                    activeOpacity={0.7}
-                    onPress={() => handleSelectSemester(semNum)}
-                    accessibilityRole="tab"
-                    accessibilityState={{ selected: isSelected }}
-                    accessibilityLabel={`Semester ${semNum}`}
-                  >
-                    <Text
-                      style={[
-                        styles.segmentBtnText,
-                        isSelected && styles.segmentBtnTextActive,
-                      ]}
-                    >
-                      Semester {semNum}
-                    </Text>
-                    {!loading && (
-                      <View
+export const SubjectListScreen = () => {
+  const route = useRoute<any>();
+  const navigation = useNavigation<any>();
+  const { width, bp, wideMaxWidth, hPadding } = useResponsive();
+  const { yearNumber, semesterIds, semesterNumbers: passedSemNumbers } = route.params || {};
+
+  const availableSemesters = useMemo<number[]>(() => {
+    if (Array.isArray(passedSemNumbers) && passedSemNumbers.length > 0) {
+      return passedSemNumbers;
+    }
+    if (yearNumber) {
+      return semesterNumbersForYear(yearNumber);
+    }
+    return [];
+  }, [passedSemNumbers, yearNumber]);
+
+  const columns = bp({ phone: 1, tablet: 2, laptop: 3 });
+  const isGrid = columns > 1;
+  const GAP = 12;
+  const frameMaxWidth = wideMaxWidth + (isGrid ? hPadding * 2 : 0);
+  const [listWidth, setListWidth] = useState(0);
+  const onContentLayout = useCallback(
+    (e: LayoutChangeEvent) => setListWidth(e.nativeEvent.layout.width),
+    []
+  );
+  const trackWidth = listWidth || width;
+  const contentWidth =
+    Math.min(trackWidth, frameMaxWidth) - (isGrid ? hPadding * 2 : 0);
+  const cardWidth = isGrid ? (contentWidth - GAP * (columns - 1)) / columns : undefined;
+
+  const [subjects, setSubjects] = useState<(SubjectSummary & { semesterId: string; semesterNumber: number })[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const loadData = useCallback(async (isManual = false) => {
+    if (!semesterIds || !Array.isArray(semesterIds)) {
+      setLoading(false);
+      return;
+    }
+    if (isManual) setRefreshing(true);
+    try {
+      const results = await Promise.all(
+        (semesterIds as string[]).map(async (id: string, idx: number) => {
+          const data = await getSubjects(id, isManual);
+          const semNum = availableSemesters[idx] ?? (yearNumber ? yearNumber * 2 - 1 + idx : 1);
+          return data.map((subject) => ({
+            ...subject,
+            semesterId: id,
+            semesterNumber: semNum,
+          }));
+        })
+      );
+      const merged = results
+        .flat()
+        .sort((a, b) => a.semesterNumber - b.semesterNumber || a.name.localeCompare(b.name));
+      setSubjects(merged);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, [semesterIds, availableSemesters, yearNumber]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  const subjectsBySemester = useMemo(() => {
+    const map: Record<number, (SubjectSummary & { semesterId: string; semesterNumber: number })[]> = {};
+    for (const num of availableSemesters) {
+      map[num] = [];
+    }
+    for (const s of subjects) {
+      if (map[s.semesterNumber]) {
+        map[s.semesterNumber].push(s);
+      }
+    }
+    return map;
+  }, [subjects, availableSemesters]);
+
+  const semCounts = useMemo(() => {
+    const counts: Record<number, number> = {};
+    for (const num of availableSemesters) {
+      counts[num] = (subjectsBySemester[num] || []).length;
+    }
+    return counts;
+  }, [subjectsBySemester, availableSemesters]);
+
+  return (
+    <View style={styles.container} onLayout={onContentLayout}>
+      {availableSemesters.length > 1 ? (
+        <Tab.Navigator
+          initialRouteName={`Semester${availableSemesters[0]}`}
+          screenOptions={{
+            tabBarActiveTintColor: COLORS.primary,
+            tabBarInactiveTintColor: COLORS.textMuted,
+            tabBarPressColor: COLORS.primaryLight,
+            tabBarIndicatorStyle: {
+              backgroundColor: COLORS.primary,
+              height: 2.5,
+            },
+            tabBarStyle: {
+              backgroundColor: COLORS.card,
+              borderBottomWidth: 1,
+              borderBottomColor: COLORS.borderDashed,
+              elevation: 0,
+              shadowOpacity: 0,
+            },
+            tabBarLabelStyle: {
+              textTransform: 'none',
+            },
+          }}
+        >
+          {availableSemesters.map((semNum) => (
+            <Tab.Screen
+              key={semNum}
+              name={`Semester${semNum}`}
+              listeners={{
+                tabPress: () => {
+                  void Haptics.selectionAsync().catch(() => {});
+                },
+              }}
+              options={{
+                tabBarLabel: ({ focused, color }) => {
+                  const count = semCounts[semNum] ?? 0;
+                  return (
+                    <View style={styles.tabLabelRow}>
+                      <Text
                         style={[
-                          styles.segmentBadge,
-                          isSelected && styles.segmentBadgeActive,
+                          styles.tabLabelText,
+                          { color },
+                          focused && styles.tabLabelTextActive,
                         ]}
                       >
-                        <Text
-                          style={[
-                            styles.segmentBadgeText,
-                            isSelected && styles.segmentBadgeTextActive,
-                          ]}
-                        >
-                          {count}
-                        </Text>
-                      </View>
-                    )}
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          </View>
-        </View>
+                        Semester {semNum}
+                      </Text>
+                      {!loading && (
+                        <View style={[styles.tabBadge, focused && styles.tabBadgeActive]}>
+                          <Text
+                            style={[
+                              styles.tabBadgeText,
+                              focused && styles.tabBadgeTextActive,
+                            ]}
+                          >
+                            {count}
+                          </Text>
+                        </View>
+                      )}
+                    </View>
+                  );
+                },
+              }}
+            >
+              {() => (
+                <SemesterTabContent
+                  semesterNumber={semNum}
+                  subjects={subjectsBySemester[semNum] || []}
+                  loading={loading}
+                  refreshing={refreshing}
+                  onRefresh={() => loadData(true)}
+                  isGrid={isGrid}
+                  columns={columns}
+                  cardWidth={cardWidth}
+                  frameMaxWidth={frameMaxWidth}
+                  GAP={GAP}
+                  hPadding={hPadding}
+                  yearNumber={yearNumber}
+                  navigation={navigation}
+                />
+              )}
+            </Tab.Screen>
+          ))}
+        </Tab.Navigator>
+      ) : (
+        <SemesterTabContent
+          semesterNumber={availableSemesters[0] ?? (yearNumber ? yearNumber * 2 - 1 : 1)}
+          subjects={subjects}
+          loading={loading}
+          refreshing={refreshing}
+          onRefresh={() => loadData(true)}
+          isGrid={isGrid}
+          columns={columns}
+          cardWidth={cardWidth}
+          frameMaxWidth={frameMaxWidth}
+          GAP={GAP}
+          hPadding={hPadding}
+          yearNumber={yearNumber}
+          navigation={navigation}
+        />
       )}
-
-      <View style={styles.content} onLayout={onContentLayout}>
-        {loading ? (
-          <View style={{ maxWidth: frameMaxWidth, width: '100%', alignSelf: 'center' }}>
-            {[1, 2, 3, 4, 5, 6].map((i) => (
-              <SubjectCardSkeleton key={i} />
-            ))}
-          </View>
-        ) : (
-          <FlatList
-            ref={listRef}
-            data={filteredSubjects}
-            // FlatList caches its layout per column count, so it has to be
-            // remounted when that changes - otherwise rotating a tablet (or
-            // dragging a browser window across a breakpoint) leaves the old
-            // single-column layout behind.
-            key={columns}
-            numColumns={columns}
-            columnWrapperStyle={isGrid ? { gap: GAP } : undefined}
-            keyExtractor={(item) => item.id}
-            renderItem={renderSubjectItem}
-            initialNumToRender={10}
-            maxToRenderPerBatch={10}
-            windowSize={5}
-            removeClippedSubviews={Platform.OS === 'android'}
-            contentContainerStyle={{
-              paddingBottom: 24,
-              paddingTop: isGrid ? GAP : 0,
-              paddingHorizontal: isGrid ? hPadding : 0,
-              maxWidth: frameMaxWidth,
-              width: '100%',
-              alignSelf: 'center',
-            }}
-            refreshControl={
-              <RefreshControl
-                refreshing={refreshing}
-                onRefresh={() => {
-                  setRefreshing(true);
-                  loadData();
-                }}
-                tintColor={COLORS.primary}
-              />
-            }
-            ListEmptyComponent={
-              <View style={styles.comingSoonContainer}>
-                <View style={styles.comingSoonBadge}>
-                  <Feather name="clock" size={14} color={COLORS.primary} />
-                  <Text style={styles.comingSoonBadgeText}>COMING SOON</Text>
-                </View>
-                <Text style={styles.comingSoonTitle}>
-                  {selectedSemesterNumber
-                    ? `No Semester ${selectedSemesterNumber} subjects yet`
-                    : 'No subjects added yet'}
-                </Text>
-                <Text style={styles.comingSoonDesc}>
-                  {selectedSemesterNumber
-                    ? `We are actively curating previous year questions for Semester ${selectedSemesterNumber}. Switch semesters above or browse other active subjects.`
-                    : `We are actively curating previous year questions for Year ${yearNumber}. Check back soon or browse other active years.`}
-                </Text>
-                <TouchableOpacity
-                  style={styles.browseAllBtn}
-                  activeOpacity={0.7}
-                  onPress={() => navigation.navigate('AllSubjects')}
-                >
-                  <Text style={styles.browseAllBtnText}>Browse all available subjects</Text>
-                  <Feather name="arrow-right" size={14} color={COLORS.text} />
-                </TouchableOpacity>
-              </View>
-            }
-          />
-        )}
-      </View>
       <AdBanner />
     </View>
   );
@@ -358,75 +368,25 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.background,
   },
-  header: {
-    paddingTop: 16,
-    paddingBottom: 16,
-    borderBottomWidth: 1,
-    borderColor: COLORS.borderDashed,
-    backgroundColor: COLORS.card,
-    alignItems: 'center',
-  },
-  headerInner: {
-    width: '100%',
-  },
-  tabBarWrapper: {
-    backgroundColor: COLORS.card,
-    borderBottomWidth: 1,
-    borderColor: COLORS.borderDashed,
-    alignItems: 'center',
-    paddingVertical: 10,
-  },
-  tabBarInner: {
-    width: '100%',
-  },
-  segmentedControl: {
-    flexDirection: 'row',
-    backgroundColor: COLORS.background,
-    borderRadius: 8,
-    padding: 3,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  segmentBtn: {
+  tabContent: {
     flex: 1,
+    backgroundColor: COLORS.background,
+  },
+  tabLabelRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 9,
-    paddingHorizontal: 12,
-    borderRadius: 6,
     gap: 6,
   },
-  segmentBtnActive: {
-    backgroundColor: COLORS.card,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.08,
-        shadowRadius: 2,
-      },
-      android: {
-        elevation: 1.5,
-      },
-      web: {
-        boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
-      },
-    }),
-  },
-  segmentBtnText: {
+  tabLabelText: {
     fontFamily: FONTS.mono,
     fontSize: 12.5,
     fontWeight: '600',
-    color: COLORS.textMuted,
   },
-  segmentBtnTextActive: {
-    color: COLORS.primary,
+  tabLabelTextActive: {
     fontWeight: '700',
   },
-  segmentBadge: {
+  tabBadge: {
     paddingHorizontal: 6,
     paddingVertical: 1,
     borderRadius: 10,
@@ -434,44 +394,19 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.borderLight,
   },
-  segmentBadgeActive: {
+  tabBadgeActive: {
     backgroundColor: COLORS.primaryLight,
     borderColor: COLORS.primaryBorder,
   },
-  segmentBadgeText: {
+  tabBadgeText: {
     fontFamily: FONTS.mono,
     fontSize: 10.5,
     fontWeight: '600',
     color: COLORS.textSubtle,
   },
-  segmentBadgeTextActive: {
+  tabBadgeTextActive: {
     color: COLORS.primary,
     fontWeight: '700',
-  },
-  badgeText: {
-    fontFamily: FONTS.mono,
-    fontSize: 10.5,
-    color: COLORS.primary,
-    fontWeight: '700',
-    letterSpacing: 1.5,
-    marginBottom: 4,
-  },
-  title: {
-    fontFamily: FONTS.serif,
-    fontSize: 27,
-    fontStyle: 'italic',
-    fontWeight: '400',
-    color: COLORS.text,
-    letterSpacing: -0.5,
-  },
-  subtitle: {
-    fontSize: 13,
-    color: COLORS.textMuted,
-    marginTop: 4,
-    lineHeight: 18,
-  },
-  content: {
-    flex: 1,
   },
   card: {
     flexDirection: 'row',
@@ -483,8 +418,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 14,
   },
-  // Grid mode: a standalone bordered card rather than a full-bleed row with
-  // only a bottom rule.
   cardGrid: {
     borderWidth: 1,
     borderBottomWidth: 1,
