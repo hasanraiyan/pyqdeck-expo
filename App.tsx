@@ -275,13 +275,6 @@ function AppContent() {
   // Still reading AsyncStorage — render nothing to avoid a flash of wrong screen
   if (onboarded === null) return null;
 
-  // First launch — show onboarding full-screen
-  if (onboarded === false) {
-    return (
-      <OnboardingScreen onDone={() => setOnboarded(true)} />
-    );
-  }
-
   // The tab navigator, wrapped by the root stack below so the auth screens can
   // sit above it rather than inside a tab.
   const tabs = (
@@ -349,17 +342,33 @@ function AppContent() {
           SignIn lived in HomeStack, voting from a Search-tab question had to
           bounce through the Browse tab to find the route. */}
       <RootStack.Navigator screenOptions={{ headerShown: false }}>
-        <RootStack.Screen name="Tabs">{() => tabs}</RootStack.Screen>
-        <RootStack.Screen
-          name="SignIn"
-          component={SignInScreen}
-          options={{ presentation: 'fullScreenModal' }}
-        />
-        <RootStack.Screen
-          name="ManageAccount"
-          component={ManageAccountScreen}
-          options={{ presentation: 'fullScreenModal' }}
-        />
+        {onboarded === false ? (
+          <RootStack.Screen name="InitialOnboarding">
+            {() => <OnboardingScreen onDone={() => setOnboarded(true)} />}
+          </RootStack.Screen>
+        ) : (
+          <>
+            <RootStack.Screen name="Tabs">{() => tabs}</RootStack.Screen>
+            <RootStack.Screen
+              name="SignIn"
+              component={SignInScreen}
+              options={{ presentation: 'fullScreenModal' }}
+            />
+            <RootStack.Screen
+              name="ManageAccount"
+              component={ManageAccountScreen}
+              options={{ presentation: 'fullScreenModal' }}
+            />
+            <RootStack.Screen
+              name="Onboarding"
+              options={{ presentation: 'fullScreenModal' }}
+            >
+              {({ navigation }: any) => (
+                <OnboardingScreen onDone={() => navigation.goBack()} />
+              )}
+            </RootStack.Screen>
+          </>
+        )}
       </RootStack.Navigator>
     </NavigationContainer>
   );

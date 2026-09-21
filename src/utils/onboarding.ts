@@ -18,3 +18,12 @@ export async function markOnboardingDone(): Promise<void> {
     // silently ignore write errors
   }
 }
+
+export async function resetOnboarding(): Promise<void> {
+  try {
+    await AsyncStorage.removeItem(KEY);
+  } catch {
+    // silently ignore write errors
+  }
+}
+

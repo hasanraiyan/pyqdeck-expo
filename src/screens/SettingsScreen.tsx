@@ -29,6 +29,7 @@ import {
 import { openStoreListing, checkForUpdateInteractive } from '../utils/appUpdate';
 import * as Cache from '../db/cacheService';
 import { isAuthEnabled } from '../config/features';
+import { resetOnboarding } from '../utils/onboarding';
 
 const WEBSITE_URL = 'https://pyqdeck.in';
 
@@ -282,6 +283,23 @@ export const SettingsScreen = ({ navigation }: any) => {
                 <Text style={styles.statusText}>Clearing…</Text>
               ) : undefined
             }
+          />
+        </View>
+
+        <Text style={styles.sectionHeading}>APP TOUR</Text>
+        <View style={styles.card}>
+          <SettingsRow
+            icon="compass"
+            label="Replay Welcome Tour"
+            subtitle="Reset and preview the 3-slide introduction again"
+            onPress={async () => {
+              try {
+                await Haptics.selectionAsync();
+              } catch {}
+              await resetOnboarding();
+              navigation.navigate('Onboarding');
+            }}
+            last
           />
         </View>
 
