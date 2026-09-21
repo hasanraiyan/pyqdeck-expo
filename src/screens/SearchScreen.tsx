@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -35,26 +35,7 @@ export const SearchScreen = () => {
   const [hasSearched, setHasSearched] = useState(false);
   const [cooldownSec, setCooldownSec] = useState(0);
   const [validationError, setValidationError] = useState<string | null>(null);
-  const [filter, setFilter] = useState<'all' | 'solution' | '7marks'>('all');
 
-  const filteredQuestions = useMemo(() => {
-    if (filter === 'solution') {
-      return questionResults.filter((q) => q.hasSolution);
-    }
-    if (filter === '7marks') {
-      return questionResults.filter((q) => (q.marks || 0) >= 7);
-    }
-    return questionResults;
-  }, [questionResults, filter]);
-
-  const solutionCount = useMemo(
-    () => questionResults.filter((q) => q.hasSolution).length,
-    [questionResults]
-  );
-  const highMarksCount = useMemo(
-    () => questionResults.filter((q) => (q.marks || 0) >= 7).length,
-    [questionResults]
-  );
 
   const cooldownTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const lastQueryRef = useRef<string>('');
@@ -356,37 +337,6 @@ export const SearchScreen = () => {
               <Text style={styles.cooldownText}>Slow down — try again in {cooldownSec}s</Text>
             </View>
           )}
-          {hasSearched && !loading && questionResults.length > 0 && (
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.filterChipsScroll}
-            >
-              {(['all', 'solution', '7marks'] as const).map((f) => {
-                const label =
-                  f === 'all'
-                    ? `All (${questionResults.length})`
-                    : f === 'solution'
-                    ? `With Solution (${solutionCount})`
-                    : `7+ Marks (${highMarksCount})`;
-                const active = filter === f;
-                return (
-                  <TouchableOpacity
-                    key={f}
-                    style={[styles.filterChip, active && styles.filterChipActive]}
-                    onPress={() => {
-                      Haptics.selectionAsync();
-                      setFilter(f);
-                    }}
-                  >
-                    <Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>
-                      {label}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </ScrollView>
-          )}
         </View>
       </View>
 
@@ -509,10 +459,10 @@ export const SearchScreen = () => {
           {!loading && questionResults.length > 0 && (
             <View style={styles.section}>
               <Text style={styles.sectionHeading}>
-                QUESTIONS ({filteredQuestions.length}{filter !== 'all' ? ` of ${questionResults.length}` : ''})
+                QUESTIONS ({questionResults.length})
               </Text>
               <View style={{ gap: 10 }}>
-                {filteredQuestions.map((q) => (
+                {questionResults.map((q) => (
                   <TouchableOpacity
                     key={`${q.subject?.id || 's'}-${q.questionId}`}
                     style={styles.questionResultCard}
@@ -811,35 +761,6 @@ const styles = StyleSheet.create({
   loaderBox: {
     paddingVertical: 48,
     alignItems: 'center',
-  },
-  filterChipsScroll: {
-    flexDirection: 'row',
-    gap: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-  },
-  filterChip: {
-    height: 30,
-    paddingHorizontal: 12,
-    borderRadius: 15,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    backgroundColor: COLORS.card,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  filterChipActive: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
-  },
-  filterChipText: {
-    fontFamily: FONTS.mono,
-    fontSize: rf(11.5),
-    color: COLORS.textSubtle,
-    letterSpacing: 0.3,
-  },
-  filterChipTextActive: {
-    color: '#fff',
   },
   emptyContainer: {
     paddingVertical: 48,
