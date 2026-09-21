@@ -68,7 +68,8 @@
         {
           "android": {
             "enableMinifyInReleaseBuilds": true,
-            "enableShrinkResourcesInReleaseBuilds": true
+            "enableShrinkResourcesInReleaseBuilds": true,
+            "extraProguardRules": "-dontwarn kotlin.MustUseReturnValues\n-dontwarn kotlin.**ReturnValue**"
           }
         }
       ],
