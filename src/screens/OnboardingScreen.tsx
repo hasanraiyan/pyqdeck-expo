@@ -559,7 +559,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 8,
-    minWidth: 126,
+    width: 140,
     height: 42,
     justifyContent: 'center',
   },

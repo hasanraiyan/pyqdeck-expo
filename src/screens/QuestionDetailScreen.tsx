@@ -72,7 +72,9 @@ export const QuestionDetailScreen = () => {
   const [repeats, setRepeats] = useState<any[]>([]);
   const [similar, setSimilar] = useState<any[]>([]);
   const [loading, setLoading] = useState(!initialQuestion);
-  const [loadingRelated, setLoadingRelated] = useState(true);
+  const [loadingSimilar, setLoadingSimilar] = useState(false);
+  const [hasLoadedSimilar, setHasLoadedSimilar] = useState(false);
+  const [similarError, setSimilarError] = useState(false);
   const [copied, setCopied] = useState(false);
   const [showSimilar, setShowSimilar] = useState(true);
   const [showRepeats, setShowRepeats] = useState(true);
@@ -148,6 +150,29 @@ export const QuestionDetailScreen = () => {
     void loadSolution();
   };
 
+  const handleLoadSimilar = async () => {
+    if (loadingSimilar) return;
+    if (hasLoadedSimilar) {
+      Haptics.selectionAsync();
+      setShowSimilar((prev) => !prev);
+      return;
+    }
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setLoadingSimilar(true);
+    setSimilarError(false);
+    setShowSimilar(true);
+    try {
+      const simData = await getSimilarQuestions(subjectId, questionId);
+      setSimilar(simData.questions || []);
+      setHasLoadedSimilar(true);
+    } catch (e) {
+      console.error('Failed to load similar questions', e);
+      setSimilarError(true);
+    } finally {
+      setLoadingSimilar(false);
+    }
+  };
+
   useEffect(() => {
     const loadAll = async () => {
       try {
@@ -165,15 +190,13 @@ export const QuestionDetailScreen = () => {
           setLoadingSolution(false);
           setSolutionError(false);
         }
-        const [repData, simData, paperData] = await Promise.all([
+        const [repData, paperData] = await Promise.all([
           getRepeatedQuestions(subjectId, questionId).catch(() => ({ questions: [] })),
-          getSimilarQuestions(subjectId, questionId).catch(() => ({ questions: [] })),
           currentYear
             ? getQuestions(subjectId, { year: Number(currentYear), limit: 50 }).catch(() => null)
             : Promise.resolve(null),
         ]);
         setRepeats(repData.questions || []);
-        setSimilar(simData.questions || []);
         if (paperData?.questions) {
           setPaperQuestions(paperData.questions);
         }
@@ -181,7 +204,6 @@ export const QuestionDetailScreen = () => {
         console.error(e);
       } finally {
         setLoading(false);
-        setLoadingRelated(false);
       }
     };
     loadAll();
@@ -203,11 +225,13 @@ export const QuestionDetailScreen = () => {
     setSolutionError(false);
     setRepeats([]);
     setSimilar([]);
+    setHasLoadedSimilar(false);
+    setLoadingSimilar(false);
+    setSimilarError(false);
     setShowSimilar(true);
     setShowRepeats(true);
     setCopied(false);
     setLoading(false);
-    setLoadingRelated(true);
     navigation.setParams({
       questionId: q.questionId,
       year: q.year,
@@ -646,71 +670,127 @@ export const QuestionDetailScreen = () => {
             </View>
           )}
 
-          {/* Similar Questions (collapsible) */}
-          {(loadingRelated || similar.length > 0) && (
-            <View style={styles.relatedSection}>
-              <TouchableOpacity
-                style={styles.sectionHeaderBtn}
-                activeOpacity={0.7}
-                onPress={() => setShowSimilar(!showSimilar)}
-              >
-                <Text style={styles.relatedHeading}>
-                  SIMILAR QUESTIONS {loadingRelated ? '' : `(${similar.length})`}
-                </Text>
-                <Feather
-                  name={showSimilar ? 'chevron-up' : 'chevron-down'}
-                  size={16}
-                  color={COLORS.textMuted}
-                />
-              </TouchableOpacity>
-              {showSimilar && (
-                loadingRelated ? (
+          {/* Similar Questions (On-demand to save backend vector search costs) */}
+          <View style={styles.relatedSection}>
+            {!hasLoadedSimilar ? (
+              <View>
+                <TouchableOpacity
+                  style={styles.onDemandSimilarCard}
+                  activeOpacity={0.7}
+                  onPress={handleLoadSimilar}
+                  disabled={loadingSimilar}
+                >
+                  <View style={styles.onDemandSimilarLeft}>
+                    <View style={styles.onDemandSimilarIconBox}>
+                      <Feather name="layers" size={15} color={COLORS.primary} />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.onDemandSimilarTitle}>Similar Questions</Text>
+                      <Text style={styles.onDemandSimilarSub}>
+                        Find related questions from other exam papers
+                      </Text>
+                    </View>
+                  </View>
+
+                  {loadingSimilar ? (
+                    <View style={styles.onDemandLoadingWrap}>
+                      <WaveLoader color={COLORS.primary} dotSize={4} />
+                    </View>
+                  ) : (
+                    <View style={styles.onDemandFindBtn}>
+                      <Text style={styles.onDemandFindBtnText}>Find</Text>
+                      <Feather name="arrow-right" size={12} color={COLORS.primary} />
+                    </View>
+                  )}
+                </TouchableOpacity>
+
+                {loadingSimilar && (
                   <View style={{ marginTop: 8 }}>
                     <SimilarQuestionSkeleton />
                   </View>
-                ) : (
-                  <View style={[styles.similarContainer, { marginTop: 8 }]}>
-                    {similar.map((item, idx) => (
-                      <TouchableOpacity
-                        key={idx}
-                        style={[
-                          styles.similarRow,
-                          idx === similar.length - 1 && { borderBottomWidth: 0 },
-                        ]}
-                        activeOpacity={0.7}
-                        onPress={() =>
-                          navigation.push('QuestionDetail', {
-                            subjectId: item.subject?.id || subjectId,
-                            semesterId: item.subject?.semesterId || semesterId,
-                            year: item.year,
-                            questionId: item.questionId,
-                            initialQuestion: item,
-                            subjectName: item.subject?.name || subjectName,
-                          })
-                        }
-                      >
-                        {/* Top Line: Module/Subject on left, Year & Marks badge on right */}
-                        <View style={styles.similarTopMeta}>
-                          <Text style={styles.similarSubject} numberOfLines={1}>
-                            {item.chapter || item.subject?.name || subjectName}
-                          </Text>
-                          <View style={styles.similarBadgeGroup}>
-                            <YearBadge year={item.year} />
-                            <MarksBadge marks={item.marks} />
-                          </View>
-                        </View>
+                )}
+              </View>
+            ) : (
+              <>
+                <TouchableOpacity
+                  style={styles.sectionHeaderBtn}
+                  activeOpacity={0.7}
+                  onPress={() => setShowSimilar(!showSimilar)}
+                >
+                  <Text style={styles.relatedHeading}>
+                    SIMILAR QUESTIONS ({similar.length})
+                  </Text>
+                  <Feather
+                    name={showSimilar ? 'chevron-up' : 'chevron-down'}
+                    size={16}
+                    color={COLORS.textMuted}
+                  />
+                </TouchableOpacity>
 
-                        {/* Bottom Line: Question Preview Text */}
-                        <Text style={styles.similarText} numberOfLines={2}>
-                          {cleanMarkdown(item.textPreview || item.text)}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                )
-              )}
-            </View>
-          )}
+                {showSimilar && (
+                  similar.length === 0 ? (
+                    <View style={styles.similarEmptyBox}>
+                      <Text style={styles.similarEmptyText}>
+                        No similar questions found in other papers.
+                      </Text>
+                    </View>
+                  ) : (
+                    <View style={[styles.similarContainer, { marginTop: 8 }]}>
+                      {similar.map((item, idx) => (
+                        <TouchableOpacity
+                          key={idx}
+                          style={[
+                            styles.similarRow,
+                            idx === similar.length - 1 && { borderBottomWidth: 0 },
+                          ]}
+                          activeOpacity={0.7}
+                          onPress={() =>
+                            navigation.push('QuestionDetail', {
+                              subjectId: item.subject?.id || subjectId,
+                              semesterId: item.subject?.semesterId || semesterId,
+                              year: item.year,
+                              questionId: item.questionId,
+                              initialQuestion: item,
+                              subjectName: item.subject?.name || subjectName,
+                            })
+                          }
+                        >
+                          {/* Top Line: Module/Subject on left, Year & Marks badge on right */}
+                          <View style={styles.similarTopMeta}>
+                            <Text style={styles.similarSubject} numberOfLines={1}>
+                              {item.chapter || item.subject?.name || subjectName}
+                            </Text>
+                            <View style={styles.similarBadgeGroup}>
+                              <YearBadge year={item.year} />
+                              <MarksBadge marks={item.marks} />
+                            </View>
+                          </View>
+
+                          {/* Bottom Line: Question Preview Text */}
+                          <Text style={styles.similarText} numberOfLines={2}>
+                            {cleanMarkdown(item.textPreview || item.text)}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  )
+                )}
+              </>
+            )}
+
+            {similarError && !loadingSimilar && (
+              <TouchableOpacity
+                style={styles.solutionErrorBtn}
+                onPress={handleLoadSimilar}
+                activeOpacity={0.7}
+              >
+                <Feather name="refresh-cw" size={13} color={COLORS.primary} />
+                <Text style={styles.solutionErrorText}>
+                  Could not load similar questions — tap to retry
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
           {/* Prev / Next Question in Paper Nav */}
           {hasNav && (
             <View style={styles.navSection}>
@@ -1378,6 +1458,83 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: COLORS.textSubtle,
     letterSpacing: 1.2,
+  },
+  onDemandSimilarCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: COLORS.card,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  onDemandSimilarLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    flex: 1,
+    marginRight: 10,
+  },
+  onDemandSimilarIconBox: {
+    width: 32,
+    height: 32,
+    borderRadius: 6,
+    backgroundColor: COLORS.cardSecondary,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  onDemandSimilarTitle: {
+    fontFamily: FONTS.serif,
+    fontSize: rf(13.5),
+    fontWeight: '700',
+    color: COLORS.text,
+    marginBottom: 2,
+  },
+  onDemandSimilarSub: {
+    fontFamily: FONTS.sans,
+    fontSize: rf(11.5),
+    color: COLORS.textMuted,
+    lineHeight: rf(15),
+  },
+  onDemandLoadingWrap: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  onDemandFindBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: COLORS.primaryLight,
+    borderWidth: 1,
+    borderColor: COLORS.primaryBorder,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 6,
+  },
+  onDemandFindBtnText: {
+    fontFamily: FONTS.mono,
+    fontSize: rf(11.5),
+    fontWeight: '700',
+    color: COLORS.primary,
+  },
+  similarEmptyBox: {
+    backgroundColor: COLORS.card,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 6,
+    padding: 14,
+    marginTop: 8,
+    alignItems: 'center',
+  },
+  similarEmptyText: {
+    fontFamily: FONTS.sans,
+    fontSize: rf(12.5),
+    color: COLORS.textMuted,
+    textAlign: 'center',
   },
   relatedCard: {
     backgroundColor: COLORS.card,
