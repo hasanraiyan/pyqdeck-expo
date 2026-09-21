@@ -229,14 +229,6 @@ export const TopicNotesScreen = () => {
           </View>
         )}
 
-        {!loading && done && (
-          <View style={styles.completedPillRow}>
-            <View style={styles.completedPill}>
-              <Feather name="check-circle" size={13} color={COLORS.secondary} />
-              <Text style={styles.completedPillText}>TOPIC COMPLETED</Text>
-            </View>
-          </View>
-        )}
 
         {!loading && (prevEntry || nextEntry) && (
           <View style={styles.navSection}>
@@ -291,28 +283,5 @@ const styles = StyleSheet.create({
     color: COLORS.textSubtle,
     textAlign: 'center',
     maxWidth: 260,
-  },
-  completedPillRow: {
-    alignItems: 'center',
-    marginTop: 18,
-    marginBottom: 4,
-  },
-  completedPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: COLORS.secondaryLight,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(31, 75, 67, 0.25)',
-  },
-  completedPillText: {
-    fontFamily: FONTS.mono,
-    fontSize: 11,
-    fontWeight: '700',
-    color: COLORS.secondary,
-    letterSpacing: 0.8,
   },
 });

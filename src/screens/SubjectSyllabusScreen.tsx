@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -14,6 +14,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRoute, useNavigation, useFocusEffect } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
+import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
 import * as WebBrowser from 'expo-web-browser';
 import { COLORS, FONTS } from '../theme/colors';
@@ -60,6 +61,28 @@ export const SubjectSyllabusScreen = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [done, setDone] = useState<Set<string>>(new Set());
   const [open, setOpen] = useState<Set<string>>(new Set());
+  const [copiedTopic, setCopiedTopic] = useState<string | null>(null);
+  const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleCopyTopic = useCallback(async (topicTitle: string) => {
+    try {
+      await Clipboard.setStringAsync(topicTitle);
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch {
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    }
+    setCopiedTopic(topicTitle);
+    if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
+    copyTimeoutRef.current = setTimeout(() => {
+      setCopiedTopic(null);
+    }, 2000);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
+    };
+  }, []);
 
   const load = useCallback(
     async (force = false) => {
@@ -235,15 +258,19 @@ export const SubjectSyllabusScreen = () => {
         {expanded &&
           m.topics.map((t) => {
             const isDone = done.has(topicKey(m.id, t.id));
+            const isCopied = copiedTopic === t.title;
             return (
-              <View key={t.id} style={styles.topicRow}>
+              <View key={t.id} style={[styles.topicRow, isCopied && styles.topicRowCopied]}>
                 <TouchableOpacity
                   style={styles.tickZone}
                   activeOpacity={0.6}
                   onPress={() => toggleDone(m.id, t)}
+                  onLongPress={() => handleCopyTopic(t.title)}
+                  delayLongPress={350}
                   accessibilityRole="checkbox"
                   accessibilityState={{ checked: isDone }}
                   accessibilityLabel={`Mark ${t.title} as done`}
+                  accessibilityHint="Long press to copy topic title"
                 >
                   <View style={[styles.bubble, isDone && styles.bubbleOn]}>
                     {isDone && <Feather name="check" size={13} color={COLORS.card} />}
@@ -251,6 +278,12 @@ export const SubjectSyllabusScreen = () => {
                   <Text style={[styles.topicText, isDone && styles.topicTextDone]}>
                     {t.title}
                   </Text>
+                  {isCopied && (
+                    <View style={styles.inlineCopiedBadge}>
+                      <Feather name="check" size={10} color={COLORS.primary} />
+                      <Text style={styles.inlineCopiedText}>Copied</Text>
+                    </View>
+                  )}
                 </TouchableOpacity>
 
                 <View style={styles.actionsWrap}>
@@ -344,6 +377,21 @@ export const SubjectSyllabusScreen = () => {
           subject.modules.map(renderModule)
         )}
       </ScrollView>
+
+      {/* Floating toast notification on copy */}
+      {copiedTopic && (
+        <View
+          style={[styles.toastContainer, { bottom: insets.bottom + 16 }]}
+          pointerEvents="none"
+        >
+          <View style={styles.toastCard}>
+            <Feather name="copy" size={13} color={COLORS.primary} />
+            <Text style={styles.toastText} numberOfLines={1}>
+              Copied "{copiedTopic}"
+            </Text>
+          </View>
+        </View>
+      )}
     </View>
   );
 };
@@ -472,4 +520,63 @@ const styles = StyleSheet.create({
   topicTextDone: { color: COLORS.textSubtle },
   bar: { height: 4, borderRadius: 2, backgroundColor: COLORS.borderLight, overflow: 'hidden' },
   barFill: { height: '100%', backgroundColor: COLORS.secondary },
+  topicRowCopied: {
+    backgroundColor: COLORS.primaryLight,
+  },
+  inlineCopiedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: COLORS.primaryLight,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: COLORS.primaryBorder,
+    marginLeft: 6,
+  },
+  inlineCopiedText: {
+    fontFamily: FONTS.mono,
+    fontSize: 10,
+    fontWeight: '700',
+    color: COLORS.primary,
+  },
+  toastContainer: {
+    position: 'absolute',
+    left: 20,
+    right: 20,
+    alignItems: 'center',
+    zIndex: 999,
+  },
+  toastCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: COLORS.text,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 24,
+    maxWidth: '92%',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.25,
+        shadowRadius: 5,
+      },
+      android: {
+        elevation: 6,
+      },
+      web: {
+        boxShadow: '0 4px 12px rgba(0,0,0,0.18)',
+      },
+    }),
+  },
+  toastText: {
+    fontFamily: FONTS.mono,
+    fontSize: 12,
+    color: '#ffffff',
+    fontWeight: '600',
+    flexShrink: 1,
+  },
 });

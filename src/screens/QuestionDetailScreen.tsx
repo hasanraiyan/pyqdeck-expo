@@ -29,7 +29,6 @@ import {
 import { QuestionSummary, Solution } from '../types';
 import { COLORS, FONTS } from '../theme/colors';
 import { Badge, MarksBadge, AskAiBadge, YearBadge, ShowSolnBadge, QNumBadge } from '../components/Badge';
-import { getOldUiEnabled } from '../utils/settings';
 import { PrevNextNav } from '../components/PrevNextNav';
 import { SolutionSkeleton, SimilarQuestionSkeleton } from '../components/Skeleton';
 import { rf, cleanMarkdown, useResponsive } from '../utils/responsive';
@@ -92,13 +91,6 @@ export const QuestionDetailScreen = () => {
   const [reportMsg, setReportMsg] = useState('');
   const [reportSubmitting, setReportSubmitting] = useState(false);
   const [reported, setReported] = useState(false);
-  const [isOldUi, setIsOldUi] = useState(false);
-
-  useFocusEffect(
-    useCallback(() => {
-      getOldUiEnabled().then(setIsOldUi);
-    }, [])
-  );
 
   const currentYear = question?.year || year;
   const scrollRef = useRef<ScrollView>(null);
@@ -423,90 +415,47 @@ export const QuestionDetailScreen = () => {
         contentContainerStyle={[styles.scroll, { paddingHorizontal: hPadding }]}
       >
         <View style={[styles.centerWrapper, { maxWidth: readMaxWidth }]}>
-          {/* Breadcrumb / Paper info */}
-          {!isOldUi && (
-            <View style={styles.metaRow}>
-              <Text style={styles.subjectText} numberOfLines={1}>
-                {subjectName || 'Subject'}
-                {question.chapter ? ` • ${question.chapter}` : ''}
-              </Text>
+          {/* Question Card (Always Classic UI) */}
+          <View style={[styles.questionCard, styles.questionCardClassic]}>
+            {/* Top row inside card: Year on left, Q-Number & Marks badge on right */}
+            <View style={styles.qNumRowClassic}>
+              <View style={styles.qNumLeftGroup}>
+                {question.year ? (
+                  <TouchableOpacity
+                    onPress={() =>
+                      navigation.navigate('QuestionList', {
+                        semesterId,
+                        subjectId,
+                        subjectName,
+                        initialYear: question.year,
+                      })
+                    }
+                    activeOpacity={0.7}
+                  >
+                    <YearBadge year={question.year} variant="teal" />
+                  </TouchableOpacity>
+                ) : null}
+              </View>
+
+              <View style={styles.qNumRightGroup}>
+                <QNumBadge
+                  qNum={question.qNumber || question.questionId}
+                  variant="primary"
+                />
+                {question.marks ? (
+                  <MarksBadge marks={question.marks} />
+                ) : null}
+              </View>
             </View>
-          )}
 
-          {/* Question Card */}
-          <View style={[styles.questionCard, isOldUi && styles.questionCardClassic]}>
-            {/* Top row inside card: Q-Number on left, Year & Marks badge on right */}
-            {isOldUi ? (
-              <>
-                <View style={styles.qNumRowClassic}>
-                  <View style={styles.qNumLeftGroup}>
-                    {question.year ? (
-                      <TouchableOpacity
-                        onPress={() =>
-                          navigation.navigate('QuestionList', {
-                            semesterId,
-                            subjectId,
-                            subjectName,
-                            initialYear: question.year,
-                          })
-                        }
-                        activeOpacity={0.7}
-                      >
-                        <YearBadge year={question.year} variant="teal" />
-                      </TouchableOpacity>
-                    ) : null}
-                  </View>
-
-                  <View style={styles.qNumRightGroup}>
-                    <QNumBadge
-                      qNum={question.qNumber || question.questionId}
-                      variant="primary"
-                    />
-                    {question.marks ? (
-                      <MarksBadge marks={question.marks} />
-                    ) : null}
-                  </View>
-                </View>
-
-                {Boolean(question.chapter) && (
-                  <View style={styles.detailModuleStrip}>
-                    <Feather name="layers" size={13} color={COLORS.primary} />
-                    <Text style={styles.detailModuleText} numberOfLines={1}>
-                      {question.chapter.toLowerCase().startsWith('module')
-                        ? question.chapter
-                        : `Module: ${question.chapter}`}
-                    </Text>
-                  </View>
-                )}
-              </>
-            ) : (
-              <View style={styles.qNumRow}>
-                <View style={styles.qNumLeftGroup}>
-                  <Text style={styles.qNumber}>
-                    {question.qNumber
-                      ? String(question.qNumber).startsWith('Q')
-                        ? question.qNumber
-                        : `Q${question.qNumber}`
-                      : 'QUESTION'}
-                  </Text>
-                  {question.year ? (
-                    <TouchableOpacity
-                      onPress={() =>
-                        navigation.navigate('QuestionList', {
-                          semesterId,
-                          subjectId,
-                          subjectName,
-                          initialYear: question.year,
-                        })
-                      }
-                      activeOpacity={0.7}
-                    >
-                      <YearBadge year={question.year} />
-                    </TouchableOpacity>
-                  ) : null}
-                </View>
-
-                <MarksBadge marks={question.marks} />
+            {Boolean(question.chapter) && (
+              <View style={styles.detailModuleStrip}>
+                <Feather name="layers" size={13} color={COLORS.primary} />
+                <Text style={styles.detailModuleText} numberOfLines={1}>
+                  {question.chapter.toLowerCase().startsWith('module')
+                    ? question.chapter
+                    : `Module: ${question.chapter}`}
+                </Text>
               </View>
             )}
 
@@ -552,132 +501,71 @@ export const QuestionDetailScreen = () => {
               </View>
             )}
 
-            {/* Action buttons */}
-            {isOldUi ? (
-              <View style={styles.actionsRowClassic}>
-                <View style={styles.actionButtonsLeftClassic}>
-                  <TouchableOpacity
-                    style={styles.actionIconButton}
-                    onPress={handleGoogleSearch}
-                    activeOpacity={0.6}
-                    accessibilityLabel="Search question on Google"
-                    hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
-                  >
-                    <FontAwesome name="google" size={15} color={COLORS.textMuted} />
-                  </TouchableOpacity>
+            {/* Action buttons (Classic UI) */}
+            <View style={styles.actionsRowClassic}>
+              <View style={styles.actionButtonsLeftClassic}>
+                <TouchableOpacity
+                  style={styles.actionIconButton}
+                  onPress={handleGoogleSearch}
+                  activeOpacity={0.6}
+                  accessibilityLabel="Search question on Google"
+                  hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
+                >
+                  <FontAwesome name="google" size={15} color={COLORS.textMuted} />
+                  {isTablet && <Text style={styles.actionIconLabel}>Google</Text>}
+                </TouchableOpacity>
 
-                  <TouchableOpacity
-                    style={styles.actionIconButton}
-                    onPress={handleCopy}
-                    activeOpacity={0.6}
-                    accessibilityLabel={copied ? 'Copied' : 'Copy question text'}
-                    hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
-                  >
-                    <Feather
-                      name={copied ? 'check' : 'copy'}
-                      size={16}
-                      color={copied ? COLORS.primary : COLORS.textMuted}
-                    />
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    style={styles.actionIconButton}
-                    onPress={handleShare}
-                    activeOpacity={0.6}
-                    accessibilityLabel="Share question"
-                    hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
-                  >
-                    <Feather name="share-2" size={16} color={COLORS.textMuted} />
-                  </TouchableOpacity>
-
-                  {(question?.hasSolution || Boolean(solution) || loadingSolution) && (
-                    <TouchableOpacity
-                      onPress={handleToggleSolution}
-                      activeOpacity={0.7}
-                      disabled={loadingSolution}
-                      style={{ marginLeft: 4 }}
-                    >
-                      <ShowSolnBadge
-                        isOpen={showSolution && Boolean(solution)}
-                        loading={loadingSolution}
-                      />
-                    </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.actionIconButton}
+                  onPress={handleCopy}
+                  activeOpacity={0.6}
+                  accessibilityLabel={copied ? 'Copied' : 'Copy question text'}
+                  hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
+                >
+                  <Feather
+                    name={copied ? 'check' : 'copy'}
+                    size={16}
+                    color={copied ? COLORS.primary : COLORS.textMuted}
+                  />
+                  {isTablet && (
+                    <Text style={[styles.actionIconLabel, copied && { color: COLORS.primary }]}>
+                      {copied ? 'Copied' : 'Copy'}
+                    </Text>
                   )}
-                </View>
+                </TouchableOpacity>
 
-                {isAiEnabled && (
-                  <TouchableOpacity onPress={openAiSearch} activeOpacity={0.7}>
-                    <AskAiBadge />
+                <TouchableOpacity
+                  style={styles.actionIconButton}
+                  onPress={handleShare}
+                  activeOpacity={0.6}
+                  accessibilityLabel="Share question"
+                  hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
+                >
+                  <Feather name="share-2" size={16} color={COLORS.textMuted} />
+                  {isTablet && <Text style={styles.actionIconLabel}>Share</Text>}
+                </TouchableOpacity>
+
+                {(question?.hasSolution || Boolean(solution) || loadingSolution) && (
+                  <TouchableOpacity
+                    onPress={handleToggleSolution}
+                    activeOpacity={0.7}
+                    disabled={loadingSolution}
+                    style={{ marginLeft: 4 }}
+                  >
+                    <ShowSolnBadge
+                      isOpen={showSolution && Boolean(solution)}
+                      loading={loadingSolution}
+                    />
                   </TouchableOpacity>
                 )}
               </View>
-            ) : (
-              <View style={styles.actionsRow}>
-                <View style={styles.actionButtonsLeft}>
-                  {isAiEnabled && (
-                    <TouchableOpacity onPress={openAiSearch} activeOpacity={0.7}>
-                      <AskAiBadge />
-                    </TouchableOpacity>
-                  )}
 
-                  {(question?.hasSolution || Boolean(solution) || loadingSolution) && (
-                    <TouchableOpacity
-                      onPress={handleToggleSolution}
-                      activeOpacity={0.7}
-                      disabled={loadingSolution}
-                    >
-                      <ShowSolnBadge
-                        isOpen={showSolution && Boolean(solution)}
-                        loading={loadingSolution}
-                      />
-                    </TouchableOpacity>
-                  )}
-                </View>
-
-                <View style={styles.actionButtonsRight}>
-                  <TouchableOpacity
-                    style={styles.actionIconButton}
-                    onPress={handleGoogleSearch}
-                    activeOpacity={0.6}
-                    accessibilityLabel="Search question on Google"
-                    hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
-                  >
-                    <FontAwesome name="google" size={15} color={COLORS.textMuted} />
-                    {isTablet && <Text style={styles.actionIconLabel}>Google</Text>}
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    style={styles.actionIconButton}
-                    onPress={handleCopy}
-                    activeOpacity={0.6}
-                    accessibilityLabel={copied ? 'Copied' : 'Copy question text'}
-                    hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
-                  >
-                    <Feather
-                      name={copied ? 'check' : 'copy'}
-                      size={16}
-                      color={copied ? COLORS.primary : COLORS.textMuted}
-                    />
-                    {isTablet && (
-                      <Text style={[styles.actionIconLabel, copied && { color: COLORS.primary }]}>
-                        {copied ? 'Copied' : 'Copy'}
-                      </Text>
-                    )}
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    style={styles.actionIconButton}
-                    onPress={handleShare}
-                    activeOpacity={0.6}
-                    accessibilityLabel="Share question"
-                    hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
-                  >
-                    <Feather name="share-2" size={16} color={COLORS.textMuted} />
-                    {isTablet && <Text style={styles.actionIconLabel}>Share</Text>}
-                  </TouchableOpacity>
-                </View>
-              </View>
-            )}
+              {isAiEnabled && (
+                <TouchableOpacity onPress={openAiSearch} activeOpacity={0.7}>
+                  <AskAiBadge />
+                </TouchableOpacity>
+              )}
+            </View>
           </View>
 
           {/* Worked Solution */}

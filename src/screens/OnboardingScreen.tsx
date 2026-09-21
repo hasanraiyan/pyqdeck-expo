@@ -248,9 +248,7 @@ export function OnboardingScreen({ onDone }: Props) {
         {/* Next / Get Started */}
         <TouchableOpacity style={styles.nextBtn} onPress={goNext} activeOpacity={0.85}>
           <Text style={styles.nextText}>{isLast ? 'Get Started' : 'Next'}</Text>
-          {!isLast && (
-            <Feather name="arrow-right" size={14} color="#fff" style={{ marginLeft: 6 }} />
-          )}
+          <Feather name="arrow-right" size={14} color="#fff" style={{ marginLeft: 6 }} />
         </TouchableOpacity>
       </View>
     </View>
@@ -558,10 +556,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: COLORS.primary,
-    paddingHorizontal: 18,
+    paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 8,
-    minWidth: 48,
+    minWidth: 126,
+    height: 42,
     justifyContent: 'center',
   },
   nextText: {
