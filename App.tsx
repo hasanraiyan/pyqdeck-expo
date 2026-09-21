@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { AppState, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer } from '@react-navigation/native';
@@ -42,6 +42,8 @@ import { checkForStoreUpdate } from './src/utils/appUpdate';
 import { maybeRequestReview } from './src/utils/appReview';
 import { isSyllabusEnabled } from './src/config/features';
 import * as Sentry from '@sentry/react-native';
+import { OnboardingScreen } from './src/screens/OnboardingScreen';
+import { hasSeenOnboarding } from './src/utils/onboarding';
 
 // Crash/error monitoring only - deliberately not sendDefaultPii (would send
 // IP address etc, undisclosed in the Play Store Data Safety form) and no
@@ -235,6 +237,12 @@ export default Sentry.wrap(function App() {
 
 function AppContent() {
   const insets = useSafeAreaInsets();
+  // null = still reading AsyncStorage (prevents white flash or wrong screen)
+  const [onboarded, setOnboarded] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    hasSeenOnboarding().then((seen) => setOnboarded(seen));
+  }, []);
 
   useEffect(() => {
     mobileAds().initialize();
@@ -263,6 +271,16 @@ function AppContent() {
       appStateSub.remove();
     };
   }, []);
+
+  // Still reading AsyncStorage — render nothing to avoid a flash of wrong screen
+  if (onboarded === null) return null;
+
+  // First launch — show onboarding full-screen
+  if (onboarded === false) {
+    return (
+      <OnboardingScreen onDone={() => setOnboarded(true)} />
+    );
+  }
 
   // The tab navigator, wrapped by the root stack below so the auth screens can
   // sit above it rather than inside a tab.
