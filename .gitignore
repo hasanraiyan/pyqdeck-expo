@@ -54,3 +54,4 @@ builds/
 # goldie store assets (generated) and raw screenshots dropped in for import
 goldie/out/
 images/
+image.png

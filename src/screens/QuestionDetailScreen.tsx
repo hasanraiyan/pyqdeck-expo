@@ -40,6 +40,7 @@ import { AdBanner } from '../components/AdBanner';
 import { getMyVote, setMyVote } from '../utils/votes';
 import { useRequireAuth } from '../auth/useRequireAuth';
 import { WaveLoader } from '../components/WaveLoader';
+import { isAiEnabled } from '../config/features';
 
 export const QuestionDetailScreen = () => {
   const insets = useSafeAreaInsets();
