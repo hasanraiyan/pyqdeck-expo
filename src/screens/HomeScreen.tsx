@@ -268,21 +268,27 @@ export const HomeScreen = () => {
                 >
                   <View style={styles.recentTopRow}>
                     <Text style={styles.recentCode} numberOfLines={1}>
-                      {recentStudies[0].subjectCode ||
-                        `SEM ${recentStudies[0].semesterId?.replace(/\D/g, '') || ''}`}
+                      {recentStudies[0].subjectCode
+                        ? `${recentStudies[0].subjectCode} · SEM ${recentStudies[0].semesterId?.replace(/\D/g, '') || ''}`
+                        : `SEMESTER ${recentStudies[0].semesterId?.replace(/\D/g, '') || ''}`}
                     </Text>
-                    {recentStudies[0].year ? (
-                      <View style={styles.recentYearBadge}>
-                        <Text style={styles.recentYearText}>{recentStudies[0].year} Paper</Text>
-                      </View>
-                    ) : null}
+                    <View style={styles.recentRecentPill}>
+                      <Text style={styles.recentRecentPillText}>
+                        {recentStudies[0].year ? `${recentStudies[0].year} Paper` : 'Studied recently'}
+                      </Text>
+                    </View>
                   </View>
                   <Text style={[styles.recentSubjectName, styles.recentSubjectNameFull]} numberOfLines={1}>
                     {recentStudies[0].subjectName}
                   </Text>
-                  <View style={styles.recentActionRow}>
-                    <Text style={styles.recentResumeText}>Resume studying</Text>
-                    <Feather name="arrow-right" size={11} color={COLORS.primary} />
+                  <Text style={styles.recentSubText} numberOfLines={1}>
+                    {recentStudies[0].year ? `${recentStudies[0].year} Exam Questions` : 'Questions & Syllabus'}
+                  </Text>
+                  <View style={styles.recentFooterRow}>
+                    <Text style={styles.recentResumeText}>Tap to resume</Text>
+                    <View style={styles.recentArrowCircle}>
+                      <Feather name="arrow-right" size={12} color="#fff" />
+                    </View>
                   </View>
                 </TouchableOpacity>
               ) : (
@@ -318,20 +324,27 @@ export const HomeScreen = () => {
                     >
                       <View style={styles.recentTopRow}>
                         <Text style={styles.recentCode} numberOfLines={1}>
-                          {item.subjectCode || `SEM ${item.semesterId?.replace(/\D/g, '') || ''}`}
+                          {item.subjectCode
+                            ? `${item.subjectCode} · SEM ${item.semesterId?.replace(/\D/g, '') || ''}`
+                            : `SEM ${item.semesterId?.replace(/\D/g, '') || ''}`}
                         </Text>
-                        {item.year ? (
-                          <View style={styles.recentYearBadge}>
-                            <Text style={styles.recentYearText}>{item.year}</Text>
-                          </View>
-                        ) : null}
+                        <View style={styles.recentRecentPill}>
+                          <Text style={styles.recentRecentPillText}>
+                            {item.year ? `${item.year}` : 'Recent'}
+                          </Text>
+                        </View>
                       </View>
                       <Text style={styles.recentSubjectName} numberOfLines={1}>
                         {item.subjectName}
                       </Text>
-                      <View style={styles.recentActionRow}>
-                        <Text style={styles.recentResumeText}>Resume studying</Text>
-                        <Feather name="arrow-right" size={11} color={COLORS.primary} />
+                      <Text style={styles.recentSubText} numberOfLines={1}>
+                        {item.year ? `${item.year} Questions` : 'Questions & Syllabus'}
+                      </Text>
+                      <View style={styles.recentFooterRow}>
+                        <Text style={styles.recentResumeText}>Tap to resume</Text>
+                        <View style={styles.recentArrowCircle}>
+                          <Feather name="arrow-right" size={12} color="#fff" />
+                        </View>
                       </View>
                     </TouchableOpacity>
                   ))}
@@ -614,67 +627,84 @@ const styles = StyleSheet.create({
     paddingRight: 16,
   },
   recentCard: {
-    width: 205,
+    width: 218,
     backgroundColor: COLORS.card,
     borderWidth: 1,
     borderColor: COLORS.border,
-    borderRadius: 6,
-    padding: 12,
-    gap: 5,
+    borderRadius: 14,
+    padding: 14,
+    gap: 4,
   },
   recentCardFull: {
     width: '100%',
     paddingVertical: 14,
     paddingHorizontal: 16,
+    gap: 4,
   },
   recentTopRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    marginBottom: 4,
   },
   recentCode: {
     fontFamily: FONTS.mono,
-    fontSize: rf(10),
+    fontSize: rf(9.5),
     fontWeight: '700',
     color: COLORS.textSubtle,
     letterSpacing: 0.5,
     flex: 1,
     marginRight: 6,
   },
-  recentYearBadge: {
+  recentRecentPill: {
     backgroundColor: COLORS.primaryLight,
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 4,
-    borderWidth: 1,
-    borderColor: COLORS.primaryBorder,
   },
-  recentYearText: {
+  recentRecentPillText: {
     fontFamily: FONTS.mono,
-    fontSize: rf(9.5),
+    fontSize: rf(8.5),
     fontWeight: '700',
     color: COLORS.primary,
   },
   recentSubjectName: {
     fontFamily: FONTS.serif,
-    fontSize: rf(14),
-    fontWeight: '600',
+    fontSize: rf(14.5),
+    fontWeight: '700',
     color: COLORS.text,
   },
   recentSubjectNameFull: {
-    fontSize: rf(16),
+    fontSize: rf(16.5),
   },
-  recentActionRow: {
+  recentSubText: {
+    fontFamily: FONTS.sans,
+    fontSize: rf(12),
+    color: COLORS.textMuted,
+    marginBottom: 4,
+  },
+  recentFooterRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    justifyContent: 'space-between',
+    paddingTop: 8,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: COLORS.border,
     marginTop: 2,
   },
   recentResumeText: {
-    fontFamily: FONTS.mono,
-    fontSize: rf(10.5),
+    fontFamily: FONTS.sans,
+    fontSize: rf(12),
     fontWeight: '600',
     color: COLORS.primary,
+  },
+  recentArrowCircle: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: COLORS.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   loaderContainer: {
     paddingVertical: 36,
