@@ -136,6 +136,16 @@ export const baseMarkdownStyles = {
     color: COLORS.primary,
     textDecorationLine: 'underline' as const,
   },
+  // Without an explicit width, react-native-markdown-display's default
+  // image style renders at the image's own (often small) intrinsic size.
+  // FitImage measures the remote image and picks a matching height once
+  // given a width, so '100%' here is what makes a question's diagram/photo
+  // fill the available column instead of showing tiny.
+  image: {
+    width: '100%' as const,
+    borderRadius: 6,
+    marginVertical: 8,
+  },
 };
 
 export const questionMarkdownStyles = {

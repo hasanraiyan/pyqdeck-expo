@@ -4,7 +4,6 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
-  Share,
   TextInput,
   Modal,
   TouchableWithoutFeedback,
@@ -27,7 +26,7 @@ import { InlineMathText } from './InlineMathText';
 import { cleanMarkdown, isTablet } from '../utils/responsive';
 import { questionMarkdownStyles, solutionMarkdownStyles, markdownRules } from '../theme/markdownStyles';
 import { isAiEnabled } from '../config/features';
-import { QuestionShareModal } from './QuestionShareModal';
+import { shareQuestion } from '../utils/links';
 
 interface QuestionItemProps {
   question: QuestionSummary;
@@ -114,7 +113,6 @@ export const QuestionItem: React.FC<QuestionItemProps> = React.memo(({
     voteCountsRef.current = voteCounts;
   }, [voteCounts]);
 
-  const [shareModalVisible, setShareModalVisible] = useState(false);
 
   const handleCopy = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -123,9 +121,18 @@ export const QuestionItem: React.FC<QuestionItemProps> = React.memo(({
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const handleShare = () => {
+  const handleShare = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setShareModalVisible(true);
+    await shareQuestion({
+      subjectName,
+      year: question.year,
+      qNumber: question.qNumber,
+      marks: question.marks,
+      text: question.text,
+      semesterId,
+      subjectId,
+      questionId: question.questionId,
+    });
   };
 
   const handleAskAi = async () => {
@@ -445,14 +452,6 @@ export const QuestionItem: React.FC<QuestionItemProps> = React.memo(({
         </TouchableWithoutFeedback>
       </Modal>
 
-      <QuestionShareModal
-        visible={shareModalVisible}
-        onClose={() => setShareModalVisible(false)}
-        question={question}
-        subjectName={subjectName}
-        semesterId={semesterId}
-        subjectId={subjectId}
-      />
     </View>
   );
 });
