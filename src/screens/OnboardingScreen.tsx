@@ -55,7 +55,7 @@ const SLIDES = [
 /* Slide 1 Demo: Real QuestionItemClassic Component + Year Chips */
 function DemoQuestionCard() {
   return (
-    <View style={styles.demoContainer}>
+    <View style={styles.demoContainer} pointerEvents="none">
       {/* 1-Tap Year Chips Bar */}
       <View style={styles.demoChipsRow}>
         <View style={styles.demoChip}>
@@ -72,7 +72,7 @@ function DemoQuestionCard() {
         </View>
       </View>
 
-      {/* Real QuestionItemClassic component */}
+      {/* Real QuestionItemClassic component (UI only demo) */}
       <QuestionItemClassic
         question={DEMO_QUESTION}
         subjectId="operating-systems"
@@ -86,7 +86,7 @@ function DemoQuestionCard() {
 /* Slide 2 Demo: Jump Back In Full Card */
 function DemoJumpBackIn() {
   return (
-    <View style={styles.demoContainer}>
+    <View style={styles.demoContainer} pointerEvents="none">
       {/* Zap Header */}
       <View style={styles.demoZapRow}>
         <Feather name="zap" size={12} color={COLORS.primary} />
@@ -123,7 +123,7 @@ function DemoJumpBackIn() {
 /* Slide 3 Demo: Instant Search Card */
 function DemoSearch() {
   return (
-    <View style={styles.demoContainer}>
+    <View style={styles.demoContainer} pointerEvents="none">
       {/* Search Input Mock */}
       <View style={styles.demoSearchBar}>
         <Feather name="search" size={13} color={COLORS.primary} />
