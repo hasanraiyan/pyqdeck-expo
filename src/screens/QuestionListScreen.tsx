@@ -494,8 +494,8 @@ const styles = StyleSheet.create({
   },
   yearChip: {
     paddingHorizontal: 12,
-    paddingVertical: 5,
-    borderRadius: 6,
+    paddingVertical: 4.5,
+    borderRadius: 14,
     backgroundColor: COLORS.card,
     borderWidth: 1,
     borderColor: COLORS.border,
@@ -506,7 +506,7 @@ const styles = StyleSheet.create({
   },
   yearChipText: {
     fontFamily: FONTS.mono,
-    fontSize: rf(11.5),
+    fontSize: rf(11),
     fontWeight: '600',
     color: COLORS.textMuted,
   },
