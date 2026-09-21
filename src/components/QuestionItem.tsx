@@ -114,7 +114,6 @@ export const QuestionItem: React.FC<QuestionItemProps> = React.memo(({
     voteCountsRef.current = voteCounts;
   }, [voteCounts]);
 
-  const [copied, setCopied] = useState(false);
   const [shareModalVisible, setShareModalVisible] = useState(false);
 
   const handleCopy = async () => {
