@@ -44,6 +44,15 @@ jobs:
       - name: 📱 Setup Android SDK
         uses: android-actions/setup-android@v4
 
+      - name: 🧠 Raise Gradle JVM heap for R8
+        # R8 (enabled via expo-build-properties in app.json) OOMs on the
+        # template's 2 GB default heap. User-level gradle.properties wins over
+        # the prebuild-generated android/gradle.properties, so nothing native
+        # needs patching.
+        run: |
+          mkdir -p ~/.gradle
+          echo "org.gradle.jvmargs=-Xmx6g -XX:MaxMetaspaceSize=1g -XX:+UseParallelGC" >> ~/.gradle/gradle.properties
+
       - name: 🔢 Bump Android versionCode (release builds only)
         id: version
         env:
