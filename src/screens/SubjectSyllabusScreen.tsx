@@ -291,6 +291,13 @@ export const SubjectSyllabusScreen = () => {
     );
   };
 
+  const totalTopics = subject.modules.reduce((sum, m) => sum + m.topics.length, 0);
+  const completedTopics = subject.modules.reduce(
+    (sum, m) => sum + m.topics.filter((t) => done.has(topicKey(m.id, t.id))).length,
+    0
+  );
+  const progressPercent = totalTopics > 0 ? Math.round((completedTopics / totalTopics) * 100) : 0;
+
   return (
     <View style={styles.container}>
       <ScrollView
@@ -303,6 +310,34 @@ export const SubjectSyllabusScreen = () => {
           />
         }
       >
+        {/* Live Syllabus Progress Meter */}
+        {totalTopics > 0 && (
+          <View style={styles.progressCard}>
+            <View style={styles.progressHeaderRow}>
+              <View style={styles.progressTitleWrap}>
+                <Feather
+                  name="check-circle"
+                  size={13}
+                  color={progressPercent === 100 ? COLORS.secondary : COLORS.primary}
+                />
+                <Text style={styles.progressKicker}>SYLLABUS PROGRESS</Text>
+              </View>
+              <Text style={styles.progressPercentText}>
+                {completedTopics} / {totalTopics} Topics ({progressPercent}%)
+              </Text>
+            </View>
+            <View style={styles.progressTrack}>
+              <View
+                style={[
+                  styles.progressFill,
+                  { width: `${progressPercent}%` },
+                  progressPercent === 100 && styles.progressFillDone,
+                ]}
+              />
+            </View>
+          </View>
+        )}
+
         {subject.modules.length === 0 ? (
           <ScreenEmpty message="No modules have been typed up for this subject yet." />
         ) : (
@@ -320,6 +355,54 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.background,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  progressCard: {
+    backgroundColor: COLORS.card,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    marginHorizontal: 14,
+    marginBottom: 12,
+    gap: 8,
+  },
+  progressHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  progressTitleWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  progressKicker: {
+    fontFamily: FONTS.mono,
+    fontSize: 10.5,
+    fontWeight: '700',
+    color: COLORS.textSubtle,
+    letterSpacing: 1.2,
+  },
+  progressPercentText: {
+    fontFamily: FONTS.mono,
+    fontSize: 11,
+    fontWeight: '700',
+    color: COLORS.text,
+  },
+  progressTrack: {
+    height: 6,
+    backgroundColor: COLORS.cardSecondary,
+    borderRadius: 3,
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: '100%',
+    backgroundColor: COLORS.primary,
+    borderRadius: 3,
+  },
+  progressFillDone: {
+    backgroundColor: COLORS.secondary,
   },
   modHead: {
     flexDirection: 'row',

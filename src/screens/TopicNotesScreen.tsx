@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Linking } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRoute, useNavigation } from '@react-navigation/native';
@@ -129,17 +129,45 @@ export const TopicNotesScreen = () => {
     };
   }, [subjectId, moduleId, topic?.id]);
 
-  const toggleDone = async () => {
-    if (!subjectId || !moduleId || !topic?.id) return;
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  const layoutHeightRef = useRef(0);
+  const contentHeightRef = useRef(0);
+
+  const markAsDone = useCallback(async () => {
+    if (done || !subjectId || !moduleId || !topic?.id) return;
     const key = topicKey(moduleId, topic.id);
-    const next = !done;
-    setDone(next);
+    setDone(true);
+    try {
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch {}
     const doneSet = await getDoneTopics(subjectId);
-    if (next) doneSet.add(key);
-    else doneSet.delete(key);
-    await saveDoneTopics(subjectId, doneSet);
+    if (!doneSet.has(key)) {
+      doneSet.add(key);
+      await saveDoneTopics(subjectId, doneSet);
+    }
+  }, [done, subjectId, moduleId, topic?.id]);
+
+  const handleScroll = (e: any) => {
+    if (done) return;
+    const { layoutMeasurement, contentOffset, contentSize } = e.nativeEvent;
+    const paddingToBottom = 40;
+    if (layoutMeasurement.height + contentOffset.y >= contentSize.height - paddingToBottom) {
+      void markAsDone();
+    }
   };
+
+  useEffect(() => {
+    if (done || loading || !notes) return;
+    const timer = setTimeout(() => {
+      if (
+        layoutHeightRef.current > 0 &&
+        contentHeightRef.current > 0 &&
+        contentHeightRef.current <= layoutHeightRef.current + 40
+      ) {
+        void markAsDone();
+      }
+    }, 2500);
+    return () => clearTimeout(timer);
+  }, [done, loading, notes, markAsDone]);
 
   const currentIndex = notesList?.findIndex((t) => t.id === topic?.id) ?? -1;
   const prevEntry = notesList && currentIndex > 0 ? notesList[currentIndex - 1] : null;
@@ -177,6 +205,14 @@ export const TopicNotesScreen = () => {
       <ScrollView
         ref={scrollRef}
         contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 32 }]}
+        onScroll={handleScroll}
+        scrollEventThrottle={16}
+        onContentSizeChange={(_w, h) => {
+          contentHeightRef.current = h;
+        }}
+        onLayout={(e) => {
+          layoutHeightRef.current = e.nativeEvent.layout.height;
+        }}
       >
         {loading ? null : notes ? (
           <View style={styles.notesBody}>
@@ -193,23 +229,13 @@ export const TopicNotesScreen = () => {
           </View>
         )}
 
-        {!loading && subjectId && moduleId && (
-          <TouchableOpacity
-            style={[styles.completeBtn, done && styles.completeBtnDone]}
-            onPress={toggleDone}
-            activeOpacity={0.8}
-            accessibilityRole="checkbox"
-            accessibilityState={{ checked: done }}
-          >
-            <Feather
-              name={done ? 'check-circle' : 'circle'}
-              size={17}
-              color={done ? COLORS.card : COLORS.primary}
-            />
-            <Text style={[styles.completeBtnText, done && styles.completeBtnTextDone]}>
-              {done ? 'Marked as complete' : 'Mark as complete'}
-            </Text>
-          </TouchableOpacity>
+        {!loading && done && (
+          <View style={styles.completedPillRow}>
+            <View style={styles.completedPill}>
+              <Feather name="check-circle" size={13} color={COLORS.secondary} />
+              <Text style={styles.completedPillText}>TOPIC COMPLETED</Text>
+            </View>
+          </View>
         )}
 
         {!loading && (prevEntry || nextEntry) && (
@@ -266,30 +292,27 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     maxWidth: 260,
   },
-  completeBtn: {
+  completedPillRow: {
+    alignItems: 'center',
+    marginTop: 18,
+    marginBottom: 4,
+  },
+  completedPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    marginTop: 20,
-    paddingVertical: 13,
-    borderRadius: 8,
-    borderWidth: 1.5,
-    borderColor: COLORS.primary,
-    backgroundColor: COLORS.card,
+    gap: 6,
+    backgroundColor: COLORS.secondaryLight,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(31, 75, 67, 0.25)',
   },
-  completeBtnDone: {
-    backgroundColor: COLORS.secondary,
-    borderColor: COLORS.secondary,
-  },
-  completeBtnText: {
+  completedPillText: {
     fontFamily: FONTS.mono,
-    fontSize: 13,
+    fontSize: 11,
     fontWeight: '700',
-    color: COLORS.primary,
-    letterSpacing: 0.3,
-  },
-  completeBtnTextDone: {
-    color: COLORS.card,
+    color: COLORS.secondary,
+    letterSpacing: 0.8,
   },
 });
