@@ -25,9 +25,9 @@ import { Badge, MarksBadge, AskAiBadge, YearBadge, ShowSolnBadge } from './Badge
 import { WaveLoader } from './WaveLoader';
 import { InlineMathText } from './InlineMathText';
 import { cleanMarkdown, isTablet } from '../utils/responsive';
-import { shareQuestion } from '../utils/links';
 import { questionMarkdownStyles, solutionMarkdownStyles, markdownRules } from '../theme/markdownStyles';
 import { isAiEnabled } from '../config/features';
+import { QuestionShareModal } from './QuestionShareModal';
 
 interface QuestionItemProps {
   question: QuestionSummary;
@@ -114,6 +114,9 @@ export const QuestionItem: React.FC<QuestionItemProps> = React.memo(({
     voteCountsRef.current = voteCounts;
   }, [voteCounts]);
 
+  const [copied, setCopied] = useState(false);
+  const [shareModalVisible, setShareModalVisible] = useState(false);
+
   const handleCopy = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     await Clipboard.setStringAsync(question.text);
@@ -121,17 +124,9 @@ export const QuestionItem: React.FC<QuestionItemProps> = React.memo(({
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const handleShare = async () => {
-    await shareQuestion({
-      subjectName,
-      year: question.year,
-      qNumber: question.qNumber,
-      marks: question.marks,
-      text: question.text,
-      semesterId,
-      subjectId,
-      questionId: question.questionId,
-    });
+  const handleShare = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setShareModalVisible(true);
   };
 
   const handleAskAi = async () => {
@@ -450,6 +445,15 @@ export const QuestionItem: React.FC<QuestionItemProps> = React.memo(({
           </View>
         </TouchableWithoutFeedback>
       </Modal>
+
+      <QuestionShareModal
+        visible={shareModalVisible}
+        onClose={() => setShareModalVisible(false)}
+        question={question}
+        subjectName={subjectName}
+        semesterId={semesterId}
+        subjectId={subjectId}
+      />
     </View>
   );
 });

@@ -19,6 +19,7 @@ import { shareQuestion } from '../utils/links';
 import { questionMarkdownStyles, markdownRules } from '../theme/markdownStyles';
 import { COLORS, FONTS } from '../theme/colors';
 import { isAiEnabled } from '../config/features';
+import { QuestionShareModal } from './QuestionShareModal';
 
 interface QuestionItemClassicProps {
   question: QuestionSummary;
@@ -37,6 +38,7 @@ export const QuestionItemClassic: React.FC<QuestionItemClassicProps> = React.mem
 }) => {
   const navigation = useNavigation<any>();
   const [copied, setCopied] = useState(false);
+  const [shareModalVisible, setShareModalVisible] = useState(false);
 
   const handleCopy = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -45,17 +47,9 @@ export const QuestionItemClassic: React.FC<QuestionItemClassicProps> = React.mem
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const handleShare = async () => {
-    await shareQuestion({
-      subjectName,
-      year: question.year,
-      qNumber: question.qNumber,
-      marks: question.marks,
-      text: question.text,
-      semesterId,
-      subjectId,
-      questionId: question.questionId,
-    });
+  const handleShare = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setShareModalVisible(true);
   };
 
   const handleGoogleSearch = async () => {
@@ -211,6 +205,15 @@ export const QuestionItemClassic: React.FC<QuestionItemClassicProps> = React.mem
           </TouchableOpacity>
         )}
       </View>
+
+      <QuestionShareModal
+        visible={shareModalVisible}
+        onClose={() => setShareModalVisible(false)}
+        question={question}
+        subjectName={subjectName}
+        semesterId={semesterId}
+        subjectId={subjectId}
+      />
     </View>
   );
 });

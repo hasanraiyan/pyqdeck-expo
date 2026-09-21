@@ -40,8 +40,8 @@ import { recordQuestionOpenedAndMaybeShowInterstitial } from '../utils/ads';
 import { AdBanner } from '../components/AdBanner';
 import { getMyVote, setMyVote } from '../utils/votes';
 import { useRequireAuth } from '../auth/useRequireAuth';
-import { isAiEnabled } from '../config/features';
 import { WaveLoader } from '../components/WaveLoader';
+import { QuestionShareModal } from '../components/QuestionShareModal';
 
 export const QuestionDetailScreen = () => {
   const insets = useSafeAreaInsets();
@@ -267,18 +267,12 @@ export const QuestionDetailScreen = () => {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const handleShare = async () => {
+  const [shareModalVisible, setShareModalVisible] = useState(false);
+
+  const handleShare = () => {
     if (!question) return;
-    await shareQuestion({
-      subjectName,
-      year: question.year || year,
-      qNumber: question.qNumber,
-      marks: question.marks,
-      text: question.text,
-      semesterId,
-      subjectId,
-      questionId,
-    });
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setShareModalVisible(true);
   };
 
   // YouTube-style: optimistic UI with lock + actionId to prevent race.
@@ -910,6 +904,26 @@ export const QuestionDetailScreen = () => {
           </View>
         </TouchableWithoutFeedback>
       </Modal>
+
+      <QuestionShareModal
+        visible={shareModalVisible}
+        onClose={() => setShareModalVisible(false)}
+        question={
+          question
+            ? {
+                questionId,
+                text: question.text,
+                year: question.year || year,
+                qNumber: question.qNumber,
+                marks: question.marks,
+                chapter: question.chapter,
+              }
+            : null
+        }
+        subjectName={subjectName}
+        semesterId={semesterId}
+        subjectId={subjectId}
+      />
 
       <AdBanner />
     </View>
