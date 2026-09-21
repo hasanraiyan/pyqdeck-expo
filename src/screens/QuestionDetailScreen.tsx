@@ -34,7 +34,7 @@ import { getOldUiEnabled } from '../utils/settings';
 import { PrevNextNav } from '../components/PrevNextNav';
 import { SolutionSkeleton, SimilarQuestionSkeleton } from '../components/Skeleton';
 import { rf, cleanMarkdown, useResponsive } from '../utils/responsive';
-import { buildQuestionUrl } from '../utils/links';
+import { shareQuestion } from '../utils/links';
 import { questionMarkdownStyles, solutionMarkdownStyles, markdownRules } from '../theme/markdownStyles';
 import { recordQuestionOpenedAndMaybeShowInterstitial } from '../utils/ads';
 import { AdBanner } from '../components/AdBanner';
@@ -269,12 +269,16 @@ export const QuestionDetailScreen = () => {
 
   const handleShare = async () => {
     if (!question) return;
-    try {
-      const url = buildQuestionUrl(semesterId, subjectId, question.year, questionId);
-      await Share.share({ message: url, url });
-    } catch (e) {
-      console.error(e);
-    }
+    await shareQuestion({
+      subjectName,
+      year: question.year || year,
+      qNumber: question.qNumber,
+      marks: question.marks,
+      text: question.text,
+      semesterId,
+      subjectId,
+      questionId,
+    });
   };
 
   // YouTube-style: optimistic UI with lock + actionId to prevent race.

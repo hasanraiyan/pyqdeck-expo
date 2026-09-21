@@ -25,7 +25,7 @@ import { Badge, MarksBadge, AskAiBadge, YearBadge, ShowSolnBadge } from './Badge
 import { WaveLoader } from './WaveLoader';
 import { InlineMathText } from './InlineMathText';
 import { cleanMarkdown, isTablet } from '../utils/responsive';
-import { buildQuestionUrl } from '../utils/links';
+import { shareQuestion } from '../utils/links';
 import { questionMarkdownStyles, solutionMarkdownStyles, markdownRules } from '../theme/markdownStyles';
 import { isAiEnabled } from '../config/features';
 
@@ -122,12 +122,16 @@ export const QuestionItem: React.FC<QuestionItemProps> = React.memo(({
   };
 
   const handleShare = async () => {
-    try {
-      const url = buildQuestionUrl(semesterId, subjectId, question.year, question.questionId);
-      await Share.share({ message: url, url });
-    } catch (e) {
-      console.error(e);
-    }
+    await shareQuestion({
+      subjectName,
+      year: question.year,
+      qNumber: question.qNumber,
+      marks: question.marks,
+      text: question.text,
+      semesterId,
+      subjectId,
+      questionId: question.questionId,
+    });
   };
 
   const handleAskAi = async () => {

@@ -15,7 +15,7 @@ import Markdown from 'react-native-markdown-display';
 import { QuestionSummary } from '../types';
 import { AskAiBadge, YearBadge, MarksBadge, QNumBadge } from './Badge';
 import { cleanMarkdown } from '../utils/responsive';
-import { buildQuestionUrl } from '../utils/links';
+import { shareQuestion } from '../utils/links';
 import { questionMarkdownStyles, markdownRules } from '../theme/markdownStyles';
 import { COLORS, FONTS } from '../theme/colors';
 import { isAiEnabled } from '../config/features';
@@ -46,12 +46,16 @@ export const QuestionItemClassic: React.FC<QuestionItemClassicProps> = React.mem
   };
 
   const handleShare = async () => {
-    try {
-      const url = buildQuestionUrl(semesterId, subjectId, question.year, question.questionId);
-      await Share.share({ message: url, url });
-    } catch (e) {
-      console.error(e);
-    }
+    await shareQuestion({
+      subjectName,
+      year: question.year,
+      qNumber: question.qNumber,
+      marks: question.marks,
+      text: question.text,
+      semesterId,
+      subjectId,
+      questionId: question.questionId,
+    });
   };
 
   const handleGoogleSearch = async () => {
