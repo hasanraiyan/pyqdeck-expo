@@ -67,8 +67,8 @@
         "expo-build-properties",
         {
           "android": {
-            "enableMinifyInReleaseBuilds": true,
-            "enableShrinkResourcesInReleaseBuilds": true,
+            "enableMinifyInReleaseBuilds": false,
+            "enableShrinkResourcesInReleaseBuilds": false,
             "extraProguardRules": "-dontwarn kotlin.MustUseReturnValues\n-dontwarn kotlin.**ReturnValue**"
           }
         }

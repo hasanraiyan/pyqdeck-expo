@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import {
   View,
   Text,
@@ -12,6 +12,7 @@ import {
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
 import { getSubjects } from '../api';
 import { SubjectSummary } from '../types';
 import { COLORS, FONTS } from '../theme/colors';
@@ -19,14 +20,45 @@ import { SubjectCardSkeleton } from '../components/Skeleton';
 import { Badge } from '../components/Badge';
 import { AdBanner } from '../components/AdBanner';
 import { useResponsive } from '../utils/responsive';
+import { semesterNumbersForYear } from '../utils/year';
 
 export const SubjectListScreen = () => {
   const insets = useSafeAreaInsets();
   const route = useRoute<any>();
   const navigation = useNavigation<any>();
   const { width, bp, wideMaxWidth, hPadding } = useResponsive();
-  const { yearNumber, semesterIds, semesterNumbers } = route.params || {};
-  const isMultiSemester = Array.isArray(semesterIds) && semesterIds.length > 1;
+  const { yearNumber, semesterIds, semesterNumbers: passedSemNumbers } = route.params || {};
+
+  const availableSemesters = useMemo<number[]>(() => {
+    if (Array.isArray(passedSemNumbers) && passedSemNumbers.length > 0) {
+      return passedSemNumbers;
+    }
+    if (yearNumber) {
+      return semesterNumbersForYear(yearNumber);
+    }
+    return [];
+  }, [passedSemNumbers, yearNumber]);
+
+  const [selectedSemesterNumber, setSelectedSemesterNumber] = useState<number | null>(() => {
+    if (Array.isArray(passedSemNumbers) && passedSemNumbers.length > 0) {
+      return passedSemNumbers[0];
+    }
+    if (yearNumber) {
+      return semesterNumbersForYear(yearNumber)[0];
+    }
+    return null;
+  });
+
+  const listRef = useRef<FlatList>(null);
+  const isMultiSemester = availableSemesters.length > 1;
+
+  useEffect(() => {
+    if (availableSemesters.length > 0) {
+      if (selectedSemesterNumber === null || !availableSemesters.includes(selectedSemesterNumber)) {
+        setSelectedSemesterNumber(availableSemesters[0]);
+      }
+    }
+  }, [availableSemesters]);
 
   // A phone keeps the dense full-bleed row list - it's the right shape for a
   // narrow column. Wider screens switch to a card grid, because a single row
@@ -58,14 +90,19 @@ export const SubjectListScreen = () => {
   const [refreshing, setRefreshing] = useState(false);
 
   const loadData = async () => {
+    if (!semesterIds || !Array.isArray(semesterIds)) {
+      setLoading(false);
+      return;
+    }
     try {
       const results = await Promise.all(
         (semesterIds as string[]).map(async (id: string, idx: number) => {
           const data = await getSubjects(id);
+          const semNum = availableSemesters[idx] ?? (yearNumber ? yearNumber * 2 - 1 + idx : 1);
           return data.map((subject) => ({
             ...subject,
             semesterId: id,
-            semesterNumber: (semesterNumbers as number[])[idx],
+            semesterNumber: semNum,
           }));
         })
       );
@@ -84,6 +121,34 @@ export const SubjectListScreen = () => {
   useEffect(() => {
     loadData();
   }, [JSON.stringify(semesterIds)]);
+
+  const filteredSubjects = useMemo(() => {
+    if (availableSemesters.length <= 1 || selectedSemesterNumber === null) {
+      return subjects;
+    }
+    return subjects.filter((s) => s.semesterNumber === selectedSemesterNumber);
+  }, [subjects, selectedSemesterNumber, availableSemesters.length]);
+
+  const semCounts = useMemo(() => {
+    const counts: Record<number, number> = {};
+    for (const num of availableSemesters) {
+      counts[num] = 0;
+    }
+    for (const s of subjects) {
+      if (counts[s.semesterNumber] !== undefined) {
+        counts[s.semesterNumber]++;
+      }
+    }
+    return counts;
+  }, [subjects, availableSemesters]);
+
+  const handleSelectSemester = useCallback((semNum: number) => {
+    if (selectedSemesterNumber !== semNum) {
+      void Haptics.selectionAsync().catch(() => {});
+      setSelectedSemesterNumber(semNum);
+      listRef.current?.scrollToOffset({ offset: 0, animated: false });
+    }
+  }, [selectedSemesterNumber]);
 
   const renderSubjectItem = useCallback(
     ({ item }: { item: SubjectSummary & { semesterId: string; semesterNumber: number } }) => {
@@ -110,9 +175,6 @@ export const SubjectListScreen = () => {
           <View style={styles.cardLeft}>
             <View style={styles.codeRow}>
               {item.code ? <Badge label={item.code} variant="secondary" /> : null}
-              {isMultiSemester && (
-                <Badge label={`Sem ${item.semesterNumber}`} variant="outline" />
-              )}
               {isComingSoon && (
                 <View style={styles.cardSoonTag}>
                   <Text style={styles.cardSoonTagText}>SOON</Text>
@@ -134,7 +196,7 @@ export const SubjectListScreen = () => {
         </TouchableOpacity>
       );
     },
-    [isMultiSemester, navigation, isGrid, cardWidth]
+    [navigation, isGrid, cardWidth]
   );
 
   return (
@@ -156,6 +218,65 @@ export const SubjectListScreen = () => {
         </View>
       </View>
 
+      {/* Top Navigation Tabs for Semesters (e.g. Sem 5 and Sem 6) */}
+      {availableSemesters.length > 1 && (
+        <View style={styles.tabBarWrapper}>
+          <View
+            style={[
+              styles.tabBarInner,
+              {
+                maxWidth: frameMaxWidth,
+                paddingHorizontal: isGrid ? hPadding : 16,
+              },
+            ]}
+          >
+            <View style={styles.segmentedControl}>
+              {availableSemesters.map((semNum) => {
+                const isSelected = selectedSemesterNumber === semNum;
+                const count = semCounts[semNum] ?? 0;
+                return (
+                  <TouchableOpacity
+                    key={semNum}
+                    style={[styles.segmentBtn, isSelected && styles.segmentBtnActive]}
+                    activeOpacity={0.7}
+                    onPress={() => handleSelectSemester(semNum)}
+                    accessibilityRole="tab"
+                    accessibilityState={{ selected: isSelected }}
+                    accessibilityLabel={`Semester ${semNum}`}
+                  >
+                    <Text
+                      style={[
+                        styles.segmentBtnText,
+                        isSelected && styles.segmentBtnTextActive,
+                      ]}
+                    >
+                      Semester {semNum}
+                    </Text>
+                    {!loading && (
+                      <View
+                        style={[
+                          styles.segmentBadge,
+                          isSelected && styles.segmentBadgeActive,
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.segmentBadgeText,
+                            isSelected && styles.segmentBadgeTextActive,
+                          ]}
+                        >
+                          {count}
+                        </Text>
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+        </View>
+      )}
+
       <View style={styles.content} onLayout={onContentLayout}>
         {loading ? (
           <View style={{ maxWidth: frameMaxWidth, width: '100%', alignSelf: 'center' }}>
@@ -165,7 +286,8 @@ export const SubjectListScreen = () => {
           </View>
         ) : (
           <FlatList
-            data={subjects}
+            ref={listRef}
+            data={filteredSubjects}
             // FlatList caches its layout per column count, so it has to be
             // remounted when that changes - otherwise rotating a tablet (or
             // dragging a browser window across a breakpoint) leaves the old
@@ -203,9 +325,15 @@ export const SubjectListScreen = () => {
                   <Feather name="clock" size={14} color={COLORS.primary} />
                   <Text style={styles.comingSoonBadgeText}>COMING SOON</Text>
                 </View>
-                <Text style={styles.comingSoonTitle}>No subjects added yet</Text>
+                <Text style={styles.comingSoonTitle}>
+                  {selectedSemesterNumber
+                    ? `No Semester ${selectedSemesterNumber} subjects yet`
+                    : 'No subjects added yet'}
+                </Text>
                 <Text style={styles.comingSoonDesc}>
-                  We are actively curating previous year questions for Year {yearNumber}. Check back soon or browse other active years.
+                  {selectedSemesterNumber
+                    ? `We are actively curating previous year questions for Semester ${selectedSemesterNumber}. Switch semesters above or browse other active subjects.`
+                    : `We are actively curating previous year questions for Year ${yearNumber}. Check back soon or browse other active years.`}
                 </Text>
                 <TouchableOpacity
                   style={styles.browseAllBtn}
@@ -240,6 +368,85 @@ const styles = StyleSheet.create({
   },
   headerInner: {
     width: '100%',
+  },
+  tabBarWrapper: {
+    backgroundColor: COLORS.card,
+    borderBottomWidth: 1,
+    borderColor: COLORS.borderDashed,
+    alignItems: 'center',
+    paddingVertical: 10,
+  },
+  tabBarInner: {
+    width: '100%',
+  },
+  segmentedControl: {
+    flexDirection: 'row',
+    backgroundColor: COLORS.background,
+    borderRadius: 8,
+    padding: 3,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  segmentBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 9,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+    gap: 6,
+  },
+  segmentBtnActive: {
+    backgroundColor: COLORS.card,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.08,
+        shadowRadius: 2,
+      },
+      android: {
+        elevation: 1.5,
+      },
+      web: {
+        boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+      },
+    }),
+  },
+  segmentBtnText: {
+    fontFamily: FONTS.mono,
+    fontSize: 12.5,
+    fontWeight: '600',
+    color: COLORS.textMuted,
+  },
+  segmentBtnTextActive: {
+    color: COLORS.primary,
+    fontWeight: '700',
+  },
+  segmentBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: 10,
+    backgroundColor: COLORS.cardSecondary,
+    borderWidth: 1,
+    borderColor: COLORS.borderLight,
+  },
+  segmentBadgeActive: {
+    backgroundColor: COLORS.primaryLight,
+    borderColor: COLORS.primaryBorder,
+  },
+  segmentBadgeText: {
+    fontFamily: FONTS.mono,
+    fontSize: 10.5,
+    fontWeight: '600',
+    color: COLORS.textSubtle,
+  },
+  segmentBadgeTextActive: {
+    color: COLORS.primary,
+    fontWeight: '700',
   },
   badgeText: {
     fontFamily: FONTS.mono,

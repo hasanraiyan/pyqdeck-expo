@@ -292,6 +292,9 @@ export const QuestionListScreen = () => {
         removeClippedSubviews={false}
         contentContainerStyle={[
           {
+            // Classic cards carry only marginBottom, so give the first one
+            // breathing room from the year bar; accordion rows are flush by design.
+            paddingTop: isOldUi ? 12 : 0,
             paddingBottom: 24,
             maxWidth: readMaxWidth,
             width: '100%',
