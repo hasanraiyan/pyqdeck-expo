@@ -16,9 +16,10 @@ import { solutionMarkdownStyles, markdownRules } from '../theme/markdownStyles';
 import { ScreenEmpty } from '../components/ScreenState';
 import { AdBanner } from '../components/AdBanner';
 import { PrevNextNav } from '../components/PrevNextNav';
-import { WaveLoader } from '../components/WaveLoader';
+import { CircleLoader } from '../components/CircleLoader';
 
 import { recordRecentNote } from '../utils/recentStudy';
+import { userMessage } from '../utils/netError';
 
 /** Same namespacing as SubjectSyllabusScreen's topicKey - must stay identical, the two screens read/write the same AsyncStorage key. */
 const topicKey = (moduleId: string, topicId: string) => `${moduleId}:${topicId}`;
@@ -161,7 +162,7 @@ export const TopicNotesScreen = () => {
       })
       .catch((e: any) => {
         if (cancelled) return;
-        const msg = e?.message || 'Could not load notes.';
+        const msg = userMessage(e, 'Could not load notes.');
         if (msg.includes('not found') && subjectId) {
           void SylCache.remove(SylCache.subjectKey(subjectId));
         }
@@ -270,7 +271,7 @@ export const TopicNotesScreen = () => {
         }}
       >
         {loading ? (
-          <WaveLoader color={COLORS.primary} dotSize={6} />
+          <CircleLoader color={COLORS.primary} dotSize={6} size={40} />
         ) : notes ? (
           <View style={styles.notesBody}>
             <NativeContentRenderer content={notes} fontSize={16} />

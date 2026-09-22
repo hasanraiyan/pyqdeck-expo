@@ -39,7 +39,9 @@ import { AdBanner } from '../components/AdBanner';
 import { getMyVote, setMyVote } from '../utils/votes';
 import { useRequireAuth } from '../auth/useRequireAuth';
 import { WaveLoader } from '../components/WaveLoader';
+import { CircleLoader } from '../components/CircleLoader';
 import { isAiEnabled } from '../config/features';
+import { userMessage } from '../utils/netError';
 
 export const QuestionDetailScreen = () => {
   const insets = useSafeAreaInsets();
@@ -92,6 +94,7 @@ export const QuestionDetailScreen = () => {
   const [reportReason, setReportReason] = useState<'incorrect' | 'incomplete' | 'formatting' | 'other' | null>(null);
   const [reportMsg, setReportMsg] = useState('');
   const [reportSubmitting, setReportSubmitting] = useState(false);
+  const [reportError, setReportError] = useState<string | null>(null);
   const [reported, setReported] = useState(false);
 
   const currentYear = question?.year || year;
@@ -392,6 +395,7 @@ export const QuestionDetailScreen = () => {
   const handleReportSubmit = async () => {
     if (!reportReason || reportSubmitting) return;
     if (reportReason === 'other' && reportMsg.trim().length < 4) return;
+    setReportError(null);
     setReportSubmitting(true);
     try {
       await reportSolution(subjectId, questionId, reportReason, reportMsg.trim() || undefined);
@@ -401,10 +405,13 @@ export const QuestionDetailScreen = () => {
       setReportMsg('');
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (e: any) {
-      const msg = e?.message?.includes('already reported') ? 'You have already reported this solution' : e?.message || 'Failed to report';
-      // simple alert via Haptics + could show toast; keep minimal
+      setReportError(
+        e?.message?.includes('already reported')
+          ? 'You have already reported this solution.'
+          : userMessage(e, 'Could not send your report.')
+      );
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      // reset to allow retry, but keep modal open
+      // Modal stays open so the message is visible and the tap can be retried.
     } finally {
       setReportSubmitting(false);
     }
@@ -426,7 +433,7 @@ export const QuestionDetailScreen = () => {
   if (loading || !question) {
     return (
       <View style={[styles.container, styles.centerLoading]}>
-        <WaveLoader color={COLORS.primary} dotSize={6} />
+        <CircleLoader color={COLORS.primary} dotSize={6} size={40} />
       </View>
     );
   }
@@ -833,8 +840,8 @@ export const QuestionDetailScreen = () => {
         </View>
       </ScrollView>
 
-      <Modal visible={showReport} transparent animationType="slide" onRequestClose={() => setShowReport(false)}>
-        <TouchableWithoutFeedback onPress={() => setShowReport(false)}>
+      <Modal visible={showReport} transparent animationType="slide" onRequestClose={() => { setShowReport(false); setReportError(null); }}>
+        <TouchableWithoutFeedback onPress={() => { setShowReport(false); setReportError(null); }}>
           <View style={styles.reportOverlay}>
             <TouchableWithoutFeedback>
               <View style={[styles.reportSheet, { paddingBottom: 24 + 16 }]}>
@@ -867,6 +874,7 @@ export const QuestionDetailScreen = () => {
                     style={styles.reportInput}
                   />
                 )}
+                {reportError && <Text style={styles.reportErrorText}>{reportError}</Text>}
                 <TouchableOpacity
                   style={[styles.reportSubmitBtn, (!reportReason || (reportReason==='other' && reportMsg.trim().length<4) || reportSubmitting) && styles.reportSubmitBtnDisabled]}
                   onPress={handleReportSubmit}
@@ -875,7 +883,7 @@ export const QuestionDetailScreen = () => {
                 >
                   <Text style={styles.reportSubmitText}>{reportSubmitting ? 'Submitting…' : 'Submit report'}</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.reportCancelBtn} onPress={() => setShowReport(false)} activeOpacity={0.7}>
+                <TouchableOpacity style={styles.reportCancelBtn} onPress={() => { setShowReport(false); setReportError(null); }} activeOpacity={0.7}>
                   <Text style={styles.reportCancelText}>Cancel</Text>
                 </TouchableOpacity>
                 </ScrollView>
@@ -1438,6 +1446,13 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
     color: '#fff',
+  },
+  reportErrorText: {
+    fontSize: 12.5,
+    lineHeight: 17,
+    color: COLORS.primary,
+    textAlign: 'center',
+    marginBottom: 8,
   },
   reportCancelBtn: {
     paddingVertical: 12,

@@ -21,17 +21,49 @@ import * as Cache from '../db/cacheService';
 import * as SylCache from '../db/syllabusCache';
 import * as Backend from './backend';
 import { authHeader } from '../auth/token';
+import {
+  FailureKind,
+  MESSAGES,
+  isDeviceOffline,
+  isTimeoutError,
+  kindForStatus,
+} from '../utils/netError';
 
 export class ApiError extends Error {
   status?: number;
   retryAfterSec?: number;
-  constructor(message: string, status?: number, retryAfterSec?: number) {
+  /** Why this failed, for callers that branch rather than just render. */
+  kind: FailureKind;
+  /**
+   * True when `message` was written for a student to read. The screens all do
+   * `e?.message || 'Could not load X.'`, so an unclassified platform string
+   * would always win over their own fallback - this flag is what lets
+   * userMessage() tell "safe to show" from "raw platform noise".
+   */
+  userFacing: boolean;
+  /** The original error, kept for Sentry rather than for the UI. */
+  cause?: unknown;
+
+  constructor(
+    message: string,
+    status?: number,
+    retryAfterSec?: number,
+    kind: FailureKind = 'unknown',
+    cause?: unknown
+  ) {
     super(message);
     this.status = status;
     this.retryAfterSec = retryAfterSec;
+    this.kind = kind;
+    this.userFacing = true;
+    this.cause = cause;
     this.name = 'ApiError';
   }
 }
+
+// A request that never answers is worse than one that fails: the screen sits
+// on a spinner forever. Cap it so a dead connection surfaces as a timeout.
+const REQUEST_TIMEOUT_MS = 20000;
 
 // Backend subject names occasionally carry stray leading/trailing whitespace,
 // which breaks alphabetical sorting and looks wrong wherever it's rendered.
@@ -47,7 +79,7 @@ async function request<T>(path: string, init?: RequestInit, isRetry = false): Pr
   const url = `${Backend.getApiBaseUrl()}${path}`;
 
   try {
-    const res = await fetch(url, init);
+    const res = await fetchWithTimeout(url, init);
 
     if (!res.ok) {
       // 5xx means this origin is sick, so it's worth asking whether the other
@@ -59,13 +91,17 @@ async function request<T>(path: string, init?: RequestInit, isRetry = false): Pr
         return request<T>(path, init, true);
       }
 
-      const errData = await res.json().catch(() => ({ message: res.statusText }));
+      const errData = await res.json().catch(() => ({}));
       const rawRetry = res.headers?.get?.('Retry-After');
       const retryAfterSec = rawRetry ? Number(rawRetry) : undefined;
+      const kind = kindForStatus(res.status);
+      // Our own backend writes messages meant for students, so prefer it.
+      // res.statusText ("Bad Gateway") is not that, hence the MESSAGES map.
       throw new ApiError(
-        errData.message || `Request failed with status ${res.status}`,
+        errData.message || MESSAGES[kind],
         res.status,
-        retryAfterSec
+        retryAfterSec,
+        kind
       );
     }
 
@@ -80,7 +116,28 @@ async function request<T>(path: string, init?: RequestInit, isRetry = false): Pr
     if (!isRetry && (await Backend.failover())) {
       return request<T>(path, init, true);
     }
-    throw new ApiError(err.message || 'Network error occurred');
+
+    // Both origins are unreachable. Ask the OS why before blaming the server:
+    // "you're offline" is actionable, "couldn't reach PYQdeck" is not.
+    const kind: FailureKind = (await isDeviceOffline())
+      ? 'offline'
+      : isTimeoutError(err)
+        ? 'timeout'
+        : 'unreachable';
+    throw new ApiError(MESSAGES[kind], undefined, undefined, kind, err);
+  }
+}
+
+// fetch has no timeout of its own, so a half-open socket hangs the screen's
+// spinner indefinitely. AbortController is used rather than
+// AbortSignal.timeout for Hermes support on older Android.
+async function fetchWithTimeout(url: string, init?: RequestInit): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  try {
+    return await fetch(url, { ...init, signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
   }
 }
 

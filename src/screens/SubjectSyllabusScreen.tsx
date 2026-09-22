@@ -23,7 +23,8 @@ import { SyllabusModule, SyllabusSubject, Topic } from '../types/syllabus';
 import { getDoneTopics, saveDoneTopics, pruneOrphanedDoneTopics } from '../db/syllabusProgress';
 import { DoneStamp } from '../components/Badge';
 import { ScreenError, ScreenEmpty } from '../components/ScreenState';
-import { WaveLoader } from '../components/WaveLoader';
+import { CircleLoader } from '../components/CircleLoader';
+import { userMessage } from '../utils/netError';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -103,7 +104,7 @@ export const SubjectSyllabusScreen = () => {
         // Keep all modules collapsed by default; user taps to expand.
         setOpen(new Set());
       } catch (e: any) {
-        setError(e?.message || 'Could not load this subject.');
+        setError(userMessage(e, 'Could not load this subject.'));
       }
     },
     [subjectId]
@@ -231,7 +232,7 @@ export const SubjectSyllabusScreen = () => {
         {error ? (
           <ScreenError message={error} onRetry={() => load(true)} />
         ) : (
-          <WaveLoader color={COLORS.primary} dotSize={6} />
+          <CircleLoader color={COLORS.primary} dotSize={6} size={40} />
         )}
       </View>
     );

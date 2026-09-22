@@ -18,6 +18,7 @@ import { getDoneCounts } from '../db/syllabusProgress';
 import { getSelectedBranch, setSelectedBranch } from '../utils/settings';
 import { ScreenError, ScreenEmpty } from '../components/ScreenState';
 import { WaveLoader } from '../components/WaveLoader';
+import { userMessage } from '../utils/netError';
 
 export const SemesterSelectScreen = () => {
   const insets = useSafeAreaInsets();
@@ -72,7 +73,7 @@ export const SemesterSelectScreen = () => {
         const res = await getBranchSemesters(branchId, force);
         setData(res);
       } catch (e: any) {
-        setError(e?.message || 'Could not load semesters for this branch.');
+        setError(userMessage(e, 'Could not load semesters for this branch.'));
       }
     },
     []

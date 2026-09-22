@@ -20,7 +20,8 @@ import { BranchSemester, SyllabusSubjectSummary } from '../types/syllabus';
 import { getDoneCounts } from '../db/syllabusProgress';
 import { recordContentOpenedAndMaybeShowInterstitial } from '../utils/ads';
 import { ScreenError, ScreenEmpty } from '../components/ScreenState';
-import { WaveLoader } from '../components/WaveLoader';
+import { CircleLoader } from '../components/CircleLoader';
+import { userMessage } from '../utils/netError';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -64,7 +65,7 @@ export const SyllabusOverviewScreen = () => {
         setError(null);
         setData(await getBranchSemester(branchId, semesterNumber, force));
       } catch (e: any) {
-        setError(e?.message || 'Could not load this semester.');
+        setError(userMessage(e, 'Could not load this semester.'));
       }
     },
     [branchId, semesterNumber]
@@ -99,7 +100,7 @@ export const SyllabusOverviewScreen = () => {
         {error ? (
           <ScreenError message={error} onRetry={() => load(true)} />
         ) : (
-          <WaveLoader color={COLORS.primary} dotSize={6} />
+          <CircleLoader color={COLORS.primary} dotSize={6} size={40} />
         )}
       </View>
     );

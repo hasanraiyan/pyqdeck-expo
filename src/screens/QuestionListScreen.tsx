@@ -21,6 +21,7 @@ import { COLORS, FONTS } from '../theme/colors';
 import { QuestionItem } from '../components/QuestionItem';
 import { QuestionItemClassic } from '../components/QuestionItemClassic';
 import { WaveLoader } from '../components/WaveLoader';
+import { CircleLoader } from '../components/CircleLoader';
 import { PrevNextNav } from '../components/PrevNextNav';
 import { AdBanner } from '../components/AdBanner';
 import { VolumeScrollHint } from '../components/VolumeScrollHint';
@@ -322,7 +323,7 @@ export const QuestionListScreen = () => {
         ListEmptyComponent={
           loading ? (
             <View style={styles.centerContainer}>
-              <WaveLoader color={COLORS.primary} dotSize={7} />
+              <CircleLoader color={COLORS.primary} dotSize={6} size={40} />
             </View>
           ) : (
             <View style={styles.emptyState}>
