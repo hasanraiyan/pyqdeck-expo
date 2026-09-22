@@ -165,10 +165,6 @@ export const cleanMarkdown = (text: string | null | undefined): string => {
         : `\`$ ${formatMathExpression(inline)} $\``
   );
 
-  // Convert remaining standalone LaTeX symbols outside math blocks, but DO NOT
-  // run underscore/caret subscripting on regular prose, snake_case, or ASCII art.
-  formatted = formatLatexSymbols(formatted);
-
   // Restore shielded code verbatim
   formatted = formatted.replace(/\uE000(\d+)\uE001/g, (_, i) => codeBlocks[Number(i)]);
 
