@@ -297,9 +297,9 @@ function AppContent() {
           name="Browse"
           component={HomeStack}
           options={{
-            tabBarLabel: 'Browse',
+            tabBarLabel: 'PYQ',
             tabBarIcon: ({ color, size }) => (
-              <Feather name="book-open" size={size} color={color} />
+              <Feather name="file-text" size={size} color={color} />
             ),
           }}
         />
@@ -308,7 +308,7 @@ function AppContent() {
             name="Syllabus"
             component={SyllabusStack}
             options={{
-              tabBarLabel: 'Syllabus',
+              tabBarLabel: 'Study',
               tabBarIcon: ({ color, size, focused }) => (
                 <SyllabusTabIcon size={size} color={color} focused={focused} />
               ),
