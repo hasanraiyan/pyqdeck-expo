@@ -67,9 +67,9 @@
         "expo-build-properties",
         {
           "android": {
-            "enableMinifyInReleaseBuilds": false,
-            "enableShrinkResourcesInReleaseBuilds": false,
-            "extraProguardRules": "-dontwarn kotlin.MustUseReturnValues\n-dontwarn kotlin.**ReturnValue**"
+            "enableMinifyInReleaseBuilds": true,
+            "enableShrinkResourcesInReleaseBuilds": true,
+            "extraProguardRules": "-dontwarn kotlin.MustUseReturnValues\n-dontwarn kotlin.**ReturnValue**\n# Clerk: keep full SDK under R8 until clerk-android#941 is confirmed fixed for auth-only apps\n-keep class com.clerk.api.** { *; }\n-keep class com.clerk.ui.** { *; }"
           }
         }
       ],
