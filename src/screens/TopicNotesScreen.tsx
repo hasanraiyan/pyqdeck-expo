@@ -16,6 +16,8 @@ import { solutionMarkdownStyles, markdownRules } from '../theme/markdownStyles';
 import { ScreenEmpty } from '../components/ScreenState';
 import { AdBanner } from '../components/AdBanner';
 import { PrevNextNav } from '../components/PrevNextNav';
+import { VolumeScrollHint } from '../components/VolumeScrollHint';
+import { useVolumeScroll } from '../utils/volumeScroll';
 import { CircleLoader } from '../components/CircleLoader';
 
 import { recordRecentNote } from '../utils/recentStudy';
@@ -23,6 +25,9 @@ import { userMessage } from '../utils/netError';
 
 /** Same namespacing as SubjectSyllabusScreen's topicKey - must stay identical, the two screens read/write the same AsyncStorage key. */
 const topicKey = (moduleId: string, topicId: string) => `${moduleId}:${topicId}`;
+
+/** One volume press scrolls about a screenful of reading, as on the question list. */
+const VOLUME_SCROLL_STEP = 320;
 
 type NotesListEntry = { id: string; title: string; moduleId: string; moduleName: string };
 
@@ -189,6 +194,8 @@ export const TopicNotesScreen = () => {
 
   const layoutHeightRef = useRef(0);
   const contentHeightRef = useRef(0);
+  const scrollOffsetRef = useRef(0);
+  const [showVolumeHint, setShowVolumeHint] = useState(false);
 
   const markAsDone = useCallback(async () => {
     if (done || !subjectId || !moduleId || !topic?.id) return;
@@ -205,6 +212,7 @@ export const TopicNotesScreen = () => {
   }, [done, subjectId, moduleId, topic?.id]);
 
   const handleScroll = (e: any) => {
+    scrollOffsetRef.current = e.nativeEvent.contentOffset.y;
     if (done) return;
     const { layoutMeasurement, contentOffset, contentSize } = e.nativeEvent;
     const paddingToBottom = 40;
@@ -226,6 +234,19 @@ export const TopicNotesScreen = () => {
     }, 2500);
     return () => clearTimeout(timer);
   }, [done, loading, notes, markAsDone]);
+
+  useVolumeScroll(
+    useCallback((direction) => {
+      const delta = direction === 'down' ? VOLUME_SCROLL_STEP : -VOLUME_SCROLL_STEP;
+      // Clamped at both ends so holding a button past the end does not build
+      // up an offset that then takes several presses to scroll back out of.
+      const maxOffset = Math.max(0, contentHeightRef.current - layoutHeightRef.current);
+      const nextOffset = Math.min(maxOffset, Math.max(0, scrollOffsetRef.current + delta));
+      scrollOffsetRef.current = nextOffset;
+      scrollRef.current?.scrollTo({ y: nextOffset, animated: true });
+    }, []),
+    useCallback(() => setShowVolumeHint(true), [])
+  );
 
   const currentIndex = localNotesList?.findIndex((t) => t.id === topic?.id) ?? -1;
   const prevEntry = localNotesList && currentIndex > 0 ? localNotesList[currentIndex - 1] : null;
@@ -303,6 +324,12 @@ export const TopicNotesScreen = () => {
           </View>
         )}
       </ScrollView>
+
+      <VolumeScrollHint
+        visible={showVolumeHint}
+        onHide={() => setShowVolumeHint(false)}
+        bottomOffset={insets.bottom + 16}
+      />
 
       <AdBanner />
     </View>

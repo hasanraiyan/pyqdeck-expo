@@ -254,7 +254,7 @@ export const SettingsScreen = ({ navigation }: any) => {
               <SettingsRow
                 icon="volume-2"
                 label="Scroll with volume buttons"
-                subtitle="Move between questions with hardware volume keys"
+                subtitle="Scroll questions and study notes with hardware volume keys"
                 last
                 right={
                   <Switch
