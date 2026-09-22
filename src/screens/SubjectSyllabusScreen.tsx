@@ -185,6 +185,7 @@ export const SubjectSyllabusScreen = () => {
         moduleName: module.title,
         subjectId,
         subjectName: subject.name,
+        semesterId: subject.semester ? `sem-${subject.semester}` : undefined,
         notesList,
       });
     },

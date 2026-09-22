@@ -8,8 +8,34 @@ import { SVG } from 'mathjax-full/js/output/svg.js';
 import { liteAdaptor } from 'mathjax-full/js/adaptors/liteAdaptor.js';
 // @ts-ignore
 import { RegisterHTMLHandler } from 'mathjax-full/js/handlers/html.js';
-// @ts-ignore
-import { AllPackages } from 'mathjax-full/js/input/tex/AllPackages.js';
+
+// Import only essential math packages to minimize JS bundle size (avoids heavy chemistry/physics/buss trees)
+import 'mathjax-full/js/input/tex/ams/AmsConfiguration.js';
+import 'mathjax-full/js/input/tex/amscd/AmscdConfiguration.js';
+import 'mathjax-full/js/input/tex/newcommand/NewcommandConfiguration.js';
+import 'mathjax-full/js/input/tex/mathtools/MathtoolsConfiguration.js';
+import 'mathjax-full/js/input/tex/boldsymbol/BoldsymbolConfiguration.js';
+import 'mathjax-full/js/input/tex/cases/CasesConfiguration.js';
+import 'mathjax-full/js/input/tex/color/ColorConfiguration.js';
+import 'mathjax-full/js/input/tex/extpfeil/ExtpfeilConfiguration.js';
+import 'mathjax-full/js/input/tex/noerrors/NoErrorsConfiguration.js';
+import 'mathjax-full/js/input/tex/noundefined/NoUndefinedConfiguration.js';
+import 'mathjax-full/js/input/tex/unicode/UnicodeConfiguration.js';
+
+const MATH_PACKAGES = [
+  'base',
+  'ams',
+  'amscd',
+  'newcommand',
+  'mathtools',
+  'boldsymbol',
+  'cases',
+  'color',
+  'extpfeil',
+  'noerrors',
+  'noundefined',
+  'unicode',
+];
 
 export interface SvgMathResult {
   xml: string;
@@ -35,7 +61,7 @@ function ensureInitialized() {
   RegisterHTMLHandler(adaptor);
 
   mathDocument = mathjax.document('', {
-    InputJax: new TeX({ packages: AllPackages }),
+    InputJax: new TeX({ packages: MATH_PACKAGES }),
     OutputJax: new SVG({ fontCache: 'none' }),
   });
 }

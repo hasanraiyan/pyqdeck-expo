@@ -20,7 +20,7 @@ import { COLORS, FONTS } from '../theme/colors';
 import { WaveLoader } from '../components/WaveLoader';
 import { rf, scale, verticalScale, useResponsive } from '../utils/responsive';
 import { yearNumberOf, YEAR_NUMBERS } from '../utils/year';
-import { getRecentStudies, RecentStudy } from '../utils/recentStudy';
+import { getRecentStudies, RecentStudy, getRecentNotes, RecentNote } from '../utils/recentStudy';
 
 export const HomeScreen = () => {
   const insets = useSafeAreaInsets();
@@ -63,13 +63,15 @@ export const HomeScreen = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [recentStudies, setRecentStudies] = useState<RecentStudy[]>([]);
+  const [recentNotes, setRecentNotes] = useState<RecentNote[]>([]);
 
   useFocusEffect(
     useCallback(() => {
       let isCurrent = true;
-      getRecentStudies().then((studies) => {
+      Promise.all([getRecentStudies(), getRecentNotes()]).then(([studies, notes]) => {
         if (isCurrent) {
           setRecentStudies(studies);
+          setRecentNotes(notes);
         }
       });
       return () => {
@@ -77,6 +79,18 @@ export const HomeScreen = () => {
       };
     }, [])
   );
+
+  type RecentItem =
+    | { kind: 'study'; data: RecentStudy; visitedAt: number }
+    | { kind: 'note'; data: RecentNote; visitedAt: number };
+
+  const recentItems = useMemo<RecentItem[]>(() => {
+    const items: RecentItem[] = [
+      ...recentStudies.map((s) => ({ kind: 'study' as const, data: s, visitedAt: s.visitedAt })),
+      ...recentNotes.map((n) => ({ kind: 'note' as const, data: n, visitedAt: n.visitedAt })),
+    ];
+    return items.sort((a, b) => b.visitedAt - a.visitedAt);
+  }, [recentStudies, recentNotes]);
 
   const loadData = async (isManualRefresh = false) => {
     // 1. Instant 0ms load from cache if available
@@ -232,7 +246,7 @@ export const HomeScreen = () => {
           </View>
 
           {/* Jump Back In Section */}
-          {recentStudies.length > 0 && (
+          {recentItems.length > 0 && (
             <View style={styles.recentSection}>
               <View style={styles.recentHeaderRow}>
                 <View style={styles.recentTitleWrap}>
@@ -241,113 +255,201 @@ export const HomeScreen = () => {
                 </View>
               </View>
 
-              {recentStudies.length === 1 ? (
-                <TouchableOpacity
-                  style={[styles.recentCard, styles.recentCardFull]}
-                  activeOpacity={0.7}
-                  onPress={() => {
-                    const item = recentStudies[0];
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                    if (item.year) {
-                      navigation.navigate('QuestionList', {
-                        semesterId: item.semesterId,
-                        subjectId: item.subjectId,
-                        subjectName: item.subjectName,
-                        subjectCode: item.subjectCode,
-                        initialYear: item.year,
-                      });
-                    } else {
-                      navigation.navigate('SubjectDetail', {
-                        semesterId: item.semesterId,
-                        subjectId: item.subjectId,
-                        subjectName: item.subjectName,
-                        subjectCode: item.subjectCode,
-                      });
-                    }
-                  }}
-                >
-                  <View style={styles.recentTopRow}>
-                    <Text style={styles.recentCode} numberOfLines={1}>
-                      {recentStudies[0].subjectCode
-                        ? `${recentStudies[0].subjectCode} · SEM ${recentStudies[0].semesterId?.replace(/\D/g, '') || ''}`
-                        : `SEMESTER ${recentStudies[0].semesterId?.replace(/\D/g, '') || ''}`}
-                    </Text>
-                    <View style={styles.recentRecentPill}>
-                      <Text style={styles.recentRecentPillText}>
-                        {recentStudies[0].year ? `${recentStudies[0].year} Paper` : 'Studied recently'}
+              {recentItems.length === 1 ? (
+                recentItems[0].kind === 'study' ? (
+                  <TouchableOpacity
+                    style={[styles.recentCard, styles.recentCardFull]}
+                    activeOpacity={0.7}
+                    onPress={() => {
+                      const item = recentItems[0].data as RecentStudy;
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      if (item.year) {
+                        navigation.navigate('QuestionList', {
+                          semesterId: item.semesterId,
+                          subjectId: item.subjectId,
+                          subjectName: item.subjectName,
+                          subjectCode: item.subjectCode,
+                          initialYear: item.year,
+                        });
+                      } else {
+                        navigation.navigate('SubjectDetail', {
+                          semesterId: item.semesterId,
+                          subjectId: item.subjectId,
+                          subjectName: item.subjectName,
+                          subjectCode: item.subjectCode,
+                        });
+                      }
+                    }}
+                  >
+                    <View style={styles.recentTopRow}>
+                      <Text style={styles.recentCode} numberOfLines={1}>
+                        {(recentItems[0].data as RecentStudy).subjectCode
+                          ? `${(recentItems[0].data as RecentStudy).subjectCode} · SEM ${(recentItems[0].data as RecentStudy).semesterId?.replace(/\D/g, '') || ''}`
+                          : `SEMESTER ${(recentItems[0].data as RecentStudy).semesterId?.replace(/\D/g, '') || ''}`}
                       </Text>
+                      <View style={styles.recentRecentPill}>
+                        <Text style={styles.recentRecentPillText}>
+                          {(recentItems[0].data as RecentStudy).year ? `${(recentItems[0].data as RecentStudy).year} Paper` : 'Studied recently'}
+                        </Text>
+                      </View>
                     </View>
-                  </View>
-                  <Text style={[styles.recentSubjectName, styles.recentSubjectNameFull]} numberOfLines={1}>
-                    {recentStudies[0].subjectName}
-                  </Text>
-                  <Text style={styles.recentSubText} numberOfLines={1}>
-                    {recentStudies[0].year ? `${recentStudies[0].year} Exam Questions` : 'Questions & Syllabus'}
-                  </Text>
-                  <View style={styles.recentFooterRow}>
-                    <Text style={styles.recentResumeText}>Tap to resume</Text>
-                    <View style={styles.recentArrowCircle}>
-                      <Feather name="arrow-right" size={12} color="#fff" />
+                    <Text style={[styles.recentSubjectName, styles.recentSubjectNameFull]} numberOfLines={1}>
+                      {recentItems[0].data.subjectName}
+                    </Text>
+                    <Text style={styles.recentSubText} numberOfLines={1}>
+                      {(recentItems[0].data as RecentStudy).year ? `${(recentItems[0].data as RecentStudy).year} Exam Questions` : 'Questions & Syllabus'}
+                    </Text>
+                    <View style={styles.recentFooterRow}>
+                      <Text style={styles.recentResumeText}>Tap to resume</Text>
+                      <View style={styles.recentArrowCircle}>
+                        <Feather name="arrow-right" size={12} color="#fff" />
+                      </View>
                     </View>
-                  </View>
-                </TouchableOpacity>
+                  </TouchableOpacity>
+                ) : (
+                  <TouchableOpacity
+                    style={[styles.recentCard, styles.recentCardFull]}
+                    activeOpacity={0.7}
+                    onPress={() => {
+                      const item = recentItems[0].data as RecentNote;
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      navigation.navigate('TopicNotes', {
+                        topic: { id: item.topicId, title: item.topicTitle },
+                        moduleId: item.moduleId,
+                        moduleName: item.moduleName,
+                        subjectId: item.subjectId,
+                        subjectName: item.subjectName,
+                        semesterId: item.semesterId,
+                      });
+                    }}
+                  >
+                    <View style={styles.recentTopRow}>
+                      <Text style={styles.recentCode} numberOfLines={1}>
+                        {recentItems[0].data.subjectName}
+                      </Text>
+                      <View style={styles.recentNotesPill}>
+                        <Feather name="book-open" size={9.5} color="#0f766e" style={{ marginRight: 3 }} />
+                        <Text style={styles.recentNotesPillText}>NOTES</Text>
+                      </View>
+                    </View>
+                    <Text style={[styles.recentSubjectName, styles.recentSubjectNameFull]} numberOfLines={1}>
+                      {(recentItems[0].data as RecentNote).topicTitle}
+                    </Text>
+                    <Text style={styles.recentSubText} numberOfLines={1}>
+                      {(recentItems[0].data as RecentNote).moduleName || 'Topic Study Notes'}
+                    </Text>
+                    <View style={styles.recentFooterRow}>
+                      <Text style={styles.recentResumeText}>Continue reading</Text>
+                      <View style={[styles.recentArrowCircle, { backgroundColor: '#0f766e' }]}>
+                        <Feather name="arrow-right" size={12} color="#fff" />
+                      </View>
+                    </View>
+                  </TouchableOpacity>
+                )
               ) : (
                 <ScrollView
                   horizontal
                   showsHorizontalScrollIndicator={false}
                   contentContainerStyle={styles.recentScrollContent}
                 >
-                  {recentStudies.map((item) => (
-                    <TouchableOpacity
-                      key={item.subjectId}
-                      style={styles.recentCard}
-                      activeOpacity={0.7}
-                      onPress={() => {
-                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                        if (item.year) {
-                          navigation.navigate('QuestionList', {
-                            semesterId: item.semesterId,
-                            subjectId: item.subjectId,
-                            subjectName: item.subjectName,
-                            subjectCode: item.subjectCode,
-                            initialYear: item.year,
-                          });
-                        } else {
-                          navigation.navigate('SubjectDetail', {
-                            semesterId: item.semesterId,
-                            subjectId: item.subjectId,
-                            subjectName: item.subjectName,
-                            subjectCode: item.subjectCode,
-                          });
-                        }
-                      }}
-                    >
-                      <View style={styles.recentTopRow}>
-                        <Text style={styles.recentCode} numberOfLines={1}>
-                          {item.subjectCode
-                            ? `${item.subjectCode} · SEM ${item.semesterId?.replace(/\D/g, '') || ''}`
-                            : `SEM ${item.semesterId?.replace(/\D/g, '') || ''}`}
-                        </Text>
-                        <View style={styles.recentRecentPill}>
-                          <Text style={styles.recentRecentPillText}>
-                            {item.year ? `${item.year}` : 'Recent'}
+                  {recentItems.map((item) => {
+                    if (item.kind === 'study') {
+                      const study = item.data;
+                      return (
+                        <TouchableOpacity
+                          key={`study-${study.subjectId}`}
+                          style={styles.recentCard}
+                          activeOpacity={0.7}
+                          onPress={() => {
+                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                            if (study.year) {
+                              navigation.navigate('QuestionList', {
+                                semesterId: study.semesterId,
+                                subjectId: study.subjectId,
+                                subjectName: study.subjectName,
+                                subjectCode: study.subjectCode,
+                                initialYear: study.year,
+                              });
+                            } else {
+                              navigation.navigate('SubjectDetail', {
+                                semesterId: study.semesterId,
+                                subjectId: study.subjectId,
+                                subjectName: study.subjectName,
+                                subjectCode: study.subjectCode,
+                              });
+                            }
+                          }}
+                        >
+                          <View style={styles.recentTopRow}>
+                            <Text style={styles.recentCode} numberOfLines={1}>
+                              {study.subjectCode
+                                ? `${study.subjectCode} · SEM ${study.semesterId?.replace(/\D/g, '') || ''}`
+                                : `SEM ${study.semesterId?.replace(/\D/g, '') || ''}`}
+                            </Text>
+                            <View style={styles.recentRecentPill}>
+                              <Text style={styles.recentRecentPillText}>
+                                {study.year ? `${study.year}` : 'Recent'}
+                              </Text>
+                            </View>
+                          </View>
+                          <Text style={styles.recentSubjectName} numberOfLines={1}>
+                            {study.subjectName}
                           </Text>
+                          <Text style={styles.recentSubText} numberOfLines={1}>
+                            {study.year ? `${study.year} Questions` : 'Questions & Syllabus'}
+                          </Text>
+                          <View style={styles.recentFooterRow}>
+                            <Text style={styles.recentResumeText}>Tap to resume</Text>
+                            <View style={styles.recentArrowCircle}>
+                              <Feather name="arrow-right" size={12} color="#fff" />
+                            </View>
+                          </View>
+                        </TouchableOpacity>
+                      );
+                    }
+
+                    const note = item.data;
+                    return (
+                      <TouchableOpacity
+                        key={`note-${note.topicId}`}
+                        style={styles.recentCard}
+                        activeOpacity={0.7}
+                        onPress={() => {
+                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                          navigation.navigate('TopicNotes', {
+                            topic: { id: note.topicId, title: note.topicTitle },
+                            moduleId: note.moduleId,
+                            moduleName: note.moduleName,
+                            subjectId: note.subjectId,
+                            subjectName: note.subjectName,
+                            semesterId: note.semesterId,
+                          });
+                        }}
+                      >
+                        <View style={styles.recentTopRow}>
+                          <Text style={styles.recentCode} numberOfLines={1}>
+                            {note.subjectName}
+                          </Text>
+                          <View style={styles.recentNotesPill}>
+                            <Feather name="book-open" size={9.5} color="#0f766e" style={{ marginRight: 3 }} />
+                            <Text style={styles.recentNotesPillText}>NOTES</Text>
+                          </View>
                         </View>
-                      </View>
-                      <Text style={styles.recentSubjectName} numberOfLines={1}>
-                        {item.subjectName}
-                      </Text>
-                      <Text style={styles.recentSubText} numberOfLines={1}>
-                        {item.year ? `${item.year} Questions` : 'Questions & Syllabus'}
-                      </Text>
-                      <View style={styles.recentFooterRow}>
-                        <Text style={styles.recentResumeText}>Tap to resume</Text>
-                        <View style={styles.recentArrowCircle}>
-                          <Feather name="arrow-right" size={12} color="#fff" />
+                        <Text style={styles.recentSubjectName} numberOfLines={1}>
+                          {note.topicTitle}
+                        </Text>
+                        <Text style={styles.recentSubText} numberOfLines={1}>
+                          {note.moduleName || 'Topic Study Notes'}
+                        </Text>
+                        <View style={styles.recentFooterRow}>
+                          <Text style={styles.recentResumeText}>Continue reading</Text>
+                          <View style={[styles.recentArrowCircle, { backgroundColor: '#0f766e' }]}>
+                            <Feather name="arrow-right" size={12} color="#fff" />
+                          </View>
                         </View>
-                      </View>
-                    </TouchableOpacity>
-                  ))}
+                      </TouchableOpacity>
+                    );
+                  })}
                 </ScrollView>
               )}
             </View>
@@ -669,6 +771,23 @@ const styles = StyleSheet.create({
     fontSize: rf(8.5),
     fontWeight: '700',
     color: COLORS.primary,
+  },
+  recentNotesPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ecfdf5',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: '#a7f3d0',
+  },
+  recentNotesPillText: {
+    fontFamily: FONTS.mono,
+    fontSize: rf(8.5),
+    fontWeight: '700',
+    color: '#0f766e',
+    letterSpacing: 0.4,
   },
   recentSubjectName: {
     fontFamily: FONTS.serif,

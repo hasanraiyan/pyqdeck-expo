@@ -18,6 +18,8 @@ import { AdBanner } from '../components/AdBanner';
 import { PrevNextNav } from '../components/PrevNextNav';
 import { WaveLoader } from '../components/WaveLoader';
 
+import { recordRecentNote } from '../utils/recentStudy';
+
 /** Same namespacing as SubjectSyllabusScreen's topicKey - must stay identical, the two screens read/write the same AsyncStorage key. */
 const topicKey = (moduleId: string, topicId: string) => `${moduleId}:${topicId}`;
 
@@ -50,19 +52,58 @@ export const TopicNotesScreen = () => {
   const insets = useSafeAreaInsets();
   const route = useRoute<any>();
   const navigation = useNavigation<any>();
-  const { topic, subjectId, moduleId, notesList, subjectName } = (route.params ?? {}) as {
-    topic: Topic;
-    subjectId?: string;
-    moduleId?: string;
-    subjectName?: string;
-    notesList?: NotesListEntry[];
-  };
+  const { topic, subjectId, moduleId, moduleName, notesList, subjectName, semesterId } =
+    (route.params ?? {}) as {
+      topic: Topic;
+      subjectId?: string;
+      moduleId?: string;
+      moduleName?: string;
+      subjectName?: string;
+      semesterId?: string;
+      notesList?: NotesListEntry[];
+    };
   const scrollRef = useRef<ScrollView>(null);
 
   const [notes, setNotes] = useState<string | undefined>(topic?.notes);
   const [loading, setLoading] = useState(Boolean(subjectId && topic?.id));
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
+  const [localNotesList, setLocalNotesList] = useState<NotesListEntry[] | undefined>(notesList);
+
+  useEffect(() => {
+    if (notesList && notesList.length > 0) {
+      setLocalNotesList(notesList);
+      return;
+    }
+    if (!subjectId) return;
+    SylCache.read<any>(SylCache.subjectKey(subjectId)).then((cached) => {
+      if (cached && Array.isArray(cached.modules)) {
+        const flattened = cached.modules.flatMap((m: any) =>
+          (m.topics || [])
+            .filter((t: any) => t.hasNotes)
+            .map((t: any) => ({ id: t.id, title: t.title, moduleId: m.id, moduleName: m.title }))
+        );
+        if (flattened.length > 0) {
+          setLocalNotesList(flattened);
+        }
+      }
+    });
+  }, [subjectId, notesList]);
+
+  // Record if topic notes are already attached
+  useEffect(() => {
+    if (topic?.notes && subjectId && moduleId && topic?.id && topic?.title) {
+      void recordRecentNote({
+        topicId: topic.id,
+        topicTitle: topic.title,
+        moduleId,
+        moduleName: moduleName || 'Module',
+        subjectId,
+        subjectName: subjectName || 'Subject',
+        semesterId,
+      });
+    }
+  }, [topic?.id, topic?.notes, subjectId, moduleId, moduleName, subjectName, semesterId]);
 
   const openYouTubeSearch = () => {
     if (!topic?.title) return;
@@ -106,6 +147,17 @@ export const TopicNotesScreen = () => {
       .then((res) => {
         if (cancelled) return;
         setNotes(res.notes || undefined);
+        if (res.notes && moduleId && topic.title) {
+          void recordRecentNote({
+            topicId: topic.id,
+            topicTitle: topic.title,
+            moduleId,
+            moduleName: moduleName || 'Module',
+            subjectId,
+            subjectName: subjectName || 'Subject',
+            semesterId,
+          });
+        }
       })
       .catch((e: any) => {
         if (cancelled) return;
@@ -121,7 +173,7 @@ export const TopicNotesScreen = () => {
     return () => {
       cancelled = true;
     };
-  }, [subjectId, topic?.id]);
+  }, [subjectId, topic?.id, moduleId, moduleName, subjectName, semesterId]);
 
   useEffect(() => {
     if (!subjectId || !moduleId || !topic?.id) return;
@@ -174,11 +226,11 @@ export const TopicNotesScreen = () => {
     return () => clearTimeout(timer);
   }, [done, loading, notes, markAsDone]);
 
-  const currentIndex = notesList?.findIndex((t) => t.id === topic?.id) ?? -1;
-  const prevEntry = notesList && currentIndex > 0 ? notesList[currentIndex - 1] : null;
+  const currentIndex = localNotesList?.findIndex((t) => t.id === topic?.id) ?? -1;
+  const prevEntry = localNotesList && currentIndex > 0 ? localNotesList[currentIndex - 1] : null;
   const nextEntry =
-    notesList && currentIndex >= 0 && currentIndex < notesList.length - 1
-      ? notesList[currentIndex + 1]
+    localNotesList && currentIndex >= 0 && currentIndex < localNotesList.length - 1
+      ? localNotesList[currentIndex + 1]
       : null;
 
   const goToTopic = (entry: NotesListEntry) => {
