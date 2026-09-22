@@ -10,8 +10,7 @@ import * as Haptics from 'expo-haptics';
 import * as WebBrowser from 'expo-web-browser';
 import { Feather, FontAwesome } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
-import Markdown from 'react-native-markdown-display';
-import { MathView } from './MathView';
+import { NativeContentRenderer } from './NativeContentRenderer';
 import { QuestionSummary } from '../types';
 import { AskAiBadge, YearBadge, MarksBadge, QNumBadge } from './Badge';
 import { cleanMarkdown } from '../utils/responsive';
@@ -152,10 +151,11 @@ export const QuestionItemClassic: React.FC<QuestionItemClassicProps> = React.mem
         style={styles.bodyPressable}
       >
         <View pointerEvents="none">
-          <MathView
+          <NativeContentRenderer
             content={question.text}
             html={(question as any).textHtml}
             fontSize={15}
+            variant="question"
           />
         </View>
       </TouchableOpacity>

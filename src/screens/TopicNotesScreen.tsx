@@ -5,8 +5,7 @@ import { useRoute, useNavigation } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import * as WebBrowser from 'expo-web-browser';
-import Markdown from 'react-native-markdown-display';
-import { MathView } from '../components/MathView';
+import { NativeContentRenderer } from '../components/NativeContentRenderer';
 import { COLORS, FONTS } from '../theme/colors';
 import { Topic } from '../types/syllabus';
 import { getTopicNotes } from '../api';
@@ -222,7 +221,7 @@ export const TopicNotesScreen = () => {
       >
         {loading ? null : notes ? (
           <View style={styles.notesBody}>
-            <MathView content={notes} fontSize={16} />
+            <NativeContentRenderer content={notes} fontSize={16} />
           </View>
         ) : (
           <View style={styles.empty}>

@@ -16,8 +16,7 @@ import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
 import * as WebBrowser from 'expo-web-browser';
 import { Feather, FontAwesome } from '@expo/vector-icons';
-import Markdown from 'react-native-markdown-display';
-import { MathView } from '../components/MathView';
+import { NativeContentRenderer } from '../components/NativeContentRenderer';
 import {
   getQuestion,
   getQuestions,
@@ -484,10 +483,11 @@ export const QuestionDetailScreen = () => {
               </View>
             )}
 
-            <MathView
+            <NativeContentRenderer
               content={question.text}
               html={(question as any).textHtml}
               fontSize={16}
+              variant="question"
             />
 
             {/* Alert: Repeated in previous years (with clickable years) */}
@@ -601,10 +601,11 @@ export const QuestionDetailScreen = () => {
               <Text style={styles.solutionTitle}>WORKED SOLUTION</Text>
               {solution ? (
                 <View style={styles.solutionBody}>
-                  <MathView
+                  <NativeContentRenderer
                     content={solution.content}
                     html={(solution as any).contentHtml}
                     fontSize={15}
+                    variant="solution"
                   />
                   <View style={styles.voteRow}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>

@@ -1,27 +1,20 @@
 import React, { useMemo } from 'react';
-import { Text, TextStyle } from 'react-native';
+import { Text, TextStyle, StyleProp } from 'react-native';
 import { COLORS, FONTS } from '../theme/colors';
 import { formatMathExpression } from '../utils/responsive';
 
 /**
- * Renders a single line of text with math fragments styled as math, so a
- * question header that contains LaTeX shows `x²`, `√(x+1)` etc. instead of the
- * raw `$ ... $` source.
- *
- * Recognised delimiters:
- * - the app's own cleanMarkdown convention — backtick-wrapped `$…$` / `$$…$$`
+ * Delimiters for inline math and environments:
+ * - backtick-wrapped `$…$` / `$$…$$`
  * - bare `$…$` / `$$…$$`
  * - LaTeX \(…\) and \[…\]
- *
- * Each math fragment is normalized with the same formatMathExpression used by
- * the full-body markdown renderer (unicode superscripts/subscripts, common
- * symbols, sqrt/fraction to plain-text), then styled serif-italic-primary so it
- * reads as math. Plain text passes through untouched.
+ * - LaTeX matrix / tabular environments \begin{...}...\end{...}
  */
 const MATH_TOKEN =
-  /(`\$\$[\s\S]*?\$\$`|`\$[^\n]*?\$`|\$\$[\s\S]*?\$\$|\$[^\n$]*?\$|\\\[[\s\S]*?\\\]|\\\([^)]*?\\\))/g;
+  /(`\$\$[\s\S]*?\$\$`|`\$[^\n]*?\$`|\$\$[\s\S]*?\$\$|\$[^\n$]*?\$|\\\[[\s\S]*?\\\]|\\\([^)]*?\\\)|\\begin\{(?:matrix|pmatrix|bmatrix|vmatrix|Vmatrix|cases)\}[\s\S]*?\\end\{(?:matrix|pmatrix|bmatrix|vmatrix|Vmatrix|cases)\})/g;
+
 const MATH_PART =
-  /^(`\$\$[\s\S]*?\$\$`|`\$[^\n]*?\$`|\$\$[\s\S]*?\$\$|\$[^\n$]*?\$|\\\[[\s\S]*?\\\]|\\\([^)]*?\\\))$/;
+  /^(`\$\$[\s\S]*?\$\$`|`\$[^\n]*?\$`|\$\$[\s\S]*?\$\$|\$[^\n$]*?\$|\\\[[\s\S]*?\\\]|\\\([^)]*?\\\)|\\begin\{(?:matrix|pmatrix|bmatrix|vmatrix|Vmatrix|cases)\}[\s\S]*?\\end\{(?:matrix|pmatrix|bmatrix|vmatrix|Vmatrix|cases)\})$/;
 
 const mathTextStyle: TextStyle = {
   fontFamily: FONTS.serif,
@@ -45,15 +38,53 @@ const normalizeMath = (raw: string): string => {
   return formatMathExpression(expr.trim());
 };
 
-export const InlineMathText: React.FC<{
+/**
+ * Strips markdown clutter (headings, images, bold asterisks, hard line breaks)
+ * for a clean single-line or multi-line preview text.
+ */
+export const cleanPreviewMarkdown = (text: string): string => {
+  if (!text) return '';
+  return text
+    // Replace newlines with spaces so single-line preview doesn't truncate prematurely
+    .replace(/\r\n/g, ' ')
+    .replace(/\n+/g, ' ')
+    // Remove markdown images ![alt](url)
+    .replace(/!\[.*?\]\(.*?\)/g, '')
+    // Replace markdown links [text](url) -> text
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+    // Remove leading markdown headings (#, ##, ###)
+    .replace(/^#+\s*/, '')
+    // Remove bold/italic markers in prose (preserving math tokens)
+    .replace(/\*\*([^*]+)\*\*/g, '$1')
+    .replace(/\*([^*]+)\*/g, '$1')
+    // Collapse consecutive spaces
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+};
+
+export interface InlineMathTextProps {
   content: string;
-  style?: TextStyle;
+  prefix?: string;
+  prefixStyle?: StyleProp<TextStyle>;
+  style?: StyleProp<TextStyle>;
   numberOfLines?: number;
-}> = ({ content, style, numberOfLines }) => {
-  const parts = useMemo(() => content.split(MATH_TOKEN), [content]);
+}
+
+export const InlineMathText: React.FC<InlineMathTextProps> = ({
+  content,
+  prefix,
+  prefixStyle,
+  style,
+  numberOfLines,
+}) => {
+  const parts = useMemo(() => {
+    const cleaned = cleanPreviewMarkdown(content || '');
+    return cleaned.split(MATH_TOKEN);
+  }, [content]);
 
   return (
-    <Text style={style} numberOfLines={numberOfLines}>
+    <Text style={style} numberOfLines={numberOfLines} ellipsizeMode="tail">
+      {prefix ? <Text style={prefixStyle}>{prefix}</Text> : null}
       {parts.map((part, i) => {
         if (!part) return null;
         if (MATH_PART.test(part)) {

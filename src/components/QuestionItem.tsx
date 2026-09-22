@@ -14,8 +14,7 @@ import * as Haptics from 'expo-haptics';
 import * as WebBrowser from 'expo-web-browser';
 import { Feather } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
-import Markdown from 'react-native-markdown-display';
-import { MathView } from './MathView';
+import { NativeContentRenderer } from './NativeContentRenderer';
 import { QuestionSummary, Solution } from '../types';
 import { getSolution, voteSolution, reportSolution } from '../api';
 import { useRequireAuth } from '../auth/useRequireAuth';
@@ -257,14 +256,13 @@ export const QuestionItem: React.FC<QuestionItemProps> = React.memo(({
         style={[styles.header, expanded && styles.headerExpanded]}
       >
         <View style={styles.headerLeft}>
-          <Text style={styles.previewText} numberOfLines={1}>
-            {question.qNumber ? (
-              <Text style={styles.qNumber}>{question.qNumber}. </Text>
-            ) : null}
-            {/* Math-aware preview: textPreview may carry $…$ / \(…\) LaTeX that a
-                plain Text would show as raw source. */}
-            <InlineMathText content={question.textPreview || question.text} />
-          </Text>
+          <InlineMathText
+            content={question.textPreview || question.text}
+            prefix={question.qNumber ? `${question.qNumber}. ` : undefined}
+            prefixStyle={styles.qNumber}
+            style={styles.previewText}
+            numberOfLines={1}
+          />
         </View>
         <View style={styles.headerRight}>
           {!hideYearBadge && question.year ? (
@@ -286,10 +284,11 @@ export const QuestionItem: React.FC<QuestionItemProps> = React.memo(({
           ) : null}
 
           <View style={styles.markdownWrapper}>
-            <MathView
+            <NativeContentRenderer
               content={question.text}
               html={(question as any).textHtml}
               fontSize={15}
+              variant="question"
             />
           </View>
 
@@ -363,10 +362,11 @@ export const QuestionItem: React.FC<QuestionItemProps> = React.memo(({
             <View style={styles.solutionSection}>
               <Text style={styles.solutionTitle}>WORKED SOLUTION</Text>
               <View style={styles.solutionBody}>
-                <MathView
+                <NativeContentRenderer
                   content={solution.content}
                   html={(solution as any).contentHtml}
                   fontSize={14}
+                  variant="solution"
                 />
                 <View style={styles.voteRow}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
