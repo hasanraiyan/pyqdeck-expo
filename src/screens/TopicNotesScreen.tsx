@@ -6,11 +6,13 @@ import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import * as WebBrowser from 'expo-web-browser';
 import Markdown from 'react-native-markdown-display';
+import { MathView } from '../components/MathView';
 import { COLORS, FONTS } from '../theme/colors';
 import { Topic } from '../types/syllabus';
 import { getTopicNotes } from '../api';
 import { getDoneTopics, saveDoneTopics } from '../db/syllabusProgress';
 import { cleanMarkdown } from '../utils/responsive';
+import * as SylCache from '../db/syllabusCache';
 import { solutionMarkdownStyles, markdownRules } from '../theme/markdownStyles';
 import { ScreenEmpty } from '../components/ScreenState';
 import { AdBanner } from '../components/AdBanner';
@@ -108,7 +110,11 @@ export const TopicNotesScreen = () => {
       })
       .catch((e: any) => {
         if (cancelled) return;
-        setError(e?.message || 'Could not load notes.');
+        const msg = e?.message || 'Could not load notes.';
+        if (msg.includes('not found') && subjectId) {
+          void SylCache.remove(SylCache.subjectKey(subjectId));
+        }
+        setError(msg);
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -216,9 +222,7 @@ export const TopicNotesScreen = () => {
       >
         {loading ? null : notes ? (
           <View style={styles.notesBody}>
-            <Markdown style={solutionMarkdownStyles} rules={markdownRules}>
-              {cleanMarkdown(notes)}
-            </Markdown>
+            <MathView content={notes} fontSize={16} />
           </View>
         ) : (
           <View style={styles.empty}>

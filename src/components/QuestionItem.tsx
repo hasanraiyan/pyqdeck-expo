@@ -15,6 +15,7 @@ import * as WebBrowser from 'expo-web-browser';
 import { Feather } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import Markdown from 'react-native-markdown-display';
+import { MathView } from './MathView';
 import { QuestionSummary, Solution } from '../types';
 import { getSolution, voteSolution, reportSolution } from '../api';
 import { useRequireAuth } from '../auth/useRequireAuth';
@@ -285,9 +286,11 @@ export const QuestionItem: React.FC<QuestionItemProps> = React.memo(({
           ) : null}
 
           <View style={styles.markdownWrapper}>
-            <Markdown style={questionMarkdownStyles} rules={markdownRules}>
-              {cleanMarkdown(question.text)}
-            </Markdown>
+            <MathView
+              content={question.text}
+              html={(question as any).textHtml}
+              fontSize={15}
+            />
           </View>
 
           {showOpenButton && (
@@ -360,9 +363,11 @@ export const QuestionItem: React.FC<QuestionItemProps> = React.memo(({
             <View style={styles.solutionSection}>
               <Text style={styles.solutionTitle}>WORKED SOLUTION</Text>
               <View style={styles.solutionBody}>
-                <Markdown style={solutionMarkdownStyles} rules={markdownRules}>
-                  {cleanMarkdown(solution.content)}
-                </Markdown>
+                <MathView
+                  content={solution.content}
+                  html={(solution as any).contentHtml}
+                  fontSize={14}
+                />
                 <View style={styles.voteRow}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
                     <TouchableOpacity style={[styles.voteButton, isVoting && { opacity: 0.6 }]} activeOpacity={0.6} onPress={() => handleVote(1)}>

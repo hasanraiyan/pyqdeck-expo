@@ -20,7 +20,7 @@ import * as WebBrowser from 'expo-web-browser';
 import { COLORS, FONTS } from '../theme/colors';
 import { getSyllabusSubject } from '../api';
 import { SyllabusModule, SyllabusSubject, Topic } from '../types/syllabus';
-import { getDoneTopics, saveDoneTopics } from '../db/syllabusProgress';
+import { getDoneTopics, saveDoneTopics, pruneOrphanedDoneTopics } from '../db/syllabusProgress';
 import { DoneStamp } from '../components/Badge';
 import { ScreenError, ScreenEmpty } from '../components/ScreenState';
 import { WaveLoader } from '../components/WaveLoader';
@@ -91,9 +91,14 @@ export const SubjectSyllabusScreen = () => {
         setError(null);
         const next = await getSyllabusSubject(subjectId, force);
         setSubject(next);
-        // Progress is device-local and read in the same pass so a returning
-        // student sees their ticks immediately.
-        const d = await getDoneTopics(next.id);
+        // Progress is device-local. Prune any orphaned keys from deleted/re-created topics.
+        const validKeys = new Set<string>();
+        for (const m of next.modules || []) {
+          for (const t of m.topics || []) {
+            validKeys.add(topicKey(m.id, t.id));
+          }
+        }
+        const d = await pruneOrphanedDoneTopics(next.id, validKeys);
         setDone(d);
         // Keep all modules collapsed by default; user taps to expand.
         setOpen(new Set());
@@ -115,7 +120,13 @@ export const SubjectSyllabusScreen = () => {
   useFocusEffect(
     useCallback(() => {
       if (!subject) return;
-      void getDoneTopics(subject.id).then(setDone);
+      const validKeys = new Set<string>();
+      for (const m of subject.modules || []) {
+        for (const t of m.topics || []) {
+          validKeys.add(topicKey(m.id, t.id));
+        }
+      }
+      void pruneOrphanedDoneTopics(subject.id, validKeys).then(setDone);
     }, [subject])
   );
 

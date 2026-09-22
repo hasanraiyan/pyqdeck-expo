@@ -1,6 +1,6 @@
 {
   "name": "pyqdeck-expo",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "main": "index.ts",
   "dependencies": {
     "@clerk/expo": "^4.6.1",
@@ -26,6 +26,8 @@
     "expo-status-bar": "~57.0.1",
     "expo-store-review": "^57.0.2",
     "expo-web-browser": "~57.0.2",
+    "katex": "^0.18.7",
+    "marked": "^18.0.13",
     "punycode": "^2.3.1",
     "react": "19.2.3",
     "react-dom": "19.2.3",
@@ -40,9 +42,11 @@
     "react-native-svg": "^15.15.4",
     "react-native-view-shot": "5.1.0",
     "react-native-web": "^0.21.2",
+    "react-native-webview": "13.16.1",
     "sp-react-native-in-app-updates": "^2.0.0"
   },
   "devDependencies": {
+    "@types/katex": "^0.16.8",
     "@types/react": "~19.2.2",
     "babel-preset-expo": "^57.0.7",
     "typescript": "~6.0.3"

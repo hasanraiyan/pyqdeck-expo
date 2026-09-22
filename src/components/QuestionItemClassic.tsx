@@ -11,6 +11,7 @@ import * as WebBrowser from 'expo-web-browser';
 import { Feather, FontAwesome } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import Markdown from 'react-native-markdown-display';
+import { MathView } from './MathView';
 import { QuestionSummary } from '../types';
 import { AskAiBadge, YearBadge, MarksBadge, QNumBadge } from './Badge';
 import { cleanMarkdown } from '../utils/responsive';
@@ -151,9 +152,11 @@ export const QuestionItemClassic: React.FC<QuestionItemClassicProps> = React.mem
         style={styles.bodyPressable}
       >
         <View pointerEvents="none">
-          <Markdown style={questionMarkdownStyles} rules={markdownRules}>
-            {cleanMarkdown(question.text)}
-          </Markdown>
+          <MathView
+            content={question.text}
+            html={(question as any).textHtml}
+            fontSize={15}
+          />
         </View>
       </TouchableOpacity>
 

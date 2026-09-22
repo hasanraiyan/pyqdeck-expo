@@ -31,6 +31,35 @@ export async function saveDoneTopics(subjectId: string, done: Set<string>): Prom
 }
 
 /**
+ * Prunes any done keys that don't match active module/topic keys for a subject,
+ * preventing orphaned records from accumulating when a syllabus is updated or recreated.
+ */
+export async function pruneOrphanedDoneTopics(
+  subjectId: string,
+  validTopicKeys: Set<string>
+): Promise<Set<string>> {
+  try {
+    const current = await getDoneTopics(subjectId);
+    let changed = false;
+    const pruned = new Set<string>();
+    current.forEach((key) => {
+      if (validTopicKeys.has(key)) {
+        pruned.add(key);
+      } else {
+        changed = true;
+      }
+    });
+    if (changed) {
+      await saveDoneTopics(subjectId, pruned);
+    }
+    return pruned;
+  } catch {
+    return new Set();
+  }
+}
+
+
+/**
  * Counts for a list of subjects in one pass - the overview screen needs every
  * subject's progress at once, and multiGet is a single bridge crossing rather
  * than one per subject.

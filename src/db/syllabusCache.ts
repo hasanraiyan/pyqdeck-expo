@@ -46,6 +46,13 @@ export async function write<T>(key: string, value: T): Promise<void> {
   }
 }
 
+export async function remove(key: string): Promise<void> {
+  try {
+    await AsyncStorage.removeItem(valueKey(key));
+    await AsyncStorage.removeItem(metaKey(key));
+  } catch {}
+}
+
 // Key builders, kept here so a screen and the cache can never disagree on
 // what a given request is called.
 export const branchesKey = () => 'branches';

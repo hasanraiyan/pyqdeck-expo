@@ -17,6 +17,7 @@ import * as Haptics from 'expo-haptics';
 import * as WebBrowser from 'expo-web-browser';
 import { Feather, FontAwesome } from '@expo/vector-icons';
 import Markdown from 'react-native-markdown-display';
+import { MathView } from '../components/MathView';
 import {
   getQuestion,
   getQuestions,
@@ -483,9 +484,11 @@ export const QuestionDetailScreen = () => {
               </View>
             )}
 
-            <Markdown style={questionMarkdownStyles} rules={markdownRules}>
-              {cleanMarkdown(question.text)}
-            </Markdown>
+            <MathView
+              content={question.text}
+              html={(question as any).textHtml}
+              fontSize={16}
+            />
 
             {/* Alert: Repeated in previous years (with clickable years) */}
             {repeats && repeats.length > 0 && (
@@ -598,9 +601,11 @@ export const QuestionDetailScreen = () => {
               <Text style={styles.solutionTitle}>WORKED SOLUTION</Text>
               {solution ? (
                 <View style={styles.solutionBody}>
-                  <Markdown style={solutionMarkdownStyles} rules={markdownRules}>
-                    {cleanMarkdown(solution.content)}
-                  </Markdown>
+                  <MathView
+                    content={solution.content}
+                    html={(solution as any).contentHtml}
+                    fontSize={15}
+                  />
                   <View style={styles.voteRow}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
                       <TouchableOpacity
