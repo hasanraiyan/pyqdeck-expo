@@ -65,6 +65,27 @@ export const HomeScreen = () => {
   const [recentStudies, setRecentStudies] = useState<RecentStudy[]>([]);
   const [recentNotes, setRecentNotes] = useState<RecentNote[]>([]);
 
+  // TopicNotes is registered in the Syllabus tab's stack, not this one, so a
+  // plain navigate('TopicNotes') from here is dropped by the tab navigator.
+  // Target the tab and nest the screen, as notifications.ts does for Browse.
+  const openNote = useCallback(
+    (note: RecentNote) => {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      navigation.navigate('Syllabus', {
+        screen: 'TopicNotes',
+        params: {
+          topic: { id: note.topicId, title: note.topicTitle },
+          moduleId: note.moduleId,
+          moduleName: note.moduleName,
+          subjectId: note.subjectId,
+          subjectName: note.subjectName,
+          semesterId: note.semesterId,
+        },
+      });
+    },
+    [navigation]
+  );
+
   useFocusEffect(
     useCallback(() => {
       let isCurrent = true;
@@ -310,27 +331,12 @@ export const HomeScreen = () => {
                   <TouchableOpacity
                     style={[styles.recentCard, styles.recentCardFull]}
                     activeOpacity={0.7}
-                    onPress={() => {
-                      const item = recentItems[0].data as RecentNote;
-                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                      navigation.navigate('TopicNotes', {
-                        topic: { id: item.topicId, title: item.topicTitle },
-                        moduleId: item.moduleId,
-                        moduleName: item.moduleName,
-                        subjectId: item.subjectId,
-                        subjectName: item.subjectName,
-                        semesterId: item.semesterId,
-                      });
-                    }}
+                    onPress={() => openNote(recentItems[0].data as RecentNote)}
                   >
                     <View style={styles.recentTopRow}>
                       <Text style={styles.recentCode} numberOfLines={1}>
                         {recentItems[0].data.subjectName}
                       </Text>
-                      <View style={styles.recentNotesPill}>
-                        <Feather name="book-open" size={9.5} color="#0f766e" style={{ marginRight: 3 }} />
-                        <Text style={styles.recentNotesPillText}>NOTES</Text>
-                      </View>
                     </View>
                     <Text style={[styles.recentSubjectName, styles.recentSubjectNameFull]} numberOfLines={1}>
                       {(recentItems[0].data as RecentNote).topicTitle}
@@ -414,26 +420,12 @@ export const HomeScreen = () => {
                         key={`note-${note.topicId}`}
                         style={styles.recentCard}
                         activeOpacity={0.7}
-                        onPress={() => {
-                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                          navigation.navigate('TopicNotes', {
-                            topic: { id: note.topicId, title: note.topicTitle },
-                            moduleId: note.moduleId,
-                            moduleName: note.moduleName,
-                            subjectId: note.subjectId,
-                            subjectName: note.subjectName,
-                            semesterId: note.semesterId,
-                          });
-                        }}
+                        onPress={() => openNote(note)}
                       >
                         <View style={styles.recentTopRow}>
                           <Text style={styles.recentCode} numberOfLines={1}>
                             {note.subjectName}
                           </Text>
-                          <View style={styles.recentNotesPill}>
-                            <Feather name="book-open" size={9.5} color="#0f766e" style={{ marginRight: 3 }} />
-                            <Text style={styles.recentNotesPillText}>NOTES</Text>
-                          </View>
                         </View>
                         <Text style={styles.recentSubjectName} numberOfLines={1}>
                           {note.topicTitle}
@@ -771,23 +763,6 @@ const styles = StyleSheet.create({
     fontSize: rf(8.5),
     fontWeight: '700',
     color: COLORS.primary,
-  },
-  recentNotesPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#ecfdf5',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-    borderWidth: 1,
-    borderColor: '#a7f3d0',
-  },
-  recentNotesPillText: {
-    fontFamily: FONTS.mono,
-    fontSize: rf(8.5),
-    fontWeight: '700',
-    color: '#0f766e',
-    letterSpacing: 0.4,
   },
   recentSubjectName: {
     fontFamily: FONTS.serif,
