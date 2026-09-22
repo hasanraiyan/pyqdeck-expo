@@ -135,133 +135,158 @@ const SUBSCRIPTS: Record<string, string> = {
   'v': 'ᵥ', 'x': 'ₓ',
 };
 
+const LATEX_SYMBOL_MAP: Record<string, string> = {
+  // Calculus & operators
+  iint: '∬',
+  iiint: '∭',
+  oint: '∮',
+  int: '∫',
+  sum: '∑',
+  prod: '∏',
+  coprod: '∐',
+  partial: '∂',
+  nabla: '∇',
+  lim: 'lim',
+  prime: '′',
+  infty: '∞',
+
+  // Blackboard sets
+  'mathbb{R}': 'ℝ',
+  'mathbb{C}': 'ℂ',
+  'mathbb{N}': 'ℕ',
+  'mathbb{Z}': 'ℤ',
+  'mathbb{Q}': 'ℚ',
+
+  // Logic & relations
+  forall: '∀',
+  exists: '∃',
+  neg: '¬',
+  land: '∧',
+  lor: '∨',
+  emptyset: '∅',
+  notin: '∉',
+  subseteq: '⊆',
+  supseteq: '⊇',
+  subset: '⊂',
+  supset: '⊃',
+  equiv: '≡',
+  approx: '≈',
+  sim: '∼',
+  propto: '∝',
+  neq: '≠',
+  leq: '≤',
+  geq: '≥',
+  le: '≤',
+  ge: '≥',
+  times: '×',
+  div: '÷',
+  pm: '±',
+  mp: '∓',
+  cdot: '·',
+  circ: '∘',
+  bullet: '•',
+  in: '∈',
+  cup: '∪',
+  cap: '∩',
+  perp: '⊥',
+  parallel: '∥',
+
+  // Arrows
+  iff: '⇔',
+  implies: '⇒',
+  leftrightarrow: '↔',
+  Leftrightarrow: '⇔',
+  rightarrow: '→',
+  leftarrow: '←',
+  Rightarrow: '⇒',
+  Leftarrow: '⇐',
+  to: '→',
+
+  // Greek uppercase
+  Gamma: 'Γ',
+  Delta: 'Δ',
+  Theta: 'Θ',
+  Lambda: 'Λ',
+  Xi: 'Ξ',
+  Pi: 'Π',
+  Sigma: 'Σ',
+  Upsilon: 'Υ',
+  Phi: 'Φ',
+  Psi: 'Ψ',
+  Omega: 'Ω',
+
+  // Greek lowercase
+  alpha: 'α',
+  beta: 'β',
+  gamma: 'γ',
+  delta: 'δ',
+  epsilon: 'ε',
+  varepsilon: 'ε',
+  zeta: 'ζ',
+  eta: 'η',
+  theta: 'θ',
+  iota: 'ι',
+  kappa: 'κ',
+  lambda: 'λ',
+  mu: 'μ',
+  nu: 'ν',
+  xi: 'ξ',
+  pi: 'π',
+  rho: 'ρ',
+  sigma: 'σ',
+  tau: 'τ',
+  upsilon: 'υ',
+  phi: 'φ',
+  chi: 'χ',
+  psi: 'ψ',
+  omega: 'ω',
+
+  // Dots
+  cdots: '…',
+  ldots: '…',
+  vdots: '…',
+  ddots: '…',
+  dots: '…',
+
+  // Layout and formatting commands to strip
+  displaystyle: '',
+  textstyle: '',
+  limits: '',
+  nolimits: '',
+  quad: ' ',
+  qquad: ' ',
+};
+
+const LATEX_TOKEN_REGEX = /\\(mathbb\{[RCNZQ]\})|\\([a-zA-Z]+)|\\([,;!])/g;
+const MATRIX_ENV_REGEX = /\\begin\{(?:matrix|pmatrix|bmatrix|vmatrix|Vmatrix)\}([\s\S]*?)\\end\{(?:matrix|pmatrix|bmatrix|vmatrix|Vmatrix)\}/gi;
+const FRAC_REGEX = /\\frac\{([^}]+)\}\{([^}]+)\}/gi;
+const SQRT_REGEX = /\\sqrt(?:\[(\d+)\])?\{([^}]+)\}|\\sqrt/gi;
+const TEXT_WRAP_REGEX = /\\(?:text|mathrm|mathbf|mathit|operatorname)\{([^}]+)\}/gi;
+const DELIM_REGEX = /\\(?:left|right)[.()[\]|{}]?/gi;
+
 export const formatLatexSymbols = (expr: string): string => {
   return expr
-    // Matrices and tabular environments
-    .replace(/\\begin\{(pmatrix|matrix)\}([\s\S]*?)\\end\{\1\}/gi, (_, __, inner) => {
-      const rows = inner.trim().split(/\\\\/).map((r: string) => r.trim().split('&').map((c: string) => c.trim()).join(', '));
-      return `(${rows.join('; ')})`;
-    })
-    .replace(/\\begin\{bmatrix\}([\s\S]*?)\\end\{bmatrix\}/gi, (_, inner) => {
-      const rows = inner.trim().split(/\\\\/).map((r: string) => r.trim().split('&').map((c: string) => c.trim()).join(', '));
+    // 1. Matrices and tabular environments
+    .replace(MATRIX_ENV_REGEX, (_, inner) => {
+      const rows = inner.trim().split(/\\\\/).map((r: string) =>
+        r.trim().split('&').map((c: string) => c.trim()).join(', ')
+      );
       return `[${rows.join('; ')}]`;
     })
-    .replace(/\\begin\{vmatrix\}([\s\S]*?)\\end\{vmatrix\}/gi, (_, inner) => {
-      const rows = inner.trim().split(/\\\\/).map((r: string) => r.trim().split('&').map((c: string) => c.trim()).join(', '));
-      return `|${rows.join('; ')}|`;
-    })
-    // Calculus & operators
-    .replace(/\\iint/gi, '∬')
-    .replace(/\\iiint/gi, '∭')
-    .replace(/\\oint/gi, '∮')
-    .replace(/\\int/gi, '∫')
-    .replace(/\\sum/gi, '∑')
-    .replace(/\\prod/gi, '∏')
-    .replace(/\\coprod/gi, '∐')
-    .replace(/\\partial/gi, '∂')
-    .replace(/\\nabla/gi, '∇')
-    .replace(/\\lim/gi, 'lim')
-    .replace(/\\prime/gi, '′')
-    // Blackboard sets
-    .replace(/\\mathbb\{R\}/gi, 'ℝ')
-    .replace(/\\mathbb\{C\}/gi, 'ℂ')
-    .replace(/\\mathbb\{N\}/gi, 'ℕ')
-    .replace(/\\mathbb\{Z\}/gi, 'ℤ')
-    .replace(/\\mathbb\{Q\}/gi, 'ℚ')
-    // Logic & relations
-    .replace(/\\forall/gi, '∀')
-    .replace(/\\exists/gi, '∃')
-    .replace(/\\neg/gi, '¬')
-    .replace(/\\land/gi, '∧')
-    .replace(/\\lor/gi, '∨')
-    .replace(/\\emptyset/gi, '∅')
-    .replace(/\\notin/gi, '∉')
-    .replace(/\\subseteq/gi, '⊆')
-    .replace(/\\supseteq/gi, '⊇')
-    .replace(/\\subset/gi, '⊂')
-    .replace(/\\supset/gi, '⊃')
-    .replace(/\\equiv/gi, '≡')
-    .replace(/\\approx/gi, '≈')
-    .replace(/\\sim/gi, '∼')
-    .replace(/\\propto/gi, '∝')
-    .replace(/\\neq/gi, '≠')
-    .replace(/\\leq/gi, '≤')
-    .replace(/\\geq/gi, '≥')
-    .replace(/\\le(?![a-zA-Z])/gi, '≤')
-    .replace(/\\ge(?![a-zA-Z])/gi, '≥')
-    .replace(/\\times/gi, '×')
-    .replace(/\\div/gi, '÷')
-    .replace(/\\pm/gi, '±')
-    .replace(/\\mp/gi, '∓')
-    .replace(/\\cdot/gi, '·')
-    .replace(/\\circ/gi, '∘')
-    .replace(/\\bullet/gi, '•')
-    .replace(/\\in(?![a-zA-Z])/gi, '∈')
-    .replace(/\\cup/gi, '∪')
-    .replace(/\\cap/gi, '∩')
-    .replace(/\\perp/gi, '⊥')
-    .replace(/\\parallel/gi, '∥')
-    // Arrows
-    .replace(/\\iff/gi, '⇔')
-    .replace(/\\implies/gi, '⇒')
-    .replace(/\\leftrightarrow/gi, '↔')
-    .replace(/\\Leftrightarrow/gi, '⇔')
-    .replace(/\\rightarrow/gi, '→')
-    .replace(/\\leftarrow/gi, '←')
-    .replace(/\\Rightarrow/gi, '⇒')
-    .replace(/\\Leftarrow/gi, '⇐')
-    .replace(/\\to(?![a-zA-Z])/gi, '→')
-    // Greek uppercase
-    .replace(/\\Gamma/g, 'Γ')
-    .replace(/\\Delta/g, 'Δ')
-    .replace(/\\Theta/g, 'Θ')
-    .replace(/\\Lambda/g, 'Λ')
-    .replace(/\\Xi/g, 'Ξ')
-    .replace(/\\Pi/g, 'Π')
-    .replace(/\\Sigma/g, 'Σ')
-    .replace(/\\Upsilon/g, 'Υ')
-    .replace(/\\Phi/g, 'Φ')
-    .replace(/\\Psi/g, 'Ψ')
-    .replace(/\\Omega/g, 'Ω')
-    // Greek lowercase
-    .replace(/\\alpha/gi, 'α')
-    .replace(/\\beta/gi, 'β')
-    .replace(/\\gamma/gi, 'γ')
-    .replace(/\\delta/gi, 'δ')
-    .replace(/\\epsilon|\\varepsilon/gi, 'ε')
-    .replace(/\\zeta/gi, 'ζ')
-    .replace(/\\eta/gi, 'η')
-    .replace(/\\theta/g, 'θ')
-    .replace(/\\iota/gi, 'ι')
-    .replace(/\\kappa/gi, 'κ')
-    .replace(/\\lambda/g, 'λ')
-    .replace(/\\mu/gi, 'μ')
-    .replace(/\\nu/gi, 'ν')
-    .replace(/\\xi/g, 'ξ')
-    .replace(/\\pi/g, 'π')
-    .replace(/\\rho/gi, 'ρ')
-    .replace(/\\sigma/g, 'σ')
-    .replace(/\\tau/gi, 'τ')
-    .replace(/\\upsilon/g, 'υ')
-    .replace(/\\phi/g, 'φ')
-    .replace(/\\chi/gi, 'χ')
-    .replace(/\\psi/g, 'ψ')
-    .replace(/\\omega/g, 'ω')
-    .replace(/\\infty/gi, '∞')
-    // Dots
-    .replace(/\\(c|l|v|d)?dots/gi, '…')
-    // Layout and sizing commands
-    .replace(/\\(displaystyle|textstyle|limits|nolimits)/gi, '')
-    .replace(/\\(left|right)[.()[\]|{}]?/gi, (m) => m.replace(/\\(left|right)/i, ''))
-    .replace(/\\(quad|qquad)/gi, ' ')
-    .replace(/\\,/gi, ' ')
-    // Roots and fractions
-    .replace(/\\sqrt\[(\d+)\]\{([^}]+)\}/gi, '$1√($2)')
-    .replace(/\\sqrt\{([^}]+)\}/gi, '√($1)')
-    .replace(/\\sqrt/gi, '√')
-    .replace(/\\frac\{([^}]+)\}\{([^}]+)\}/gi, '($1 / $2)')
-    // Text blocks \text{...} -> ...
-    .replace(/\\(text|mathrm|mathbf|mathit|operatorname)\{([^}]+)\}/gi, '$2');
+    // 2. Fractions and roots
+    .replace(FRAC_REGEX, '($1 / $2)')
+    .replace(SQRT_REGEX, (_, n, inner) => (inner ? (n ? `${n}√(${inner})` : `√(${inner})`) : '√'))
+    // 3. Text blocks \text{...} -> ...
+    .replace(TEXT_WRAP_REGEX, '$1')
+    // 4. Delimiters \left( \right) -> ( )
+    .replace(DELIM_REGEX, (m) => m.replace(/\\(?:left|right)/i, ''))
+    // 5. High-performance single-pass dictionary lookup for symbols, Greek, arrows, logic
+    .replace(LATEX_TOKEN_REGEX, (match, bb, cmd, punc) => {
+      if (bb) return LATEX_SYMBOL_MAP[bb] ?? match;
+      if (cmd) return LATEX_SYMBOL_MAP[cmd] ?? match;
+      if (punc) return ' ';
+      return match;
+    });
 };
 
 export const formatMathExpression = (expr: string): string => {
