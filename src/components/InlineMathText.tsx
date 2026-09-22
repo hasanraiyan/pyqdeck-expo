@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { Text, TextStyle, StyleProp } from 'react-native';
 import { COLORS, FONTS } from '../theme/colors';
-import { formatMathExpression } from '../utils/responsive';
+import { latexToUnicode } from '../utils/latexToText';
 
 /**
  * Delimiters for inline math and environments:
@@ -35,7 +35,7 @@ const normalizeMath = (raw: string): string => {
     .replace(/\\\]$/, '')
     .replace(/^\\\(/, '')
     .replace(/\\\)$/, '');
-  return formatMathExpression(expr.trim());
+  return latexToUnicode(expr.trim());
 };
 
 /**
