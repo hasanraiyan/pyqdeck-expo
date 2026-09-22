@@ -69,7 +69,7 @@
           "android": {
             "enableMinifyInReleaseBuilds": true,
             "enableShrinkResourcesInReleaseBuilds": true,
-            "extraProguardRules": "-dontwarn kotlin.MustUseReturnValues\n-dontwarn kotlin.**ReturnValue**\n# Clerk: keep full SDK under R8 until clerk-android#941 is confirmed fixed for auth-only apps\n-keep class com.clerk.api.** { *; }\n-keep class com.clerk.ui.** { *; }"
+            "extraProguardRules": "-dontwarn kotlin.MustUseReturnValues\n-dontwarn kotlin.**ReturnValue**\n# Clerk: keep full SDK under R8 until clerk-android#941 is confirmed fixed for auth-only apps\n-keep class com.clerk.api.** { *; }\n-keep class com.clerk.ui.** { *; }\n# react-native-device-info reads InstallReferrerClient.newBuilder reflectively (its documented rule)\n-keep class com.android.installreferrer.api.** { *; }"
           }
         }
       ],
