@@ -11,7 +11,7 @@ import { RegisterHTMLHandler } from 'mathjax-full/js/handlers/html.js';
 
 // Import only essential math packages to minimize JS bundle size (avoids heavy chemistry/physics/buss trees)
 import 'mathjax-full/js/input/tex/ams/AmsConfiguration.js';
-import 'mathjax-full/js/input/tex/amscd/AmscdConfiguration.js';
+import 'mathjax-full/js/input/tex/amscd/AmsCdConfiguration.js';
 import 'mathjax-full/js/input/tex/newcommand/NewcommandConfiguration.js';
 import 'mathjax-full/js/input/tex/mathtools/MathtoolsConfiguration.js';
 import 'mathjax-full/js/input/tex/boldsymbol/BoldsymbolConfiguration.js';
