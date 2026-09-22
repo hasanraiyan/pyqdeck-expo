@@ -252,16 +252,14 @@ export const TopicNotesScreen = () => {
 
   return (
     <View style={styles.container}>
-      {/* Wave Loader positioned just below the navigation header */}
-      {loading && (
-        <View style={styles.topLoaderBar}>
-          <WaveLoader color={COLORS.primary} />
-        </View>
-      )}
-
       <ScrollView
         ref={scrollRef}
-        contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 32 }]}
+        contentContainerStyle={[
+          styles.scroll,
+          { paddingBottom: insets.bottom + 32 },
+          // Centre the loader in the empty content area, as QuestionDetail does.
+          loading && styles.scrollLoading,
+        ]}
         onScroll={handleScroll}
         scrollEventThrottle={16}
         onContentSizeChange={(_w, h) => {
@@ -271,7 +269,9 @@ export const TopicNotesScreen = () => {
           layoutHeightRef.current = e.nativeEvent.layout.height;
         }}
       >
-        {loading ? null : notes ? (
+        {loading ? (
+          <WaveLoader color={COLORS.primary} dotSize={6} />
+        ) : notes ? (
           <View style={styles.notesBody}>
             <NativeContentRenderer content={notes} fontSize={16} />
           </View>
@@ -317,16 +317,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   scroll: { padding: 16 },
+  scrollLoading: { flexGrow: 1, alignItems: 'center', justifyContent: 'center' },
   notesBody: { paddingBottom: 8 },
   navSection: { marginTop: 18 },
-  topLoaderBar: {
-    paddingVertical: 2,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderColor: COLORS.borderLight,
-    backgroundColor: COLORS.background,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   empty: {
     alignItems: 'center',
     justifyContent: 'center',
