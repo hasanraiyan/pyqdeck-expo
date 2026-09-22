@@ -68,11 +68,15 @@ export const HomeScreen = () => {
   // TopicNotes is registered in the Syllabus tab's stack, not this one, so a
   // plain navigate('TopicNotes') from here is dropped by the tab navigator.
   // Target the tab and nest the screen, as notifications.ts does for Browse.
+  // initial: false keeps SyllabusRoot under TopicNotes when the Syllabus tab
+  // has not been mounted yet; without it TopicNotes becomes that stack's
+  // root and the header loses its back button.
   const openNote = useCallback(
     (note: RecentNote) => {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       navigation.navigate('Syllabus', {
         screen: 'TopicNotes',
+        initial: false,
         params: {
           topic: { id: note.topicId, title: note.topicTitle },
           moduleId: note.moduleId,
