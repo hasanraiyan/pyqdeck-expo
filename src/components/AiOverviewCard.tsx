@@ -267,7 +267,6 @@ export const AiOverviewCard: React.FC<Props> = ({ overview, loading, onPressRefe
           <Text style={styles.sourcesBtnText}>
             Sources · {overview.references.length}
           </Text>
-          <Feather name="chevron-up" size={14} color={COLORS.textSubtle} style={{ marginLeft: 'auto' }} />
         </TouchableOpacity>
       )}
 
@@ -411,19 +410,21 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: COLORS.primary,
   },
-  // Single entry point to every source behind the answer - full-width row
-  // under the toggle; tapping slides the sources sheet up from the bottom.
+  // Single entry point to every source behind the answer - a left-aligned
+  // pill (icon + text, white with a border) under the toggle; tapping slides
+  // the sources sheet up from the bottom.
   sourcesBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    alignSelf: 'flex-start',
+    gap: 6,
     marginTop: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 11,
-    borderRadius: 6,
+    paddingHorizontal: 13,
+    paddingVertical: 7,
+    borderRadius: 20,
     borderWidth: 1,
     borderColor: COLORS.border,
-    backgroundColor: COLORS.cardSecondary,
+    backgroundColor: COLORS.card,
   },
   sourcesBtnText: {
     fontFamily: FONTS.mono,
