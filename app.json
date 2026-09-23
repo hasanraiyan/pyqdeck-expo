@@ -33,6 +33,46 @@
             {
               "scheme": "https",
               "host": "pyqdeck.in",
+              "pathPattern": "/syllabus"
+            },
+            {
+              "scheme": "https",
+              "host": "www.pyqdeck.in",
+              "pathPattern": "/syllabus"
+            },
+            {
+              "scheme": "https",
+              "host": "pyqdeck.in",
+              "pathPattern": "/syllabus/.*"
+            },
+            {
+              "scheme": "https",
+              "host": "www.pyqdeck.in",
+              "pathPattern": "/syllabus/.*"
+            },
+            {
+              "scheme": "https",
+              "host": "pyqdeck.in",
+              "pathPattern": "/search"
+            },
+            {
+              "scheme": "https",
+              "host": "www.pyqdeck.in",
+              "pathPattern": "/search"
+            },
+            {
+              "scheme": "https",
+              "host": "pyqdeck.in",
+              "pathPattern": "/search/.*"
+            },
+            {
+              "scheme": "https",
+              "host": "www.pyqdeck.in",
+              "pathPattern": "/search/.*"
+            },
+            {
+              "scheme": "https",
+              "host": "pyqdeck.in",
               "pathPattern": "/.*/.*/.*/.*"
             },
             {

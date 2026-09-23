@@ -25,11 +25,13 @@ export const SemesterSelectScreen = () => {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
 
+  // `branchId` is the in-app param; `branch` is the web query key from a
+  // shared `pyqdeck.in/syllabus?branch=` deep link (see App.tsx linking).
+  const paramBranch = route.params?.branchId ?? route.params?.branch ?? '';
+
   const [branches, setBranches] = useState<Branch[] | null>(null);
-  const [selectedBranchId, setSelectedBranchId] = useState<string>(
-    route.params?.branchId ?? ''
-  );
-  const [isBranchReady, setIsBranchReady] = useState<boolean>(!!route.params?.branchId);
+  const [selectedBranchId, setSelectedBranchId] = useState<string>(paramBranch);
+  const [isBranchReady, setIsBranchReady] = useState<boolean>(!!paramBranch);
   const [data, setData] = useState<BranchSemesters | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -37,8 +39,8 @@ export const SemesterSelectScreen = () => {
 
   // 1. Restore saved branch from storage on mount (if not in route params)
   useEffect(() => {
-    if (route.params?.branchId) {
-      setSelectedBranchId(route.params.branchId);
+    if (paramBranch) {
+      setSelectedBranchId(paramBranch);
       setIsBranchReady(true);
       return;
     }
@@ -52,7 +54,7 @@ export const SemesterSelectScreen = () => {
     return () => {
       alive = false;
     };
-  }, [route.params?.branchId]);
+  }, [paramBranch]);
 
   // 2. Load all available branches
   const loadBranches = useCallback(async (force = false) => {

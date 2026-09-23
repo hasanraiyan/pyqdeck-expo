@@ -41,7 +41,10 @@ export const SyllabusOverviewScreen = () => {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const branchId: string = route.params?.branchId ?? 'cse';
-  const semesterNumber: number = route.params?.semester ?? 5;
+  // Number() because the value arrives as a string over a deep link even
+  // though in-app callers pass a number (linking parse covers the URL case;
+  // this covers any programmatic string pass-through).
+  const semesterNumber: number = Number(route.params?.semester ?? 5);
 
   const [data, setData] = useState<BranchSemester | null>(null);
   const [error, setError] = useState<string | null>(null);
