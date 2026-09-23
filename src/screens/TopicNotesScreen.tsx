@@ -8,7 +8,7 @@ import * as WebBrowser from 'expo-web-browser';
 import { NativeContentRenderer } from '../components/NativeContentRenderer';
 import { COLORS, FONTS } from '../theme/colors';
 import { Topic } from '../types/syllabus';
-import { getTopicNotes } from '../api';
+import { getTopicNotes, getSyllabusSubject } from '../api';
 import { getDoneTopics, saveDoneTopics } from '../db/syllabusProgress';
 import { cleanMarkdown } from '../utils/responsive';
 import * as SylCache from '../db/syllabusCache';
@@ -77,23 +77,47 @@ export const TopicNotesScreen = () => {
   const [localNotesList, setLocalNotesList] = useState<NotesListEntry[] | undefined>(notesList);
 
   useEffect(() => {
-    if (notesList && notesList.length > 0) {
+    // A one-entry list is not something you can step through, and that is
+    // exactly what a search result hands over, so it has to fall through to
+    // the subject's full list or Prev/Next never appears.
+    if (notesList && notesList.length > 1) {
       setLocalNotesList(notesList);
       return;
     }
     if (!subjectId) return;
-    SylCache.read<any>(SylCache.subjectKey(subjectId)).then((cached) => {
+    let cancelled = false;
+
+    const flatten = (modules: any[]): NotesListEntry[] =>
+      modules.flatMap((m: any) =>
+        (m.topics || [])
+          .filter((t: any) => t.hasNotes)
+          .map((t: any) => ({ id: t.id, title: t.title, moduleId: m.id, moduleName: m.title }))
+      );
+
+    (async () => {
+      const cached = await SylCache.read<any>(SylCache.subjectKey(subjectId)).catch(() => null);
+      if (cancelled) return;
       if (cached && Array.isArray(cached.modules)) {
-        const flattened = cached.modules.flatMap((m: any) =>
-          (m.topics || [])
-            .filter((t: any) => t.hasNotes)
-            .map((t: any) => ({ id: t.id, title: t.title, moduleId: m.id, moduleName: m.title }))
-        );
+        const flattened = flatten(cached.modules);
         if (flattened.length > 0) {
           setLocalNotesList(flattened);
+          return;
         }
       }
-    });
+      // Reached straight from search, a notification or Jump Back In, without
+      // the subject's syllabus ever having been opened - nothing is cached,
+      // so fetch it rather than leaving the reader with no way onward.
+      try {
+        const subject = await getSyllabusSubject(subjectId);
+        if (cancelled) return;
+        const flattened = flatten((subject as any)?.modules ?? []);
+        if (flattened.length > 0) setLocalNotesList(flattened);
+      } catch {}
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [subjectId, notesList]);
 
   // Record if topic notes are already attached
