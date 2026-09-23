@@ -131,16 +131,51 @@ export const SearchScreen = () => {
   };
 
   const openAiReference = (ref: AiOverviewReference) => {
-    // Preferred: open the server's canonical URL straight through the same
-    // linking config that handles incoming deep links, so citation routing
-    // can never drift from real route shapes again. Regex, not new URL():
+    // Preferred: the server's canonical URL, but routed into THIS tab's own
+    // stack - never via linkTo(). linkTo() resolves these paths into the
+    // Syllabus/Browse stacks, and when that stack isn't mounted yet the
+    // target becomes its root: no back button, no way back to results (or
+    // to the Study home). SearchStack registers TopicNotes, QuestionDetail
+    // and QuestionList (see App.tsx), so a plain navigate pushes over the
+    // search results with the header back intact. Regex, not new URL():
     // Hermes has no URL global to rely on.
     const raw = ref.url;
     if (raw) {
       const m = raw.match(/^https:\/\/(www\.)?pyqdeck\.in(\/[^?#]*)?(\?[^#]*)?/);
       if (m) {
+        const path = m[2] || '/';
+        const topic = path.match(/^\/syllabus\/subject\/([^/]+)\/topic\/([^/]+)/);
+        if (topic) {
+          // Bare ids - the resolver on TopicNotesScreen fills in the
+          // title/module, same as a deep link.
+          navigation.navigate('TopicNotes', { subjectId: topic[1], topicId: topic[2] });
+          return;
+        }
+        const parts = path.split('/').filter(Boolean);
+        const year = parts.length >= 3 ? Number(parts[2]) : NaN;
+        if (!Number.isNaN(year)) {
+          if (parts.length === 4) {
+            navigation.navigate('QuestionDetail', {
+              semesterId: parts[0],
+              subjectId: parts[1],
+              year,
+              questionId: parts[3],
+            });
+            return;
+          }
+          if (parts.length === 3 && parts[0] !== 'syllabus') {
+            navigation.navigate('QuestionList', {
+              semesterId: parts[0],
+              subjectId: parts[1],
+              year,
+            });
+            return;
+          }
+        }
+        // Anything else (semester sheets, /search) is owned by other stacks -
+        // those still go through the deep-link config.
         try {
-          linkTo((m[2] || '/') + (m[3] || ''));
+          linkTo(path + (m[3] || ''));
           return;
         } catch {
           // Unmatched path (a route the app does not know yet) - fall
