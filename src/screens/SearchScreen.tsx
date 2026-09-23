@@ -132,6 +132,15 @@ export const SearchScreen = () => {
   const openAiReference = (ref: AiOverviewReference) => {
     const nav = ref.navigate;
     if (!nav) return;
+    if (nav.target === 'topic' && nav.subjectSlug && nav.topicId) {
+      // A cited study note - the resolver on TopicNotesScreen fills in the
+      // title/module from the bare ids, same as a deep link.
+      navigation.navigate('TopicNotes', {
+        subjectId: nav.subjectSlug,
+        topicId: nav.topicId,
+      });
+      return;
+    }
     if (nav.target === 'question') {
       navigation.navigate('QuestionDetail', {
         subjectId: nav.subjectId,
