@@ -5,6 +5,8 @@ import {
   TouchableOpacity,
   StyleSheet,
   Animated,
+  Easing,
+  Linking,
   Platform,
   Modal,
   ScrollView,
@@ -12,7 +14,9 @@ import {
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { COLORS, FONTS } from '../theme/colors';
+import { markdownRules } from '../theme/markdownStyles';
 import { AiOverview, AiOverviewReference } from '../types';
+import { NativeContentRenderer } from './NativeContentRenderer';
 import { rf } from '../utils/responsive';
 
 /**
@@ -27,6 +31,12 @@ import { rf } from '../utils/responsive';
  */
 
 const COLLAPSED_LINES = 6;
+
+// Collapsed height in px, derived from the body's own line height so the clip
+// lands on a line boundary at any font scale. Applies as maxHeight because
+// the body is block-level markdown now, not a single Text numberOfLines can
+// clamp.
+const COLLAPSED_H = rf(22) * COLLAPSED_LINES;
 
 // Characters revealed per tick of the typewriter. One char per frame reads as
 // a stall on an 800-character answer, so several go at once and the tick is
@@ -162,11 +172,7 @@ export const AiOverviewCard: React.FC<Props> = ({ overview, loading, onPressRefe
   // card disappears rather than showing an empty or failed state.
   if (!overview?.enabled || !overview.text) return null;
 
-  const refByIndex = new Map(overview.references.map((r) => [r.index, r]));
-
-  // Walk the segments and cut at the reveal point. A segment's citations are
-  // withheld until its text is fully out, so a chip never precedes the
-  // sentence it belongs to.
+  // Walk the segments and cut at the reveal point.
   const visible: { text: string; refs: number[] }[] = [];
   let budget = revealed;
   for (const seg of segments) {
@@ -180,11 +186,38 @@ export const AiOverviewCard: React.FC<Props> = ({ overview, loading, onPressRefe
     }
   }
 
-  const openSources = (refs: number[]) => {
-    const list = refs.map((n) => refByIndex.get(n)).filter(Boolean) as AiOverviewReference[];
-    if (!list.length) return;
+  // One button for every source behind the answer - the sheet lists them all
+  // and each row jumps to its question, paper or note.
+  const openAllSources = () => {
+    if (!overview.references.length) return;
     Haptics.selectionAsync().catch(() => {});
-    setSheetRefs(list);
+    setSheetRefs(overview.references);
+  };
+
+  // Plain http(s) links inside the summary stay tappable; everything else
+  // renders as normal text.
+  const overviewRules = {
+    ...markdownRules,
+    link: (node: any, children: any) => {
+      const href: string = node.attributes?.href ?? '';
+      if (/^https?:\/\//.test(href)) {
+        return (
+          <Text
+            key={node.key}
+            style={styles.extLink}
+            onPress={() => Linking.openURL(href).catch(() => {})}
+            suppressHighlighting
+          >
+            {children}
+          </Text>
+        );
+      }
+      return (
+        <Text key={node.key} style={styles.extLink}>
+          {children}
+        </Text>
+      );
+    },
   };
 
   return (
@@ -195,31 +228,21 @@ export const AiOverviewCard: React.FC<Props> = ({ overview, loading, onPressRefe
         <Text style={styles.headerNote}>from past papers</Text>
       </View>
 
-      <Text
-        style={styles.body}
-        numberOfLines={expanded ? undefined : COLLAPSED_LINES}
-      >
+      {/* The summary is markdown with LaTeX, so each span renders through
+          the same markdown+math pipeline as notes and solutions rather than
+          as flat text. No inline chips - one Sources button below opens the
+          slide-up sheet with every source. Slicing for the typewriter can
+          briefly cut a markdown token in half; it resolves on the next tick. */}
+      <View style={!expanded ? { maxHeight: COLLAPSED_H, overflow: 'hidden' } : undefined}>
         {visible.map((seg, i) => (
-          <Text key={i}>
-            {seg.text}
-            {seg.refs.length > 0 && (
-              // One chip for the whole span rather than [1][2][3]: a sentence
-              // backed by three papers was three separate marks competing with
-              // the prose. The count goes to a sheet listing just those.
-              //
-              // The separating space sits OUTSIDE the styled run, or the chip's
-              // background would extend into the gap before it.
-              <Text onPress={() => openSources(seg.refs)} suppressHighlighting>
-                {' '}
-                <Text style={styles.citation}>
-                  <Feather name="globe" size={rf(10)} color={COLORS.secondary} />
-                  {seg.refs.length > 1 ? `+${seg.refs.length}` : ''}
-                </Text>
-              </Text>
-            )}
-          </Text>
+          <NativeContentRenderer
+            key={i}
+            content={seg.text}
+            fontSize={rf(14)}
+            rules={overviewRules}
+          />
         ))}
-      </Text>
+      </View>
 
       <TouchableOpacity
         style={styles.toggle}
@@ -233,6 +256,19 @@ export const AiOverviewCard: React.FC<Props> = ({ overview, loading, onPressRefe
         <Text style={styles.toggleText}>{expanded ? 'Show less' : 'Show more'}</Text>
         <Feather name={expanded ? 'chevron-up' : 'chevron-down'} size={14} color={COLORS.primary} />
       </TouchableOpacity>
+
+      {overview.references.length > 0 && (
+        <TouchableOpacity
+          style={styles.sourcesBtn}
+          activeOpacity={0.7}
+          onPress={openAllSources}
+        >
+          <Feather name="book-open" size={13} color={COLORS.secondary} />
+          <Text style={styles.sourcesBtnText}>
+            Sources · {overview.references.length}
+          </Text>
+        </TouchableOpacity>
+      )}
 
       <Modal
         visible={sheetRefs !== null}
@@ -256,7 +292,7 @@ export const AiOverviewCard: React.FC<Props> = ({ overview, loading, onPressRefe
                   key={ref.index}
                   style={styles.sourceRow}
                   activeOpacity={0.7}
-                  disabled={!ref.navigate}
+                  disabled={!ref.navigate && !ref.url}
                   onPress={() => {
                     setSheetRefs(null);
                     Haptics.selectionAsync().catch(() => {});
@@ -264,7 +300,20 @@ export const AiOverviewCard: React.FC<Props> = ({ overview, loading, onPressRefe
                   }}
                 >
                   <View style={styles.sourceIcon}>
-                    <Feather name="globe" size={13} color={COLORS.secondary} />
+                    {/* Icon follows the link pattern the server parsed: notes
+                        get a book, PYQs a paper, anything unrecognised keeps
+                        the globe. */}
+                    <Feather
+                      name={
+                        ref.navigate?.target === 'topic'
+                          ? 'book-open'
+                          : ref.navigate
+                            ? 'file-text'
+                            : 'globe'
+                      }
+                      size={13}
+                      color={COLORS.secondary}
+                    />
                   </View>
                   <View style={styles.sourceBody}>
                     <Text style={styles.sourceTitle} numberOfLines={3}>
@@ -284,10 +333,9 @@ export const AiOverviewCard: React.FC<Props> = ({ overview, loading, onPressRefe
                       </Text>
                     )}
                   </View>
-                  {ref.navigate && (
+                  {(ref.navigate || ref.url) && (
                     <Feather name="chevron-right" size={16} color={COLORS.textSubtle} />
-                  )}
-                </TouchableOpacity>
+                  )}                </TouchableOpacity>
               ))}
             </ScrollView>
 
@@ -354,6 +402,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
     letterSpacing: 0.5,
   },
+  extLink: {
+    color: COLORS.primary,
+    textDecorationLine: 'underline',
+  },
   toggle: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -369,6 +421,28 @@ const styles = StyleSheet.create({
     fontSize: rf(11),
     fontWeight: '700',
     color: COLORS.primary,
+  },
+  // Single entry point to every source behind the answer - a left-aligned
+  // pill (icon + text, white with a border) under the toggle; tapping slides
+  // the sources sheet up from the bottom.
+  sourcesBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: 6,
+    marginTop: 8,
+    paddingHorizontal: 13,
+    paddingVertical: 7,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.card,
+  },
+  sourcesBtnText: {
+    fontFamily: FONTS.mono,
+    fontSize: rf(11),
+    fontWeight: '700',
+    color: COLORS.text,
   },
   bone: {
     height: 12,
