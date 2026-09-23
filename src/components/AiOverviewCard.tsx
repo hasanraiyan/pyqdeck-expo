@@ -172,11 +172,7 @@ export const AiOverviewCard: React.FC<Props> = ({ overview, loading, onPressRefe
   // card disappears rather than showing an empty or failed state.
   if (!overview?.enabled || !overview.text) return null;
 
-  const refByIndex = new Map(overview.references.map((r) => [r.index, r]));
-
-  // Walk the segments and cut at the reveal point. A segment's citations are
-  // withheld until its text is fully out, so a chip never precedes the
-  // sentence it belongs to.
+  // Walk the segments and cut at the reveal point.
   const visible: { text: string; refs: number[] }[] = [];
   let budget = revealed;
   for (const seg of segments) {
@@ -190,34 +186,20 @@ export const AiOverviewCard: React.FC<Props> = ({ overview, loading, onPressRefe
     }
   }
 
-  const openSources = (refs: number[]) => {
-    const list = refs.map((n) => refByIndex.get(n)).filter(Boolean) as AiOverviewReference[];
-    if (!list.length) return;
+  // One button for every source behind the answer - the sheet lists them all
+  // and each row jumps to its question, paper or note.
+  const openAllSources = () => {
+    if (!overview.references.length) return;
     Haptics.selectionAsync().catch(() => {});
-    setSheetRefs(list);
+    setSheetRefs(overview.references);
   };
 
-  // Citation chips ride INSIDE the rendered markdown as links with a private
-  // pyqdeck-refs: scheme, so the count sits inline at the end of its sentence
-  // instead of breaking onto its own row. The suffix is appended when each
-  // cited span's source text is assembled below.
+  // Plain http(s) links inside the summary stay tappable; everything else
+  // renders as normal text.
   const overviewRules = {
     ...markdownRules,
     link: (node: any, children: any) => {
       const href: string = node.attributes?.href ?? '';
-      const m = href.match(/^pyqdeck-refs:([\d,]+)$/);
-      if (m) {
-        const idxs = m[1].split(',').map((n) => Number(n));
-        return (
-          <Text key={node.key} onPress={() => openSources(idxs)} suppressHighlighting>
-            {' '}
-            <Text style={styles.citation}>
-              <Feather name="globe" size={rf(10)} color={COLORS.secondary} />
-              {children}
-            </Text>
-          </Text>
-        );
-      }
       if (/^https?:\/\//.test(href)) {
         return (
           <Text
@@ -246,21 +228,16 @@ export const AiOverviewCard: React.FC<Props> = ({ overview, loading, onPressRefe
         <Text style={styles.headerNote}>from past papers</Text>
       </View>
 
-      {/* The summary is markdown with LaTeX, so each cited span renders
-          through the same markdown+math pipeline as notes and solutions
-          rather than as flat text. The span's source count is suffixed as a
-          pyqdeck-refs: link (see overviewRules above) so it stays inline.
-          Slicing for the typewriter can briefly cut a markdown token in half;
-          it resolves on the next tick. */}
+      {/* The summary is markdown with LaTeX, so each span renders through
+          the same markdown+math pipeline as notes and solutions rather than
+          as flat text. No inline chips - one Sources button below opens the
+          slide-up sheet with every source. Slicing for the typewriter can
+          briefly cut a markdown token in half; it resolves on the next tick. */}
       <View style={!expanded ? { maxHeight: COLLAPSED_H, overflow: 'hidden' } : undefined}>
         {visible.map((seg, i) => (
           <NativeContentRenderer
             key={i}
-            content={
-              seg.refs.length > 0
-                ? `${seg.text} [${seg.refs.length}](pyqdeck-refs:${seg.refs.join(',')})`
-                : seg.text
-            }
+            content={seg.text}
             fontSize={rf(14)}
             rules={overviewRules}
           />
@@ -279,6 +256,20 @@ export const AiOverviewCard: React.FC<Props> = ({ overview, loading, onPressRefe
         <Text style={styles.toggleText}>{expanded ? 'Show less' : 'Show more'}</Text>
         <Feather name={expanded ? 'chevron-up' : 'chevron-down'} size={14} color={COLORS.primary} />
       </TouchableOpacity>
+
+      {overview.references.length > 0 && (
+        <TouchableOpacity
+          style={styles.sourcesBtn}
+          activeOpacity={0.7}
+          onPress={openAllSources}
+        >
+          <Feather name="book-open" size={13} color={COLORS.secondary} />
+          <Text style={styles.sourcesBtnText}>
+            Sources · {overview.references.length}
+          </Text>
+          <Feather name="chevron-up" size={14} color={COLORS.textSubtle} style={{ marginLeft: 'auto' }} />
+        </TouchableOpacity>
+      )}
 
       <Modal
         visible={sheetRefs !== null}
@@ -419,6 +410,26 @@ const styles = StyleSheet.create({
     fontSize: rf(11),
     fontWeight: '700',
     color: COLORS.primary,
+  },
+  // Single entry point to every source behind the answer - full-width row
+  // under the toggle; tapping slides the sources sheet up from the bottom.
+  sourcesBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 11,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.cardSecondary,
+  },
+  sourcesBtnText: {
+    fontFamily: FONTS.mono,
+    fontSize: rf(11),
+    fontWeight: '700',
+    color: COLORS.text,
   },
   bone: {
     height: 12,
