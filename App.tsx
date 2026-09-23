@@ -60,10 +60,18 @@ const Stack = createNativeStackNavigator();
 const RootStack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
-// Mirrors pyqdeck-frontend's /[semester]/[subject]/[year]/[questionId] route
+// Mirrors pyqdeck-frontend's routes (see that repo's app/ directory) so a
+// shared web link opens straight in the app whether it is installed or not:
+//   /:semester/:subject/:year/:questionId          -> question (Browse tab)
+//   /syllabus[?branch=]                            -> branch/semester picker
+//   /syllabus/:branch/sem/:semester                -> semester sheet
+//   /syllabus/subject/:slug                        -> subject modules/topics
+//   /syllabus/subject/:slug/topic/:topicId/:topicSlug?  -> topic study notes
+//   (topic URLs are hybrid, StackOverflow-style: the id resolves, the slug
+//   tail is cosmetic for SEO/sharing and is ignored here)
+//   /search?q=&tab=                                -> search with query + tab
 // (see app.json's Android App Links intentFilters + the site's
-// public/.well-known/assetlinks.json), so a shared question link opens
-// straight to that question whether the app is installed or not.
+// public/.well-known/assetlinks.json).
 const linking: any = {
   prefixes: ['https://pyqdeck.in', 'https://www.pyqdeck.in'],
   config: {
@@ -75,6 +83,22 @@ const linking: any = {
           Browse: {
             screens: {
               QuestionDetail: ':semesterId/:subjectId/:year/:questionId',
+            },
+          },
+          Syllabus: {
+            screens: {
+              SyllabusRoot: 'syllabus',
+              SyllabusOverview: {
+                path: 'syllabus/:branchId/sem/:semester',
+                parse: { semester: (value: string) => Number(value) },
+              },
+              SubjectSyllabus: 'syllabus/subject/:subjectId',
+              TopicNotes: 'syllabus/subject/:subjectId/topic/:topicId/:topicSlug?',
+            },
+          },
+          Search: {
+            screens: {
+              SearchRoot: 'search',
             },
           },
         },

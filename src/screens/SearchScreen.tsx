@@ -8,7 +8,7 @@ import {
   StyleSheet,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import * as Haptics from 'expo-haptics';
 import { Feather } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -37,6 +37,7 @@ type SearchTab = 'all' | 'notes' | 'questions' | 'subjects';
 export const SearchScreen = () => {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<any>();
+  const route = useRoute<any>();
   const { readMaxWidth, hPadding } = useResponsive();
   const [query, setQuery] = useState('');
   const [activeTab, setActiveTab] = useState<SearchTab>('all');
@@ -322,6 +323,38 @@ export const SearchScreen = () => {
     setRecentSearches([]);
     AsyncStorage.removeItem(RECENT_SEARCHES_KEY).catch(() => {});
   };
+
+  // Deep-link entry: a shared `pyqdeck.in/search?q=...&tab=...` URL lands here
+  // with `q`/`tab` params (see the linking config in App.tsx). Run it once per
+  // query value - the same validation + token-bucket path as a typed search.
+  const deepLinkQueryRef = useRef<string | null>(null);
+  useEffect(() => {
+    const initQ = typeof route.params?.q === 'string' ? route.params.q : '';
+    if (!initQ.trim() || initQ === deepLinkQueryRef.current) return;
+    const initTab = route.params?.tab;
+    if (initTab === 'all' || initTab === 'notes' || initTab === 'questions' || initTab === 'subjects') {
+      setActiveTab(initTab);
+    }
+    const norm = normalizeQuery(initQ);
+    if (!norm.ok) {
+      setValidationError(norm.error);
+      return;
+    }
+    const bucket = consumeSearchToken();
+    if (!bucket.allowed) {
+      startCooldown(bucket.retryAfterSec);
+      setValidationError(`Slow down — try again in ${bucket.retryAfterSec}s`);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
+      return;
+    }
+    deepLinkQueryRef.current = initQ;
+    setQuery(norm.query);
+    saveRecentSearch(norm.query);
+    void runSearch(norm.query);
+    // runSearch is intentionally read from the first render's closure: a deep
+    // link always starts from a pristine (no results, not loading) state.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [route.params?.q]);
 
   const activeSuggestions = dynamicSuggestions.length > 0 ? dynamicSuggestions : [
     'Operating System',

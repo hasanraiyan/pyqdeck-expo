@@ -60,7 +60,11 @@ export const TopicNotesScreen = () => {
   const navigation = useNavigation<any>();
   const { topic, subjectId, moduleId, moduleName, notesList, subjectName, semesterId } =
     (route.params ?? {}) as {
-      topic: Topic;
+      topic?: Topic;
+      // Deep-link entry (`syllabus/subject/:subjectId/topic/:topicId`, see the
+      // linking config in App.tsx) carries ids only, no topic object - the
+      // resolver effect below fills the rest in via setParams.
+      topicId?: string;
       subjectId?: string;
       moduleId?: string;
       moduleName?: string;
@@ -68,7 +72,56 @@ export const TopicNotesScreen = () => {
       semesterId?: string;
       notesList?: NotesListEntry[];
     };
+  const paramTopicId = !topic && typeof (route.params as any)?.topicId === 'string'
+    ? (route.params as any).topicId as string
+    : undefined;
+  const [resolvingTopic, setResolvingTopic] = useState(Boolean(paramTopicId));
+  const [topicNotFound, setTopicNotFound] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
+
+  // Resolves a bare deep-link topic id into the full params every other entry
+  // point provides, via setParams so the whole screen below keeps reading
+  // route.params untouched. Prefers the cached subject payload (already there
+  // when arriving from SubjectSyllabusScreen) and falls back to a fetch.
+  useEffect(() => {
+    if (topic) {
+      setResolvingTopic(false);
+      return;
+    }
+    if (!subjectId || !paramTopicId) return;
+    let cancelled = false;
+    setResolvingTopic(true);
+    setTopicNotFound(false);
+    (async () => {
+      try {
+        let modules: any[] | undefined =
+          (await SylCache.read<any>(SylCache.subjectKey(subjectId)).catch(() => null))?.modules;
+        if (!Array.isArray(modules)) {
+          modules = (await getSyllabusSubject(subjectId))?.modules ?? [];
+        }
+        if (cancelled) return;
+        for (const m of modules) {
+          const t = (m.topics || []).find((x: any) => x.id === paramTopicId);
+          if (t) {
+            navigation.setParams({
+              topic: { id: t.id, title: t.title, hasNotes: t.hasNotes },
+              moduleId: m.id,
+              moduleName: m.title,
+            });
+            return;
+          }
+        }
+        setTopicNotFound(true);
+      } catch {
+        if (!cancelled) setTopicNotFound(true);
+      } finally {
+        if (!cancelled) setResolvingTopic(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [navigation, subjectId, paramTopicId, topic]);
 
   const [notes, setNotes] = useState<string | undefined>(topic?.notes);
   const [loading, setLoading] = useState(Boolean(subjectId && topic?.id));
@@ -283,6 +336,9 @@ export const TopicNotesScreen = () => {
     scrollRef.current?.scrollTo({ y: 0, animated: false });
     navigation.setParams({
       topic: { id: entry.id, title: entry.title },
+      // Kept in sync so a stale deep-link topicId never shadows the topic
+      // object on the next render.
+      topicId: entry.id,
       moduleId: entry.moduleId,
       moduleName: entry.moduleName,
     });
@@ -291,7 +347,11 @@ export const TopicNotesScreen = () => {
   if (!topic) {
     return (
       <View style={styles.centerContainer}>
-        <ScreenEmpty message="No topic selected." />
+        {topicNotFound ? (
+          <ScreenEmpty message="Topic not found." />
+        ) : (
+          <CircleLoader color={COLORS.primary} dotSize={6} size={40} />
+        )}
       </View>
     );
   }
