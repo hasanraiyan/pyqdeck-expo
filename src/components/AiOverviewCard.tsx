@@ -233,29 +233,46 @@ export const AiOverviewCard: React.FC<Props> = ({ overview, loading, onPressRefe
           as flat text. No inline chips - one Sources button below opens the
           slide-up sheet with every source. Slicing for the typewriter can
           briefly cut a markdown token in half; it resolves on the next tick. */}
-      <View style={!expanded ? { maxHeight: COLLAPSED_H, overflow: 'hidden' } : undefined}>
-        {visible.map((seg, i) => (
-          <NativeContentRenderer
-            key={i}
-            content={seg.text}
-            fontSize={rf(14)}
-            rules={overviewRules}
-          />
-        ))}
+      <View>
+        <View style={!expanded ? { maxHeight: COLLAPSED_H, overflow: 'hidden' } : undefined}>
+          {visible.map((seg, i) => (
+            <NativeContentRenderer
+              key={i}
+              content={seg.text}
+              fontSize={rf(14)}
+              rules={overviewRules}
+            />
+          ))}
+        </View>
+        {/* Inline “… Show more” pinned to the cut end of the clipped text -
+            no separate button below the card body. */}
+        {!expanded && (
+          <TouchableOpacity
+            style={styles.moreOverlay}
+            activeOpacity={0.7}
+            onPress={() => {
+              Haptics.selectionAsync().catch(() => {});
+              finishTyping();
+              setExpanded(true);
+            }}
+          >
+            <Text style={styles.moreText}>… Show more</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
-      <TouchableOpacity
-        style={styles.toggle}
-        activeOpacity={0.7}
-        onPress={() => {
-          Haptics.selectionAsync().catch(() => {});
-          finishTyping();
-          setExpanded((v) => !v);
-        }}
-      >
-        <Text style={styles.toggleText}>{expanded ? 'Show less' : 'Show more'}</Text>
-        <Feather name={expanded ? 'chevron-up' : 'chevron-down'} size={14} color={COLORS.primary} />
-      </TouchableOpacity>
+      {expanded && (
+        <TouchableOpacity
+          style={styles.lessLink}
+          activeOpacity={0.7}
+          onPress={() => {
+            Haptics.selectionAsync().catch(() => {});
+            setExpanded(false);
+          }}
+        >
+          <Text style={styles.lessText}>Show less</Text>
+        </TouchableOpacity>
+      )}
 
       {overview.references.length > 0 && (
         <TouchableOpacity
@@ -417,6 +434,35 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.primaryLight,
   },
   toggleText: {
+    fontFamily: FONTS.mono,
+    fontSize: rf(11),
+    fontWeight: '700',
+    color: COLORS.primary,
+  },
+  // Inline “… Show more” pinned over the cut end of the clipped body (right
+  // aligned, card background so it reads as the text's own tail). One line
+  // tall so it only ever covers the clipped line, never real content above.
+  moreOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    alignItems: 'flex-end',
+    backgroundColor: COLORS.card,
+    paddingTop: 2,
+  },
+  moreText: {
+    fontFamily: FONTS.mono,
+    fontSize: rf(11),
+    fontWeight: '700',
+    color: COLORS.primary,
+  },
+  lessLink: {
+    alignSelf: 'flex-end',
+    paddingVertical: 6,
+    paddingLeft: 12,
+  },
+  lessText: {
     fontFamily: FONTS.mono,
     fontSize: rf(11),
     fontWeight: '700',
