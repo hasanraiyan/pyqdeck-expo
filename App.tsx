@@ -205,6 +205,16 @@ function SearchStack() {
           title: 'Question Paper',
         }}
       />
+      <Stack.Screen
+        name="TopicNotes"
+        component={TopicNotesScreen}
+        options={({ route }: any) => ({ title: route.params?.moduleName || 'Notes' })}
+      />
+      <Stack.Screen
+        name="SubjectSyllabus"
+        component={SubjectSyllabusScreen}
+        options={({ route }: any) => ({ title: route.params?.subjectName || 'Syllabus' })}
+      />
     </Stack.Navigator>
   );
 }

@@ -12,7 +12,14 @@ import { useNavigation } from '@react-navigation/native';
 import * as Haptics from 'expo-haptics';
 import { Feather } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { searchAllQuestions, searchSubjects, listAllSubjects, ApiError } from '../api';
+import {
+  searchAllQuestions,
+  searchSubjects,
+  searchTopicNotes,
+  listAllSubjects,
+  ApiError,
+} from '../api';
+import { TopicNoteSearchResultItem } from '../types';
 import * as Cache from '../db/cacheService';
 import { COLORS, FONTS } from '../theme/colors';
 import { Badge, MarksBadge, YearBadge } from '../components/Badge';
@@ -22,13 +29,17 @@ import { normalizeQuery, consumeSearchToken, shouldDebounceTap, applyServerRetry
 
 const RECENT_SEARCHES_KEY = 'pyq_recent_searches';
 
+type SearchTab = 'all' | 'notes' | 'questions' | 'subjects';
+
 export const SearchScreen = () => {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<any>();
   const { readMaxWidth, hPadding } = useResponsive();
   const [query, setQuery] = useState('');
+  const [activeTab, setActiveTab] = useState<SearchTab>('all');
   const [subjectResults, setSubjectResults] = useState<any[]>([]);
   const [questionResults, setQuestionResults] = useState<any[]>([]);
+  const [noteResults, setNoteResults] = useState<TopicNoteSearchResultItem[]>([]);
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
   const [dynamicSuggestions, setDynamicSuggestions] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
@@ -113,53 +124,82 @@ export const SearchScreen = () => {
     // inflight guard — handled by caller, but double-check
     if (loading) return;
     // dedup: skip if same as last successful query and we already have results
-    if (normalized.toLowerCase() === lastQueryRef.current.toLowerCase() && hasSearched && (subjectResults.length > 0 || questionResults.length > 0)) {
+    if (
+      normalized.toLowerCase() === lastQueryRef.current.toLowerCase() &&
+      hasSearched &&
+      (subjectResults.length > 0 || questionResults.length > 0 || noteResults.length > 0)
+    ) {
       return;
     }
     setLoading(true);
     setHasSearched(true);
     setValidationError(null);
     try {
-      const [subs, qs] = await Promise.all([
-        searchSubjects(normalized).catch((e: any) => {
-          if (e instanceof ApiError && e.status === 429) throw e;
-          return { subjects: [] } as any;
-        }),
-        searchAllQuestions(normalized).catch((e: any) => {
-          if (e instanceof ApiError && e.status === 429) throw e;
-          return { questions: [] } as any;
-        }),
+      const [subsResult, qsResult, notesResult] = await Promise.allSettled([
+        searchSubjects(normalized),
+        searchAllQuestions(normalized),
+        searchTopicNotes(normalized),
       ]);
+
+      const subsData = subsResult.status === 'fulfilled' ? subsResult.value : null;
+      const qsData = qsResult.status === 'fulfilled' ? qsResult.value : null;
+      const notesData = notesResult.status === 'fulfilled' ? notesResult.value : null;
+
+      const subjectList = Array.isArray(subsData?.subjects) ? subsData.subjects : [];
+      const questionList = Array.isArray(qsData?.questions) ? qsData.questions : [];
+      const noteList = Array.isArray(notesData?.results) ? notesData.results : [];
 
       lastQueryRef.current = normalized;
 
-      // If online results found, set them
-      if ((subs.subjects && subs.subjects.length > 0) || (qs.questions && qs.questions.length > 0)) {
-        setSubjectResults(subs.subjects || []);
-        setQuestionResults(qs.questions || []);
-      } else {
-        // Fallback to local cache
-        const local = await Cache.searchLocalCache(normalized);
-        setSubjectResults(local.subjects.map((s: any) => ({ ...s, semester: { id: '', number: 0 } })));
-        setQuestionResults(local.questions.map((qu: any) => ({ ...qu, subject: { id: '', name: '', semesterId: '' } })));
-      }
-    } catch (e: any) {
-      // Surface 429 instead of hiding behind offline fallback
-      if (e instanceof ApiError && e.status === 429) {
-        const retry = e.retryAfterSec ?? 15;
+      // Check if rate limited (429) across failing requests
+      const isRateLimited =
+        (subsResult.status === 'rejected' && (subsResult.reason as any)?.status === 429) ||
+        (qsResult.status === 'rejected' && (qsResult.reason as any)?.status === 429) ||
+        (notesResult.status === 'rejected' && (notesResult.reason as any)?.status === 429);
+
+      if (isRateLimited && subjectList.length === 0 && questionList.length === 0 && noteList.length === 0) {
+        const retry = 15;
         applyServerRetryAfter(retry);
         startCooldown(retry);
         setValidationError(`Too many searches — try again in ${retry}s`);
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
         return;
       }
+
+      // If online results found, set them
+      if (subjectList.length > 0 || questionList.length > 0 || noteList.length > 0) {
+        setSubjectResults(subjectList);
+        setQuestionResults(questionList);
+        setNoteResults(noteList);
+        setActiveTab('all');
+      } else {
+        // Fallback to local cache if no online results
+        try {
+          const local = await Cache.searchLocalCache(normalized);
+          setSubjectResults((local?.subjects || []).map((s: any) => ({ ...s, semester: { id: '', number: 0 } })));
+          setQuestionResults((local?.questions || []).map((qu: any) => ({ ...qu, subject: { id: '', name: '', semesterId: '' } })));
+          setNoteResults([]);
+          setActiveTab('all');
+        } catch {
+          setSubjectResults([]);
+          setQuestionResults([]);
+          setNoteResults([]);
+          setActiveTab('all');
+        }
+      }
+    } catch (e: any) {
       // Complete offline fallback for network errors
       try {
         const local = await Cache.searchLocalCache(normalized);
-        setSubjectResults(local.subjects.map((s: any) => ({ ...s, semester: { id: '', number: 0 } })));
-        setQuestionResults(local.questions.map((qu: any) => ({ ...qu, subject: { id: '', name: '', semesterId: '' } })));
+        setSubjectResults((local?.subjects || []).map((s: any) => ({ ...s, semester: { id: '', number: 0 } })));
+        setQuestionResults((local?.questions || []).map((qu: any) => ({ ...qu, subject: { id: '', name: '', semesterId: '' } })));
+        setNoteResults([]);
+        setActiveTab('all');
       } catch {
-        // keep empty
+        setSubjectResults([]);
+        setQuestionResults([]);
+        setNoteResults([]);
+        setActiveTab('all');
       }
     } finally {
       setLoading(false);
@@ -192,12 +232,14 @@ export const SearchScreen = () => {
     setQuery('');
     setSubjectResults([]);
     setQuestionResults([]);
+    setNoteResults([]);
+    setActiveTab('all');
     setHasSearched(false);
     setValidationError(null);
     lastQueryRef.current = '';
   };
 
-  const handleSuggestionPress = (term: string) => {
+  const handleSuggestionPress = async (term: string) => {
     if (loading || cooldownSec > 0) return;
     if (shouldDebounceTap()) return;
 
@@ -217,45 +259,7 @@ export const SearchScreen = () => {
 
     setQuery(norm.query);
     saveRecentSearch(norm.query);
-    setLoading(true);
-    setHasSearched(true);
-    setValidationError(null);
-
-    Promise.all([
-      searchSubjects(norm.query).catch((e: any) => {
-        if (e instanceof ApiError && e.status === 429) throw e;
-        return { subjects: [] } as any;
-      }),
-      searchAllQuestions(norm.query).catch((e: any) => {
-        if (e instanceof ApiError && e.status === 429) throw e;
-        return { questions: [] } as any;
-      }),
-    ])
-      .then(async ([subs, qs]) => {
-        lastQueryRef.current = norm.query;
-        if ((subs.subjects && subs.subjects.length > 0) || (qs.questions && qs.questions.length > 0)) {
-          setSubjectResults(subs.subjects || []);
-          setQuestionResults(qs.questions || []);
-        } else {
-          const local = await Cache.searchLocalCache(norm.query);
-          setSubjectResults(local.subjects.map((s: any) => ({ ...s, semester: { id: '', number: 0 } })));
-          setQuestionResults(local.questions.map((qu: any) => ({ ...qu, subject: { id: '', name: '', semesterId: '' } })));
-        }
-      })
-      .catch(async (e: any) => {
-        if (e instanceof ApiError && e.status === 429) {
-          const retry = e.retryAfterSec ?? 15;
-          applyServerRetryAfter(retry);
-          startCooldown(retry);
-          setValidationError(`Too many searches — try again in ${retry}s`);
-          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
-          return;
-        }
-        const local = await Cache.searchLocalCache(norm.query);
-        setSubjectResults(local.subjects.map((s: any) => ({ ...s, semester: { id: '', number: 0 } })));
-        setQuestionResults(local.questions.map((qu: any) => ({ ...qu, subject: { id: '', name: '', semesterId: '' } })));
-      })
-      .finally(() => setLoading(false));
+    await runSearch(norm.query);
   };
 
   const clearRecentSearches = () => {
@@ -272,10 +276,68 @@ export const SearchScreen = () => {
     'Engineering Mathematics',
   ];
 
+  const totalResultsCount = subjectResults.length + questionResults.length + noteResults.length;
+
   const noResults =
-    hasSearched && !loading && !validationError && cooldownSec === 0 && subjectResults.length === 0 && questionResults.length === 0;
+    hasSearched &&
+    !loading &&
+    !validationError &&
+    cooldownSec === 0 &&
+    totalResultsCount === 0;
 
   const isInputDisabled = loading || cooldownSec > 0;
+
+  const renderNoteCard = (note: TopicNoteSearchResultItem) => (
+    <TouchableOpacity
+      key={`${note.subjectSlug}-${note.topicId}`}
+      style={styles.noteResultCard}
+      activeOpacity={0.7}
+      onPress={() =>
+        // Must match the shape TopicNotesScreen destructures - it reads a
+        // `topic` object and `subjectId`, so passing topicId/subject flat
+        // left topic undefined and rendered "No topic selected."
+        navigation.navigate('TopicNotes', {
+          topic: { id: note.topicId, title: note.topicTitle },
+          subjectId: note.subjectSlug,
+          subjectName: note.subjectName,
+          moduleId: note.moduleId,
+          moduleName: note.moduleTitle,
+          semesterId: note.semester ? `sem-${note.semester}` : undefined,
+          notesList: [
+            {
+              id: note.topicId,
+              title: note.topicTitle,
+              moduleId: note.moduleId,
+              moduleName: note.moduleTitle,
+            },
+          ],
+        })
+      }
+    >
+      <Text style={styles.resultSubjectName} numberOfLines={1}>
+        {note.subjectName}
+        {note.moduleNumber ? ` · Module ${note.moduleNumber}` : ''}
+      </Text>
+
+      <Text style={styles.noteTitle}>{note.topicTitle}</Text>
+
+      {note.snippet ? (
+        <Text style={styles.noteSnippet} numberOfLines={2}>
+          {note.snippet}
+        </Text>
+      ) : null}
+
+      <View style={styles.noteFooter}>
+        <Text style={styles.noteModuleTitle} numberOfLines={1}>
+          {note.moduleTitle}
+        </Text>
+        <View style={styles.readNoteLink}>
+          <Text style={styles.readNoteLinkText}>Read Note</Text>
+          <Feather name="arrow-right" size={12} color={COLORS.primary} style={{ marginLeft: 4 }} />
+        </View>
+      </View>
+    </TouchableOpacity>
+  );
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -291,12 +353,18 @@ export const SearchScreen = () => {
           <Text style={styles.title}>Search</Text>
 
           <View style={[styles.searchBar, isInputDisabled && styles.searchBarDisabled]}>
-            <Feather
-              name="search"
-              size={16}
-              color={COLORS.textMuted}
-              style={styles.searchIcon}
-            />
+            <TouchableOpacity
+              onPress={handleSearch}
+              disabled={isInputDisabled}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              style={styles.searchIconBtn}
+            >
+              <Feather
+                name="search"
+                size={16}
+                color={query.trim().length > 0 ? COLORS.primary : COLORS.textMuted}
+              />
+            </TouchableOpacity>
             <TextInput
               placeholder={cooldownSec > 0 ? `Cooldown ${cooldownSec}s...` : 'Search subjects, questions, or topics...'}
               placeholderTextColor={COLORS.textSubtle}
@@ -309,17 +377,31 @@ export const SearchScreen = () => {
                   setHasSearched(false);
                   setSubjectResults([]);
                   setQuestionResults([]);
+                  setNoteResults([]);
+                  setActiveTab('all');
                   lastQueryRef.current = '';
                 }
               }}
               onSubmitEditing={handleSearch}
               returnKeyType="search"
+              blurOnSubmit={true}
+              enablesReturnKeyAutomatically={true}
               autoCorrect={false}
               style={[styles.searchInput, isInputDisabled && { opacity: 0.6 }]}
             />
             {query.length > 0 && !loading && cooldownSec === 0 && (
-              <TouchableOpacity onPress={handleClear} style={styles.clearBtn}>
+              <TouchableOpacity onPress={handleClear} style={styles.clearBtn} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
                 <Feather name="x" size={15} color={COLORS.textMuted} />
+              </TouchableOpacity>
+            )}
+
+            {query.trim().length > 0 && !loading && cooldownSec === 0 && (
+              <TouchableOpacity
+                onPress={handleSearch}
+                style={styles.searchActionBtn}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Feather name="arrow-right" size={15} color={COLORS.primary} />
               </TouchableOpacity>
             )}
 
@@ -415,8 +497,89 @@ export const SearchScreen = () => {
             </View>
           )}
 
+          {/* Filter Tabs Row */}
+          {!loading && hasSearched && !noResults && (
+            <View style={styles.filterTabsContainer}>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.filterTabsRow}
+              >
+                <TouchableOpacity
+                  style={[styles.filterTabPill, activeTab === 'all' && styles.filterTabPillActive]}
+                  activeOpacity={0.7}
+                  onPress={() => {
+                    Haptics.selectionAsync().catch(() => {});
+                    setActiveTab('all');
+                  }}
+                >
+                  <Text style={[styles.filterTabPillText, activeTab === 'all' && styles.filterTabPillTextActive]}>
+                    All ({totalResultsCount})
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.filterTabPill, activeTab === 'questions' && styles.filterTabPillActive]}
+                  activeOpacity={0.7}
+                  onPress={() => {
+                    Haptics.selectionAsync().catch(() => {});
+                    setActiveTab('questions');
+                  }}
+                >
+                  <Feather
+                    name="help-circle"
+                    size={12}
+                    color={activeTab === 'questions' ? '#ffffff' : COLORS.textMuted}
+                    style={{ marginRight: 5 }}
+                  />
+                  <Text style={[styles.filterTabPillText, activeTab === 'questions' && styles.filterTabPillTextActive]}>
+                    Questions ({questionResults.length})
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.filterTabPill, activeTab === 'notes' && styles.filterTabPillActive]}
+                  activeOpacity={0.7}
+                  onPress={() => {
+                    Haptics.selectionAsync().catch(() => {});
+                    setActiveTab('notes');
+                  }}
+                >
+                  <Feather
+                    name="book-open"
+                    size={12}
+                    color={activeTab === 'notes' ? '#ffffff' : COLORS.textMuted}
+                    style={{ marginRight: 5 }}
+                  />
+                  <Text style={[styles.filterTabPillText, activeTab === 'notes' && styles.filterTabPillTextActive]}>
+                    Notes ({noteResults.length})
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.filterTabPill, activeTab === 'subjects' && styles.filterTabPillActive]}
+                  activeOpacity={0.7}
+                  onPress={() => {
+                    Haptics.selectionAsync().catch(() => {});
+                    setActiveTab('subjects');
+                  }}
+                >
+                  <Feather
+                    name="folder"
+                    size={12}
+                    color={activeTab === 'subjects' ? '#ffffff' : COLORS.textMuted}
+                    style={{ marginRight: 5 }}
+                  />
+                  <Text style={[styles.filterTabPillText, activeTab === 'subjects' && styles.filterTabPillTextActive]}>
+                    Subjects ({subjectResults.length})
+                  </Text>
+                </TouchableOpacity>
+              </ScrollView>
+            </View>
+          )}
+
           {/* Subjects Result Section */}
-          {!loading && subjectResults.length > 0 && (
+          {!loading && (activeTab === 'all' || activeTab === 'subjects') && subjectResults.length > 0 && (
             <View style={styles.section}>
               <Text style={styles.sectionHeading}>
                 SUBJECTS ({subjectResults.length})
@@ -455,8 +618,17 @@ export const SearchScreen = () => {
             </View>
           )}
 
+          {/* Empty Subjects Tab */}
+          {!loading && activeTab === 'subjects' && subjectResults.length === 0 && (
+            <View style={styles.tabEmptyContainer}>
+              <Feather name="folder" size={24} color={COLORS.textSubtle} style={{ marginBottom: 8 }} />
+              <Text style={styles.tabEmptyTitle}>No matching subjects</Text>
+              <Text style={styles.tabEmptySubtitle}>Try searching by subject name or course code.</Text>
+            </View>
+          )}
+
           {/* Questions Result Section */}
-          {!loading && questionResults.length > 0 && (
+          {!loading && (activeTab === 'all' || activeTab === 'questions') && questionResults.length > 0 && (
             <View style={styles.section}>
               <Text style={styles.sectionHeading}>
                 QUESTIONS ({questionResults.length})
@@ -507,6 +679,56 @@ export const SearchScreen = () => {
               </View>
             </View>
           )}
+
+          {/* Empty Questions Tab */}
+          {!loading && activeTab === 'questions' && questionResults.length === 0 && (
+            <View style={styles.tabEmptyContainer}>
+              <Feather name="help-circle" size={24} color={COLORS.textSubtle} style={{ marginBottom: 8 }} />
+              <Text style={styles.tabEmptyTitle}>No matching exam questions</Text>
+              <Text style={styles.tabEmptySubtitle}>
+                Try searching for questions with different keywords.
+              </Text>
+            </View>
+          )}
+
+          {/* Study Notes Result Section */}
+          {!loading && (activeTab === 'all' || activeTab === 'notes') && noteResults.length > 0 && (
+            <View style={styles.section}>
+              <View style={styles.sectionHeaderRow}>
+                <Text style={styles.sectionHeading}>
+                  STUDY NOTES ({noteResults.length})
+                </Text>
+                {activeTab === 'all' && noteResults.length > 3 && (
+                  <TouchableOpacity
+                    onPress={() => {
+                      Haptics.selectionAsync().catch(() => {});
+                      setActiveTab('notes');
+                    }}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  >
+                    <Text style={styles.seeAllLink}>View all {noteResults.length} →</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+              <View style={{ gap: 10 }}>
+                {(activeTab === 'all' ? noteResults.slice(0, 3) : noteResults).map((note) =>
+                  renderNoteCard(note)
+                )}
+              </View>
+            </View>
+          )}
+
+          {/* Empty Notes Tab */}
+          {!loading && activeTab === 'notes' && noteResults.length === 0 && (
+            <View style={styles.tabEmptyContainer}>
+              <Feather name="book-open" size={24} color={COLORS.textSubtle} style={{ marginBottom: 8 }} />
+              <Text style={styles.tabEmptyTitle}>No matching study notes</Text>
+              <Text style={styles.tabEmptySubtitle}>
+                Try searching for broader topic or concept names.
+              </Text>
+            </View>
+          )}
+
         </View>
       </ScrollView>
     </View>
@@ -566,6 +788,20 @@ const styles = StyleSheet.create({
   },
   searchIcon: {
     marginRight: 8,
+  },
+  searchIconBtn: {
+    paddingRight: 8,
+    paddingVertical: 4,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  searchActionBtn: {
+    padding: 6,
+    marginLeft: 2,
+    backgroundColor: COLORS.cardSecondary,
+    borderRadius: 4,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   searchInput: {
     flex: 1,
@@ -775,5 +1011,120 @@ const styles = StyleSheet.create({
   emptySubtitle: {
     fontSize: rf(13),
     color: COLORS.textMuted,
+  },
+  filterTabsContainer: {
+    marginBottom: 16,
+    marginHorizontal: -4,
+  },
+  filterTabsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 4,
+    paddingBottom: 2,
+  },
+  filterTabPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.card,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 20,
+    paddingHorizontal: 13,
+    paddingVertical: 7,
+  },
+  filterTabPillActive: {
+    backgroundColor: COLORS.text,
+    borderColor: COLORS.text,
+  },
+  filterTabPillText: {
+    fontFamily: FONTS.mono,
+    fontSize: rf(11.5),
+    fontWeight: '600',
+    color: COLORS.textMuted,
+  },
+  filterTabPillTextActive: {
+    color: '#ffffff',
+  },
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+  },
+  seeAllLink: {
+    fontFamily: FONTS.mono,
+    fontSize: rf(11),
+    color: COLORS.primary,
+    fontWeight: '600',
+  },
+  noteResultCard: {
+    backgroundColor: COLORS.card,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 4,
+    padding: 14,
+  },
+  noteTitle: {
+    fontFamily: FONTS.serif,
+    fontSize: rf(15),
+    fontWeight: '600',
+    color: COLORS.text,
+    lineHeight: rf(21),
+    marginBottom: 6,
+  },
+  noteSnippet: {
+    fontSize: rf(12.5),
+    color: COLORS.textMuted,
+    lineHeight: rf(18),
+    marginBottom: 10,
+  },
+  noteFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderTopWidth: 1,
+    borderTopColor: COLORS.borderLight,
+    paddingTop: 8,
+    marginTop: 2,
+  },
+  noteModuleTitle: {
+    fontFamily: FONTS.mono,
+    fontSize: rf(10.5),
+    color: COLORS.textSubtle,
+    flex: 1,
+    marginRight: 8,
+  },
+  readNoteLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  readNoteLinkText: {
+    fontFamily: FONTS.mono,
+    fontSize: rf(11),
+    fontWeight: '600',
+    color: COLORS.primary,
+  },
+  tabEmptyContainer: {
+    paddingVertical: 36,
+    alignItems: 'center',
+    backgroundColor: COLORS.card,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 4,
+    paddingHorizontal: 16,
+    marginBottom: 20,
+  },
+  tabEmptyTitle: {
+    fontSize: rf(14.5),
+    fontWeight: '600',
+    color: COLORS.text,
+    marginBottom: 4,
+  },
+  tabEmptySubtitle: {
+    fontFamily: FONTS.mono,
+    fontSize: rf(11),
+    color: COLORS.textMuted,
+    textAlign: 'center',
   },
 });

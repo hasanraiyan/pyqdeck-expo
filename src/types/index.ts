@@ -1,4 +1,4 @@
-﻿export interface Semester {
+export interface Semester {
   id: string;
   number: number;
 }
@@ -79,3 +79,5 @@ export interface SimilarQuestionsResult {
 }
 
 export type RepeatedQuestionsResult = SimilarQuestionsResult;
+
+export * from './syllabus';

@@ -92,3 +92,21 @@ export interface BranchSemester {
 
 export const topicCountOf = (subject: SyllabusSubject) =>
   subject.modules.reduce((n, m) => n + m.topics.length, 0);
+
+export interface TopicNoteSearchResultItem {
+  topicId: string;
+  topicTitle: string;
+  moduleId: string;
+  moduleNumber?: number;
+  moduleTitle: string;
+  subjectSlug: string;
+  subjectName: string;
+  semester?: number;
+  snippet?: string;
+}
+
+export interface TopicNotesSearchResult {
+  query: string;
+  total: number;
+  results: TopicNoteSearchResultItem[];
+}

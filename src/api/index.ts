@@ -10,6 +10,7 @@ import {
   AllQuestionsSearchResult,
   SimilarQuestionsResult,
   RepeatedQuestionsResult,
+  TopicNotesSearchResult,
 } from '../types';
 import {
   Branch,
@@ -327,7 +328,7 @@ export const getSolution = async (subjectId: string, questionId: string): Promis
 
 export const searchSubjects = async (query: string, limit = 20) => {
   const res = await fetchApi<SubjectSearchResult>(`/subjects/search?q=${encodeURIComponent(query)}&limit=${limit}`);
-  return { ...res, subjects: res.subjects.map(trimName) };
+  return { ...res, subjects: Array.isArray(res?.subjects) ? res.subjects.map(trimName) : [] };
 };
 
 export const listAllSubjects = async (params: { q?: string; page?: number } = {}) => {
@@ -335,7 +336,7 @@ export const listAllSubjects = async (params: { q?: string; page?: number } = {}
   if (params.q) qs.set('q', params.q);
   if (params.page) qs.set('page', String(params.page));
   const res = await fetchApi<SubjectsPage>(`/subjects?${qs.toString()}`);
-  return { ...res, subjects: res.subjects.map(trimName) };
+  return { ...res, subjects: Array.isArray(res?.subjects) ? res.subjects.map(trimName) : [] };
 };
 
 export const searchAllQuestions = (query: string, limit = 20) =>
@@ -447,3 +448,9 @@ export const getTopicNotes = (subject: string, topicId: string) =>
   fetchApi<{ id: string; title: string; notes: string }>(
     `/syllabus/subjects/${encodeURIComponent(subject)}/topics/${encodeURIComponent(topicId)}/notes`
   );
+
+export const searchTopicNotes = (query: string, limit = 20) =>
+  fetchApi<TopicNotesSearchResult>(
+    `/syllabus/search/topics?q=${encodeURIComponent(query)}&limit=${limit}`
+  );
+
