@@ -81,3 +81,42 @@ export interface SimilarQuestionsResult {
 export type RepeatedQuestionsResult = SimilarQuestionsResult;
 
 export * from './syllabus';
+
+/** One source behind an AI overview, already resolved to something tappable. */
+export interface AiOverviewReference {
+  /** 1-based, matching the [n] markers in the summary text. */
+  index: number;
+  title: string;
+  link: string | null;
+  /**
+   * Params to navigate by, or null when the source URL had a shape the server
+   * did not recognise - the citation then renders as plain text.
+   */
+  navigate: {
+    semesterId: string;
+    subjectId: string;
+    year?: number;
+    questionId?: string;
+    target: 'question' | 'paper';
+  } | null;
+}
+
+/** A span of the summary and the references that back it. */
+export interface AiOverviewCitation {
+  /** UTF-8 byte offsets into `text`. */
+  start: number;
+  end: number;
+  /** 1-based reference indexes. */
+  refs: number[];
+}
+
+export interface AiOverview {
+  enabled: boolean;
+  query: string;
+  /** Empty when the query produced no summary - show nothing, not an error. */
+  text: string;
+  references: AiOverviewReference[];
+  citations: AiOverviewCitation[];
+  totalResults: number;
+  cached?: boolean;
+}

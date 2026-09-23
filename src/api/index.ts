@@ -11,6 +11,7 @@ import {
   SimilarQuestionsResult,
   RepeatedQuestionsResult,
   TopicNotesSearchResult,
+  AiOverview,
 } from '../types';
 import {
   Branch,
@@ -454,3 +455,23 @@ export const searchTopicNotes = (query: string, limit = 20) =>
     `/syllabus/search/topics?q=${encodeURIComponent(query)}&limit=${limit}`
   );
 
+// -------------------------------------------------------------
+// AI OVERVIEW (Vertex AI Search, proxied by the server)
+// -------------------------------------------------------------
+
+// Asked once per app session before the card is ever rendered, so a
+// deployment with the feature switched off costs nothing but this one cheap
+// call. Never throws: a failure here just means "no card".
+export const getAiOverviewStatus = async (): Promise<boolean> => {
+  try {
+    const res = await fetchApi<{ enabled: boolean }>('/search/ai-overview/status');
+    return Boolean(res?.enabled);
+  } catch {
+    return false;
+  }
+};
+
+// POST, not GET: the server keeps the query out of a cacheable URL because
+// Cloudflare caches public GETs for an hour and every miss is billed.
+export const getAiOverview = (query: string, limit?: number) =>
+  postApi<AiOverview>('/search/ai-overview', { query, ...(limit ? { limit } : {}) });

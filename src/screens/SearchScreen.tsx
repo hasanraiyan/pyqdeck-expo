@@ -16,10 +16,13 @@ import {
   searchAllQuestions,
   searchSubjects,
   searchTopicNotes,
+  getAiOverview,
+  getAiOverviewStatus,
   listAllSubjects,
   ApiError,
 } from '../api';
-import { TopicNoteSearchResultItem } from '../types';
+import { TopicNoteSearchResultItem, AiOverview, AiOverviewReference } from '../types';
+import { AiOverviewCard } from '../components/AiOverviewCard';
 import * as Cache from '../db/cacheService';
 import { COLORS, FONTS } from '../theme/colors';
 import { Badge, MarksBadge, YearBadge } from '../components/Badge';
@@ -46,6 +49,11 @@ export const SearchScreen = () => {
   const [hasSearched, setHasSearched] = useState(false);
   const [cooldownSec, setCooldownSec] = useState(0);
   const [validationError, setValidationError] = useState<string | null>(null);
+  const [aiOverview, setAiOverview] = useState<AiOverview | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  // Asked once per mount; until it answers the card is simply not rendered.
+  const aiEnabledRef = useRef<boolean | null>(null);
+  const aiOverviewQueryRef = useRef('');
 
 
   const cooldownTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -120,6 +128,49 @@ export const SearchScreen = () => {
     });
   };
 
+  const openAiReference = (ref: AiOverviewReference) => {
+    const nav = ref.navigate;
+    if (!nav) return;
+    if (nav.target === 'question') {
+      navigation.navigate('QuestionDetail', {
+        subjectId: nav.subjectId,
+        semesterId: nav.semesterId,
+        questionId: nav.questionId,
+        year: nav.year,
+      });
+      return;
+    }
+    // A whole paper rather than one question.
+    navigation.navigate('QuestionList', {
+      subjectId: nav.subjectId,
+      semesterId: nav.semesterId,
+      year: nav.year,
+    });
+  };
+
+  const runAiOverview = async (normalized: string) => {
+    if (aiEnabledRef.current === null) {
+      aiEnabledRef.current = await getAiOverviewStatus();
+    }
+    if (!aiEnabledRef.current) return;
+
+    aiOverviewQueryRef.current = normalized;
+    setAiOverview(null);
+    setAiLoading(true);
+    try {
+      const res = await getAiOverview(normalized);
+      // A slower earlier query must not overwrite a newer one's answer.
+      if (aiOverviewQueryRef.current !== normalized) return;
+      setAiOverview(res);
+    } catch {
+      // Never surfaced: the overview is a bonus on top of real results, so a
+      // failure means no card rather than an error the student must dismiss.
+      if (aiOverviewQueryRef.current === normalized) setAiOverview(null);
+    } finally {
+      if (aiOverviewQueryRef.current === normalized) setAiLoading(false);
+    }
+  };
+
   const runSearch = async (normalized: string) => {
     // inflight guard — handled by caller, but double-check
     if (loading) return;
@@ -144,6 +195,11 @@ export const SearchScreen = () => {
       const subsData = subsResult.status === 'fulfilled' ? subsResult.value : null;
       const qsData = qsResult.status === 'fulfilled' ? qsResult.value : null;
       const notesData = notesResult.status === 'fulfilled' ? notesResult.value : null;
+
+      // Deliberately not awaited and not part of the Promise.allSettled above:
+      // the overview takes ~4s cold while the three searches return in under
+      // one, so the results render immediately and the card fills in behind.
+      void runAiOverview(normalized);
 
       const subjectList = Array.isArray(subsData?.subjects) ? subsData.subjects : [];
       const questionList = Array.isArray(qsData?.questions) ? qsData.questions : [];
@@ -576,6 +632,16 @@ export const SearchScreen = () => {
                 </TouchableOpacity>
               </ScrollView>
             </View>
+          )}
+
+          {/* AI overview - above the results it summarises, hidden when the
+              feature is off or the query produced no summary. */}
+          {!loading && hasSearched && (aiLoading || aiOverview) && (
+            <AiOverviewCard
+              overview={aiOverview}
+              loading={aiLoading}
+              onPressReference={openAiReference}
+            />
           )}
 
           {/* Subjects Result Section */}
