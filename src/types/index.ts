@@ -90,8 +90,8 @@ export interface AiOverviewReference {
   link: string | null;
   /**
    * Canonical https page URL (www host) when the citation points at a real
-   * site page. (Same field as the canonical-URL PR adds - kept identical so
-   * the two merge cleanly.)
+   * site page - clients open this through the deep-link config. Absent on
+   * older cached payloads, which fall back to `navigate`.
    */
   url?: string | null;
   /**
