@@ -15,6 +15,8 @@ export interface NativeContentRendererProps {
   textColor?: string;
   variant?: 'question' | 'solution';
   markdownStyles?: any;
+  /** Override the markdown render rules (defaults to the shared set). */
+  rules?: any;
   style?: StyleProp<ViewStyle>;
 }
 
@@ -25,6 +27,7 @@ export const NativeContentRenderer: React.FC<NativeContentRendererProps> = React
     textColor = COLORS.text,
     variant = 'question',
     markdownStyles,
+    rules = markdownRules,
     style,
   }) => {
     const blocks = useMemo(() => {
@@ -69,7 +72,7 @@ export const NativeContentRenderer: React.FC<NativeContentRendererProps> = React
             <View key={`md-${index}`} style={styles.markdownBlock}>
               <Markdown
                 style={mdStyles}
-                rules={markdownRules}
+                rules={rules}
               >
                 {cleanMarkdown(block.content)}
               </Markdown>

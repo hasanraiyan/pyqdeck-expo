@@ -5,6 +5,8 @@ import {
   TouchableOpacity,
   StyleSheet,
   Animated,
+  Easing,
+  Linking,
   Platform,
   Modal,
   ScrollView,
@@ -12,6 +14,7 @@ import {
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { COLORS, FONTS } from '../theme/colors';
+import { markdownRules } from '../theme/markdownStyles';
 import { AiOverview, AiOverviewReference } from '../types';
 import { NativeContentRenderer } from './NativeContentRenderer';
 import { rf } from '../utils/responsive';
@@ -194,6 +197,47 @@ export const AiOverviewCard: React.FC<Props> = ({ overview, loading, onPressRefe
     setSheetRefs(list);
   };
 
+  // Citation chips ride INSIDE the rendered markdown as links with a private
+  // pyqdeck-refs: scheme, so the count sits inline at the end of its sentence
+  // instead of breaking onto its own row. The suffix is appended when each
+  // cited span's source text is assembled below.
+  const overviewRules = {
+    ...markdownRules,
+    link: (node: any, children: any) => {
+      const href: string = node.attributes?.href ?? '';
+      const m = href.match(/^pyqdeck-refs:([\d,]+)$/);
+      if (m) {
+        const idxs = m[1].split(',').map((n) => Number(n));
+        return (
+          <Text key={node.key} onPress={() => openSources(idxs)} suppressHighlighting>
+            {' '}
+            <Text style={styles.citation}>
+              <Feather name="globe" size={rf(10)} color={COLORS.secondary} />
+              {children}
+            </Text>
+          </Text>
+        );
+      }
+      if (/^https?:\/\//.test(href)) {
+        return (
+          <Text
+            key={node.key}
+            style={styles.extLink}
+            onPress={() => Linking.openURL(href).catch(() => {})}
+            suppressHighlighting
+          >
+            {children}
+          </Text>
+        );
+      }
+      return (
+        <Text key={node.key} style={styles.extLink}>
+          {children}
+        </Text>
+      );
+    },
+  };
+
   return (
     <View style={styles.card}>
       <View style={styles.headerRow}>
@@ -204,27 +248,22 @@ export const AiOverviewCard: React.FC<Props> = ({ overview, loading, onPressRefe
 
       {/* The summary is markdown with LaTeX, so each cited span renders
           through the same markdown+math pipeline as notes and solutions
-          rather than as flat text. A span's sources sit directly beneath it
-          as a compact button - inline chips are not expressible inside
-          rendered markdown. Slicing for the typewriter can briefly cut a
-          markdown token in half; it resolves on the next tick. */}
+          rather than as flat text. The span's source count is suffixed as a
+          pyqdeck-refs: link (see overviewRules above) so it stays inline.
+          Slicing for the typewriter can briefly cut a markdown token in half;
+          it resolves on the next tick. */}
       <View style={!expanded ? { maxHeight: COLLAPSED_H, overflow: 'hidden' } : undefined}>
         {visible.map((seg, i) => (
-          <View key={i}>
-            <NativeContentRenderer content={seg.text} fontSize={rf(14)} />
-            {seg.refs.length > 0 && (
-              <TouchableOpacity
-                style={styles.sourcesBtn}
-                activeOpacity={0.7}
-                onPress={() => openSources(seg.refs)}
-              >
-                <Feather name="globe" size={11} color={COLORS.secondary} />
-                <Text style={styles.sourcesBtnText}>
-                  {seg.refs.length > 1 ? `${seg.refs.length} sources` : 'Source'}
-                </Text>
-              </TouchableOpacity>
-            )}
-          </View>
+          <NativeContentRenderer
+            key={i}
+            content={
+              seg.refs.length > 0
+                ? `${seg.text} [${seg.refs.length}](pyqdeck-refs:${seg.refs.join(',')})`
+                : seg.text
+            }
+            fontSize={rf(14)}
+            rules={overviewRules}
+          />
         ))}
       </View>
 
@@ -361,6 +400,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
     letterSpacing: 0.5,
   },
+  extLink: {
+    color: COLORS.primary,
+    textDecorationLine: 'underline',
+  },
   toggle: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -376,27 +419,6 @@ const styles = StyleSheet.create({
     fontSize: rf(11),
     fontWeight: '700',
     color: COLORS.primary,
-  },
-  // Per-span sources button: compact so a much-cited answer does not become
-  // a stack of banners, but a real row (not an inline chip) because rendered
-  // markdown cannot host inline tappables.
-  sourcesBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    gap: 5,
-    marginTop: 2,
-    marginBottom: 8,
-    paddingHorizontal: 9,
-    paddingVertical: 5,
-    borderRadius: 12,
-    backgroundColor: COLORS.secondaryLight,
-  },
-  sourcesBtnText: {
-    fontFamily: FONTS.mono,
-    fontSize: rf(10.5),
-    fontWeight: '700',
-    color: COLORS.secondary,
   },
   bone: {
     height: 12,
