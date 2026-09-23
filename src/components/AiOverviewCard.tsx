@@ -13,6 +13,7 @@ import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { COLORS, FONTS } from '../theme/colors';
 import { AiOverview, AiOverviewReference } from '../types';
+import { NativeContentRenderer } from './NativeContentRenderer';
 import { rf } from '../utils/responsive';
 
 /**
@@ -27,6 +28,12 @@ import { rf } from '../utils/responsive';
  */
 
 const COLLAPSED_LINES = 6;
+
+// Collapsed height in px, derived from the body's own line height so the clip
+// lands on a line boundary at any font scale. Applies as maxHeight because
+// the body is block-level markdown now, not a single Text numberOfLines can
+// clamp.
+const COLLAPSED_H = rf(22) * COLLAPSED_LINES;
 
 // Characters revealed per tick of the typewriter. One char per frame reads as
 // a stall on an 800-character answer, so several go at once and the tick is
@@ -195,31 +202,31 @@ export const AiOverviewCard: React.FC<Props> = ({ overview, loading, onPressRefe
         <Text style={styles.headerNote}>from past papers</Text>
       </View>
 
-      <Text
-        style={styles.body}
-        numberOfLines={expanded ? undefined : COLLAPSED_LINES}
-      >
+      {/* The summary is markdown with LaTeX, so each cited span renders
+          through the same markdown+math pipeline as notes and solutions
+          rather than as flat text. A span's sources sit directly beneath it
+          as a compact button - inline chips are not expressible inside
+          rendered markdown. Slicing for the typewriter can briefly cut a
+          markdown token in half; it resolves on the next tick. */}
+      <View style={!expanded ? { maxHeight: COLLAPSED_H, overflow: 'hidden' } : undefined}>
         {visible.map((seg, i) => (
-          <Text key={i}>
-            {seg.text}
+          <View key={i}>
+            <NativeContentRenderer content={seg.text} fontSize={rf(14)} />
             {seg.refs.length > 0 && (
-              // One chip for the whole span rather than [1][2][3]: a sentence
-              // backed by three papers was three separate marks competing with
-              // the prose. The count goes to a sheet listing just those.
-              //
-              // The separating space sits OUTSIDE the styled run, or the chip's
-              // background would extend into the gap before it.
-              <Text onPress={() => openSources(seg.refs)} suppressHighlighting>
-                {' '}
-                <Text style={styles.citation}>
-                  <Feather name="globe" size={rf(10)} color={COLORS.secondary} />
-                  {seg.refs.length > 1 ? `+${seg.refs.length}` : ''}
+              <TouchableOpacity
+                style={styles.sourcesBtn}
+                activeOpacity={0.7}
+                onPress={() => openSources(seg.refs)}
+              >
+                <Feather name="globe" size={11} color={COLORS.secondary} />
+                <Text style={styles.sourcesBtnText}>
+                  {seg.refs.length > 1 ? `${seg.refs.length} sources` : 'Source'}
                 </Text>
-              </Text>
+              </TouchableOpacity>
             )}
-          </Text>
+          </View>
         ))}
-      </Text>
+      </View>
 
       <TouchableOpacity
         style={styles.toggle}
@@ -369,6 +376,27 @@ const styles = StyleSheet.create({
     fontSize: rf(11),
     fontWeight: '700',
     color: COLORS.primary,
+  },
+  // Per-span sources button: compact so a much-cited answer does not become
+  // a stack of banners, but a real row (not an inline chip) because rendered
+  // markdown cannot host inline tappables.
+  sourcesBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: 5,
+    marginTop: 2,
+    marginBottom: 8,
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+    borderRadius: 12,
+    backgroundColor: COLORS.secondaryLight,
+  },
+  sourcesBtnText: {
+    fontFamily: FONTS.mono,
+    fontSize: rf(10.5),
+    fontWeight: '700',
+    color: COLORS.secondary,
   },
   bone: {
     height: 12,
