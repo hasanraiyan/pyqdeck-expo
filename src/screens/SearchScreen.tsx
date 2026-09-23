@@ -8,7 +8,7 @@ import {
   StyleSheet,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useLinkTo, useNavigation, useRoute } from '@react-navigation/native';
 import * as Haptics from 'expo-haptics';
 import { Feather } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -38,6 +38,7 @@ export const SearchScreen = () => {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
+  const linkTo = useLinkTo();
   const { readMaxWidth, hPadding } = useResponsive();
   const [query, setQuery] = useState('');
   const [activeTab, setActiveTab] = useState<SearchTab>('all');
@@ -130,6 +131,24 @@ export const SearchScreen = () => {
   };
 
   const openAiReference = (ref: AiOverviewReference) => {
+    // Preferred: open the server's canonical URL straight through the same
+    // linking config that handles incoming deep links, so citation routing
+    // can never drift from real route shapes again. Regex, not new URL():
+    // Hermes has no URL global to rely on.
+    const raw = ref.url;
+    if (raw) {
+      const m = raw.match(/^https:\/\/(www\.)?pyqdeck\.in(\/[^?#]*)?(\?[^#]*)?/);
+      if (m) {
+        try {
+          linkTo((m[2] || '/') + (m[3] || ''));
+          return;
+        } catch {
+          // Unmatched path (a route the app does not know yet) - fall
+          // through to the param-based handling below, then give up.
+        }
+      }
+    }
+    // Fallback for cached payloads from before `url` existed.
     const nav = ref.navigate;
     if (!nav) return;
     if (nav.target === 'topic' && nav.subjectSlug && nav.topicId) {
