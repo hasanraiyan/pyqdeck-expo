@@ -93,11 +93,14 @@ export interface AiOverviewReference {
    * did not recognise - the citation then renders as plain text.
    */
   navigate: {
-    semesterId: string;
-    subjectId: string;
+    semesterId?: string;
+    subjectId?: string;
     year?: number;
     questionId?: string;
-    target: 'question' | 'paper';
+    /** Study-notes citations carry the subject slug + topic id instead. */
+    subjectSlug?: string;
+    topicId?: string;
+    target: 'question' | 'paper' | 'topic';
   } | null;
 }
 

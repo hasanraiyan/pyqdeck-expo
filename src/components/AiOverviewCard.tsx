@@ -272,9 +272,15 @@ export const AiOverviewCard: React.FC<Props> = ({ overview, loading, onPressRefe
                     </Text>
                     {ref.navigate && (
                       <Text style={styles.sourceMeta}>
-                        {ref.navigate.semesterId.toUpperCase()}
+                        {ref.navigate.target === 'topic'
+                          ? 'STUDY NOTE'
+                          : ref.navigate.semesterId?.toUpperCase()}
                         {ref.navigate.year ? ` · ${ref.navigate.year}` : ''}
-                        {ref.navigate.questionId ? ` · ${ref.navigate.questionId}` : ' · Full paper'}
+                        {ref.navigate.target === 'topic'
+                          ? ''
+                          : ref.navigate.questionId
+                            ? ` · ${ref.navigate.questionId}`
+                            : ' · Full paper'}
                       </Text>
                     )}
                   </View>
