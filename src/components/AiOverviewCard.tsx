@@ -228,6 +228,21 @@ export const AiOverviewCard: React.FC<Props> = ({ overview, loading, onPressRefe
     }).start();
   };
 
+  // While expanded, revealed text keeps growing the content (the typewriter,
+  // or finishTyping above) after heightAnim already settled on the height
+  // measured at tap time - glide it to the new height so the open answer is
+  // never clipped mid-typing. Collapsed is untouched: the gate on expanded
+  // means the clipped height is never disturbed.
+  useEffect(() => {
+    if (!expanded || fullH <= COLLAPSED_H) return;
+    Animated.timing(heightAnim, {
+      toValue: fullH,
+      duration: 200,
+      easing: Easing.inOut(Easing.ease),
+      useNativeDriver: false,
+    }).start();
+  }, [fullH, expanded, heightAnim]);
+
   const bodyText = (
     <Text
       style={styles.body}
