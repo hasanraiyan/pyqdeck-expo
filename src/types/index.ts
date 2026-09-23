@@ -89,6 +89,12 @@ export interface AiOverviewReference {
   title: string;
   link: string | null;
   /**
+   * Canonical https page URL (www host) when the citation points at a real
+   * site page - clients open this through the deep-link config. Absent on
+   * older cached payloads, which fall back to `navigate`.
+   */
+  url?: string | null;
+  /**
    * Params to navigate by, or null when the source URL had a shape the server
    * did not recognise - the citation then renders as plain text.
    */
