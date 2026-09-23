@@ -1,10 +1,11 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
   StyleSheet,
   Animated,
+  Easing,
   Platform,
   Modal,
   ScrollView,
@@ -27,6 +28,14 @@ import { rf } from '../utils/responsive';
  */
 
 const COLLAPSED_LINES = 6;
+
+// Collapsed height in px, derived from the body's own line height so the clip
+// always lands exactly on a line boundary at any font scale.
+const COLLAPSED_H = rf(22) * COLLAPSED_LINES;
+
+// How long the show more/less height animation runs. Long enough to read as
+// motion, short enough to never feel like waiting.
+const TOGGLE_MS = 300;
 
 // Characters revealed per tick of the typewriter. One char per frame reads as
 // a stall on an 800-character answer, so several go at once and the tick is
@@ -133,8 +142,18 @@ export const AiOverviewCard: React.FC<Props> = ({ overview, loading, onPressRefe
   // restarts it, and cleared on unmount so a timer never outlives the screen.
   const fullText = overview?.text ?? '';
   const [revealed, setRevealed] = useState(0);
+  // Animated container height: starts clipped to COLLAPSED_H and glides to
+  // the measured full height on expand (and back on collapse), instead of
+  // numberOfLines snapping between the two states instantly.
+  const heightAnim = useRef(new Animated.Value(COLLAPSED_H)).current;
+  const [fullH, setFullH] = useState(0);
 
   useEffect(() => {
+    // A new answer starts collapsed again - carrying the old query's expanded
+    // state (and stale height) into a fresh summary would mis-clip it.
+    setExpanded(false);
+    heightAnim.setValue(COLLAPSED_H);
+    setFullH(0);
     if (!fullText) {
       setRevealed(0);
       return;
@@ -187,6 +206,61 @@ export const AiOverviewCard: React.FC<Props> = ({ overview, loading, onPressRefe
     setSheetRefs(list);
   };
 
+  // Until measured, assume the toggle is needed so a long answer never
+  // flashes fully open for a frame. Short answers (fits in the collapsed
+  // height) render plain with no toggle at all.
+  const needsToggle = fullH <= 0 || fullH > COLLAPSED_H + 2;
+
+  const toggleExpanded = () => {
+    Haptics.selectionAsync().catch(() => {});
+    finishTyping();
+    const next = !expanded;
+    setExpanded(next);
+    // Deliberately not useNativeDriver: height is a layout prop and cannot
+    // be natively driven. One timing per tap - starting a new one retires
+    // the in-flight one, so rapid taps reverse direction mid-flight instead
+    // of queuing.
+    Animated.timing(heightAnim, {
+      toValue: next ? Math.max(fullH, COLLAPSED_H) : COLLAPSED_H,
+      duration: TOGGLE_MS,
+      easing: Easing.inOut(Easing.ease),
+      useNativeDriver: false,
+    }).start();
+  };
+
+  const bodyText = (
+    <Text
+      style={styles.body}
+      onLayout={(e) => {
+        const h = e.nativeEvent.layout.height;
+        // ±1px dead band: sub-pixel layout rounds jitter onLayout otherwise
+        // and each setState re-lays-out, which would loop forever.
+        setFullH((prev) => (Math.abs(prev - h) > 1 ? h : prev));
+      }}
+    >
+      {visible.map((seg, i) => (
+        <Text key={i}>
+          {seg.text}
+          {seg.refs.length > 0 && (
+            // One chip for the whole span rather than [1][2][3]: a sentence
+            // backed by three papers was three separate marks competing with
+            // the prose. The count goes to a sheet listing just those.
+            //
+            // The separating space sits OUTSIDE the styled run, or the chip's
+            // background would extend into the gap before it.
+            <Text onPress={() => openSources(seg.refs)} suppressHighlighting>
+              {' '}
+              <Text style={styles.citation}>
+                <Feather name="globe" size={rf(10)} color={COLORS.secondary} />
+                {seg.refs.length > 1 ? `+${seg.refs.length}` : ''}
+              </Text>
+            </Text>
+          )}
+        </Text>
+      ))}
+    </Text>
+  );
+
   return (
     <View style={styles.card}>
       <View style={styles.headerRow}>
@@ -195,44 +269,24 @@ export const AiOverviewCard: React.FC<Props> = ({ overview, loading, onPressRefe
         <Text style={styles.headerNote}>from past papers</Text>
       </View>
 
-      <Text
-        style={styles.body}
-        numberOfLines={expanded ? undefined : COLLAPSED_LINES}
-      >
-        {visible.map((seg, i) => (
-          <Text key={i}>
-            {seg.text}
-            {seg.refs.length > 0 && (
-              // One chip for the whole span rather than [1][2][3]: a sentence
-              // backed by three papers was three separate marks competing with
-              // the prose. The count goes to a sheet listing just those.
-              //
-              // The separating space sits OUTSIDE the styled run, or the chip's
-              // background would extend into the gap before it.
-              <Text onPress={() => openSources(seg.refs)} suppressHighlighting>
-                {' '}
-                <Text style={styles.citation}>
-                  <Feather name="globe" size={rf(10)} color={COLORS.secondary} />
-                  {seg.refs.length > 1 ? `+${seg.refs.length}` : ''}
-                </Text>
-              </Text>
-            )}
-          </Text>
-        ))}
-      </Text>
+      {needsToggle ? (
+        <>
+          <Animated.View style={{ height: heightAnim, overflow: 'hidden' }}>
+            {bodyText}
+          </Animated.View>
 
-      <TouchableOpacity
-        style={styles.toggle}
-        activeOpacity={0.7}
-        onPress={() => {
-          Haptics.selectionAsync().catch(() => {});
-          finishTyping();
-          setExpanded((v) => !v);
-        }}
-      >
-        <Text style={styles.toggleText}>{expanded ? 'Show less' : 'Show more'}</Text>
-        <Feather name={expanded ? 'chevron-up' : 'chevron-down'} size={14} color={COLORS.primary} />
-      </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.toggle}
+            activeOpacity={0.7}
+            onPress={toggleExpanded}
+          >
+            <Text style={styles.toggleText}>{expanded ? 'Show less' : 'Show more'}</Text>
+            <Feather name={expanded ? 'chevron-up' : 'chevron-down'} size={14} color={COLORS.primary} />
+          </TouchableOpacity>
+        </>
+      ) : (
+        bodyText
+      )}
 
       <Modal
         visible={sheetRefs !== null}
