@@ -292,7 +292,7 @@ export const AiOverviewCard: React.FC<Props> = ({ overview, loading, onPressRefe
                   key={ref.index}
                   style={styles.sourceRow}
                   activeOpacity={0.7}
-                  disabled={!ref.navigate}
+                  disabled={!ref.navigate && !ref.url}
                   onPress={() => {
                     setSheetRefs(null);
                     Haptics.selectionAsync().catch(() => {});
@@ -300,7 +300,20 @@ export const AiOverviewCard: React.FC<Props> = ({ overview, loading, onPressRefe
                   }}
                 >
                   <View style={styles.sourceIcon}>
-                    <Feather name="globe" size={13} color={COLORS.secondary} />
+                    {/* Icon follows the link pattern the server parsed: notes
+                        get a book, PYQs a paper, anything unrecognised keeps
+                        the globe. */}
+                    <Feather
+                      name={
+                        ref.navigate?.target === 'topic'
+                          ? 'book-open'
+                          : ref.navigate
+                            ? 'file-text'
+                            : 'globe'
+                      }
+                      size={13}
+                      color={COLORS.secondary}
+                    />
                   </View>
                   <View style={styles.sourceBody}>
                     <Text style={styles.sourceTitle} numberOfLines={3}>
@@ -320,10 +333,9 @@ export const AiOverviewCard: React.FC<Props> = ({ overview, loading, onPressRefe
                       </Text>
                     )}
                   </View>
-                  {ref.navigate && (
+                  {(ref.navigate || ref.url) && (
                     <Feather name="chevron-right" size={16} color={COLORS.textSubtle} />
-                  )}
-                </TouchableOpacity>
+                  )}                </TouchableOpacity>
               ))}
             </ScrollView>
 
