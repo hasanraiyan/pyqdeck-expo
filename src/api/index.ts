@@ -12,6 +12,7 @@ import {
   RepeatedQuestionsResult,
   TopicNotesSearchResult,
   AiOverview,
+  AiFeatureStatus,
 } from '../types';
 import {
   Branch,
@@ -359,15 +360,21 @@ export const searchTopicNotes = (query: string, limit = 20, signal?: AbortSignal
 // AI OVERVIEW (Vertex AI Search, proxied by the server)
 // -------------------------------------------------------------
 
-// Asked once per app session before the card is ever rendered, so a
-// deployment with the feature switched off costs nothing but this one cheap
-// call. Never throws: a failure here just means "no card".
-export const getAiOverviewStatus = async (signal?: AbortSignal): Promise<boolean> => {
+// Asked before the card is ever rendered (and again when the chat opens), so a
+// deployment with a feature switched off costs nothing but this one cheap
+// call. Never throws: a failure here just means "no card, no chips, no chat".
+// `followups` and `chat` are keys an older server does not send, so a missing
+// one reads as off rather than on.
+export const getAiOverviewStatus = async (signal?: AbortSignal): Promise<AiFeatureStatus> => {
   try {
-    const res = await fetchApi<{ enabled: boolean }>('/search/ai-overview/status', signal);
-    return Boolean(res?.enabled);
+    const res = await fetchApi<Partial<AiFeatureStatus>>('/search/ai-overview/status', signal);
+    return {
+      enabled: res?.enabled === true,
+      followups: res?.followups === true,
+      chat: res?.chat === true,
+    };
   } catch {
-    return false;
+    return { enabled: false, followups: false, chat: false };
   }
 };
 

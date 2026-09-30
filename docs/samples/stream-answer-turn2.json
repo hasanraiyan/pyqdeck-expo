@@ -1,0 +1,1077 @@
+[{
+  "answer": {
+    "name": "projects/124734118875/locations/global/collections/default_collection/engines/pyqdeck_1787542792054/sessions/14956706605406992762/answers/6830704829587245347",
+    "state": "STREAMING",
+    "steps": [
+      {
+        "state": "SUCCEEDED",
+        "description": "Rephrase the query and search.",
+        "actions": [
+          {
+            "searchAction": {
+              "query": " What are examples of narrow AI?"
+            },
+            "observation": {
+              "searchResults": [
+                {
+                  "document": "projects/124734118875/locations/global/collections/default_collection/dataStores/pyqdeck_1787542746373/branches/0/documents/55fe502fd3badeb2f3ba90064fa4840a",
+                  "uri": "https://www.pyqdeck.in/sem5/sem5_artificial_intelligence/2025/Q108",
+                  "title": "Weak AI is also known as (i) Narrow AI (ii) General AI (iii) Strong AI — PYQDeck",
+                  "snippetInfo": [
+                    {
+                      "snippet": "Weak AI is also known as (i) \u003cb\u003eNarrow AI\u003c/b\u003e (ii) General AI (iii) Strong AI (iv) Super AI. ... \u003cb\u003eis an example\u003c/b\u003e of (i) Informed Search (ii) Uninformed Search (iii)&nbsp;...",
+                      "snippetStatus": "SUCCESS"
+                    }
+                  ]
+                },
+                {
+                  "document": "projects/124734118875/locations/global/collections/default_collection/dataStores/pyqdeck_1787542746373/branches/0/documents/1efca4574d0105fe2a0bfd7c9db80ddc",
+                  "uri": "https://www.pyqdeck.in/syllabus/subject/sem1-100108-computer-fundamentals-emerging-tech/topic/6a96365f0b50dbcb551eb853",
+                  "title": "Artificial Intelligence (AI): Introduction — Computer Fundamentals & Emerging Technologies — PYQDeck",
+                  "snippetInfo": [
+                    {
+                      "snippet": "Artificial Intelligence (AI): Introduction 1. Definition Artificial Intelligence ... Differentiate \u003cb\u003enarrow AI\u003c/b\u003e, general AI and super AI with \u003cb\u003eexamples\u003c/b\u003e — 5 marks&nbsp;...",
+                      "snippetStatus": "SUCCESS"
+                    }
+                  ]
+                },
+                {
+                  "document": "projects/124734118875/locations/global/collections/default_collection/dataStores/pyqdeck_1787542746373/branches/0/documents/2ed380593df75ee07bfeccf254854099",
+                  "uri": "https://www.pyqdeck.in/sem5/sem5_artificial_intelligence/2022/Q28",
+                  "title": "What is artificial intelligence? (i) Putting your intelligence into co — PYQDeck",
+                  "snippetInfo": [
+                    {
+                      "snippet": "Discuss the applications area of AI.2022 7mArtificial intelligenceWeak AI is also known as (i) \u003cb\u003eNarrow AI\u003c/b\u003e (ii) General AI (iii) Strong AI (iv) Super AI2025&nbsp;...",
+                      "snippetStatus": "SUCCESS"
+                    }
+                  ]
+                },
+                {
+                  "document": "projects/124734118875/locations/global/collections/default_collection/dataStores/pyqdeck_1787542746373/branches/0/documents/69d67c6ad8d4364479fd082afd22b8bb",
+                  "uri": "https://www.pyqdeck.in/syllabus/subject/sem1-100105-introduction-to-ai/topic/6a96312b0b50dbcb551eb589",
+                  "title": "What is AI? — Introduction to AI — PYQDeck",
+                  "snippetInfo": [
+                    {
+                      "snippet": "What is \u003cb\u003eAI\u003c/b\u003e? — Beginner-Friendly Notes 1. Simple Definition (remember this) \u003cb\u003eArtificial Intelligence\u003c/b\u003e (\u003cb\u003eAI\u003c/b\u003e) ... Thinking \u003cb\u003eAI\u003c/b\u003e = human consciousness — no, it is \u003cb\u003enarrow\u003c/b\u003e&nbsp;...",
+                      "snippetStatus": "SUCCESS"
+                    }
+                  ]
+                },
+                {
+                  "document": "projects/124734118875/locations/global/collections/default_collection/dataStores/pyqdeck_1787542746373/branches/0/documents/81fb2e0957ead4fbf46a85fc5894c146",
+                  "uri": "https://www.pyqdeck.in/sem5/sem5_artificial_intelligence/2025",
+                  "title": "Artificial intelligence — 2025 question paper — PYQDeck",
+                  "snippetInfo": [
+                    {
+                      "snippet": "Weak AI is also known as (i) \u003cb\u003eNarrow AI\u003c/b\u003e (ii) General AI (iii) Strong AI (iv) Super AI ... . Explain Breadth First Search and Depth First Search with \u003cb\u003eexamples\u003c/b\u003e.",
+                      "snippetStatus": "SUCCESS"
+                    }
+                  ]
+                },
+                {
+                  "document": "projects/124734118875/locations/global/collections/default_collection/dataStores/pyqdeck_1787542746373/branches/0/documents/3a27b9295f6abed0f9b7797c30e242f7",
+                  "uri": "https://www.pyqdeck.in/syllabus/subject/sem1-100105-introduction-to-ai/topic/6a96312b0b50dbcb551eb58b",
+                  "title": "Foundations of AI: philosophy — Introduction to AI — PYQDeck",
+                  "snippetInfo": [
+                    {
+                      "snippet": "Q5: What are the limits? (Gödel, free will, ethics). Gödel showed formal systems have limits (\u003cb\u003esome\u003c/b\u003e truths unprovable) — hints \u003cb\u003eAI\u003c/b\u003e reasoning also has limits. Free&nbsp;...",
+                      "snippetStatus": "SUCCESS"
+                    }
+                  ]
+                },
+                {
+                  "document": "projects/124734118875/locations/global/collections/default_collection/dataStores/pyqdeck_1787542746373/branches/0/documents/571cf32d10c4ff0963a13ab1045ce760",
+                  "uri": "https://www.pyqdeck.in/syllabus/subject/sem1-100105-introduction-to-ai/topic/6a96312b0b50dbcb551eb59b",
+                  "title": "Overview of AI application domains across engineering disciplines — Introduction to AI — PYQDeck",
+                  "snippetInfo": [
+                    {
+                      "snippet": "A. Computer &amp; Software Engineering (your home). Code generation, bug detection, automated testing. Recommendation, search, fraud detection, chatbots. \u003cb\u003eExample\u003c/b\u003e:&nbsp;...",
+                      "snippetStatus": "SUCCESS"
+                    }
+                  ]
+                },
+                {
+                  "document": "projects/124734118875/locations/global/collections/default_collection/dataStores/pyqdeck_1787542746373/branches/0/documents/923ce14550ee847b39963ed87e1056a5",
+                  "uri": "https://www.pyqdeck.in/sem5/sem5_artificial_intelligence/2022/Q30",
+                  "title": "Face Recognition system is based on which type of approach? (i) Weak A — PYQDeck",
+                  "snippetInfo": [
+                    {
+                      "snippet": "Similar questions. Artificial intelligenceWeak AI is also known as (i) \u003cb\u003eNarrow AI\u003c/b\u003e ... (i) Linear approach (ii) Heuristic approach (\u003cb\u003esome\u003c/b\u003e ... \u003cb\u003esome\u003c/b\u003e knowledges are&nbsp;...",
+                      "snippetStatus": "SUCCESS"
+                    }
+                  ]
+                },
+                {
+                  "document": "projects/124734118875/locations/global/collections/default_collection/dataStores/pyqdeck_1787542746373/branches/0/documents/39ab68a3d41a878e53ae3ca17c6f6c2f",
+                  "uri": "https://www.pyqdeck.in/syllabus/subject/sem1-100108-computer-fundamentals-emerging-tech/topic/6a96365f0b50dbcb551eb855",
+                  "title": "Applications — Computer Fundamentals & Emerging Technologies — PYQDeck",
+                  "snippetInfo": [
+                    {
+                      "snippet": "Applications (of \u003cb\u003eArtificial Intelligence\u003c/b\u003e) &middot; 1. How \u003cb\u003eAI\u003c/b\u003e Applications Are Grouped &middot; 2. Applications by Sector &middot; 3. Familiar \u003cb\u003eExamples\u003c/b\u003e Around Us &middot; 4. Benefits and&nbsp;...",
+                      "snippetStatus": "SUCCESS"
+                    }
+                  ]
+                },
+                {
+                  "document": "projects/124734118875/locations/global/collections/default_collection/dataStores/pyqdeck_1787542746373/branches/0/documents/51fbff10d25cdb239ae305864bf587d0",
+                  "uri": "https://www.pyqdeck.in/syllabus/subject/sem1-100108-computer-fundamentals-emerging-tech/topic/6a96365f0b50dbcb551eb854/ai-agents",
+                  "title": "AI agents — Computer Fundamentals & Emerging Technologies — PYQDeck",
+                  "snippetInfo": [
+                    {
+                      "snippet": "Types of Agents. Type, How it decides, \u003cb\u003eExample\u003c/b\u003e. Simple reflex, Condition–action rules on the current percept only, Thermostat:&nbsp;...",
+                      "snippetStatus": "SUCCESS"
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "searchAction": {
+              "query": " What is narrow AI?"
+            },
+            "observation": {
+              "searchResults": [
+                {
+                  "document": "projects/124734118875/locations/global/collections/default_collection/dataStores/pyqdeck_1787542746373/branches/0/documents/55fe502fd3badeb2f3ba90064fa4840a",
+                  "uri": "https://www.pyqdeck.in/sem5/sem5_artificial_intelligence/2025/Q108",
+                  "title": "Weak AI is also known as (i) Narrow AI (ii) General AI (iii) Strong AI — PYQDeck",
+                  "snippetInfo": [
+                    {
+                      "snippet": "Weak AI is also known as. (i) \u003cb\u003eNarrow AI\u003c/b\u003e (ii) General AI (iii) Strong AI (iv) Super AI. Copy Search Google Ask AI. Similar questions. Artificial intelligenceFace&nbsp;...",
+                      "snippetStatus": "SUCCESS"
+                    }
+                  ]
+                },
+                {
+                  "document": "projects/124734118875/locations/global/collections/default_collection/dataStores/pyqdeck_1787542746373/branches/0/documents/1efca4574d0105fe2a0bfd7c9db80ddc",
+                  "uri": "https://www.pyqdeck.in/syllabus/subject/sem1-100108-computer-fundamentals-emerging-tech/topic/6a96365f0b50dbcb551eb853",
+                  "title": "Artificial Intelligence (AI): Introduction — Computer Fundamentals & Emerging Technologies — PYQDeck",
+                  "snippetInfo": [
+                    {
+                      "snippet": "Artificial Intelligence (AI): Introduction 1. Definition Artificial Intelligence ... Differentiate \u003cb\u003enarrow AI\u003c/b\u003e, general AI and super AI with examples — 5 marks&nbsp;...",
+                      "snippetStatus": "SUCCESS"
+                    }
+                  ]
+                },
+                {
+                  "document": "projects/124734118875/locations/global/collections/default_collection/dataStores/pyqdeck_1787542746373/branches/0/documents/2ed380593df75ee07bfeccf254854099",
+                  "uri": "https://www.pyqdeck.in/sem5/sem5_artificial_intelligence/2022/Q28",
+                  "title": "What is artificial intelligence? (i) Putting your intelligence into co — PYQDeck",
+                  "snippetInfo": [
+                    {
+                      "snippet": "What is \u003cb\u003eartificial intelligence\u003c/b\u003e? (i) Putting your intelligence into computer (ii) Programming with your own intelligence (iii) Making a machine intelligent&nbsp;...",
+                      "snippetStatus": "SUCCESS"
+                    }
+                  ]
+                },
+                {
+                  "document": "projects/124734118875/locations/global/collections/default_collection/dataStores/pyqdeck_1787542746373/branches/0/documents/3a27b9295f6abed0f9b7797c30e242f7",
+                  "uri": "https://www.pyqdeck.in/syllabus/subject/sem1-100105-introduction-to-ai/topic/6a96312b0b50dbcb551eb58b",
+                  "title": "Foundations of AI: philosophy — Introduction to AI — PYQDeck",
+                  "snippetInfo": [
+                    {
+                      "snippet": "What is knowledge and reasoning? Without this, we cannot define what &quot;intelligent&quot; even means. 2. Five Philosophical Questions That Shaped \u003cb\u003eAI\u003c/b\u003e. Q1: Can machines&nbsp;...",
+                      "snippetStatus": "SUCCESS"
+                    }
+                  ]
+                },
+                {
+                  "document": "projects/124734118875/locations/global/collections/default_collection/dataStores/pyqdeck_1787542746373/branches/0/documents/69d67c6ad8d4364479fd082afd22b8bb",
+                  "uri": "https://www.pyqdeck.in/syllabus/subject/sem1-100105-introduction-to-ai/topic/6a96312b0b50dbcb551eb589",
+                  "title": "What is AI? — Introduction to AI — PYQDeck",
+                  "snippetInfo": [
+                    {
+                      "snippet": "What is \u003cb\u003eAI\u003c/b\u003e? — Beginner-Friendly Notes 1. Simple Definition (remember this) \u003cb\u003eArtificial Intelligence\u003c/b\u003e (\u003cb\u003eAI\u003c/b\u003e) = making computers do things that normally need&nbsp;...",
+                      "snippetStatus": "SUCCESS"
+                    }
+                  ]
+                },
+                {
+                  "document": "projects/124734118875/locations/global/collections/default_collection/dataStores/pyqdeck_1787542746373/branches/0/documents/81fb2e0957ead4fbf46a85fc5894c146",
+                  "uri": "https://www.pyqdeck.in/sem5/sem5_artificial_intelligence/2025",
+                  "title": "Artificial intelligence — 2025 question paper — PYQDeck",
+                  "snippetInfo": [
+                    {
+                      "snippet": "Q1a. The Turing Test was proposed by (i) John McCarthy (ii) Alan Turing (iii) Marvin Minsky (iv) Herbert Simon2025 2m &middot; Q1b. Weak \u003cb\u003eAI\u003c/b\u003e is also known as (i) \u003cb\u003eNarrow\u003c/b\u003e&nbsp;...",
+                      "snippetStatus": "SUCCESS"
+                    }
+                  ]
+                },
+                {
+                  "document": "projects/124734118875/locations/global/collections/default_collection/dataStores/pyqdeck_1787542746373/branches/0/documents/923ce14550ee847b39963ed87e1056a5",
+                  "uri": "https://www.pyqdeck.in/sem5/sem5_artificial_intelligence/2022/Q30",
+                  "title": "Face Recognition system is based on which type of approach? (i) Weak A — PYQDeck",
+                  "snippetInfo": [
+                    {
+                      "snippet": "... AI approach (iii) Cognitive AI approach (iv) Strong AI approach. ... Similar questions. Artificial intelligenceWeak AI is also known as (i) \u003cb\u003eNarrow AI\u003c/b\u003e&nbsp;...",
+                      "snippetStatus": "SUCCESS"
+                    }
+                  ]
+                },
+                {
+                  "document": "projects/124734118875/locations/global/collections/default_collection/dataStores/pyqdeck_1787542746373/branches/0/documents/b5b26add767add9ec14e41a0aa867e1d",
+                  "uri": "https://www.pyqdeck.in/syllabus/subject/sem1-100105-introduction-to-ai/topic/6a96312b0b50dbcb551eb5c9/expert-systems-architecture-and-applications",
+                  "title": "Expert systems: architecture and applications — Introduction to AI — PYQDeck",
+                  "snippetInfo": [
+                    {
+                      "snippet": "... \u003cb\u003enarrow\u003c/b\u003e domain (medicine, finance) by encoding expert knowledge as if-then rules and explaining its conclusions. First successful commercial \u003cb\u003eAI\u003c/b\u003e (1980s)&nbsp;...",
+                      "snippetStatus": "SUCCESS"
+                    }
+                  ]
+                },
+                {
+                  "document": "projects/124734118875/locations/global/collections/default_collection/dataStores/pyqdeck_1787542746373/branches/0/documents/0fb44491af897fd2e29114c9c2a5137b",
+                  "uri": "https://www.pyqdeck.in/sem5/sem5_artificial_intelligence/2022/Q37",
+                  "title": "Define Artificial Intelligence (AI). Discuss the applications area of — PYQDeck",
+                  "snippetInfo": [
+                    {
+                      "snippet": "PYQDeck — previous-year question papers, free to browse. An independent student-run archive for Bihar Engineering University (BEU) B.Tech courses. Not&nbsp;...",
+                      "snippetStatus": "SUCCESS"
+                    }
+                  ]
+                },
+                {
+                  "document": "projects/124734118875/locations/global/collections/default_collection/dataStores/pyqdeck_1787542746373/branches/0/documents/39ab68a3d41a878e53ae3ca17c6f6c2f",
+                  "uri": "https://www.pyqdeck.in/syllabus/subject/sem1-100108-computer-fundamentals-emerging-tech/topic/6a96365f0b50dbcb551eb855",
+                  "title": "Applications — Computer Fundamentals & Emerging Technologies — PYQDeck",
+                  "snippetInfo": [
+                    {
+                      "snippet": "Applications (of \u003cb\u003eArtificial Intelligence\u003c/b\u003e) 1. How \u003cb\u003eAI\u003c/b\u003e Applications Are Grouped Whatever the industry, an \u003cb\u003eAI\u003c/b\u003e application usually does one of five jobs: 1.",
+                      "snippetStatus": "SUCCESS"
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "answerQueryToken": "NMwKDAiAwPPVBhDKyvX7AhIkNmFlOTViMmUtMDAwMC0yNzM4LTllZWYtMDg5ZTA4MjUxNjQw"
+}
+,
+{
+  "answer": {
+    "name": "projects/124734118875/locations/global/collections/default_collection/engines/pyqdeck_1787542792054/sessions/14956706605406992762/answers/6830704829587245347",
+    "state": "STREAMING",
+    "references": [
+      {
+        "chunkInfo": {
+          "content": "Q3: What is knowledge and how do we reason? (Epistemology) Philosophy gave AI: logic, deduction, induction, belief vs truth. AI borrows rationalism (knowledge from reasoning — logic, rules) and empiricism (knowledge from experience — learning from data). Modern AI mixes both: rules + data. Q4: What is rational action? Philosophy + economics define a rational agent — chooses actions that best achieve goals given what it knows. This is the current definition of AI: not \"human-like\" but rationally ideal. You will use this in PEAS and agent design. Q5: What are the limits? (Gödel, free will, ethics) Gödel showed formal systems have limits (some truths unprovable) — hints AI reasoning also has limits. Free will vs determinism asks: if brain is physical, can decisions be predicted/computed? Ethics asks: what should AI be allowed to do? 3. Weak vs Strong AI (often asked) Weak / Narrow AI: does one task intelligently (all real AI today) — eg, translator, chess engine. Strong / General AI (AGI): human-level understanding across tasks — does not exist yet, debated if possible. Superintelligence: beyond human — purely speculative. In this subject you study weak AI; strong AI is philosophy. ",
+          "documentMetadata": {
+            "document": "projects/124734118875/locations/global/collections/default_collection/dataStores/pyqdeck_1787542746373/branches/0/documents/3a27b9295f6abed0f9b7797c30e242f7",
+            "uri": "https://www.pyqdeck.in/syllabus/subject/sem1-100105-introduction-to-ai/topic/6a96312b0b50dbcb551eb58b",
+            "title": "Foundations of AI: philosophy — Introduction to AI — PYQDeck"
+          }
+        }
+      },
+      {
+        "chunkInfo": {
+          "content": "Memory — vector databases (retrieval-augmented generation) for long-term knowledge, plus short-term conversation state. Planner — decompose a goal into steps: ReAct (reason + act), plan-and-execute, or tree search over plans. Reflection and self-check — the agent reviews its own output and retries on failure. Guardrails — permission scopes, allow-listed tools, rate limits, sandboxing, human approval for risky actions (payments, deletions), logging and auditability. Examples in the wild: coding agents (write, run and fix code), customer-support agents, browser/computer-use agents, research assistants, RPA-style business process agents, and multi-agent frameworks (AutoGen, CrewAI, LangGraph) in which specialised agents delegate to one another. MCP (Model Context Protocol) is an emerging standard for exposing tools and data to agents in a uniform way. ",
+          "documentMetadata": {
+            "document": "projects/124734118875/locations/global/collections/default_collection/dataStores/pyqdeck_1787542746373/branches/0/documents/51fbff10d25cdb239ae305864bf587d0",
+            "uri": "https://www.pyqdeck.in/syllabus/subject/sem1-100108-computer-fundamentals-emerging-tech/topic/6a96365f0b50dbcb551eb854/ai-agents",
+            "title": "AI agents — Computer Fundamentals & Emerging Technologies — PYQDeck"
+          }
+        }
+      },
+      {
+        "chunkInfo": {
+          "content": "You only need to recognise it: Human-like Rational (ideal) Think Systems that think like humans (eg, cognitive models) Systems that think rationally (logic, reasoning) Act Systems that act like humans (Turing Test) Systems that act rationally (agents achieving goals — modern view) Exam tip: The course takes the acting rationally / agent view as the main definition. 4. AI vs Related Terms AI (broadest): any intelligent behaviour. Machine Learning (ML): a subset of AI where the system learns from data instead of being hand-coded for every rule. Deep Learning: a subset of ML using neural networks with many layers. AI ⊃ Machine Learning ⊃ Deep Learning 5. Core Capabilities You Will See All Semester Perception — sensors → understanding (vision, speech) Reasoning — logic, search, knowledge Learning — improving from data Action — agents acting in an environment Language & Interaction — NLP, dialogue, robotics 6. Quick Examples by Category Perception: face unlock, medical image diagnosis Reasoning: chess engine, route planning, puzzle solver Learning: spam filter, Netflix recommendations, price prediction Action: vacuum robot, self-driving car, game agent Language: translation, ChatGPT, voice assistants 7. ",
+          "documentMetadata": {
+            "document": "projects/124734118875/locations/global/collections/default_collection/dataStores/pyqdeck_1787542746373/branches/0/documents/69d67c6ad8d4364479fd082afd22b8bb",
+            "uri": "https://www.pyqdeck.in/syllabus/subject/sem1-100105-introduction-to-ai/topic/6a96312b0b50dbcb551eb589",
+            "title": "What is AI? — Introduction to AI — PYQDeck"
+          }
+        }
+      },
+      {
+        "chunkInfo": {
+          "content": "Familiar Examples Around Us Google Maps' ETA and traffic colours Gmail's spam filter and Smart Compose YouTube/Netflix/Spotify recommendations Amazon/Flipkart \"customers also bought\" UPI and card fraud alerts Ola/Uber ride matching and surge pricing Zomato/Swiggy delivery-time estimates face unlock and Aadhaar face authentication Siri/Alexa/Google Assistant Bhashini-style translation of Indian languages AI advisories to farmers (Kisan call centres, crop insurance surveys with satellite data) medical imaging tools in Indian hospitals plagiarism/AI-detection in universities ChatGPT-style assistants for study and coding. 4. Benefits and Challenges Benefits Challenges Handles scale and repetition that humans cannot Bias — models inherit and amplify data bias (hiring, credit, policing) Accuracy on well-defined perception tasks (often superhuman) Privacy — training needs data, sometimes sensitive and personal 24×7 availability and consistent output Explainability — \"black box\" decisions are hard to justify in medicine or law Personalisation at population scale Job displacement and the need for reskilling Detects patterns invisible to humans (fraud, disease) Hallucination, drift and adversarial attacks — outputs can be confidently wrong Enables accessibility and new products Cost/energy of training; data quality and availability Frees people for judgement and creativity Digital divide, regulation and accountability questions 5. ",
+          "documentMetadata": {
+            "document": "projects/124734118875/locations/global/collections/default_collection/dataStores/pyqdeck_1787542746373/branches/0/documents/39ab68a3d41a878e53ae3ca17c6f6c2f",
+            "uri": "https://www.pyqdeck.in/syllabus/subject/sem1-100108-computer-fundamentals-emerging-tech/topic/6a96365f0b50dbcb551eb855",
+            "title": "Applications — Computer Fundamentals & Emerging Technologies — PYQDeck"
+          }
+        }
+      },
+      {
+        "chunkInfo": {
+          "content": "2. A Brief History 1950 Turing test → 1956 Dartmouth Conference (the term \"Artificial Intelligence\" is born) → 1960s-70s symbolic AI, search, game playing → 1970s-80s expert systems (MYCIN, DENDRAL) and the first AI winter → 1997 Deep Blue beats Kasparov → 2011 IBM Watson wins Jeopardy, Siri launches → 2012 AlexNet ignites deep learning (thanks to GPUs and big data) → 2016 AlphaGo beats Lee Sedol → 2017 the Transformer architecture → 2022+ generative AI (ChatGPT, diffusion image models) → today, multimodal and agentic AI. 3. Levels and Types of AI By capability Meaning Status Narrow / Weak AI Performs one specific task as well as or better than a human Exists today (search, translation, recommendations, chess, face unlock) General AI (AGI) Human-level ability across all cognitive tasks, transferring learning between domains Hypothetical — not achieved Super AI Far exceeds the best human minds in every field Speculative By functionality Meaning Reactive machines Respond to the current input only, no memory (Deep Blue, simple game AI) Limited memory Use recent past data (self-driving cars, chatbots) Theory of mind Model the beliefs and emotions of others — research stage Self-aware Conscious of itself — conceptual only 4. ",
+          "documentMetadata": {
+            "document": "projects/124734118875/locations/global/collections/default_collection/dataStores/pyqdeck_1787542746373/branches/0/documents/1efca4574d0105fe2a0bfd7c9db80ddc",
+            "uri": "https://www.pyqdeck.in/syllabus/subject/sem1-100108-computer-fundamentals-emerging-tech/topic/6a96365f0b50dbcb551eb853",
+            "title": "Artificial Intelligence (AI): Introduction — Computer Fundamentals & Emerging Technologies — PYQDeck"
+          }
+        }
+      },
+      {
+        "chunkInfo": {
+          "content": "Q3: What is knowledge and how do we reason? (Epistemology) Philosophy gave AI: logic, deduction, induction, belief vs truth. AI borrows rationalism (knowledge from reasoning — logic, rules) and empiricism (knowledge from experience — learning from data). Modern AI mixes both: rules + data. Q4: What is rational action? Philosophy + economics define a rational agent — chooses actions that best achieve goals given what it knows. This is the current definition of AI: not \"human-like\" but rationally ideal. You will use this in PEAS and agent design. Q5: What are the limits? (Gödel, free will, ethics) Gödel showed formal systems have limits (some truths unprovable) — hints AI reasoning also has limits. Free will vs determinism asks: if brain is physical, can decisions be predicted/computed? Ethics asks: what should AI be allowed to do? 3. Weak vs Strong AI (often asked) Weak / Narrow AI: does one task intelligently (all real AI today) — eg, translator, chess engine. Strong / General AI (AGI): human-level understanding across tasks — does not exist yet, debated if possible. Superintelligence: beyond human — purely speculative. In this subject you study weak AI; strong AI is philosophy. ",
+          "documentMetadata": {
+            "document": "projects/124734118875/locations/global/collections/default_collection/dataStores/pyqdeck_1787542746373/branches/0/documents/3a27b9295f6abed0f9b7797c30e242f7",
+            "uri": "https://www.pyqdeck.in/syllabus/subject/sem1-100105-introduction-to-ai/topic/6a96312b0b50dbcb551eb58b",
+            "title": "Foundations of AI: philosophy — Introduction to AI — PYQDeck"
+          }
+        }
+      },
+      {
+        "chunkInfo": {
+          "content": "2. A Brief History 1950 Turing test → 1956 Dartmouth Conference (the term \"Artificial Intelligence\" is born) → 1960s-70s symbolic AI, search, game playing → 1970s-80s expert systems (MYCIN, DENDRAL) and the first AI winter → 1997 Deep Blue beats Kasparov → 2011 IBM Watson wins Jeopardy, Siri launches → 2012 AlexNet ignites deep learning (thanks to GPUs and big data) → 2016 AlphaGo beats Lee Sedol → 2017 the Transformer architecture → 2022+ generative AI (ChatGPT, diffusion image models) → today, multimodal and agentic AI. 3. Levels and Types of AI By capability Meaning Status Narrow / Weak AI Performs one specific task as well as or better than a human Exists today (search, translation, recommendations, chess, face unlock) General AI (AGI) Human-level ability across all cognitive tasks, transferring learning between domains Hypothetical — not achieved Super AI Far exceeds the best human minds in every field Speculative By functionality Meaning Reactive machines Respond to the current input only, no memory (Deep Blue, simple game AI) Limited memory Use recent past data (self-driving cars, chatbots) Theory of mind Model the beliefs and emotions of others — research stage Self-aware Conscious of itself — conceptual only 4. ",
+          "documentMetadata": {
+            "document": "projects/124734118875/locations/global/collections/default_collection/dataStores/pyqdeck_1787542746373/branches/0/documents/1efca4574d0105fe2a0bfd7c9db80ddc",
+            "uri": "https://www.pyqdeck.in/syllabus/subject/sem1-100108-computer-fundamentals-emerging-tech/topic/6a96365f0b50dbcb551eb853",
+            "title": "Artificial Intelligence (AI): Introduction — Computer Fundamentals & Emerging Technologies — PYQDeck"
+          }
+        }
+      },
+      {
+        "chunkInfo": {
+          "content": "Expert systems: architecture and applications — Introduction to AI — PYQDeck PyQdeck Logo PyQdeckBEU PYQ ArchiveSubjectsSyllabusBlog Home Syllabus Introduction to AI Expert systems: architecture and applications Introduction to Machine Learning and AI Applications (10hrs) Introduction to AI Expert systems: architecture and applications Watch lectures Expert Systems: Architecture and Applications — Beginner-Friendly Notes 1. What an Expert System Is Expert system = rule-based AI that mimics a human expert's decision-making in a narrow domain (medicine, finance) by encoding expert knowledge as if-then rules and explaining its conclusions. First successful commercial AI (1980s) — DENDRAL (chemistry), MYCIN (bacterial infection), XCON (computer config). 2. Architecture (diagram to memorise) User ──► [User Interface / Explanation Facility] ◄── Blackboard / Working Memory │ ↕ │ └─► [Inference Engine] ──► [Knowledge Base (rules + facts)] ↕ [Knowledge Acquisition Module] (expert → KB) Parts: Knowledge Base (KB): domain rules + facts (often production system, Module 3 topic 11) + certainty factors (Module 4). Inference Engine: forward/backward chaining (Module 3) to derive conclusions. Working Memory (Blackboard): current case facts (patient symptoms). ",
+          "documentMetadata": {
+            "document": "projects/124734118875/locations/global/collections/default_collection/dataStores/pyqdeck_1787542746373/branches/0/documents/b5b26add767add9ec14e41a0aa867e1d",
+            "uri": "https://www.pyqdeck.in/syllabus/subject/sem1-100105-introduction-to-ai/topic/6a96312b0b50dbcb551eb5c9/expert-systems-architecture-and-applications",
+            "title": "Expert systems: architecture and applications — Introduction to AI — PYQDeck"
+          }
+        }
+      },
+      {
+        "chunkInfo": {
+          "content": "How to Spot an AI Problem (3 checks) Environment is uncertain / large (too many possibilities to hard-code) Needs learning or search (pattern from data, or exploring options) Needs human-like judgement (classify, predict, decide, generate) If all three are low, plain programming is enough — you don't need AI. 8. Common Mistakes Beginners Make Thinking AI = human consciousness — no, it is narrow task intelligence today. Thinking more data always helps — only clean, relevant data helps. Thinking AI writes its own goals — goals are still given by humans (PEAS in next topics). 9. One-Line Summary to Write in Exam AI is the study and design of intelligent agents — systems that perceive their environment and act to maximise their chance of achieving goals, exhibiting capabilities such as learning, reasoning, perception and language understanding. 10. Quick Self-Check Is a rule if temperature \u003e 30 → turn on AC AI? (No — fixed rule, no learning/search) Is email spam detection AI? (Yes — learns patterns from examples) Name one AI you used today and which capability it used. Next topicHistory and evolution of AI ← All Introduction to AI modules PYQDeck — previous-year question papers, free to browse. ",
+          "documentMetadata": {
+            "document": "projects/124734118875/locations/global/collections/default_collection/dataStores/pyqdeck_1787542746373/branches/0/documents/69d67c6ad8d4364479fd082afd22b8bb",
+            "uri": "https://www.pyqdeck.in/syllabus/subject/sem1-100105-introduction-to-ai/topic/6a96312b0b50dbcb551eb589",
+            "title": "What is AI? — Introduction to AI — PYQDeck"
+          }
+        }
+      },
+      {
+        "chunkInfo": {
+          "content": "What is artificial intelligence? (i) Putting your intelligence into co — PYQDeck PyQdeck Logo PyQdeckBEU PYQ ArchiveSubjectsBlog Home Semester 5 Artificial intelligence 2022 Q1b Back to the 2022 paper Module 1: Introduction and Search Techniques 2022 2m What is artificial intelligence? (i) Putting your intelligence into computer (ii) Programming with your own intelligence (iii) Making a machine intelligent (iv) Playing a game Copy Search Google Ask AI Similar questions Artificial intelligenceExplain what you understand by Artificial Intelligence. Describe the Turing Test in detail and discuss its significance in the field of AI.2025 7mArtificial intelligenceDefine Artificial Intelligence (AI). Discuss the applications area of AI.2022 7mArtificial intelligenceWeak AI is also known as (i) Narrow AI (ii) General AI (iii) Strong AI (iv) Super AI2025 2mArtificial intelligenceWhich of the following best defines the Turing Test? (i) A method to calculate machine efficiency (ii) A test for machine learning algorithms (iii) A test to determine if a machine can exhibit human-like intelligence (iv) A benchmark for robotic speed2024 2m PreviousIn LISP, the function returns the list that result after the first element is removed (the rest of the list), is (i) car (ii) last (iii) cons (iv) cdrNextWhich is the best way to go for game playing problem? ",
+          "documentMetadata": {
+            "document": "projects/124734118875/locations/global/collections/default_collection/dataStores/pyqdeck_1787542746373/branches/0/documents/2ed380593df75ee07bfeccf254854099",
+            "uri": "https://www.pyqdeck.in/sem5/sem5_artificial_intelligence/2022/Q28",
+            "title": "What is artificial intelligence? (i) Putting your intelligence into co — PYQDeck"
+          }
+        }
+      }
+    ]
+  },
+  "answerQueryToken": "NMwKDAiAwPPVBhDKyvX7AhIkNmFlOTViMmUtMDAwMC0yNzM4LTllZWYtMDg5ZTA4MjUxNjQw"
+}
+,
+{
+  "answer": {
+    "name": "projects/124734118875/locations/global/collections/default_collection/engines/pyqdeck_1787542792054/sessions/14956706605406992762/answers/6830704829587245347",
+    "state": "STREAMING",
+    "answerText": "**"
+  },
+  "answerQueryToken": "NMwKDAiAwPPVBhDKyvX7AhIkNmFlOTViMmUtMDAwMC0yNzM4LTllZWYtMDg5ZTA4MjUxNjQw"
+}
+,
+{
+  "answer": {
+    "name": "projects/124734118875/locations/global/collections/default_collection/engines/pyqdeck_1787542792054/sessions/14956706605406992762/answers/6830704829587245347",
+    "state": "STREAMING",
+    "answerText": "Narrow AI** (also known as **Weak AI**) is designed to perform one"
+  },
+  "answerQueryToken": "NMwKDAiAwPPVBhDKyvX7AhIkNmFlOTViMmUtMDAwMC0yNzM4LTllZWYtMDg5ZTA4MjUxNjQw"
+}
+,
+{
+  "answer": {
+    "name": "projects/124734118875/locations/global/collections/default_collection/engines/pyqdeck_1787542792054/sessions/14956706605406992762/answers/6830704829587245347",
+    "state": "STREAMING",
+    "answerText": " specific task intelligently. "
+  },
+  "answerQueryToken": "NMwKDAiAwPPVBhDKyvX7AhIkNmFlOTViMmUtMDAwMC0yNzM4LTllZWYtMDg5ZTA4MjUxNjQw"
+}
+,
+{
+  "answer": {
+    "name": "projects/124734118875/locations/global/collections/default_collection/engines/pyqdeck_1787542792054/sessions/14956706605406992762/answers/6830704829587245347",
+    "state": "STREAMING",
+    "citations": [
+      {
+        "endIndex": "97",
+        "sources": [
+          {
+            "referenceId": "0"
+          },
+          {
+            "referenceId": "5"
+          },
+          {
+            "referenceId": "9"
+          }
+        ]
+      }
+    ]
+  },
+  "answerQueryToken": "NMwKDAiAwPPVBhDKyvX7AhIkNmFlOTViMmUtMDAwMC0yNzM4LTllZWYtMDg5ZTA4MjUxNjQw"
+}
+,
+{
+  "answer": {
+    "name": "projects/124734118875/locations/global/collections/default_collection/engines/pyqdeck_1787542792054/sessions/14956706605406992762/answers/6830704829587245347",
+    "state": "STREAMING",
+    "answerText": "It represents all real AI in existence today, including translators"
+  },
+  "answerQueryToken": "NMwKDAiAwPPVBhDKyvX7AhIkNmFlOTViMmUtMDAwMC0yNzM4LTllZWYtMDg5ZTA4MjUxNjQw"
+}
+,
+{
+  "answer": {
+    "name": "projects/124734118875/locations/global/collections/default_collection/engines/pyqdeck_1787542792054/sessions/14956706605406992762/answers/6830704829587245347",
+    "state": "STREAMING",
+    "answerText": ", chess engines, search tools, recommendations, and face unlock. \n\n"
+  },
+  "answerQueryToken": "NMwKDAiAwPPVBhDKyvX7AhIkNmFlOTViMmUtMDAwMC0yNzM4LTllZWYtMDg5ZTA4MjUxNjQw"
+}
+,
+{
+  "answer": {
+    "name": "projects/124734118875/locations/global/collections/default_collection/engines/pyqdeck_1787542792054/sessions/14956706605406992762/answers/6830704829587245347",
+    "state": "STREAMING",
+    "citations": [
+      {
+        "startIndex": "98",
+        "endIndex": "229",
+        "sources": [
+          {
+            "referenceId": "0"
+          },
+          {
+            "referenceId": "4"
+          },
+          {
+            "referenceId": "5"
+          },
+          {
+            "referenceId": "6"
+          }
+        ]
+      }
+    ]
+  },
+  "answerQueryToken": "NMwKDAiAwPPVBhDKyvX7AhIkNmFlOTViMmUtMDAwMC0yNzM4LTllZWYtMDg5ZTA4MjUxNjQw"
+}
+,
+{
+  "answer": {
+    "name": "projects/124734118875/locations/global/collections/default_collection/engines/pyqdeck_1787542792054/sessions/14956706605406992762/answers/6830704829587245347",
+    "state": "STREAMING",
+    "answerText": "Unlike General AI, which remains hypothetical and aims for human-level understanding across multiple tasks, Narrow AI operates strictly within a limited"
+  },
+  "answerQueryToken": "NMwKDAiAwPPVBhDKyvX7AhIkNmFlOTViMmUtMDAwMC0yNzM4LTllZWYtMDg5ZTA4MjUxNjQw"
+}
+,
+{
+  "answer": {
+    "name": "projects/124734118875/locations/global/collections/default_collection/engines/pyqdeck_1787542792054/sessions/14956706605406992762/answers/6830704829587245347",
+    "state": "STREAMING",
+    "answerText": " domain. "
+  },
+  "answerQueryToken": "NMwKDAiAwPPVBhDKyvX7AhIkNmFlOTViMmUtMDAwMC0yNzM4LTllZWYtMDg5ZTA4MjUxNjQw"
+}
+,
+{
+  "answer": {
+    "name": "projects/124734118875/locations/global/collections/default_collection/engines/pyqdeck_1787542792054/sessions/14956706605406992762/answers/6830704829587245347",
+    "state": "STREAMING",
+    "citations": [
+      {
+        "startIndex": "232",
+        "endIndex": "392",
+        "sources": [
+          {
+            "referenceId": "0"
+          },
+          {
+            "referenceId": "4"
+          },
+          {
+            "referenceId": "5"
+          },
+          {
+            "referenceId": "6"
+          },
+          {
+            "referenceId": "7"
+          }
+        ]
+      }
+    ]
+  },
+  "answerQueryToken": "NMwKDAiAwPPVBhDKyvX7AhIkNmFlOTViMmUtMDAwMC0yNzM4LTllZWYtMDg5ZTA4MjUxNjQw"
+}
+,
+{
+  "answer": {
+    "name": "projects/124734118875/locations/global/collections/default_collection/engines/pyqdeck_1787542792054/sessions/14956706605406992762/answers/6830704829587245347",
+    "state": "STREAMING",
+    "answerText": "It can perform its designated task as well as or even"
+  },
+  "answerQueryToken": "NMwKDAiAwPPVBhDKyvX7AhIkNmFlOTViMmUtMDAwMC0yNzM4LTllZWYtMDg5ZTA4MjUxNjQw"
+}
+,
+{
+  "answer": {
+    "name": "projects/124734118875/locations/global/collections/default_collection/engines/pyqdeck_1787542792054/sessions/14956706605406992762/answers/6830704829587245347",
+    "state": "STREAMING",
+    "answerText": " better than a human. "
+  },
+  "answerQueryToken": "NMwKDAiAwPPVBhDKyvX7AhIkNmFlOTViMmUtMDAwMC0yNzM4LTllZWYtMDg5ZTA4MjUxNjQw"
+}
+,
+{
+  "answer": {
+    "name": "projects/124734118875/locations/global/collections/default_collection/engines/pyqdeck_1787542792054/sessions/14956706605406992762/answers/6830704829587245347",
+    "state": "STREAMING",
+    "citations": [
+      {
+        "startIndex": "393",
+        "endIndex": "467",
+        "sources": [
+          {
+            "referenceId": "4"
+          },
+          {
+            "referenceId": "6"
+          }
+        ]
+      }
+    ]
+  },
+  "answerQueryToken": "NMwKDAiAwPPVBhDKyvX7AhIkNmFlOTViMmUtMDAwMC0yNzM4LTllZWYtMDg5ZTA4MjUxNjQw"
+}
+,
+{
+  "answer": {
+    "name": "projects/124734118875/locations/global/collections/default_collection/engines/pyqdeck_1787542792054/sessions/14956706605406992762/answers/6830704829587245347",
+    "state": "STREAMING",
+    "answerText": "However, it lacks consciousness, does not write its own goals, and cannot transfer its"
+  },
+  "answerQueryToken": "NMwKDAiAwPPVBhDKyvX7AhIkNmFlOTViMmUtMDAwMC0yNzM4LTllZWYtMDg5ZTA4MjUxNjQw"
+}
+,
+{
+  "answer": {
+    "name": "projects/124734118875/locations/global/collections/default_collection/engines/pyqdeck_1787542792054/sessions/14956706605406992762/answers/6830704829587245347",
+    "state": "STREAMING",
+    "answerText": " learning to other domains."
+  },
+  "answerQueryToken": "NMwKDAiAwPPVBhDKyvX7AhIkNmFlOTViMmUtMDAwMC0yNzM4LTllZWYtMDg5ZTA4MjUxNjQw"
+}
+,
+{
+  "answer": {
+    "name": "projects/124734118875/locations/global/collections/default_collection/engines/pyqdeck_1787542792054/sessions/14956706605406992762/answers/6830704829587245347",
+    "state": "STREAMING",
+    "citations": [
+      {
+        "startIndex": "468",
+        "endIndex": "581",
+        "sources": [
+          {
+            "referenceId": "4"
+          },
+          {
+            "referenceId": "6"
+          },
+          {
+            "referenceId": "8"
+          }
+        ]
+      }
+    ]
+  },
+  "answerQueryToken": "NMwKDAiAwPPVBhDKyvX7AhIkNmFlOTViMmUtMDAwMC0yNzM4LTllZWYtMDg5ZTA4MjUxNjQw"
+}
+,
+{
+  "answer": {
+    "name": "projects/124734118875/locations/global/collections/default_collection/engines/pyqdeck_1787542792054/sessions/14956706605406992762/answers/6830704829587245347",
+    "state": "STREAMING",
+    "relatedQuestions": [
+      "What are more real-world narrow AI examples?",
+      "How does narrow AI differ from general AI?",
+      "What are the limitations of narrow AI?",
+      "Can narrow AI learn new tasks?",
+      "Is most current AI narrow AI?"
+    ]
+  },
+  "answerQueryToken": "NMwKDAiAwPPVBhDKyvX7AhIkNmFlOTViMmUtMDAwMC0yNzM4LTllZWYtMDg5ZTA4MjUxNjQw"
+}
+,
+{
+  "answer": {
+    "name": "projects/124734118875/locations/global/collections/default_collection/engines/pyqdeck_1787542792054/sessions/14956706605406992762/answers/6830704829587245347",
+    "state": "SUCCEEDED",
+    "answerText": "**Narrow AI** (also known as **Weak AI**) is designed to perform one specific task intelligently. It represents all real AI in existence today, including translators, chess engines, search tools, recommendations, and face unlock. \n\nUnlike General AI, which remains hypothetical and aims for human-level understanding across multiple tasks, Narrow AI operates strictly within a limited domain. It can perform its designated task as well as or even better than a human. However, it lacks consciousness, does not write its own goals, and cannot transfer its learning to other domains.",
+    "citations": [
+      {
+        "endIndex": "97",
+        "sources": [
+          {
+            "referenceId": "0"
+          },
+          {
+            "referenceId": "5"
+          },
+          {
+            "referenceId": "9"
+          }
+        ]
+      },
+      {
+        "startIndex": "98",
+        "endIndex": "229",
+        "sources": [
+          {
+            "referenceId": "0"
+          },
+          {
+            "referenceId": "4"
+          },
+          {
+            "referenceId": "5"
+          },
+          {
+            "referenceId": "6"
+          }
+        ]
+      },
+      {
+        "startIndex": "232",
+        "endIndex": "392",
+        "sources": [
+          {
+            "referenceId": "0"
+          },
+          {
+            "referenceId": "4"
+          },
+          {
+            "referenceId": "5"
+          },
+          {
+            "referenceId": "6"
+          },
+          {
+            "referenceId": "7"
+          }
+        ]
+      },
+      {
+        "startIndex": "393",
+        "endIndex": "467",
+        "sources": [
+          {
+            "referenceId": "4"
+          },
+          {
+            "referenceId": "6"
+          }
+        ]
+      },
+      {
+        "startIndex": "468",
+        "endIndex": "581",
+        "sources": [
+          {
+            "referenceId": "4"
+          },
+          {
+            "referenceId": "6"
+          },
+          {
+            "referenceId": "8"
+          }
+        ]
+      }
+    ],
+    "references": [
+      {
+        "chunkInfo": {
+          "content": "Q3: What is knowledge and how do we reason? (Epistemology) Philosophy gave AI: logic, deduction, induction, belief vs truth. AI borrows rationalism (knowledge from reasoning — logic, rules) and empiricism (knowledge from experience — learning from data). Modern AI mixes both: rules + data. Q4: What is rational action? Philosophy + economics define a rational agent — chooses actions that best achieve goals given what it knows. This is the current definition of AI: not \"human-like\" but rationally ideal. You will use this in PEAS and agent design. Q5: What are the limits? (Gödel, free will, ethics) Gödel showed formal systems have limits (some truths unprovable) — hints AI reasoning also has limits. Free will vs determinism asks: if brain is physical, can decisions be predicted/computed? Ethics asks: what should AI be allowed to do? 3. Weak vs Strong AI (often asked) Weak / Narrow AI: does one task intelligently (all real AI today) — eg, translator, chess engine. Strong / General AI (AGI): human-level understanding across tasks — does not exist yet, debated if possible. Superintelligence: beyond human — purely speculative. In this subject you study weak AI; strong AI is philosophy. ",
+          "documentMetadata": {
+            "document": "projects/124734118875/locations/global/collections/default_collection/dataStores/pyqdeck_1787542746373/branches/0/documents/3a27b9295f6abed0f9b7797c30e242f7",
+            "uri": "https://www.pyqdeck.in/syllabus/subject/sem1-100105-introduction-to-ai/topic/6a96312b0b50dbcb551eb58b",
+            "title": "Foundations of AI: philosophy — Introduction to AI — PYQDeck"
+          }
+        }
+      },
+      {
+        "chunkInfo": {
+          "content": "Memory — vector databases (retrieval-augmented generation) for long-term knowledge, plus short-term conversation state. Planner — decompose a goal into steps: ReAct (reason + act), plan-and-execute, or tree search over plans. Reflection and self-check — the agent reviews its own output and retries on failure. Guardrails — permission scopes, allow-listed tools, rate limits, sandboxing, human approval for risky actions (payments, deletions), logging and auditability. Examples in the wild: coding agents (write, run and fix code), customer-support agents, browser/computer-use agents, research assistants, RPA-style business process agents, and multi-agent frameworks (AutoGen, CrewAI, LangGraph) in which specialised agents delegate to one another. MCP (Model Context Protocol) is an emerging standard for exposing tools and data to agents in a uniform way. ",
+          "documentMetadata": {
+            "document": "projects/124734118875/locations/global/collections/default_collection/dataStores/pyqdeck_1787542746373/branches/0/documents/51fbff10d25cdb239ae305864bf587d0",
+            "uri": "https://www.pyqdeck.in/syllabus/subject/sem1-100108-computer-fundamentals-emerging-tech/topic/6a96365f0b50dbcb551eb854/ai-agents",
+            "title": "AI agents — Computer Fundamentals & Emerging Technologies — PYQDeck"
+          }
+        }
+      },
+      {
+        "chunkInfo": {
+          "content": "You only need to recognise it: Human-like Rational (ideal) Think Systems that think like humans (eg, cognitive models) Systems that think rationally (logic, reasoning) Act Systems that act like humans (Turing Test) Systems that act rationally (agents achieving goals — modern view) Exam tip: The course takes the acting rationally / agent view as the main definition. 4. AI vs Related Terms AI (broadest): any intelligent behaviour. Machine Learning (ML): a subset of AI where the system learns from data instead of being hand-coded for every rule. Deep Learning: a subset of ML using neural networks with many layers. AI ⊃ Machine Learning ⊃ Deep Learning 5. Core Capabilities You Will See All Semester Perception — sensors → understanding (vision, speech) Reasoning — logic, search, knowledge Learning — improving from data Action — agents acting in an environment Language & Interaction — NLP, dialogue, robotics 6. Quick Examples by Category Perception: face unlock, medical image diagnosis Reasoning: chess engine, route planning, puzzle solver Learning: spam filter, Netflix recommendations, price prediction Action: vacuum robot, self-driving car, game agent Language: translation, ChatGPT, voice assistants 7. ",
+          "documentMetadata": {
+            "document": "projects/124734118875/locations/global/collections/default_collection/dataStores/pyqdeck_1787542746373/branches/0/documents/69d67c6ad8d4364479fd082afd22b8bb",
+            "uri": "https://www.pyqdeck.in/syllabus/subject/sem1-100105-introduction-to-ai/topic/6a96312b0b50dbcb551eb589",
+            "title": "What is AI? — Introduction to AI — PYQDeck"
+          }
+        }
+      },
+      {
+        "chunkInfo": {
+          "content": "Familiar Examples Around Us Google Maps' ETA and traffic colours Gmail's spam filter and Smart Compose YouTube/Netflix/Spotify recommendations Amazon/Flipkart \"customers also bought\" UPI and card fraud alerts Ola/Uber ride matching and surge pricing Zomato/Swiggy delivery-time estimates face unlock and Aadhaar face authentication Siri/Alexa/Google Assistant Bhashini-style translation of Indian languages AI advisories to farmers (Kisan call centres, crop insurance surveys with satellite data) medical imaging tools in Indian hospitals plagiarism/AI-detection in universities ChatGPT-style assistants for study and coding. 4. Benefits and Challenges Benefits Challenges Handles scale and repetition that humans cannot Bias — models inherit and amplify data bias (hiring, credit, policing) Accuracy on well-defined perception tasks (often superhuman) Privacy — training needs data, sometimes sensitive and personal 24×7 availability and consistent output Explainability — \"black box\" decisions are hard to justify in medicine or law Personalisation at population scale Job displacement and the need for reskilling Detects patterns invisible to humans (fraud, disease) Hallucination, drift and adversarial attacks — outputs can be confidently wrong Enables accessibility and new products Cost/energy of training; data quality and availability Frees people for judgement and creativity Digital divide, regulation and accountability questions 5. ",
+          "documentMetadata": {
+            "document": "projects/124734118875/locations/global/collections/default_collection/dataStores/pyqdeck_1787542746373/branches/0/documents/39ab68a3d41a878e53ae3ca17c6f6c2f",
+            "uri": "https://www.pyqdeck.in/syllabus/subject/sem1-100108-computer-fundamentals-emerging-tech/topic/6a96365f0b50dbcb551eb855",
+            "title": "Applications — Computer Fundamentals & Emerging Technologies — PYQDeck"
+          }
+        }
+      },
+      {
+        "chunkInfo": {
+          "content": "2. A Brief History 1950 Turing test → 1956 Dartmouth Conference (the term \"Artificial Intelligence\" is born) → 1960s-70s symbolic AI, search, game playing → 1970s-80s expert systems (MYCIN, DENDRAL) and the first AI winter → 1997 Deep Blue beats Kasparov → 2011 IBM Watson wins Jeopardy, Siri launches → 2012 AlexNet ignites deep learning (thanks to GPUs and big data) → 2016 AlphaGo beats Lee Sedol → 2017 the Transformer architecture → 2022+ generative AI (ChatGPT, diffusion image models) → today, multimodal and agentic AI. 3. Levels and Types of AI By capability Meaning Status Narrow / Weak AI Performs one specific task as well as or better than a human Exists today (search, translation, recommendations, chess, face unlock) General AI (AGI) Human-level ability across all cognitive tasks, transferring learning between domains Hypothetical — not achieved Super AI Far exceeds the best human minds in every field Speculative By functionality Meaning Reactive machines Respond to the current input only, no memory (Deep Blue, simple game AI) Limited memory Use recent past data (self-driving cars, chatbots) Theory of mind Model the beliefs and emotions of others — research stage Self-aware Conscious of itself — conceptual only 4. ",
+          "documentMetadata": {
+            "document": "projects/124734118875/locations/global/collections/default_collection/dataStores/pyqdeck_1787542746373/branches/0/documents/1efca4574d0105fe2a0bfd7c9db80ddc",
+            "uri": "https://www.pyqdeck.in/syllabus/subject/sem1-100108-computer-fundamentals-emerging-tech/topic/6a96365f0b50dbcb551eb853",
+            "title": "Artificial Intelligence (AI): Introduction — Computer Fundamentals & Emerging Technologies — PYQDeck"
+          }
+        }
+      },
+      {
+        "chunkInfo": {
+          "content": "Q3: What is knowledge and how do we reason? (Epistemology) Philosophy gave AI: logic, deduction, induction, belief vs truth. AI borrows rationalism (knowledge from reasoning — logic, rules) and empiricism (knowledge from experience — learning from data). Modern AI mixes both: rules + data. Q4: What is rational action? Philosophy + economics define a rational agent — chooses actions that best achieve goals given what it knows. This is the current definition of AI: not \"human-like\" but rationally ideal. You will use this in PEAS and agent design. Q5: What are the limits? (Gödel, free will, ethics) Gödel showed formal systems have limits (some truths unprovable) — hints AI reasoning also has limits. Free will vs determinism asks: if brain is physical, can decisions be predicted/computed? Ethics asks: what should AI be allowed to do? 3. Weak vs Strong AI (often asked) Weak / Narrow AI: does one task intelligently (all real AI today) — eg, translator, chess engine. Strong / General AI (AGI): human-level understanding across tasks — does not exist yet, debated if possible. Superintelligence: beyond human — purely speculative. In this subject you study weak AI; strong AI is philosophy. ",
+          "documentMetadata": {
+            "document": "projects/124734118875/locations/global/collections/default_collection/dataStores/pyqdeck_1787542746373/branches/0/documents/3a27b9295f6abed0f9b7797c30e242f7",
+            "uri": "https://www.pyqdeck.in/syllabus/subject/sem1-100105-introduction-to-ai/topic/6a96312b0b50dbcb551eb58b",
+            "title": "Foundations of AI: philosophy — Introduction to AI — PYQDeck"
+          }
+        }
+      },
+      {
+        "chunkInfo": {
+          "content": "2. A Brief History 1950 Turing test → 1956 Dartmouth Conference (the term \"Artificial Intelligence\" is born) → 1960s-70s symbolic AI, search, game playing → 1970s-80s expert systems (MYCIN, DENDRAL) and the first AI winter → 1997 Deep Blue beats Kasparov → 2011 IBM Watson wins Jeopardy, Siri launches → 2012 AlexNet ignites deep learning (thanks to GPUs and big data) → 2016 AlphaGo beats Lee Sedol → 2017 the Transformer architecture → 2022+ generative AI (ChatGPT, diffusion image models) → today, multimodal and agentic AI. 3. Levels and Types of AI By capability Meaning Status Narrow / Weak AI Performs one specific task as well as or better than a human Exists today (search, translation, recommendations, chess, face unlock) General AI (AGI) Human-level ability across all cognitive tasks, transferring learning between domains Hypothetical — not achieved Super AI Far exceeds the best human minds in every field Speculative By functionality Meaning Reactive machines Respond to the current input only, no memory (Deep Blue, simple game AI) Limited memory Use recent past data (self-driving cars, chatbots) Theory of mind Model the beliefs and emotions of others — research stage Self-aware Conscious of itself — conceptual only 4. ",
+          "documentMetadata": {
+            "document": "projects/124734118875/locations/global/collections/default_collection/dataStores/pyqdeck_1787542746373/branches/0/documents/1efca4574d0105fe2a0bfd7c9db80ddc",
+            "uri": "https://www.pyqdeck.in/syllabus/subject/sem1-100108-computer-fundamentals-emerging-tech/topic/6a96365f0b50dbcb551eb853",
+            "title": "Artificial Intelligence (AI): Introduction — Computer Fundamentals & Emerging Technologies — PYQDeck"
+          }
+        }
+      },
+      {
+        "chunkInfo": {
+          "content": "Expert systems: architecture and applications — Introduction to AI — PYQDeck PyQdeck Logo PyQdeckBEU PYQ ArchiveSubjectsSyllabusBlog Home Syllabus Introduction to AI Expert systems: architecture and applications Introduction to Machine Learning and AI Applications (10hrs) Introduction to AI Expert systems: architecture and applications Watch lectures Expert Systems: Architecture and Applications — Beginner-Friendly Notes 1. What an Expert System Is Expert system = rule-based AI that mimics a human expert's decision-making in a narrow domain (medicine, finance) by encoding expert knowledge as if-then rules and explaining its conclusions. First successful commercial AI (1980s) — DENDRAL (chemistry), MYCIN (bacterial infection), XCON (computer config). 2. Architecture (diagram to memorise) User ──► [User Interface / Explanation Facility] ◄── Blackboard / Working Memory │ ↕ │ └─► [Inference Engine] ──► [Knowledge Base (rules + facts)] ↕ [Knowledge Acquisition Module] (expert → KB) Parts: Knowledge Base (KB): domain rules + facts (often production system, Module 3 topic 11) + certainty factors (Module 4). Inference Engine: forward/backward chaining (Module 3) to derive conclusions. Working Memory (Blackboard): current case facts (patient symptoms). ",
+          "documentMetadata": {
+            "document": "projects/124734118875/locations/global/collections/default_collection/dataStores/pyqdeck_1787542746373/branches/0/documents/b5b26add767add9ec14e41a0aa867e1d",
+            "uri": "https://www.pyqdeck.in/syllabus/subject/sem1-100105-introduction-to-ai/topic/6a96312b0b50dbcb551eb5c9/expert-systems-architecture-and-applications",
+            "title": "Expert systems: architecture and applications — Introduction to AI — PYQDeck"
+          }
+        }
+      },
+      {
+        "chunkInfo": {
+          "content": "How to Spot an AI Problem (3 checks) Environment is uncertain / large (too many possibilities to hard-code) Needs learning or search (pattern from data, or exploring options) Needs human-like judgement (classify, predict, decide, generate) If all three are low, plain programming is enough — you don't need AI. 8. Common Mistakes Beginners Make Thinking AI = human consciousness — no, it is narrow task intelligence today. Thinking more data always helps — only clean, relevant data helps. Thinking AI writes its own goals — goals are still given by humans (PEAS in next topics). 9. One-Line Summary to Write in Exam AI is the study and design of intelligent agents — systems that perceive their environment and act to maximise their chance of achieving goals, exhibiting capabilities such as learning, reasoning, perception and language understanding. 10. Quick Self-Check Is a rule if temperature \u003e 30 → turn on AC AI? (No — fixed rule, no learning/search) Is email spam detection AI? (Yes — learns patterns from examples) Name one AI you used today and which capability it used. Next topicHistory and evolution of AI ← All Introduction to AI modules PYQDeck — previous-year question papers, free to browse. ",
+          "documentMetadata": {
+            "document": "projects/124734118875/locations/global/collections/default_collection/dataStores/pyqdeck_1787542746373/branches/0/documents/69d67c6ad8d4364479fd082afd22b8bb",
+            "uri": "https://www.pyqdeck.in/syllabus/subject/sem1-100105-introduction-to-ai/topic/6a96312b0b50dbcb551eb589",
+            "title": "What is AI? — Introduction to AI — PYQDeck"
+          }
+        }
+      },
+      {
+        "chunkInfo": {
+          "content": "What is artificial intelligence? (i) Putting your intelligence into co — PYQDeck PyQdeck Logo PyQdeckBEU PYQ ArchiveSubjectsBlog Home Semester 5 Artificial intelligence 2022 Q1b Back to the 2022 paper Module 1: Introduction and Search Techniques 2022 2m What is artificial intelligence? (i) Putting your intelligence into computer (ii) Programming with your own intelligence (iii) Making a machine intelligent (iv) Playing a game Copy Search Google Ask AI Similar questions Artificial intelligenceExplain what you understand by Artificial Intelligence. Describe the Turing Test in detail and discuss its significance in the field of AI.2025 7mArtificial intelligenceDefine Artificial Intelligence (AI). Discuss the applications area of AI.2022 7mArtificial intelligenceWeak AI is also known as (i) Narrow AI (ii) General AI (iii) Strong AI (iv) Super AI2025 2mArtificial intelligenceWhich of the following best defines the Turing Test? (i) A method to calculate machine efficiency (ii) A test for machine learning algorithms (iii) A test to determine if a machine can exhibit human-like intelligence (iv) A benchmark for robotic speed2024 2m PreviousIn LISP, the function returns the list that result after the first element is removed (the rest of the list), is (i) car (ii) last (iii) cons (iv) cdrNextWhich is the best way to go for game playing problem? ",
+          "documentMetadata": {
+            "document": "projects/124734118875/locations/global/collections/default_collection/dataStores/pyqdeck_1787542746373/branches/0/documents/2ed380593df75ee07bfeccf254854099",
+            "uri": "https://www.pyqdeck.in/sem5/sem5_artificial_intelligence/2022/Q28",
+            "title": "What is artificial intelligence? (i) Putting your intelligence into co — PYQDeck"
+          }
+        }
+      }
+    ],
+    "relatedQuestions": [
+      "What are more real-world narrow AI examples?",
+      "How does narrow AI differ from general AI?",
+      "What are the limitations of narrow AI?",
+      "Can narrow AI learn new tasks?",
+      "Is most current AI narrow AI?"
+    ],
+    "steps": [
+      {
+        "state": "SUCCEEDED",
+        "description": "Rephrase the query and search.",
+        "actions": [
+          {
+            "searchAction": {
+              "query": " What are examples of narrow AI?"
+            },
+            "observation": {
+              "searchResults": [
+                {
+                  "document": "projects/124734118875/locations/global/collections/default_collection/dataStores/pyqdeck_1787542746373/branches/0/documents/55fe502fd3badeb2f3ba90064fa4840a",
+                  "uri": "https://www.pyqdeck.in/sem5/sem5_artificial_intelligence/2025/Q108",
+                  "title": "Weak AI is also known as (i) Narrow AI (ii) General AI (iii) Strong AI — PYQDeck",
+                  "snippetInfo": [
+                    {
+                      "snippet": "Weak AI is also known as (i) \u003cb\u003eNarrow AI\u003c/b\u003e (ii) General AI (iii) Strong AI (iv) Super AI. ... \u003cb\u003eis an example\u003c/b\u003e of (i) Informed Search (ii) Uninformed Search (iii)&nbsp;...",
+                      "snippetStatus": "SUCCESS"
+                    }
+                  ]
+                },
+                {
+                  "document": "projects/124734118875/locations/global/collections/default_collection/dataStores/pyqdeck_1787542746373/branches/0/documents/1efca4574d0105fe2a0bfd7c9db80ddc",
+                  "uri": "https://www.pyqdeck.in/syllabus/subject/sem1-100108-computer-fundamentals-emerging-tech/topic/6a96365f0b50dbcb551eb853",
+                  "title": "Artificial Intelligence (AI): Introduction — Computer Fundamentals & Emerging Technologies — PYQDeck",
+                  "snippetInfo": [
+                    {
+                      "snippet": "Artificial Intelligence (AI): Introduction 1. Definition Artificial Intelligence ... Differentiate \u003cb\u003enarrow AI\u003c/b\u003e, general AI and super AI with \u003cb\u003eexamples\u003c/b\u003e — 5 marks&nbsp;...",
+                      "snippetStatus": "SUCCESS"
+                    }
+                  ]
+                },
+                {
+                  "document": "projects/124734118875/locations/global/collections/default_collection/dataStores/pyqdeck_1787542746373/branches/0/documents/2ed380593df75ee07bfeccf254854099",
+                  "uri": "https://www.pyqdeck.in/sem5/sem5_artificial_intelligence/2022/Q28",
+                  "title": "What is artificial intelligence? (i) Putting your intelligence into co — PYQDeck",
+                  "snippetInfo": [
+                    {
+                      "snippet": "Discuss the applications area of AI.2022 7mArtificial intelligenceWeak AI is also known as (i) \u003cb\u003eNarrow AI\u003c/b\u003e (ii) General AI (iii) Strong AI (iv) Super AI2025&nbsp;...",
+                      "snippetStatus": "SUCCESS"
+                    }
+                  ]
+                },
+                {
+                  "document": "projects/124734118875/locations/global/collections/default_collection/dataStores/pyqdeck_1787542746373/branches/0/documents/69d67c6ad8d4364479fd082afd22b8bb",
+                  "uri": "https://www.pyqdeck.in/syllabus/subject/sem1-100105-introduction-to-ai/topic/6a96312b0b50dbcb551eb589",
+                  "title": "What is AI? — Introduction to AI — PYQDeck",
+                  "snippetInfo": [
+                    {
+                      "snippet": "What is \u003cb\u003eAI\u003c/b\u003e? — Beginner-Friendly Notes 1. Simple Definition (remember this) \u003cb\u003eArtificial Intelligence\u003c/b\u003e (\u003cb\u003eAI\u003c/b\u003e) ... Thinking \u003cb\u003eAI\u003c/b\u003e = human consciousness — no, it is \u003cb\u003enarrow\u003c/b\u003e&nbsp;...",
+                      "snippetStatus": "SUCCESS"
+                    }
+                  ]
+                },
+                {
+                  "document": "projects/124734118875/locations/global/collections/default_collection/dataStores/pyqdeck_1787542746373/branches/0/documents/81fb2e0957ead4fbf46a85fc5894c146",
+                  "uri": "https://www.pyqdeck.in/sem5/sem5_artificial_intelligence/2025",
+                  "title": "Artificial intelligence — 2025 question paper — PYQDeck",
+                  "snippetInfo": [
+                    {
+                      "snippet": "Weak AI is also known as (i) \u003cb\u003eNarrow AI\u003c/b\u003e (ii) General AI (iii) Strong AI (iv) Super AI ... . Explain Breadth First Search and Depth First Search with \u003cb\u003eexamples\u003c/b\u003e.",
+                      "snippetStatus": "SUCCESS"
+                    }
+                  ]
+                },
+                {
+                  "document": "projects/124734118875/locations/global/collections/default_collection/dataStores/pyqdeck_1787542746373/branches/0/documents/3a27b9295f6abed0f9b7797c30e242f7",
+                  "uri": "https://www.pyqdeck.in/syllabus/subject/sem1-100105-introduction-to-ai/topic/6a96312b0b50dbcb551eb58b",
+                  "title": "Foundations of AI: philosophy — Introduction to AI — PYQDeck",
+                  "snippetInfo": [
+                    {
+                      "snippet": "Q5: What are the limits? (Gödel, free will, ethics). Gödel showed formal systems have limits (\u003cb\u003esome\u003c/b\u003e truths unprovable) — hints \u003cb\u003eAI\u003c/b\u003e reasoning also has limits. Free&nbsp;...",
+                      "snippetStatus": "SUCCESS"
+                    }
+                  ]
+                },
+                {
+                  "document": "projects/124734118875/locations/global/collections/default_collection/dataStores/pyqdeck_1787542746373/branches/0/documents/571cf32d10c4ff0963a13ab1045ce760",
+                  "uri": "https://www.pyqdeck.in/syllabus/subject/sem1-100105-introduction-to-ai/topic/6a96312b0b50dbcb551eb59b",
+                  "title": "Overview of AI application domains across engineering disciplines — Introduction to AI — PYQDeck",
+                  "snippetInfo": [
+                    {
+                      "snippet": "A. Computer &amp; Software Engineering (your home). Code generation, bug detection, automated testing. Recommendation, search, fraud detection, chatbots. \u003cb\u003eExample\u003c/b\u003e:&nbsp;...",
+                      "snippetStatus": "SUCCESS"
+                    }
+                  ]
+                },
+                {
+                  "document": "projects/124734118875/locations/global/collections/default_collection/dataStores/pyqdeck_1787542746373/branches/0/documents/923ce14550ee847b39963ed87e1056a5",
+                  "uri": "https://www.pyqdeck.in/sem5/sem5_artificial_intelligence/2022/Q30",
+                  "title": "Face Recognition system is based on which type of approach? (i) Weak A — PYQDeck",
+                  "snippetInfo": [
+                    {
+                      "snippet": "Similar questions. Artificial intelligenceWeak AI is also known as (i) \u003cb\u003eNarrow AI\u003c/b\u003e ... (i) Linear approach (ii) Heuristic approach (\u003cb\u003esome\u003c/b\u003e ... \u003cb\u003esome\u003c/b\u003e knowledges are&nbsp;...",
+                      "snippetStatus": "SUCCESS"
+                    }
+                  ]
+                },
+                {
+                  "document": "projects/124734118875/locations/global/collections/default_collection/dataStores/pyqdeck_1787542746373/branches/0/documents/39ab68a3d41a878e53ae3ca17c6f6c2f",
+                  "uri": "https://www.pyqdeck.in/syllabus/subject/sem1-100108-computer-fundamentals-emerging-tech/topic/6a96365f0b50dbcb551eb855",
+                  "title": "Applications — Computer Fundamentals & Emerging Technologies — PYQDeck",
+                  "snippetInfo": [
+                    {
+                      "snippet": "Applications (of \u003cb\u003eArtificial Intelligence\u003c/b\u003e) &middot; 1. How \u003cb\u003eAI\u003c/b\u003e Applications Are Grouped &middot; 2. Applications by Sector &middot; 3. Familiar \u003cb\u003eExamples\u003c/b\u003e Around Us &middot; 4. Benefits and&nbsp;...",
+                      "snippetStatus": "SUCCESS"
+                    }
+                  ]
+                },
+                {
+                  "document": "projects/124734118875/locations/global/collections/default_collection/dataStores/pyqdeck_1787542746373/branches/0/documents/51fbff10d25cdb239ae305864bf587d0",
+                  "uri": "https://www.pyqdeck.in/syllabus/subject/sem1-100108-computer-fundamentals-emerging-tech/topic/6a96365f0b50dbcb551eb854/ai-agents",
+                  "title": "AI agents — Computer Fundamentals & Emerging Technologies — PYQDeck",
+                  "snippetInfo": [
+                    {
+                      "snippet": "Types of Agents. Type, How it decides, \u003cb\u003eExample\u003c/b\u003e. Simple reflex, Condition–action rules on the current percept only, Thermostat:&nbsp;...",
+                      "snippetStatus": "SUCCESS"
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "searchAction": {
+              "query": " What is narrow AI?"
+            },
+            "observation": {
+              "searchResults": [
+                {
+                  "document": "projects/124734118875/locations/global/collections/default_collection/dataStores/pyqdeck_1787542746373/branches/0/documents/55fe502fd3badeb2f3ba90064fa4840a",
+                  "uri": "https://www.pyqdeck.in/sem5/sem5_artificial_intelligence/2025/Q108",
+                  "title": "Weak AI is also known as (i) Narrow AI (ii) General AI (iii) Strong AI — PYQDeck",
+                  "snippetInfo": [
+                    {
+                      "snippet": "Weak AI is also known as. (i) \u003cb\u003eNarrow AI\u003c/b\u003e (ii) General AI (iii) Strong AI (iv) Super AI. Copy Search Google Ask AI. Similar questions. Artificial intelligenceFace&nbsp;...",
+                      "snippetStatus": "SUCCESS"
+                    }
+                  ]
+                },
+                {
+                  "document": "projects/124734118875/locations/global/collections/default_collection/dataStores/pyqdeck_1787542746373/branches/0/documents/1efca4574d0105fe2a0bfd7c9db80ddc",
+                  "uri": "https://www.pyqdeck.in/syllabus/subject/sem1-100108-computer-fundamentals-emerging-tech/topic/6a96365f0b50dbcb551eb853",
+                  "title": "Artificial Intelligence (AI): Introduction — Computer Fundamentals & Emerging Technologies — PYQDeck",
+                  "snippetInfo": [
+                    {
+                      "snippet": "Artificial Intelligence (AI): Introduction 1. Definition Artificial Intelligence ... Differentiate \u003cb\u003enarrow AI\u003c/b\u003e, general AI and super AI with examples — 5 marks&nbsp;...",
+                      "snippetStatus": "SUCCESS"
+                    }
+                  ]
+                },
+                {
+                  "document": "projects/124734118875/locations/global/collections/default_collection/dataStores/pyqdeck_1787542746373/branches/0/documents/2ed380593df75ee07bfeccf254854099",
+                  "uri": "https://www.pyqdeck.in/sem5/sem5_artificial_intelligence/2022/Q28",
+                  "title": "What is artificial intelligence? (i) Putting your intelligence into co — PYQDeck",
+                  "snippetInfo": [
+                    {
+                      "snippet": "What is \u003cb\u003eartificial intelligence\u003c/b\u003e? (i) Putting your intelligence into computer (ii) Programming with your own intelligence (iii) Making a machine intelligent&nbsp;...",
+                      "snippetStatus": "SUCCESS"
+                    }
+                  ]
+                },
+                {
+                  "document": "projects/124734118875/locations/global/collections/default_collection/dataStores/pyqdeck_1787542746373/branches/0/documents/3a27b9295f6abed0f9b7797c30e242f7",
+                  "uri": "https://www.pyqdeck.in/syllabus/subject/sem1-100105-introduction-to-ai/topic/6a96312b0b50dbcb551eb58b",
+                  "title": "Foundations of AI: philosophy — Introduction to AI — PYQDeck",
+                  "snippetInfo": [
+                    {
+                      "snippet": "What is knowledge and reasoning? Without this, we cannot define what &quot;intelligent&quot; even means. 2. Five Philosophical Questions That Shaped \u003cb\u003eAI\u003c/b\u003e. Q1: Can machines&nbsp;...",
+                      "snippetStatus": "SUCCESS"
+                    }
+                  ]
+                },
+                {
+                  "document": "projects/124734118875/locations/global/collections/default_collection/dataStores/pyqdeck_1787542746373/branches/0/documents/69d67c6ad8d4364479fd082afd22b8bb",
+                  "uri": "https://www.pyqdeck.in/syllabus/subject/sem1-100105-introduction-to-ai/topic/6a96312b0b50dbcb551eb589",
+                  "title": "What is AI? — Introduction to AI — PYQDeck",
+                  "snippetInfo": [
+                    {
+                      "snippet": "What is \u003cb\u003eAI\u003c/b\u003e? — Beginner-Friendly Notes 1. Simple Definition (remember this) \u003cb\u003eArtificial Intelligence\u003c/b\u003e (\u003cb\u003eAI\u003c/b\u003e) = making computers do things that normally need&nbsp;...",
+                      "snippetStatus": "SUCCESS"
+                    }
+                  ]
+                },
+                {
+                  "document": "projects/124734118875/locations/global/collections/default_collection/dataStores/pyqdeck_1787542746373/branches/0/documents/81fb2e0957ead4fbf46a85fc5894c146",
+                  "uri": "https://www.pyqdeck.in/sem5/sem5_artificial_intelligence/2025",
+                  "title": "Artificial intelligence — 2025 question paper — PYQDeck",
+                  "snippetInfo": [
+                    {
+                      "snippet": "Q1a. The Turing Test was proposed by (i) John McCarthy (ii) Alan Turing (iii) Marvin Minsky (iv) Herbert Simon2025 2m &middot; Q1b. Weak \u003cb\u003eAI\u003c/b\u003e is also known as (i) \u003cb\u003eNarrow\u003c/b\u003e&nbsp;...",
+                      "snippetStatus": "SUCCESS"
+                    }
+                  ]
+                },
+                {
+                  "document": "projects/124734118875/locations/global/collections/default_collection/dataStores/pyqdeck_1787542746373/branches/0/documents/923ce14550ee847b39963ed87e1056a5",
+                  "uri": "https://www.pyqdeck.in/sem5/sem5_artificial_intelligence/2022/Q30",
+                  "title": "Face Recognition system is based on which type of approach? (i) Weak A — PYQDeck",
+                  "snippetInfo": [
+                    {
+                      "snippet": "... AI approach (iii) Cognitive AI approach (iv) Strong AI approach. ... Similar questions. Artificial intelligenceWeak AI is also known as (i) \u003cb\u003eNarrow AI\u003c/b\u003e&nbsp;...",
+                      "snippetStatus": "SUCCESS"
+                    }
+                  ]
+                },
+                {
+                  "document": "projects/124734118875/locations/global/collections/default_collection/dataStores/pyqdeck_1787542746373/branches/0/documents/b5b26add767add9ec14e41a0aa867e1d",
+                  "uri": "https://www.pyqdeck.in/syllabus/subject/sem1-100105-introduction-to-ai/topic/6a96312b0b50dbcb551eb5c9/expert-systems-architecture-and-applications",
+                  "title": "Expert systems: architecture and applications — Introduction to AI — PYQDeck",
+                  "snippetInfo": [
+                    {
+                      "snippet": "... \u003cb\u003enarrow\u003c/b\u003e domain (medicine, finance) by encoding expert knowledge as if-then rules and explaining its conclusions. First successful commercial \u003cb\u003eAI\u003c/b\u003e (1980s)&nbsp;...",
+                      "snippetStatus": "SUCCESS"
+                    }
+                  ]
+                },
+                {
+                  "document": "projects/124734118875/locations/global/collections/default_collection/dataStores/pyqdeck_1787542746373/branches/0/documents/0fb44491af897fd2e29114c9c2a5137b",
+                  "uri": "https://www.pyqdeck.in/sem5/sem5_artificial_intelligence/2022/Q37",
+                  "title": "Define Artificial Intelligence (AI). Discuss the applications area of — PYQDeck",
+                  "snippetInfo": [
+                    {
+                      "snippet": "PYQDeck — previous-year question papers, free to browse. An independent student-run archive for Bihar Engineering University (BEU) B.Tech courses. Not&nbsp;...",
+                      "snippetStatus": "SUCCESS"
+                    }
+                  ]
+                },
+                {
+                  "document": "projects/124734118875/locations/global/collections/default_collection/dataStores/pyqdeck_1787542746373/branches/0/documents/39ab68a3d41a878e53ae3ca17c6f6c2f",
+                  "uri": "https://www.pyqdeck.in/syllabus/subject/sem1-100108-computer-fundamentals-emerging-tech/topic/6a96365f0b50dbcb551eb855",
+                  "title": "Applications — Computer Fundamentals & Emerging Technologies — PYQDeck",
+                  "snippetInfo": [
+                    {
+                      "snippet": "Applications (of \u003cb\u003eArtificial Intelligence\u003c/b\u003e) 1. How \u003cb\u003eAI\u003c/b\u003e Applications Are Grouped Whatever the industry, an \u003cb\u003eAI\u003c/b\u003e application usually does one of five jobs: 1.",
+                      "snippetStatus": "SUCCESS"
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "session": {
+    "name": "projects/124734118875/locations/global/collections/default_collection/engines/pyqdeck_1787542792054/sessions/14956706605406992762",
+    "state": "IN_PROGRESS",
+    "userPseudoId": "spike-user-1",
+    "turns": [
+      {
+        "query": {
+          "queryId": "projects/124734118875/locations/global/questions/159936949",
+          "text": "what is artificial intelligence"
+        },
+        "answer": "projects/124734118875/locations/global/collections/default_collection/engines/pyqdeck_1787542792054/sessions/14956706605406992762/answers/2935914584182215048"
+      },
+      {
+        "query": {
+          "queryId": "projects/124734118875/locations/global/questions/159936959",
+          "text": "explain narrow ai further"
+        },
+        "answer": "projects/124734118875/locations/global/collections/default_collection/engines/pyqdeck_1787542792054/sessions/14956706605406992762/answers/6830704829587245347"
+      }
+    ],
+    "startTime": "2026-09-30T10:09:32.051455Z",
+    "endTime": "2026-09-30T10:09:37.068575Z"
+  },
+  "answerQueryToken": "NMwKDAiAwPPVBhDKyvX7AhIkNmFlOTViMmUtMDAwMC0yNzM4LTllZWYtMDg5ZTA4MjUxNjQw"
+}
+]

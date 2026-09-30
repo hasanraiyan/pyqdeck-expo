@@ -128,4 +128,20 @@ export interface AiOverview {
   citations: AiOverviewCitation[];
   totalResults: number;
   cached?: boolean;
+  /**
+   * Follow-up questions to offer under the answer. Absent on older servers
+   * and on payloads cached before this existed - treat missing as none.
+   */
+  relatedQuestions?: string[];
+}
+
+/**
+ * Effective on/off state of the AI features, from /search/ai-overview/status.
+ * Each flag already reflects the admin switches, env credentials and the daily
+ * cap, so the app just obeys it. An older server sends only `enabled`.
+ */
+export interface AiFeatureStatus {
+  enabled: boolean;
+  followups: boolean;
+  chat: boolean;
 }

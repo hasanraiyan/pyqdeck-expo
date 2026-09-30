@@ -156,13 +156,15 @@ export const searchNotesQuery = (q: string) =>
     ...searchOpts,
   });
 
-// Asked once per app session: a deployment with the feature off costs one
-// cheap call. getAiOverviewStatus never throws (false on failure).
+// Cheap and never persisted. Re-asked after 5 minutes (it used to be once per
+// session) so an admin switching a feature off reaches an open app within
+// minutes instead of at next launch; the chat screen also forces a fresh read
+// when it opens. getAiOverviewStatus never throws (all-off on failure).
 export const aiOverviewStatusQuery = () =>
   queryOptions({
     queryKey: qk.aiOverviewStatus(),
     queryFn: ({ signal }) => getAiOverviewStatus(signal),
-    staleTime: Infinity,
+    staleTime: 5 * 60 * 1000,
     gcTime: Infinity,
     retry: false,
   });
