@@ -258,6 +258,8 @@ function TabsNavigator() {
           },
           tabBarActiveTintColor: COLORS.primary,
           tabBarInactiveTintColor: COLORS.textMuted,
+          // The bar has a fixed height; scaled labels would clip or push icons.
+          tabBarAllowFontScaling: false,
         }}
       >
         <Tab.Screen
