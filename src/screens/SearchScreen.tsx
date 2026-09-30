@@ -32,7 +32,7 @@ import { isAuthEnabled } from '../config/features';
 import { searchLocalCache } from '../api/offlineSearch';
 import { COLORS, FONTS } from '../theme/colors';
 import { Badge, MarksBadge, YearBadge } from '../components/Badge';
-import { WaveLoader } from '../components/WaveLoader';
+import { CircleLoader } from '../components/CircleLoader';
 import { rf, verticalScale, useResponsive } from '../utils/responsive';
 import { normalizeQuery, consumeSearchToken, shouldDebounceTap, applyServerRetryAfter } from '../utils/searchGuard';
 
@@ -537,7 +537,7 @@ export const SearchScreen = () => {
           )}
           {loading ? (
             <View style={styles.loaderBox}>
-              <WaveLoader color={COLORS.primary} dotSize={7} />
+              <CircleLoader color={COLORS.primary} size={42} dotSize={6} />
             </View>
           ) : null}
 
@@ -906,10 +906,12 @@ const styles = StyleSheet.create({
   },
   scroll: {
     paddingVertical: verticalScale(16),
+    flexGrow: 1,
   },
   centerWrapper: {
     width: '100%',
     alignSelf: 'center',
+    flexGrow: 1,
   },
   suggestedSection: {
     width: '100%',
@@ -1062,8 +1064,11 @@ const styles = StyleSheet.create({
     lineHeight: 15,
   },
   loaderBox: {
-    paddingVertical: 48,
+    flex: 1,
+    minHeight: 240,
     alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 48,
   },
   emptyContainer: {
     paddingVertical: 48,
