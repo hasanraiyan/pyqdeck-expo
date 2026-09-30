@@ -179,6 +179,35 @@ These bypass React Query and hold results in `useState`:
 - N4 No new `any` in code added by this work.
 - N5 No change to the persisted cache shape, so `CACHE_BUSTER` is not bumped.
 - N6 Ad behaviour, ad frequency and interstitial counters are unchanged.
+- N7 Every change MUST satisfy the smoothness requirements in section 7A.
+
+## 7A. Smoothness requirements (the app must never feel throttled)
+
+Principle: a student should never wait on a blank screen, a dead button, or a visible pause when the app already has something useful to show. These requirements apply to R1 to R5 and take priority over saving a request.
+
+- S1 **Show something immediately.** A screen with cached data MUST render it on the first frame and refresh silently. A spinner is allowed only when there is nothing to show; it MUST be a skeleton matching the final layout (existing `Skeletons.tsx`), never a blank screen.
+- S2 **Never blank on change.** When a query key changes (year filter, search text, page), the previous result MUST stay on screen (`placeholderData: keepPreviousData`) with a subtle inline loading indicator, not be replaced by a skeleton. `QuestionListScreen` already does this; R4 screens MUST do the same.
+- S3 **Every tap responds at once.** Navigation and haptics MUST fire on press without awaiting any network, storage, or ad work. Prefetch (R3) is fire-and-forget. Recording recents and last position (R5) is fire-and-forget.
+- S4 **Search must not feel rate-limited.** The client token bucket (`searchGuard.ts`, burst 5, then 1 per 2 s) MUST never visibly block normal use. Repeat searches served from cache (R4.4) MUST NOT consume a token. A cooldown message is shown only for a real server 429, or when a student really is hammering search (more than the burst within a few seconds). Cooldown copy stays friendly and shows a countdown.
+- S5 **Failures stay quiet.** Background refetch and prefetch failures MUST NOT show an error when data is already on screen. Errors appear only when there is nothing to show, with a retry button (`ScreenState`).
+- S6 **Keep the JS thread free.** No new synchronous work over a few milliseconds on the JS thread during scroll or navigation. Concretely: no new large `JSON.parse`/`stringify` on the interaction path, heavy parsing (notes, math) stays where it is or is deferred with `InteractionManager.runAfterInteractions`, and list `renderItem` props stay stable (see the `isOldUi`/header effect fix below).
+- S7 **Smooth lists.** `QuestionListScreen` MUST NOT re-set header options on every render (`openFilterModal` in the `useLayoutEffect` deps is recreated each render); stabilise it. New list code follows the existing `FlatList` tuning and avoids inline lambdas that defeat memoisation.
+- S8 **No layout jumps.** Cards and rows reserve their space (skeleton size equals final size). The Continue card (R5) MUST reserve its slot or appear without shifting content already under the student's thumb (render it in the recents area, above existing items, on first focus before scroll).
+- S9 **Transitions never wait on data.** A screen MUST mount and animate in with what it has (route params such as subject name, `initialQuestion`) and fill the rest in. `QuestionDetail` already accepts `initialQuestion`; R5.7 uses it.
+- S10 **Cancel what is no longer wanted.** Leaving a screen or submitting a new search aborts in-flight requests (R4.1, R4.9) so stale work never competes with the current screen for the network.
+- S11 **Do not spend startup time twice.** Nothing added by this SRS may delay first render. Startup-only work runs after first paint or in the background (R1.3, R2).
+- S12 **Ads never block content.** Ad loading and interstitial checks stay off the tap path (already true in `ads.ts`; keep it so). An ad failure or slow load MUST NOT delay a question opening.
+
+### Acceptance criteria (smoothness)
+- Cold launch with a warm cache shows Home content with no spinner.
+- Switching year on the question list keeps the old list visible until the new one arrives.
+- Repeating a search shows results instantly and never triggers a cooldown.
+- Rapid Prev/Next taps in a paper never show a blank screen or a dead button.
+- Scrolling the question list while a prefetch or refetch runs shows no visible stutter on a mid-range Android device (manual check with the performance monitor: JS frame rate stays near 60).
+- A background failure with data already on screen shows no error.
+
+### Measurement (targets, not current values)
+No current numbers exist. Before implementation, record a baseline on a mid-range Android device: time from tap to first content on Subject to Question List, search submit to first result, and JS FPS while scrolling the question list. Targets to be set from that baseline; the goal is "no step slower than today, and the PYQ path noticeably faster". Sentry performance tracing MAY be enabled to record this in production.
 
 ## 8. Test plan
 No test framework exists in the repo, so verification is manual plus `tsc`:
@@ -190,6 +219,7 @@ No test framework exists in the repo, so verification is manual plus `tsc`:
 6. All Subjects: paging, search, refresh, offline.
 7. Topic notes: opens fresh, back and re-open, offline message.
 8. Resume: the four scenarios in 6.3.
+9. Smoothness: the acceptance criteria in 7A, checked on a mid-range Android device against a recorded baseline.
 
 ## 9. Delivery plan
 
