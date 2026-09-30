@@ -11,6 +11,12 @@ const COOLDOWN_MS = 120 * 1000; // 2 minutes minimum cooldown between interstiti
 let interstitial: ReturnType<typeof InterstitialAdType.createForAdRequest> | null = null;
 let loaded = false;
 
+/** Idempotent; call once after mobileAds().initialize() has resolved. */
+export function initInterstitial() {
+  if (interstitial) return;
+  createAndLoadInterstitial();
+}
+
 function createAndLoadInterstitial() {
   if (!adsAvailable || !InterstitialAd) return;
   interstitial = InterstitialAd.createForAdRequest(AD_UNIT_IDS.interstitial);
@@ -23,7 +29,6 @@ function createAndLoadInterstitial() {
   });
   interstitial.load();
 }
-createAndLoadInterstitial();
 
 async function getState(key: string): Promise<string | null> {
   try {

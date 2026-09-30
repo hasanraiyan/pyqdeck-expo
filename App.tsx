@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { AppState, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, getStateFromPath as defaultGetStateFromPath } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import {
@@ -14,6 +14,7 @@ import { ClerkProvider } from '@clerk/expo';
 import { tokenCache } from '@clerk/expo/token-cache';
 import { clerkPublishableKey } from './src/auth/publishableKey';
 import { mobileAds } from './src/utils/mobileAds';
+import { initInterstitial } from './src/utils/ads';
 import { navigationRef } from './src/utils/navigationRef';
 import * as Backend from './src/api/backend';
 import { migrateToQueryCache } from './src/db/cacheService';
@@ -75,8 +76,22 @@ const Tab = createBottomTabNavigator();
 //   /search?q=&tab=                                -> search with query + tab
 // (see app.json's Android App Links intentFilters + the site's
 // public/.well-known/assetlinks.json).
+// Only the question shape has four segments; the year is always four digits.
+// Any other 4-segment URL matches the question route by position alone, so it
+// is rejected here and the app opens on Home instead of a broken screen.
+const QUESTION_PATH = /^\/?[^/]+\/[^/]+\/\d{4}\/[^/]+\/?$/;
+
 const linking: any = {
   prefixes: ['https://pyqdeck.in', 'https://www.pyqdeck.in'],
+  getStateFromPath: (path: string, options: any) => {
+    const pathname = path.split(/[?#]/)[0];
+    const segments = pathname.split('/').filter(Boolean);
+    const first = segments[0];
+    if (first !== 'syllabus' && first !== 'search' && !QUESTION_PATH.test(pathname)) {
+      return undefined;
+    }
+    return defaultGetStateFromPath(path, options);
+  },
   config: {
     screens: {
       // Nested under Tabs now that a root stack sits above the tab navigator,
@@ -125,6 +140,45 @@ const commonScreenOptions = {
   },
 };
 
+/** Screens reachable from more than one tab; each tab stack registers the same set. */
+function renderSharedScreens(StackNav: typeof Stack, syllabusTitle = 'Syllabus') {
+  return (
+    <>
+      <StackNav.Screen
+        name="SubjectDetail"
+        component={SubjectDetailScreen}
+        options={({ route }: any) => ({
+          title: route.params?.subjectName || 'Subject',
+        })}
+      />
+      <StackNav.Screen
+        name="QuestionList"
+        component={QuestionListScreen}
+        options={({ route }: any) => ({
+          title: route.params?.subjectName || 'Questions',
+        })}
+      />
+      <StackNav.Screen
+        name="QuestionDetail"
+        component={QuestionDetailScreen}
+        options={{
+          title: 'Question Paper',
+        }}
+      />
+      <StackNav.Screen
+        name="TopicNotes"
+        component={TopicNotesScreen}
+        options={({ route }: any) => ({ title: route.params?.moduleName || 'Notes' })}
+      />
+      <StackNav.Screen
+        name="SubjectSyllabus"
+        component={SubjectSyllabusScreen}
+        options={({ route }: any) => ({ title: route.params?.subjectName || syllabusTitle })}
+      />
+    </>
+  );
+}
+
 function HomeStack() {
   return (
     <Stack.Navigator screenOptions={commonScreenOptions}>
@@ -146,31 +200,11 @@ function HomeStack() {
         })}
       />
       <Stack.Screen
-        name="SubjectDetail"
-        component={SubjectDetailScreen}
-        options={({ route }: any) => ({
-          title: route.params?.subjectName || 'Subject',
-        })}
-      />
-      <Stack.Screen
-        name="QuestionList"
-        component={QuestionListScreen}
-        options={({ route }: any) => ({
-          title: route.params?.subjectName || 'Questions',
-        })}
-      />
-      <Stack.Screen
-        name="QuestionDetail"
-        component={QuestionDetailScreen}
-        options={{
-          title: 'Question Paper',
-        }}
-      />
-      <Stack.Screen
         name="Settings"
         component={SettingsScreen}
         options={{ title: 'Settings' }}
       />
+      {renderSharedScreens(Stack)}
     </Stack.Navigator>
   );
 }
@@ -189,16 +223,7 @@ function SyllabusStack() {
         component={SyllabusOverviewScreen}
         options={({ route }: any) => ({ title: `Semester ${route.params?.semester ?? ''}` })}
       />
-      <Stack.Screen
-        name="SubjectSyllabus"
-        component={SubjectSyllabusScreen}
-        options={({ route }: any) => ({ title: route.params?.subjectName || 'Subject' })}
-      />
-      <Stack.Screen
-        name="TopicNotes"
-        component={TopicNotesScreen}
-        options={({ route }: any) => ({ title: route.params?.moduleName || 'Notes' })}
-      />
+      {renderSharedScreens(Stack, 'Subject')}
     </Stack.Navigator>
   );
 }
@@ -211,125 +236,15 @@ function SearchStack() {
         component={SearchScreen}
         options={{ headerShown: false }}
       />
-      <Stack.Screen
-        name="SubjectDetail"
-        component={SubjectDetailScreen}
-        options={({ route }: any) => ({
-          title: route.params?.subjectName || 'Subject',
-        })}
-      />
-      <Stack.Screen
-        name="QuestionList"
-        component={QuestionListScreen}
-        options={({ route }: any) => ({
-          title: route.params?.subjectName || 'Questions',
-        })}
-      />
-      <Stack.Screen
-        name="QuestionDetail"
-        component={QuestionDetailScreen}
-        options={{
-          title: 'Question Paper',
-        }}
-      />
-      <Stack.Screen
-        name="TopicNotes"
-        component={TopicNotesScreen}
-        options={({ route }: any) => ({ title: route.params?.moduleName || 'Notes' })}
-      />
-      <Stack.Screen
-        name="SubjectSyllabus"
-        component={SubjectSyllabusScreen}
-        options={({ route }: any) => ({ title: route.params?.subjectName || 'Syllabus' })}
-      />
+      {renderSharedScreens(Stack)}
     </Stack.Navigator>
   );
 }
 
-// Publishable key must be passed explicitly rather than read inside the SDK:
-// env vars are not inlined inside node_modules in production builds. See
-// src/auth/publishableKey.ts for why it falls back to app.json.
-if (!clerkPublishableKey) {
-  // Loud in dev, and Sentry catches it in production - but the app still
-  // boots below, because everything except Ask AI works signed out.
-  console.error(
-    '[auth] No Clerk publishable key (checked EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY ' +
-      'and app.json expo.extra.clerkPublishableKey). Sign-in will be unavailable.'
-  );
-}
-
-export default Sentry.wrap(function App() {
-  return (
-    // ClerkProvider renders its children straight away - it does not hold the
-    // tree back while the token cache is read. That is deliberate and load
-    // bearing: every screen except the AI tutor works signed out, so auth must
-    // never sit on the critical path to first paint.
-    <ClerkProvider publishableKey={clerkPublishableKey} tokenCache={tokenCache}>
-      <PersistQueryClientProvider client={queryClient} persistOptions={persistOptions}>
-        <SafeAreaProvider>
-          <AppContent />
-        </SafeAreaProvider>
-      </PersistQueryClientProvider>
-    </ClerkProvider>
-  );
-});
-
-function AppContent() {
+/** The tab navigator, wrapped by the root stack so the auth screens can sit above it. */
+function TabsNavigator() {
   const insets = useSafeAreaInsets();
-  // null = still reading AsyncStorage (prevents white flash or wrong screen)
-  const [onboarded, setOnboarded] = useState<boolean | null>(null);
-
-  useEffect(() => {
-    void migrateToQueryCache();
-  }, []);
-
-  useEffect(() => {
-    hasSeenOnboarding().then((seen) => setOnboarded(seen));
-  }, []);
-
-  // Silent boot work: shows nothing to the student, so it starts immediately.
-  useEffect(() => {
-    mobileAds().initialize();
-    // A tap on a notification must never be missed, even mid-onboarding.
-    const unsubscribe = subscribeToNotificationResponses();
-
-    // Start backend selection alongside the rest of boot. It runs in the
-    // background; requests do not wait for it (see src/api/backend.ts).
-    void Backend.ready();
-
-    // A session that fell back to Render should climb back onto EC2 once it
-    // recovers. Returning to the foreground is the natural moment to look,
-    // and recheckIfStale() ignores brief tab-aways.
-    const appStateSub = AppState.addEventListener('change', (state) => {
-      if (state === 'active') Backend.recheckIfStale();
-    });
-
-    return () => {
-      unsubscribe();
-      appStateSub.remove();
-    };
-  }, []);
-
-  // Anything a student can SEE (OS permission prompt, store-update dialog,
-  // review prompt) waits until onboarding is done, so a first-time user is
-  // never interrupted before they have seen what the app does. Runs once:
-  // `onboarded` only ever goes null -> boolean -> true.
-  useEffect(() => {
-    if (onboarded !== true) return;
-    registerForPushNotificationsAsync();
-
-    // Sequenced so a store-update prompt and a review prompt never show back to back.
-    checkForStoreUpdate().finally(() => {
-      maybeRequestReview();
-    });
-  }, [onboarded]);
-
-  // Still reading AsyncStorage — render nothing to avoid a flash of wrong screen
-  if (onboarded === null) return null;
-
-  // The tab navigator, wrapped by the root stack below so the auth screens can
-  // sit above it rather than inside a tab.
-  const tabs = (
+  return (
     <Tab.Navigator
         screenOptions={{
           headerShown: false,
@@ -379,6 +294,91 @@ function AppContent() {
         />
     </Tab.Navigator>
   );
+}
+
+
+// Publishable key must be passed explicitly rather than read inside the SDK:
+// env vars are not inlined inside node_modules in production builds. See
+// src/auth/publishableKey.ts for why it falls back to app.json.
+if (!clerkPublishableKey) {
+  // Loud in dev, and Sentry catches it in production - but the app still
+  // boots below, because everything except Ask AI works signed out.
+  console.error(
+    '[auth] No Clerk publishable key (checked EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY ' +
+      'and app.json expo.extra.clerkPublishableKey). Sign-in will be unavailable.'
+  );
+}
+
+export default Sentry.wrap(function App() {
+  return (
+    // ClerkProvider renders its children straight away - it does not hold the
+    // tree back while the token cache is read. That is deliberate and load
+    // bearing: every screen except the AI tutor works signed out, so auth must
+    // never sit on the critical path to first paint.
+    <ClerkProvider publishableKey={clerkPublishableKey} tokenCache={tokenCache}>
+      <PersistQueryClientProvider client={queryClient} persistOptions={persistOptions}>
+        <SafeAreaProvider>
+          <AppContent />
+        </SafeAreaProvider>
+      </PersistQueryClientProvider>
+    </ClerkProvider>
+  );
+});
+
+function AppContent() {
+  const insets = useSafeAreaInsets();
+  // null = still reading AsyncStorage (prevents white flash or wrong screen)
+  const [onboarded, setOnboarded] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    void migrateToQueryCache();
+  }, []);
+
+  useEffect(() => {
+    hasSeenOnboarding().then((seen) => setOnboarded(seen));
+  }, []);
+
+  // Silent boot work: shows nothing to the student, so it starts immediately.
+  useEffect(() => {
+    Promise.resolve(mobileAds().initialize())
+      .then(initInterstitial)
+      .catch(() => {});
+    // A tap on a notification must never be missed, even mid-onboarding.
+    const unsubscribe = subscribeToNotificationResponses();
+
+    // Start backend selection alongside the rest of boot. It runs in the
+    // background; requests do not wait for it (see src/api/backend.ts).
+    void Backend.ready();
+
+    // A session that fell back to Render should climb back onto EC2 once it
+    // recovers. Returning to the foreground is the natural moment to look,
+    // and recheckIfStale() ignores brief tab-aways.
+    const appStateSub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') Backend.recheckIfStale();
+    });
+
+    return () => {
+      unsubscribe();
+      appStateSub.remove();
+    };
+  }, []);
+
+  // Anything a student can SEE (OS permission prompt, store-update dialog,
+  // review prompt) waits until onboarding is done, so a first-time user is
+  // never interrupted before they have seen what the app does. Runs once:
+  // `onboarded` only ever goes null -> boolean -> true.
+  useEffect(() => {
+    if (onboarded !== true) return;
+    registerForPushNotificationsAsync();
+
+    // Sequenced so a store-update prompt and a review prompt never show back to back.
+    checkForStoreUpdate().finally(() => {
+      maybeRequestReview();
+    });
+  }, [onboarded]);
+
+  // Still reading AsyncStorage — render nothing to avoid a flash of wrong screen
+  if (onboarded === null) return null;
 
   const tree = (
     <NavigationContainer
@@ -400,7 +400,7 @@ function AppContent() {
           </RootStack.Screen>
         ) : (
           <>
-            <RootStack.Screen name="Tabs">{() => tabs}</RootStack.Screen>
+            <RootStack.Screen name="Tabs" component={TabsNavigator} />
             <RootStack.Screen
               name="SignIn"
               component={SignInScreen}
