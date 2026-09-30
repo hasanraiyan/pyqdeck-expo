@@ -8,6 +8,8 @@
 // this whole file can be deleted the day that changes - nothing outside
 // src/api/index.ts imports it.
 
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
 export type OriginId = 'ec2' | 'render';
 
 type Origin = {
@@ -60,8 +62,32 @@ function notify(): void {
   listeners.forEach((fn) => fn());
 }
 
-let inFlight: Promise<Origin> | null = null;
+// The last origin that proved healthy, remembered across launches so the very
+// first request can go straight to it instead of waiting on a health check.
+// Deliberately not `pyq_`-prefixed: "Clear cache" must not throw it away.
+const ORIGIN_KEY = 'pyqdeck:backend_origin';
+
+// Longest a request will wait for the stored origin to be read. AsyncStorage
+// answers in a few ms; the cap only guarantees a slow read can never delay a
+// request - it just falls back to the default origin.
+const STORED_READ_CAP_MS = 100;
+
 let hasSelected = false;
+
+function persistOrigin(origin: Origin): void {
+  AsyncStorage.setItem(ORIGIN_KEY, origin.id).catch(() => {});
+}
+
+// Started at import so it is usually finished before the first request.
+// Only applies if nothing has selected an origin in the meantime.
+const storedRead: Promise<void> = AsyncStorage.getItem(ORIGIN_KEY)
+  .then((id) => {
+    const stored = ORIGINS.find((o) => o.id === id);
+    if (stored && !hasSelected && !pinned) active = stored;
+  })
+  .catch(() => {});
+
+let inFlight: Promise<Origin> | null = null;
 let lastCheckedAt = 0;
 
 // True only for a backend that answered in time, with a success status, a
@@ -124,6 +150,7 @@ async function choose(): Promise<Origin> {
     if (await ping(origin)) {
       active = origin;
       lastCheckedAt = Date.now();
+      persistOrigin(origin);
       console.log(`[Backend] Selected: ${origin.label}`);
       notify();
       return origin;
@@ -151,11 +178,18 @@ function run(): Promise<Origin> {
   return inFlight;
 }
 
-// Awaited by every request. The first call kicks off selection; later calls
-// are free. Startup cost is one ping RTT on the first request only, and it
-// overlaps app boot (fonts, ads init, navigation) rather than adding to it.
-export function ready(): Promise<Origin> {
-  return hasSelected ? Promise.resolve(active) : run();
+// Awaited by every request, but never on a health check: it resolves with the
+// current best guess (the origin that last proved healthy, else the default)
+// straight away, and kicks the real check off in the background if it has not
+// run yet. A wrong guess costs one failover retry inside request(); a right one
+// - the common case - saves the whole ping round trip, which measured ~3.5s
+// cold, off the first screen.
+export async function ready(): Promise<Origin> {
+  if (!hasSelected && !inFlight && !pinned) void run();
+  if (!hasSelected) {
+    await Promise.race([storedRead, new Promise<void>((r) => setTimeout(r, STORED_READ_CAP_MS))]);
+  }
+  return active;
 }
 
 export function getApiBaseUrl(): string {

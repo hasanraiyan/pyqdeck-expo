@@ -109,6 +109,11 @@ async function request<T>(path: string, init?: RequestInit, isRetry = false): Pr
   } catch (err: any) {
     if (err instanceof ApiError) throw err;
 
+    // The caller cancelled (a newer search superseded this one, or the screen
+    // went away). That says nothing about the origin's health, so no failover
+    // and no user-facing error - React Query discards the result anyway.
+    if (init?.signal?.aborted) throw err;
+
     // Transport-level failure (DNS, refused, timeout) - the classic sign the
     // origin is gone rather than unhappy. isRetry caps this at one extra
     // attempt, so a genuinely offline device fails fast into the React Query cache
@@ -130,24 +135,35 @@ async function request<T>(path: string, init?: RequestInit, isRetry = false): Pr
 
 // fetch has no timeout of its own, so a half-open socket hangs the screen's
 // spinner indefinitely. AbortController is used rather than
-// AbortSignal.timeout for Hermes support on older Android.
+// AbortSignal.timeout for Hermes support on older Android. A caller's own
+// signal (React Query cancelling a superseded search, say) is forwarded so
+// either one aborts the request.
 async function fetchWithTimeout(url: string, init?: RequestInit): Promise<Response> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  const outer = init?.signal;
+  const onOuterAbort = () => controller.abort();
+  if (outer) {
+    if (outer.aborted) controller.abort();
+    else outer.addEventListener('abort', onOuterAbort);
+  }
   try {
     return await fetch(url, { ...init, signal: controller.signal });
   } finally {
     clearTimeout(timer);
+    outer?.removeEventListener('abort', onOuterAbort);
   }
 }
 
-const fetchApi = <T,>(path: string): Promise<T> => request<T>(path);
+const fetchApi = <T,>(path: string, signal?: AbortSignal): Promise<T> =>
+  request<T>(path, signal ? { signal } : undefined);
 
-const postApi = <T,>(path: string, body: unknown): Promise<T> =>
+const postApi = <T,>(path: string, body: unknown, signal?: AbortSignal): Promise<T> =>
   request<T>(path, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
+    ...(signal ? { signal } : {}),
   });
 
 // POST with the Clerk session token attached. Only for endpoints the server
@@ -167,19 +183,24 @@ const postApiAuthed = async <T,>(path: string, body: unknown): Promise<T> =>
 // Plain fetchers: no caching in here. Caching, freshness, de-duplication and
 // the offline fallback live in React Query (see queryClient.ts / queries.ts).
 
-export const getSemesters = (): Promise<Semester[]> => fetchApi<Semester[]>('/semesters');
+export const getSemesters = (signal?: AbortSignal): Promise<Semester[]> =>
+  fetchApi<Semester[]>('/semesters', signal);
 
-export const getSubjects = async (semesterId: string): Promise<SubjectSummary[]> => {
-  const live = await fetchApi<SubjectSummary[]>(`/semesters/${semesterId}/subjects`);
+export const getSubjects = async (
+  semesterId: string,
+  signal?: AbortSignal
+): Promise<SubjectSummary[]> => {
+  const live = await fetchApi<SubjectSummary[]>(`/semesters/${semesterId}/subjects`, signal);
   return live.map(trimName);
 };
 
-export const getSubjectMeta = async (subjectId: string): Promise<SubjectMeta> =>
-  trimName(await fetchApi<SubjectMeta>(`/subjects/${subjectId}/meta`));
+export const getSubjectMeta = async (subjectId: string, signal?: AbortSignal): Promise<SubjectMeta> =>
+  trimName(await fetchApi<SubjectMeta>(`/subjects/${subjectId}/meta`, signal));
 
 export const getQuestions = (
   subjectId: string,
-  params: { year?: number; chapter?: string; search?: string; limit?: number; offset?: number } = {}
+  params: { year?: number; chapter?: string; search?: string; limit?: number; offset?: number } = {},
+  signal?: AbortSignal
 ): Promise<QuestionListResult> => {
   const qs = new URLSearchParams();
   if (params.year !== undefined) qs.set('year', String(params.year));
@@ -187,41 +208,70 @@ export const getQuestions = (
   if (params.search) qs.set('search', params.search);
   qs.set('limit', String(params.limit ?? 50));
   if (params.offset) qs.set('offset', String(params.offset));
-  return fetchApi<QuestionListResult>(`/subjects/${subjectId}/questions?${qs.toString()}`);
+  return fetchApi<QuestionListResult>(`/subjects/${subjectId}/questions?${qs.toString()}`, signal);
 };
 
-export const getQuestion = (subjectId: string, questionId: string) =>
-  fetchApi<QuestionListResult>(`/subjects/${subjectId}/questions/${encodeURIComponent(questionId)}`);
-
-export const getSolution = (subjectId: string, questionId: string): Promise<Solution> =>
-  fetchApi<Solution>(
-    `/subjects/${subjectId}/questions/${encodeURIComponent(questionId)}/solution`
+export const getQuestion = (subjectId: string, questionId: string, signal?: AbortSignal) =>
+  fetchApi<QuestionListResult>(
+    `/subjects/${subjectId}/questions/${encodeURIComponent(questionId)}`,
+    signal
   );
 
-export const searchSubjects = async (query: string, limit = 20) => {
-  const res = await fetchApi<SubjectSearchResult>(`/subjects/search?q=${encodeURIComponent(query)}&limit=${limit}`);
+export const getSolution = (
+  subjectId: string,
+  questionId: string,
+  signal?: AbortSignal
+): Promise<Solution> =>
+  fetchApi<Solution>(
+    `/subjects/${subjectId}/questions/${encodeURIComponent(questionId)}/solution`,
+    signal
+  );
+
+export const searchSubjects = async (query: string, limit = 20, signal?: AbortSignal) => {
+  const res = await fetchApi<SubjectSearchResult>(
+    `/subjects/search?q=${encodeURIComponent(query)}&limit=${limit}`,
+    signal
+  );
   return { ...res, subjects: Array.isArray(res?.subjects) ? res.subjects.map(trimName) : [] };
 };
 
-export const listAllSubjects = async (params: { q?: string; page?: number } = {}) => {
+export const listAllSubjects = async (
+  params: { q?: string; page?: number } = {},
+  signal?: AbortSignal
+) => {
   const qs = new URLSearchParams();
   if (params.q) qs.set('q', params.q);
   if (params.page) qs.set('page', String(params.page));
-  const res = await fetchApi<SubjectsPage>(`/subjects?${qs.toString()}`);
+  const res = await fetchApi<SubjectsPage>(`/subjects?${qs.toString()}`, signal);
   return { ...res, subjects: Array.isArray(res?.subjects) ? res.subjects.map(trimName) : [] };
 };
 
-export const searchAllQuestions = (query: string, limit = 20) =>
-  fetchApi<AllQuestionsSearchResult>(`/questions/semantic-search?q=${encodeURIComponent(query)}&limit=${limit}`);
-
-export const getSimilarQuestions = (subjectId: string, questionId: string, limit = 5) =>
-  fetchApi<SimilarQuestionsResult>(
-    `/subjects/${subjectId}/questions/${encodeURIComponent(questionId)}/similar?limit=${limit}`
+export const searchAllQuestions = (query: string, limit = 20, signal?: AbortSignal) =>
+  fetchApi<AllQuestionsSearchResult>(
+    `/questions/semantic-search?q=${encodeURIComponent(query)}&limit=${limit}`,
+    signal
   );
 
-export const getRepeatedQuestions = (subjectId: string, questionId: string, limit = 5) =>
+export const getSimilarQuestions = (
+  subjectId: string,
+  questionId: string,
+  limit = 5,
+  signal?: AbortSignal
+) =>
+  fetchApi<SimilarQuestionsResult>(
+    `/subjects/${subjectId}/questions/${encodeURIComponent(questionId)}/similar?limit=${limit}`,
+    signal
+  );
+
+export const getRepeatedQuestions = (
+  subjectId: string,
+  questionId: string,
+  limit = 5,
+  signal?: AbortSignal
+) =>
   fetchApi<RepeatedQuestionsResult>(
-    `/subjects/${subjectId}/questions/${encodeURIComponent(questionId)}/repeats?limit=${limit}`
+    `/subjects/${subjectId}/questions/${encodeURIComponent(questionId)}/repeats?limit=${limit}`,
+    signal
   );
 
 // Requires a signed-in user. The server derives the voter identity from the
@@ -263,24 +313,26 @@ export const registerPushToken = (token: string, platform: 'ios' | 'android') =>
 // persisted React Query copy is only the offline fallback. Notes are fetched
 // separately, on demand - see getTopicNotes.
 
-const syllabusRead = <T,>(path: string): Promise<T> => fetchApi<T>(path);
+const syllabusRead = <T,>(path: string, signal?: AbortSignal): Promise<T> =>
+  fetchApi<T>(path, signal);
 
-export const getBranches = () => syllabusRead<Branch[]>('/syllabus/branches');
+export const getBranches = (signal?: AbortSignal) =>
+  syllabusRead<Branch[]>('/syllabus/branches', signal);
 
-export const getBranchSemesters = (branch: string) =>
+export const getBranchSemesters = (branch: string, signal?: AbortSignal) =>
   syllabusRead<BranchSemesters>(
-    `/syllabus/branches/${encodeURIComponent(branch)}/semesters`
+    `/syllabus/branches/${encodeURIComponent(branch)}/semesters`,
+    signal
   );
 
-export const getBranchSemester = (branch: string, semester: number) =>
+export const getBranchSemester = (branch: string, semester: number, signal?: AbortSignal) =>
   syllabusRead<BranchSemester>(
-    `/syllabus/branches/${encodeURIComponent(branch)}/semesters/${semester}`
+    `/syllabus/branches/${encodeURIComponent(branch)}/semesters/${semester}`,
+    signal
   );
 
-export const getSyllabusSubject = (subject: string) =>
-  syllabusRead<SyllabusSubject>(
-    `/syllabus/subjects/${encodeURIComponent(subject)}`
-  );
+export const getSyllabusSubject = (subject: string, signal?: AbortSignal) =>
+  syllabusRead<SyllabusSubject>(`/syllabus/subjects/${encodeURIComponent(subject)}`, signal);
 
 // Deliberately not part of getSyllabusSubject's payload - a subject screen
 // renders every topic in the tree at once, so bundling every topic's notes
@@ -289,14 +341,16 @@ export const getSyllabusSubject = (subject: string) =>
 // and NOT cached (unlike the rest of the syllabus) - an admin can revise a
 // topic's notes at any time and a student should never be stuck reading a
 // stale AsyncStorage copy.
-export const getTopicNotes = (subject: string, topicId: string) =>
+export const getTopicNotes = (subject: string, topicId: string, signal?: AbortSignal) =>
   fetchApi<{ id: string; title: string; notes: string }>(
-    `/syllabus/subjects/${encodeURIComponent(subject)}/topics/${encodeURIComponent(topicId)}/notes`
+    `/syllabus/subjects/${encodeURIComponent(subject)}/topics/${encodeURIComponent(topicId)}/notes`,
+    signal
   );
 
-export const searchTopicNotes = (query: string, limit = 20) =>
+export const searchTopicNotes = (query: string, limit = 20, signal?: AbortSignal) =>
   fetchApi<TopicNotesSearchResult>(
-    `/syllabus/search/topics?q=${encodeURIComponent(query)}&limit=${limit}`
+    `/syllabus/search/topics?q=${encodeURIComponent(query)}&limit=${limit}`,
+    signal
   );
 
 // -------------------------------------------------------------
@@ -306,9 +360,9 @@ export const searchTopicNotes = (query: string, limit = 20) =>
 // Asked once per app session before the card is ever rendered, so a
 // deployment with the feature switched off costs nothing but this one cheap
 // call. Never throws: a failure here just means "no card".
-export const getAiOverviewStatus = async (): Promise<boolean> => {
+export const getAiOverviewStatus = async (signal?: AbortSignal): Promise<boolean> => {
   try {
-    const res = await fetchApi<{ enabled: boolean }>('/search/ai-overview/status');
+    const res = await fetchApi<{ enabled: boolean }>('/search/ai-overview/status', signal);
     return Boolean(res?.enabled);
   } catch {
     return false;
@@ -317,5 +371,5 @@ export const getAiOverviewStatus = async (): Promise<boolean> => {
 
 // POST, not GET: the server keeps the query out of a cacheable URL because
 // Cloudflare caches public GETs for an hour and every miss is billed.
-export const getAiOverview = (query: string, limit?: number) =>
-  postApi<AiOverview>('/search/ai-overview', { query, ...(limit ? { limit } : {}) });
+export const getAiOverview = (query: string, limit?: number, signal?: AbortSignal) =>
+  postApi<AiOverview>('/search/ai-overview', { query, ...(limit ? { limit } : {}) }, signal);

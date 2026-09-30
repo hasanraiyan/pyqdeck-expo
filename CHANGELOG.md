@@ -2,6 +2,17 @@
 
 All notable changes to PYQDeck are listed here, newest first.
 
+## Unreleased
+
+### Added
+- **Continue where you left off.** Home shows a card that reopens the last question you were reading.
+
+### Changed
+- Content loads faster on launch: the app no longer waits for a server health check before its first request, and remembers which server worked last.
+- Opening a subject now starts loading its papers immediately.
+- Search, All Subjects and topic notes now use the shared cache: repeating a search is instant, a newer search cancels the older one, and the rate-limit wait follows the server's own timing.
+- The notification prompt, update check and review prompt no longer appear during first-time onboarding.
+
 ## 1.0.4
 
 ### Fixed

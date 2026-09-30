@@ -40,4 +40,14 @@ export const qk = {
   syllabusSemester: (branch: string, semester: number) =>
     ['syllabus', 'semester', branch, semester] as const,
   syllabusSubject: (subject: string) => ['syllabus', 'subject', subject] as const,
+  // Search keys carry the lower-cased query so "OS", "os" and "Os" share one
+  // entry. None of these are persisted (see queries.ts).
+  searchSubjects: (q: string) => ['search', 'subjects', q.toLowerCase()] as const,
+  searchQuestions: (q: string) => ['search', 'questions', q.toLowerCase()] as const,
+  searchNotes: (q: string) => ['search', 'notes', q.toLowerCase()] as const,
+  aiOverviewStatus: () => ['search', 'ai-status'] as const,
+  aiOverview: (q: string) => ['search', 'ai-overview', q.toLowerCase()] as const,
+  allSubjects: (q: string) => ['allSubjects', q.trim().toLowerCase()] as const,
+  topicNotes: (subjectId: string, topicId: string) =>
+    ['topicNotes', subjectId, topicId] as const,
 };
