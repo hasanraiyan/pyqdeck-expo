@@ -5,10 +5,14 @@
 export const isSyllabusEnabled = true;
 
 /**
- * Auth (Clerk) - disabled on master for Google Play Store review compliance.
- * Enabled on clerk-auth branch.
+ * Auth (Clerk). On: AI chat requires an account, and voting is gated behind
+ * sign-in (with auth off, useRequireAuth never runs a vote). It was off on
+ * master for Google Play Store review compliance - before shipping a build
+ * with this on, run the checklist in docs/SRS-ai-chat-streaming.md section 3.9
+ * (release-build smoke test with the Clerk R8 keep rules, in-app account
+ * deletion, Data Safety form, privacy policy).
  */
-export const isAuthEnabled = false;
+export const isAuthEnabled = true;
 
 /**
  * Ask AI - enable/disable Ask AI buttons across the app.

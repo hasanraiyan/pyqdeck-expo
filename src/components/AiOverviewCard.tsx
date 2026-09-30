@@ -1,17 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  Animated,
-  Easing,
-  Linking,
-  Platform,
-  Modal,
-  ScrollView,
-  Share,
-} from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Linking, Share } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import * as Clipboard from 'expo-clipboard';
@@ -20,6 +8,8 @@ import { COLORS, FONTS, RADIUS, SHADOWS } from '../theme/colors';
 import { markdownRules } from '../theme/markdownStyles';
 import { AiOverview, AiOverviewReference } from '../types';
 import { NativeContentRenderer } from './NativeContentRenderer';
+import { SourcesSheet } from './SourcesSheet';
+import { ThinkingIndicator } from './ThinkingIndicator';
 import { rf } from '../utils/responsive';
 
 /**
@@ -47,52 +37,43 @@ const COLLAPSED_H = rf(22) * COLLAPSED_LINES;
 const TYPE_CHARS_PER_TICK = 4;
 const TYPE_TICK_MS = 16;
 
-/** Three bars that pulse while the answer is being generated. */
-const GeneratingState = () => {
-  const anim = React.useRef(new Animated.Value(0.4)).current;
-
-  React.useEffect(() => {
-    const loop = Animated.loop(
-      Animated.sequence([
-        Animated.timing(anim, {
-          toValue: 1,
-          duration: 700,
-          useNativeDriver: Platform.OS !== 'web',
-        }),
-        Animated.timing(anim, {
-          toValue: 0.4,
-          duration: 700,
-          useNativeDriver: Platform.OS !== 'web',
-        }),
-      ])
-    );
-    loop.start();
-    return () => loop.stop();
-  }, [anim]);
-
-  return (
-    <View style={styles.card}>
-      <View style={styles.headerRow}>
-        <Feather name="zap" size={13} color={COLORS.primary} />
-        <Text style={styles.headerLabel}>GENERATING…</Text>
-      </View>
-      {/* One shared value drives every bar - a timer per bar is how jank starts. */}
-      <Animated.View style={{ opacity: anim }}>
-        <View style={[styles.bone, { width: '100%' }]} />
-        <View style={[styles.bone, { width: '96%' }]} />
-        <View style={[styles.bone, { width: '72%' }]} />
-      </Animated.View>
+/** The Claude-style thinking spinner while the answer is being generated. */
+const GeneratingState = () => (
+  <View style={styles.card}>
+    <View style={styles.headerRow}>
+      <Feather name="zap" size={13} color={COLORS.primary} />
+      <Text style={styles.headerLabel}>AI OVERVIEW</Text>
     </View>
-  );
-};
+    <ThinkingIndicator />
+  </View>
+);
 
 interface Props {
   overview: AiOverview | null;
   loading: boolean;
   onPressReference: (ref: AiOverviewReference) => void;
+  /**
+   * Follow-up chips are shown only when the server's `followups` switch is on
+   * (the caller passes an empty list otherwise). Tapping one runs it as a new
+   * search - no sign-in involved.
+   */
+  followups?: string[];
+  onPressFollowup?: (question: string) => void;
+  /**
+   * Opens the chat. Passed only when chat is switched on AND sign-in exists in
+   * this build; the caller wraps it in the sign-in guard. Omit to hide the pill.
+   */
+  onAskFollowup?: () => void;
 }
 
-export const AiOverviewCard: React.FC<Props> = ({ overview, loading, onPressReference }) => {
+export const AiOverviewCard: React.FC<Props> = ({
+  overview,
+  loading,
+  onPressReference,
+  followups = [],
+  onPressFollowup,
+  onAskFollowup,
+}) => {
   const [expanded, setExpanded] = useState(false);
   const [copied, setCopied] = useState(false);
   // Which span's sources the sheet is showing; null keeps it closed.
@@ -169,6 +150,12 @@ export const AiOverviewCard: React.FC<Props> = ({ overview, loading, onPressRefe
 
   // Expanding is a request to read it all, so stop teasing and show the rest.
   const finishTyping = () => setRevealed(fullText.length);
+  const typingDone = fullText.length > 0 && revealed >= fullText.length;
+  // Defensive: the list comes off the wire, and this card also renders
+  // payloads cached by older builds that have no such key.
+  const visibleFollowups = (Array.isArray(followups) ? followups : [])
+    .filter((q) => typeof q === 'string' && q.trim().length > 0)
+    .slice(0, 4);
 
   if (loading) return <GeneratingState />;
 
@@ -355,89 +342,50 @@ export const AiOverviewCard: React.FC<Props> = ({ overview, loading, onPressRefe
         </View>
       )}
 
-      <Modal
-        visible={sheetRefs !== null}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setSheetRefs(null)}
-      >
-        <TouchableOpacity
-          style={styles.sheetBackdrop}
-          activeOpacity={1}
-          onPress={() => setSheetRefs(null)}
-        >
-          {/* Swallows taps so a press inside the sheet does not dismiss it. */}
-          <TouchableOpacity style={styles.sheet} activeOpacity={1}>
-            <View style={styles.sheetHandle} />
-            <Text style={styles.sheetTitle}>Sources · {sheetRefs?.length ?? 0}</Text>
-
-            <ScrollView style={styles.sheetList} showsVerticalScrollIndicator={false}>
-              {(sheetRefs ?? []).map((ref) => {
-                const metaText = (() => {
-                  if (!ref.navigate) return null;
-                  if (ref.navigate.target === 'topic') return 'STUDY NOTE';
-                  const parts: string[] = [];
-                  if (ref.navigate.semesterId) parts.push(ref.navigate.semesterId.toUpperCase());
-                  if (ref.navigate.year) parts.push(String(ref.navigate.year));
-                  if (ref.navigate.questionId) {
-                    parts.push(ref.navigate.questionId);
-                  } else {
-                    parts.push('Full paper');
-                  }
-                  return parts.join(' · ');
-                })();
-
-                return (
-                  <TouchableOpacity
-                    key={ref.index}
-                    style={styles.sourceRow}
-                    activeOpacity={0.7}
-                    disabled={!ref.navigate && !ref.url}
-                    onPress={() => {
-                      setSheetRefs(null);
-                      Haptics.selectionAsync().catch(() => {});
-                      onPressReference(ref);
-                    }}
-                  >
-                    <View style={styles.sourceIcon}>
-                      <Feather
-                        name={
-                          ref.navigate?.target === 'topic'
-                            ? 'book-open'
-                            : ref.navigate
-                              ? 'file-text'
-                              : 'globe'
-                        }
-                        size={13}
-                        color={COLORS.secondary}
-                      />
-                    </View>
-                    <View style={styles.sourceBody}>
-                      <Text style={styles.sourceTitle} numberOfLines={3}>
-                        {ref.title || 'Source'}
-                      </Text>
-                      {metaText ? (
-                        <Text style={styles.sourceMeta}>{metaText}</Text>
-                      ) : null}
-                    </View>
-                    {Boolean(ref.navigate || ref.url) ? (
-                      <Feather name="chevron-right" size={16} color={COLORS.textSubtle} />
-                    ) : null}
-                  </TouchableOpacity>
-                );
-              })}
-            </ScrollView>
-
+      {/* Follow-ups appear once the answer has finished typing, so they never
+          jump around under text that is still growing. A missing or empty
+          list (older server, cached payload, switch off) renders nothing. */}
+      {typingDone && (visibleFollowups.length > 0 || onAskFollowup) && (
+        <View style={styles.followupBlock}>
+          {visibleFollowups.map((q) => (
             <TouchableOpacity
-              style={styles.sheetClose}
+              key={q}
+              style={styles.followupChip}
               activeOpacity={0.7}
-              onPress={() => setSheetRefs(null)}
+              accessibilityRole="button"
+              accessibilityLabel={q}
+              onPress={() => {
+                Haptics.selectionAsync().catch(() => {});
+                onPressFollowup?.(q);
+              }}
             >
-              <Text style={styles.sheetCloseText}>Close</Text>
+              <Feather name="corner-down-right" size={13} color={COLORS.textMuted} />
+              <Text style={styles.followupText}>{q}</Text>
             </TouchableOpacity>
-          </TouchableOpacity>
-        </TouchableOpacity>
-      </Modal>
+          ))}
+          {onAskFollowup && (
+            <TouchableOpacity
+              style={styles.askPill}
+              activeOpacity={0.8}
+              accessibilityRole="button"
+              accessibilityLabel="Ask a follow-up question"
+              onPress={() => {
+                Haptics.selectionAsync().catch(() => {});
+                onAskFollowup();
+              }}
+            >
+              <Feather name="message-circle" size={14} color={COLORS.primary} />
+              <Text style={styles.askPillText}>Ask a follow-up</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
+
+      <SourcesSheet
+        refs={sheetRefs}
+        onClose={() => setSheetRefs(null)}
+        onPressReference={onPressReference}
+      />
     </View>
   );
 };
@@ -575,88 +523,49 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginTop: 6,
   },
-  bone: {
-    height: 12,
-    borderRadius: 4,
-    backgroundColor: COLORS.cardSecondary,
-    marginBottom: 8,
-  },
-  sheetBackdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(27, 36, 48, 0.45)',
-    justifyContent: 'flex-end',
-  },
-  sheet: {
-    backgroundColor: COLORS.card,
-    borderTopLeftRadius: 14,
-    borderTopRightRadius: 14,
-    paddingHorizontal: 16,
-    paddingTop: 8,
-    paddingBottom: 16,
-    // Capped so a span citing many papers still leaves the page behind visible.
-    maxHeight: '70%',
-  },
-  sheetHandle: {
-    alignSelf: 'center',
-    width: 36,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: COLORS.border,
-    marginBottom: 12,
-  },
-  sheetTitle: {
-    fontFamily: FONTS.mono,
-    fontSize: rf(11),
-    fontWeight: '700',
-    letterSpacing: 0.5,
-    color: COLORS.textMuted,
-    marginBottom: 10,
-  },
-  sheetList: {
-    flexGrow: 0,
-  },
-  sourceRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    paddingVertical: 12,
-    borderBottomWidth: StyleSheet.hairlineWidth,
+  followupBlock: {
+    marginTop: 14,
+    paddingTop: 12,
+    gap: 8,
+    borderTopWidth: StyleSheet.hairlineWidth,
     borderColor: COLORS.borderLight,
   },
-  sourceIcon: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: COLORS.secondaryLight,
+  followupChip: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    alignSelf: 'flex-start',
+    gap: 8,
+    maxWidth: '100%',
+    minHeight: 44,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: RADIUS.lg,
+    backgroundColor: COLORS.cardSecondary,
   },
-  sourceBody: {
-    flex: 1,
-    gap: 3,
-  },
-  sourceTitle: {
+  followupText: {
+    flexShrink: 1,
     fontFamily: FONTS.sans,
     fontSize: rf(13),
     lineHeight: rf(18),
     color: COLORS.text,
   },
-  sourceMeta: {
-    fontFamily: FONTS.mono,
-    fontSize: rf(9.5),
-    color: COLORS.textSubtle,
-  },
-  sheetClose: {
-    marginTop: 12,
-    paddingVertical: 12,
-    borderRadius: 6,
+  askPill: {
+    flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.cardSecondary,
+    alignSelf: 'flex-start',
+    gap: 7,
+    minHeight: 44,
+    marginTop: 2,
+    paddingHorizontal: 16,
+    borderRadius: RADIUS.pill,
+    borderWidth: 1,
+    borderColor: COLORS.primaryBorder,
+    backgroundColor: COLORS.primaryLight,
   },
-  sheetCloseText: {
-    fontFamily: FONTS.mono,
-    fontSize: rf(12),
-    fontWeight: '700',
-    color: COLORS.textMuted,
+  askPillText: {
+    fontFamily: FONTS.sans,
+    fontSize: rf(13),
+    fontWeight: '600',
+    color: COLORS.primary,
   },
 });

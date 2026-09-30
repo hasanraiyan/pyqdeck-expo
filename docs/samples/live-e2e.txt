@@ -1,0 +1,13 @@
+OVERVIEW ms 17930 chars 852 refs 10 related ["What are the main types of AI?","Can you provide examples of AI applications?","How does AI relate to machine learning?","What are the different levels of AI?"]
+ref0 {"index":1,"title":"What is AI? — Introduction to AI","link":"https://www.pyqdeck.in/syllabus/subject/sem1-100105-introduction-to-ai/topic/6a96312b0b50dbcb551eb589/what-is-ai","navigate":{"subjectSlug":"sem1-100105-introduction-to-ai","topicId":"6a96312b0b50dbcb551eb589","target":"topic"},"url":"https://www.pyqdeck.in/syllabus/subject/sem1-100105-introduction-to-ai/topic/6a96312b0b50dbcb551eb589/what-is-ai"}
+TEXT Artificial Intelligence (AI) is a branch of computer science focused on building machines and software capable of performing tasks that typically require human intelligence. These tasks include learning, reasoning, problem-solving, perception, understanding language, and making decisions. John McCarthy, who coined the term, defined it as "the science and engineering of making intelligent machines"
+TURN1 marks {"meta":2024,"step":4842,"references":4847,"delta":5473,"related":6932,"done":6932} total 6932 events 27
+T1 text **Artificial Intelligence (AI)** is a branch of computer science focused on building machines and software capable of performing tasks that typically require human intelligence, such as learning, reasoning, decision-making, and understanding language. 
+
+AI is categorized into different types based o
+TURN2 marks {"meta":1,"step":3409,"references":3422,"delta":3966,"related":5205,"done":5205} total 5205
+T2 text **Narrow or Weak AI** is designed to perform one specific task intelligently. It represents all real, functioning AI that exists today. 
+
+Key characteristics include:
+* **Task-Specific:** It operates within a limited context and cannot transfer its learning to other domains. For example, a system tr
+RELATED2 {"questions":["What are common examples of Narrow AI?","How does Narrow AI differ from general AI?","What are the limitations of Narrow AI?","Can Narrow AI learn new tasks?"]}

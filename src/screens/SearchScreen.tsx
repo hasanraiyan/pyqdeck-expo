@@ -26,6 +26,9 @@ import {
 import { prefetchSubject } from '../api/prefetch';
 import { TopicNoteSearchResultItem, AiOverviewReference } from '../types';
 import { AiOverviewCard } from '../components/AiOverviewCard';
+import { openAiReference as openAiReferenceShared } from '../utils/openAiReference';
+import { useRequireAuth } from '../auth/useRequireAuth';
+import { isAuthEnabled } from '../config/features';
 import { searchLocalCache } from '../api/offlineSearch';
 import { COLORS, FONTS } from '../theme/colors';
 import { Badge, MarksBadge, YearBadge } from '../components/Badge';
@@ -46,6 +49,7 @@ export const SearchScreen = () => {
   const [query, setQuery] = useState('');
   const [activeTab, setActiveTab] = useState<SearchTab>('all');
   const queryClient = useQueryClient();
+  const { guard } = useRequireAuth();
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
   const [cooldownSec, setCooldownSec] = useState(0);
   const [validationError, setValidationError] = useState<string | null>(null);
@@ -66,9 +70,15 @@ export const SearchScreen = () => {
   const aiStatusQ = useQuery(aiOverviewStatusQuery());
   const aiQ = useQuery({
     ...aiOverviewQuery(q),
-    enabled: hasSearched && !loading && aiStatusQ.data === true,
+    enabled: hasSearched && !loading && aiStatusQ.data?.enabled === true,
   });
   const aiOverview = aiQ.data ?? null;
+  // Follow-ups and chat are separate server switches on top of the overview.
+  // Both read as off until the status says otherwise, and chat additionally
+  // needs sign-in to exist in this build (installed builds without it never
+  // show the pill).
+  const aiFollowups = aiStatusQ.data?.followups ? (aiOverview?.relatedQuestions ?? []) : [];
+  const aiChatAvailable = aiStatusQ.data?.chat === true && isAuthEnabled;
   const aiLoading = aiQ.isFetching;
 
   const onlineSubjects = Array.isArray(subsQ.data?.subjects) ? subsQ.data.subjects : [];
@@ -189,87 +199,8 @@ export const SearchScreen = () => {
     });
   };
 
-  const openAiReference = (ref: AiOverviewReference) => {
-    // Preferred: the server's canonical URL, but routed into THIS tab's own
-    // stack - never via linkTo(). linkTo() resolves these paths into the
-    // Syllabus/Browse stacks, and when that stack isn't mounted yet the
-    // target becomes its root: no back button, no way back to results (or
-    // to the Study home). SearchStack registers TopicNotes, QuestionDetail
-    // and QuestionList (see App.tsx), so a plain navigate pushes over the
-    // search results with the header back intact. Regex, not new URL():
-    // Hermes has no URL global to rely on.
-    const raw = ref.url;
-    if (raw) {
-      const m = raw.match(/^https:\/\/(www\.)?pyqdeck\.in(\/[^?#]*)?(\?[^#]*)?/);
-      if (m) {
-        const path = m[2] || '/';
-        const topic = path.match(/^\/syllabus\/subject\/([^/]+)\/topic\/([^/]+)/);
-        if (topic) {
-          // Bare ids - the resolver on TopicNotesScreen fills in the
-          // title/module, same as a deep link.
-          navigation.navigate('TopicNotes', { subjectId: topic[1], topicId: topic[2] });
-          return;
-        }
-        const parts = path.split('/').filter(Boolean);
-        const year = parts.length >= 3 ? Number(parts[2]) : NaN;
-        if (!Number.isNaN(year)) {
-          if (parts.length === 4) {
-            navigation.navigate('QuestionDetail', {
-              semesterId: parts[0],
-              subjectId: parts[1],
-              year,
-              questionId: parts[3],
-            });
-            return;
-          }
-          if (parts.length === 3 && parts[0] !== 'syllabus') {
-            navigation.navigate('QuestionList', {
-              semesterId: parts[0],
-              subjectId: parts[1],
-              year,
-            });
-            return;
-          }
-        }
-        // Anything else (semester sheets, /search) is owned by other stacks -
-        // those still go through the deep-link config.
-        try {
-          linkTo(path + (m[3] || ''));
-          return;
-        } catch {
-          // Unmatched path (a route the app does not know yet) - fall
-          // through to the param-based handling below, then give up.
-        }
-      }
-    }
-    // Fallback for cached payloads from before `url` existed.
-    const nav = ref.navigate;
-    if (!nav) return;
-    if (nav.target === 'topic' && nav.subjectSlug && nav.topicId) {
-      // A cited study note - the resolver on TopicNotesScreen fills in the
-      // title/module from the bare ids, same as a deep link.
-      navigation.navigate('TopicNotes', {
-        subjectId: nav.subjectSlug,
-        topicId: nav.topicId,
-      });
-      return;
-    }
-    if (nav.target === 'question') {
-      navigation.navigate('QuestionDetail', {
-        subjectId: nav.subjectId,
-        semesterId: nav.semesterId,
-        questionId: nav.questionId,
-        year: nav.year,
-      });
-      return;
-    }
-    // A whole paper rather than one question.
-    navigation.navigate('QuestionList', {
-      subjectId: nav.subjectId,
-      semesterId: nav.semesterId,
-      year: nav.year,
-    });
-  };
+  const openAiReference = (ref: AiOverviewReference) =>
+    openAiReferenceShared(navigation, linkTo, ref);
 
   // Shared by typed searches, suggestion taps and deep links. A new value here
   // unmounts the previous query's observers, which cancels its in-flight
@@ -352,6 +283,13 @@ export const SearchScreen = () => {
 
     setQuery(norm.query);
     submitQuery(norm.query);
+  };
+
+  // Chat needs an account: signed-out users get the sign-in sheet and, once
+  // they are in, the parked action opens the chat (the same resume votes use).
+  const openAiChat = () => {
+    if (!aiOverview?.text) return;
+    guard(() => navigation.navigate('AiChat', { query: q, overview: aiOverview }), 'ai');
   };
 
   const clearRecentSearches = () => {
@@ -700,6 +638,9 @@ export const SearchScreen = () => {
               overview={aiOverview}
               loading={aiLoading}
               onPressReference={openAiReference}
+              followups={aiFollowups}
+              onPressFollowup={handleSuggestionPress}
+              onAskFollowup={aiChatAvailable ? openAiChat : undefined}
             />
           )}
 

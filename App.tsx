@@ -41,6 +41,7 @@ import { SemesterSelectScreen } from './src/screens/SemesterSelectScreen';
 import { SyllabusOverviewScreen } from './src/screens/SyllabusOverviewScreen';
 import { SubjectSyllabusScreen } from './src/screens/SubjectSyllabusScreen';
 import { TopicNotesScreen } from './src/screens/TopicNotesScreen';
+import { AiChatScreen } from './src/screens/AiChatScreen';
 import { SyllabusTabIcon } from './src/components/SyllabusTabIcon';
 import { checkForStoreUpdate } from './src/utils/appUpdate';
 import { maybeRequestReview } from './src/utils/appReview';
@@ -236,6 +237,8 @@ function SearchStack() {
         component={SearchScreen}
         options={{ headerShown: false }}
       />
+      {/* Only reachable from the AI overview card, which lives on this tab. */}
+      <Stack.Screen name="AiChat" component={AiChatScreen} options={{ title: 'Ask AI' }} />
       {renderSharedScreens(Stack)}
     </Stack.Navigator>
   );

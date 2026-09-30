@@ -1,0 +1,668 @@
+{
+  "answer": {
+    "state": "SUCCEEDED",
+    "answerText": "### Definition of Artificial Intelligence (AI)\nArtificial Intelligence (AI) is a branch of computer science focused on building machines and software capable of performing tasks that typically require human intelligence. These tasks include learning, reasoning, problem-solving, perception, understanding language, and decision-making. John McCarthy, who coined the term, defined AI as \"the science and engineering of making intelligent machines\". \n\nRather than imitating the human brain, AI aims to achieve comparable outcomes by acting rationally and effectively. In academic textbooks, AI is often framed in a 2×2 grid across four definitions:\n*   **Thinking Humanly:** Systems that think like humans (e.g., cognitive models).\n*   **Thinking Rationally:** Systems that think rationally using logic and reasoning.\n*   **Acting Humanly:** Systems that act like humans (such as passing the Turing Test).\n*   **Acting Rationally:** Systems that act rationally as agents achieving goals. Modern AI courses and frameworks predominantly adopt this \"acting rationally\" or agent-based view. \n\nA concise summary of AI is the study and design of intelligent agents—systems that perceive their environment and act to maximize their chances of achieving goals.\n\n---\n\n### What AI Is and Is Not\n*   **It is not magic or a \"brain in a box\":** AI consists of programs, data, and mathematics.\n*   **It is not just physical robots:** Most AI has no physical body and exists as search engines, recommendation systems, and chat interfaces.\n*   **It is not always perfect:** Because AI learns from data, biased or limited data will result in biased or incorrect AI.\n*   **It is not human consciousness:** Today's AI possesses narrow task intelligence, not consciousness. Furthermore, AI does not write its own goals; those are still defined by humans.\n*   **AI vs. Simple Programming:** A simple, fixed rule (such as turning on an AC if the temperature exceeds 30°C) is not AI because it lacks learning or search capabilities. An AI problem typically involves an uncertain or large environment, requires learning or searching, and needs human-like judgment (such as email spam detection).\n\n---\n\n### Levels and Types of AI\nAI is categorized by its capabilities and its functionality:\n\n#### By Capability\n*   **Narrow / Weak AI:** Performs a single, specific task as well as or better than a human. This is the only type of AI that exists today (e.g., search engines, translation, chess engines, face unlock).\n*   **General AI (AGI):** A hypothetical level of AI with human-level ability across all cognitive tasks, capable of transferring learning between different domains.\n*   **Super AI:** A speculative level of AI that far exceeds the best human minds in every field.\n\n#### By Functionality\n*   **Reactive Machines:** Respond only to current inputs with no memory of past events (e.g., Deep Blue).\n*   **Limited Memory:** Can utilize recent past data to make decisions (e.g., self-driving cars, chatbots).\n*   **Theory of Mind:** A research-stage concept where systems can model the beliefs and emotions of others.\n*   **Self-aware:** A purely conceptual AI that is conscious of itself.\n\n---\n\n### AI vs. Machine Learning vs. Deep Learning\nAI is the broadest category, representing any intelligent behavior. \n*   **Machine Learning (ML)** is a subset of AI where systems learn patterns from data instead of being explicitly hand-coded with rules.\n*   **Deep Learning** is a subset of ML that utilizes multi-layer neural networks to learn features automatically.\n*   **Generative AI** is a further subset of deep learning focused on producing new content (such as text, images, audio, or code).\n\nThe relationship is represented as: **AI ⊃ Machine Learning ⊃ Deep Learning ⊃ Generative AI**.\n\n---\n\n### Core Capabilities and Subfields\nAI systems exhibit several core capabilities, which are supported by specialized subfields:\n*   **Perception (Computer Vision & Speech Processing):** Interpreting sensory inputs like images, video, and speech (e.g., face recognition, medical imaging, voice assistants).\n*   **Reasoning (Expert Systems & Search/Optimization):** Using logic, knowledge representation, and search algorithms to solve puzzles, plan routes, or diagnose faults.\n*   **Learning (Machine Learning & Deep Learning):** Improving performance using data (e.g., spam filters, recommendation systems).\n*   **Language & Interaction (Natural Language Processing):** Understanding, translating, and generating human language (e.g., translation, chatbots, ChatGPT).\n*   **Action (Robotics & Multi-Agent Systems):** Combining perception, planning, and control to act physically or digitally in an environment (e.g., vacuum robots, drones, self-driving cars).\n\n---\n\n### How AI Works\nTraditional \"symbolic\" AI relied on writing explicit rules, logic, and search. In contrast, modern AI is overwhelmingly data-driven and statistical. \n\nRoughly, modern AI works through the following pipeline:\n1. Data is collected and cleaned.\n2. Features are engineered or automatically learned.\n3. A statistical, neural, or rule-based model is trained by minimizing errors on examples.\n4. The trained model performs inference (predictions or decisions) on new inputs.\n5. Feedback and continuous retraining are used to improve the model over time.",
+    "citations": [
+      {
+        "endIndex": "220",
+        "sources": [
+          {
+            "referenceId": "0"
+          }
+        ]
+      },
+      {
+        "startIndex": "221",
+        "endIndex": "335",
+        "sources": [
+          {
+            "referenceId": "0"
+          },
+          {
+            "referenceId": "1"
+          }
+        ]
+      },
+      {
+        "startIndex": "336",
+        "endIndex": "447",
+        "sources": [
+          {
+            "referenceId": "0"
+          }
+        ]
+      },
+      {
+        "startIndex": "450",
+        "endIndex": "565",
+        "sources": [
+          {
+            "referenceId": "0"
+          }
+        ]
+      },
+      {
+        "startIndex": "648",
+        "endIndex": "730",
+        "sources": [
+          {
+            "referenceId": "4"
+          }
+        ]
+      },
+      {
+        "startIndex": "731",
+        "endIndex": "816",
+        "sources": [
+          {
+            "referenceId": "4"
+          }
+        ]
+      },
+      {
+        "startIndex": "817",
+        "endIndex": "904",
+        "sources": [
+          {
+            "referenceId": "4"
+          }
+        ]
+      },
+      {
+        "startIndex": "905",
+        "endIndex": "986",
+        "sources": [
+          {
+            "referenceId": "4"
+          }
+        ]
+      },
+      {
+        "startIndex": "987",
+        "endIndex": "1085",
+        "sources": [
+          {
+            "referenceId": "4"
+          }
+        ]
+      },
+      {
+        "startIndex": "1088",
+        "endIndex": "1253",
+        "sources": [
+          {
+            "referenceId": "6"
+          }
+        ]
+      },
+      {
+        "startIndex": "1286",
+        "endIndex": "1380",
+        "sources": [
+          {
+            "referenceId": "1"
+          }
+        ]
+      },
+      {
+        "startIndex": "1381",
+        "endIndex": "1524",
+        "sources": [
+          {
+            "referenceId": "1"
+          }
+        ]
+      },
+      {
+        "startIndex": "1525",
+        "endIndex": "1649",
+        "sources": [
+          {
+            "referenceId": "1"
+          }
+        ]
+      },
+      {
+        "startIndex": "1650",
+        "endIndex": "1754",
+        "sources": [
+          {
+            "referenceId": "6"
+          }
+        ]
+      },
+      {
+        "startIndex": "1755",
+        "endIndex": "1835",
+        "sources": [
+          {
+            "referenceId": "6"
+          }
+        ]
+      },
+      {
+        "startIndex": "1836",
+        "endIndex": "2011",
+        "sources": [
+          {
+            "referenceId": "1"
+          },
+          {
+            "referenceId": "6"
+          }
+        ]
+      },
+      {
+        "startIndex": "2012",
+        "endIndex": "2173",
+        "sources": [
+          {
+            "referenceId": "1"
+          },
+          {
+            "referenceId": "6"
+          }
+        ]
+      },
+      {
+        "startIndex": "2288",
+        "endIndex": "2381",
+        "sources": [
+          {
+            "referenceId": "2"
+          }
+        ]
+      },
+      {
+        "startIndex": "2382",
+        "endIndex": "2492",
+        "sources": [
+          {
+            "referenceId": "2"
+          }
+        ]
+      },
+      {
+        "startIndex": "2493",
+        "endIndex": "2658",
+        "sources": [
+          {
+            "referenceId": "2"
+          }
+        ]
+      },
+      {
+        "startIndex": "2659",
+        "endIndex": "2756",
+        "sources": [
+          {
+            "referenceId": "2"
+          }
+        ]
+      },
+      {
+        "startIndex": "2780",
+        "endIndex": "2886",
+        "sources": [
+          {
+            "referenceId": "2"
+          }
+        ]
+      },
+      {
+        "startIndex": "2887",
+        "endIndex": "2994",
+        "sources": [
+          {
+            "referenceId": "2"
+          }
+        ]
+      },
+      {
+        "startIndex": "2995",
+        "endIndex": "3103",
+        "sources": [
+          {
+            "referenceId": "2"
+          }
+        ]
+      },
+      {
+        "startIndex": "3104",
+        "endIndex": "3175",
+        "sources": [
+          {
+            "referenceId": "2"
+          }
+        ]
+      },
+      {
+        "startIndex": "3182",
+        "endIndex": "3295",
+        "sources": [
+          {
+            "referenceId": "4"
+          }
+        ]
+      },
+      {
+        "startIndex": "3297",
+        "endIndex": "3434",
+        "sources": [
+          {
+            "referenceId": "4"
+          },
+          {
+            "referenceId": "7"
+          }
+        ]
+      },
+      {
+        "startIndex": "3435",
+        "endIndex": "3549",
+        "sources": [
+          {
+            "referenceId": "4"
+          },
+          {
+            "referenceId": "7"
+          }
+        ]
+      },
+      {
+        "startIndex": "3550",
+        "endIndex": "3681",
+        "sources": [
+          {
+            "referenceId": "7"
+          },
+          {
+            "referenceId": "9"
+          }
+        ]
+      },
+      {
+        "startIndex": "3683",
+        "endIndex": "3783",
+        "sources": [
+          {
+            "referenceId": "4"
+          },
+          {
+            "referenceId": "9"
+          }
+        ]
+      },
+      {
+        "startIndex": "3918",
+        "endIndex": "4095",
+        "sources": [
+          {
+            "referenceId": "4"
+          },
+          {
+            "referenceId": "7"
+          }
+        ]
+      },
+      {
+        "startIndex": "4096",
+        "endIndex": "4265",
+        "sources": [
+          {
+            "referenceId": "4"
+          },
+          {
+            "referenceId": "7"
+          }
+        ]
+      },
+      {
+        "startIndex": "4266",
+        "endIndex": "4397",
+        "sources": [
+          {
+            "referenceId": "4"
+          },
+          {
+            "referenceId": "7"
+          }
+        ]
+      },
+      {
+        "startIndex": "4398",
+        "endIndex": "4557",
+        "sources": [
+          {
+            "referenceId": "4"
+          },
+          {
+            "referenceId": "7"
+          }
+        ]
+      },
+      {
+        "startIndex": "4558",
+        "endIndex": "4749",
+        "sources": [
+          {
+            "referenceId": "4"
+          },
+          {
+            "referenceId": "7"
+          }
+        ]
+      },
+      {
+        "startIndex": "4756",
+        "endIndex": "4851",
+        "sources": [
+          {
+            "referenceId": "9"
+          }
+        ]
+      },
+      {
+        "startIndex": "4852",
+        "endIndex": "4921",
+        "sources": [
+          {
+            "referenceId": "9"
+          }
+        ]
+      },
+      {
+        "startIndex": "4981",
+        "endIndex": "5014",
+        "sources": [
+          {
+            "referenceId": "7"
+          }
+        ]
+      },
+      {
+        "startIndex": "5015",
+        "endIndex": "5067",
+        "sources": [
+          {
+            "referenceId": "7"
+          }
+        ]
+      },
+      {
+        "startIndex": "5068",
+        "endIndex": "5158",
+        "sources": [
+          {
+            "referenceId": "7"
+          }
+        ]
+      },
+      {
+        "startIndex": "5159",
+        "endIndex": "5240",
+        "sources": [
+          {
+            "referenceId": "7"
+          }
+        ]
+      },
+      {
+        "startIndex": "5241",
+        "endIndex": "5319",
+        "sources": [
+          {
+            "referenceId": "7"
+          }
+        ]
+      }
+    ],
+    "references": [
+      {
+        "chunkInfo": {
+          "content": "Artificial Intelligence (AI): Introduction — Computer Fundamentals & Emerging Technologies — PYQDeck PyQdeck Logo PyQdeckBEU PYQ ArchiveSubjectsSyllabusBlog Home Syllabus Computer Fundamentals & Emerging Technologies Artificial Intelligence (AI): Introduction Emerging Technologies (8hrs) Computer Fundamentals & Emerging Technologies Artificial Intelligence (AI): Introduction Watch lectures Artificial Intelligence (AI): Introduction 1. Definition Artificial Intelligence (AI) is the branch of computer science that builds machines and software capable of performing tasks that normally require human intelligence — learning, reasoning, problem-solving, perception, understanding language and decision-making. John McCarthy, who coined the term, defined it as \"the science and engineering of making intelligent machines\". AI does not have to imitate a human brain; it only has to achieve a comparable outcome (acting rationally and effectively). Alan Turing's 1950 test — can a machine's conversation be indistinguishable from a human's? — gave the field its first operational benchmark. ",
+          "relevanceScore": 0.8,
+          "documentMetadata": {
+            "document": "projects/124734118875/locations/global/collections/default_collection/dataStores/pyqdeck_1787542746373/branches/0/documents/1efca4574d0105fe2a0bfd7c9db80ddc",
+            "uri": "https://www.pyqdeck.in/syllabus/subject/sem1-100108-computer-fundamentals-emerging-tech/topic/6a96365f0b50dbcb551eb853",
+            "title": "Artificial Intelligence (AI): Introduction — Computer Fundamentals & Emerging Technologies — PYQDeck"
+          }
+        }
+      },
+      {
+        "chunkInfo": {
+          "content": "What is AI? — Introduction to AI — PYQDeck PyQdeck Logo PyQdeckBEU PYQ ArchiveSubjectsSyllabusBlog Home Syllabus Introduction to AI What is AI? Introduction to Artificial Intelligence (8hrs) Introduction to AI What is AI? Watch lectures What is AI? — Beginner-Friendly Notes 1. Simple Definition (remember this) Artificial Intelligence (AI) = making computers do things that normally need human intelligence — like seeing, understanding language, learning from experience, and making decisions. If a task needs you to think (not just calculate), and a machine can do it — that is AI. Beginner analogy: A calculator is not AI (it just follows fixed arithmetic rules). Google Maps suggesting a faster route by learning traffic patterns is AI (it learns and predicts). 2. What AI Is NOT Not magic, not a brain in a box — it is programs + data + mathematics. Not just robots — most AI has no body (search, recommendations, chat). Not always perfect — AI learns from data, so biased or small data → biased/wrong AI. 3. The 4 Ways People Define AI (Russell & Norvig) Textbooks frame AI in a 2×2 grid. ",
+          "relevanceScore": 0.8,
+          "documentMetadata": {
+            "document": "projects/124734118875/locations/global/collections/default_collection/dataStores/pyqdeck_1787542746373/branches/0/documents/6a91fca79add9368bb52e8aa9f147f8d",
+            "uri": "https://www.pyqdeck.in/syllabus/subject/sem1-100105-introduction-to-ai/topic/6a96312b0b50dbcb551eb589/what-is-ai",
+            "title": "What is AI? — Introduction to AI — PYQDeck"
+          }
+        }
+      },
+      {
+        "chunkInfo": {
+          "content": "2. A Brief History 1950 Turing test → 1956 Dartmouth Conference (the term \"Artificial Intelligence\" is born) → 1960s-70s symbolic AI, search, game playing → 1970s-80s expert systems (MYCIN, DENDRAL) and the first AI winter → 1997 Deep Blue beats Kasparov → 2011 IBM Watson wins Jeopardy, Siri launches → 2012 AlexNet ignites deep learning (thanks to GPUs and big data) → 2016 AlphaGo beats Lee Sedol → 2017 the Transformer architecture → 2022+ generative AI (ChatGPT, diffusion image models) → today, multimodal and agentic AI. 3. Levels and Types of AI By capability Meaning Status Narrow / Weak AI Performs one specific task as well as or better than a human Exists today (search, translation, recommendations, chess, face unlock) General AI (AGI) Human-level ability across all cognitive tasks, transferring learning between domains Hypothetical — not achieved Super AI Far exceeds the best human minds in every field Speculative By functionality Meaning Reactive machines Respond to the current input only, no memory (Deep Blue, simple game AI) Limited memory Use recent past data (self-driving cars, chatbots) Theory of mind Model the beliefs and emotions of others — research stage Self-aware Conscious of itself — conceptual only 4. ",
+          "relevanceScore": 0.6,
+          "documentMetadata": {
+            "document": "projects/124734118875/locations/global/collections/default_collection/dataStores/pyqdeck_1787542746373/branches/0/documents/1efca4574d0105fe2a0bfd7c9db80ddc",
+            "uri": "https://www.pyqdeck.in/syllabus/subject/sem1-100108-computer-fundamentals-emerging-tech/topic/6a96365f0b50dbcb551eb853",
+            "title": "Artificial Intelligence (AI): Introduction — Computer Fundamentals & Emerging Technologies — PYQDeck"
+          }
+        }
+      },
+      {
+        "chunkInfo": {
+          "content": "Define Artificial Intelligence (AI). Discuss the applications area of — PYQDeck PyQdeck Logo PyQdeckBEU PYQ ArchiveSubjectsBlog Home Semester 5 Artificial intelligence 2022 Q2a Back to the 2022 paper Module 1: Introduction and Search Techniques 2022 7m Define Artificial Intelligence (AI). Discuss the applications area of AI. Copy Search Google Ask AI Similar questions Artificial intelligenceDiscuss the applications area of Artificial Intelligence.2019 7mArtificial intelligenceExplain what you understand by Artificial Intelligence. Describe the Turing Test in detail and discuss its significance in the field of AI.2025 7mArtificial intelligenceWhat are agents in AI? How do agents work to import intelligence to a system? Classify the different types of agents and briefly discuss their properties.2020 7mArtificial intelligenceWhat is artificial intelligence? (i) Putting your intelligence into computer (ii) Programming with your own intelligence (iii) Making a machine intelligent (iv) Playing a game2022 2m PreviousGraph used to represent semantic network is (i) undirected graph (ii) directed graph (iii) directed acyclic graph (DAG) (iv) directed complete graphNextWhat do you mean by learning? Explain briefly the learning methods. Discuss the advantages and disadvantages of rule-based system. PYQDeck — previous-year question papers, free to browse. An independent student-run archive for Bihar Engineering University (BEU) B.Tech courses. Not officially affiliated with or endorsed by the university. ",
+          "relevanceScore": 0.6,
+          "documentMetadata": {
+            "document": "projects/124734118875/locations/global/collections/default_collection/dataStores/pyqdeck_1787542746373/branches/0/documents/0fb44491af897fd2e29114c9c2a5137b",
+            "uri": "https://www.pyqdeck.in/sem5/sem5_artificial_intelligence/2022/Q37",
+            "title": "Define Artificial Intelligence (AI). Discuss the applications area of — PYQDeck"
+          }
+        }
+      },
+      {
+        "chunkInfo": {
+          "content": "You only need to recognise it: Human-like Rational (ideal) Think Systems that think like humans (eg, cognitive models) Systems that think rationally (logic, reasoning) Act Systems that act like humans (Turing Test) Systems that act rationally (agents achieving goals — modern view) Exam tip: The course takes the acting rationally / agent view as the main definition. 4. AI vs Related Terms AI (broadest): any intelligent behaviour. Machine Learning (ML): a subset of AI where the system learns from data instead of being hand-coded for every rule. Deep Learning: a subset of ML using neural networks with many layers. AI ⊃ Machine Learning ⊃ Deep Learning 5. Core Capabilities You Will See All Semester Perception — sensors → understanding (vision, speech) Reasoning — logic, search, knowledge Learning — improving from data Action — agents acting in an environment Language & Interaction — NLP, dialogue, robotics 6. Quick Examples by Category Perception: face unlock, medical image diagnosis Reasoning: chess engine, route planning, puzzle solver Learning: spam filter, Netflix recommendations, price prediction Action: vacuum robot, self-driving car, game agent Language: translation, ChatGPT, voice assistants 7. ",
+          "relevanceScore": 0.6,
+          "documentMetadata": {
+            "document": "projects/124734118875/locations/global/collections/default_collection/dataStores/pyqdeck_1787542746373/branches/0/documents/6a91fca79add9368bb52e8aa9f147f8d",
+            "uri": "https://www.pyqdeck.in/syllabus/subject/sem1-100105-introduction-to-ai/topic/6a96312b0b50dbcb551eb589/what-is-ai",
+            "title": "What is AI? — Introduction to AI — PYQDeck"
+          }
+        }
+      },
+      {
+        "chunkInfo": {
+          "content": "Explain what you understand by Artificial Intelligence. Describe the T — PYQDeck PyQdeck Logo PyQdeckBEU PYQ ArchiveSubjectsBlog Home Semester 5 Artificial intelligence 2025 Q2a Back to the 2025 paper Module 1: Introduction and Search Techniques 2025 7m Explain what you understand by Artificial Intelligence. Describe the Turing Test in detail and discuss its significance in the field of AI. Copy Search Google Ask AI Similar questions Artificial intelligenceWhat is the Turing test? If the machine passes the Turing test, does it mean that the system is intelligent? What are the associated problems with Turing test? What are required improvement/advances to overcome these problems?2020 7mArtificial intelligenceWhat is meant by Turing test?2019 2mArtificial intelligenceDefine Artificial Intelligence (AI). Discuss the applications area of AI.2022 7mArtificial intelligenceWhat is artificial intelligence? (i) Putting your intelligence into computer (ii) Programming with your own intelligence (iii) Making a machine intelligent (iv) Playing a game2022 2m PreviousNeural Networks are inspired by (i) Genetic evolution (ii) Human brain (iii) Particle movement (iv) Graph theoryNextExplain the concept of Rational Agents. How do they differ from Reflex Agents? PYQDeck — previous-year question papers, free to browse. An independent student-run archive for Bihar Engineering University (BEU) B.Tech courses. Not officially affiliated with or endorsed by the university. ",
+          "relevanceScore": 0.5,
+          "documentMetadata": {
+            "document": "projects/124734118875/locations/global/collections/default_collection/dataStores/pyqdeck_1787542746373/branches/0/documents/800fd27bc37e897676424ee33ba6771c",
+            "uri": "https://www.pyqdeck.in/sem5/sem5_artificial_intelligence/2025/Q117",
+            "title": "Explain what you understand by Artificial Intelligence. Describe the T — PYQDeck"
+          }
+        }
+      },
+      {
+        "chunkInfo": {
+          "content": "How to Spot an AI Problem (3 checks) Environment is uncertain / large (too many possibilities to hard-code) Needs learning or search (pattern from data, or exploring options) Needs human-like judgement (classify, predict, decide, generate) If all three are low, plain programming is enough — you don't need AI. 8. Common Mistakes Beginners Make Thinking AI = human consciousness — no, it is narrow task intelligence today. Thinking more data always helps — only clean, relevant data helps. Thinking AI writes its own goals — goals are still given by humans (PEAS in next topics). 9. One-Line Summary to Write in Exam AI is the study and design of intelligent agents — systems that perceive their environment and act to maximise their chance of achieving goals, exhibiting capabilities such as learning, reasoning, perception and language understanding. 10. Quick Self-Check Is a rule if temperature \u003e 30 → turn on AC AI? (No — fixed rule, no learning/search) Is email spam detection AI? (Yes — learns patterns from examples) Name one AI you used today and which capability it used. Next topicHistory and evolution of AI ← All Introduction to AI modules PYQDeck — previous-year question papers, free to browse. ",
+          "relevanceScore": 0.5,
+          "documentMetadata": {
+            "document": "projects/124734118875/locations/global/collections/default_collection/dataStores/pyqdeck_1787542746373/branches/0/documents/6a91fca79add9368bb52e8aa9f147f8d",
+            "uri": "https://www.pyqdeck.in/syllabus/subject/sem1-100105-introduction-to-ai/topic/6a96312b0b50dbcb551eb589/what-is-ai",
+            "title": "What is AI? — Introduction to AI — PYQDeck"
+          }
+        }
+      },
+      {
+        "chunkInfo": {
+          "content": "Subfields and Techniques Subfield What it does Typical use Machine Learning (ML) Learns patterns from data instead of being explicitly programmed Spam filters, credit scoring, recommendations Deep Learning (neural networks) Multi-layer networks learn features automatically Image/voice recognition, LLMs Natural Language Processing (NLP) Understand and generate human language Translation, chatbots, summarisation, sentiment Computer Vision Interpret images and video Face recognition, medical imaging, ANPR, defect detection Speech processing Convert speech ↔ text, identify speakers Voice assistants, dictation Robotics Combine perception, planning and control to act physically Industrial arms, drones, surgical robots Expert systems Rule-based reasoning with a knowledge base and inference engine Medical/fault diagnosis (legacy, still used) Search, planning and optimisation Find solutions in large spaces Route planning, scheduling, game AI Knowledge representation Encode facts and relationships for reasoning Knowledge graphs, semantic web Generative AI Produce new text, image, audio, video or code Chatbots, image generators, code assistants Multi-agent systems Many autonomous agents cooperating or competing Traffic simulation, market modelling 5. How AI Roughly Works Data is collected and cleaned → features are engineered or learned → a model (statistical, neural or rule-based) is trained by minimising error on examples → the trained model performs inference on new inputs → feedback and retraining improve it. ",
+          "relevanceScore": 0.5,
+          "documentMetadata": {
+            "document": "projects/124734118875/locations/global/collections/default_collection/dataStores/pyqdeck_1787542746373/branches/0/documents/1efca4574d0105fe2a0bfd7c9db80ddc",
+            "uri": "https://www.pyqdeck.in/syllabus/subject/sem1-100108-computer-fundamentals-emerging-tech/topic/6a96365f0b50dbcb551eb853",
+            "title": "Artificial Intelligence (AI): Introduction — Computer Fundamentals & Emerging Technologies — PYQDeck"
+          }
+        }
+      },
+      {
+        "chunkInfo": {
+          "content": "Foundations of AI: philosophy — Introduction to AI — PYQDeck PyQdeck Logo PyQdeckBEU PYQ ArchiveSubjectsSyllabusBlog Home Syllabus Introduction to AI Foundations of AI: philosophy Introduction to Artificial Intelligence (8hrs) Introduction to AI Foundations of AI: philosophy Watch lectures Foundations of AI: Philosophy — Beginner-Friendly Notes 1. Why Philosophy Before Code? Philosophy asks the big questions AI tries to answer: What is intelligence? Can machines think? What is knowledge and reasoning? Without this, we cannot define what \"intelligent\" even means. 2. Five Philosophical Questions That Shaped AI Q1: Can machines think? (Turing, 1950) Turing dodged defining \"think\" and proposed a test: if you cannot tell human from machine in conversation, call it intelligent — the Turing Test. Takeaway for you: AI is judged by behaviour, not by having a soul. Q2: Is the mind just computation? (Computational Theory of Mind) Idea: thinking = information processing (like software on brain-hardware). If true, mind can be reproduced on computers. Counter-view: Searle's Chinese Room — manipulating symbols ≠ understanding. A person in a room following English instructions to reply in Chinese appears to know Chinese but understands nothing. Exam point: This debate is why we distinguish weak AI (acts intelligent) vs strong AI (truly understands). ",
+          "relevanceScore": 0.5,
+          "documentMetadata": {
+            "document": "projects/124734118875/locations/global/collections/default_collection/dataStores/pyqdeck_1787542746373/branches/0/documents/3a27b9295f6abed0f9b7797c30e242f7",
+            "uri": "https://www.pyqdeck.in/syllabus/subject/sem1-100105-introduction-to-ai/topic/6a96312b0b50dbcb551eb58b",
+            "title": "Foundations of AI: philosophy — Introduction to AI — PYQDeck"
+          }
+        }
+      },
+      {
+        "chunkInfo": {
+          "content": "Traditional \"symbolic\" AI instead writes explicit rules and uses logic/search; modern AI is overwhelmingly data-driven and statistical, with neural networks whose millions of parameters are adjusted during training. AI ⊃ ML ⊃ Deep Learning ⊃ Generative AI — each is a subset of the one before. 6. AI vs Human Intelligence Aspect AI Human Speed of computation Very high, parallel on GPUs Slower, but efficient Learning Needs large labelled data; no common sense transfer Learns from few examples, transfers knowledge Memory Huge but literal Associative, reconstructive Emotion, ethics, creativity Absent; can imitate style Central to judgement and meaning Energy Very high for training ~20 W for a brain Consistency Tireless, repeatable Varies with fatigue and mood Explainability Often a \"black box\" Usually can explain reasoning 7. Benefits, Applications and Risks Benefits/applications: automation of repetitive and high-volume work, faster and more accurate diagnosis, fraud detection, personalisation, language access, scientific discovery, accessibility (speech/vision for the disabled), and new products (assistants, generative tools). ",
+          "relevanceScore": 0.4,
+          "documentMetadata": {
+            "document": "projects/124734118875/locations/global/collections/default_collection/dataStores/pyqdeck_1787542746373/branches/0/documents/1efca4574d0105fe2a0bfd7c9db80ddc",
+            "uri": "https://www.pyqdeck.in/syllabus/subject/sem1-100108-computer-fundamentals-emerging-tech/topic/6a96365f0b50dbcb551eb853",
+            "title": "Artificial Intelligence (AI): Introduction — Computer Fundamentals & Emerging Technologies — PYQDeck"
+          }
+        }
+      }
+    ],
+    "relatedQuestions": [
+      "What are the main types of AI?",
+      "Can you explain Narrow AI further?",
+      "What is the difference between AI and Machine Learning?",
+      "What are some common AI applications?",
+      "How did AI evolve historically?"
+    ],
+    "steps": [
+      {
+        "state": "SUCCEEDED",
+        "description": "Rephrase the query and search.",
+        "actions": [
+          {
+            "searchAction": {
+              "query": "what is artificial intelligence"
+            },
+            "observation": {
+              "searchResults": [
+                {
+                  "document": "projects/124734118875/locations/global/collections/default_collection/dataStores/pyqdeck_1787542746373/branches/0/documents/1efca4574d0105fe2a0bfd7c9db80ddc",
+                  "uri": "https://www.pyqdeck.in/syllabus/subject/sem1-100108-computer-fundamentals-emerging-tech/topic/6a96365f0b50dbcb551eb853",
+                  "title": "Artificial Intelligence (AI): Introduction — Computer Fundamentals & Emerging Technologies — PYQDeck",
+                  "snippetInfo": [
+                    {
+                      "snippet": "\u003cb\u003eArtificial Intelligence\u003c/b\u003e (AI): Introduction 1. Definition \u003cb\u003eArtificial Intelligence\u003c/b\u003e (AI) is the branch of computer science that builds machines and software&nbsp;...",
+                      "snippetStatus": "SUCCESS"
+                    }
+                  ]
+                },
+                {
+                  "document": "projects/124734118875/locations/global/collections/default_collection/dataStores/pyqdeck_1787542746373/branches/0/documents/6a91fca79add9368bb52e8aa9f147f8d",
+                  "uri": "https://www.pyqdeck.in/syllabus/subject/sem1-100105-introduction-to-ai/topic/6a96312b0b50dbcb551eb589/what-is-ai",
+                  "title": "What is AI? — Introduction to AI — PYQDeck",
+                  "snippetInfo": [
+                    {
+                      "snippet": "\u003cb\u003eArtificial Intelligence\u003c/b\u003e (AI) = making computers do things that normally need human intelligence — like seeing, understanding language, learning from&nbsp;...",
+                      "snippetStatus": "SUCCESS"
+                    }
+                  ]
+                },
+                {
+                  "document": "projects/124734118875/locations/global/collections/default_collection/dataStores/pyqdeck_1787542746373/branches/0/documents/2ed380593df75ee07bfeccf254854099",
+                  "uri": "https://www.pyqdeck.in/sem5/sem5_artificial_intelligence/2022/Q28",
+                  "title": "What is artificial intelligence? (i) Putting your intelligence into co — PYQDeck",
+                  "snippetInfo": [
+                    {
+                      "snippet": "\u003cb\u003eWhat is artificial intelligence\u003c/b\u003e? (i) Putting your intelligence into computer (ii) Programming with your own intelligence (iii) Making a machine intelligent&nbsp;...",
+                      "snippetStatus": "SUCCESS"
+                    }
+                  ]
+                },
+                {
+                  "document": "projects/124734118875/locations/global/collections/default_collection/dataStores/pyqdeck_1787542746373/branches/0/documents/0fb44491af897fd2e29114c9c2a5137b",
+                  "uri": "https://www.pyqdeck.in/sem5/sem5_artificial_intelligence/2022/Q37",
+                  "title": "Define Artificial Intelligence (AI). Discuss the applications area of — PYQDeck",
+                  "snippetInfo": [
+                    {
+                      "snippet": "Define \u003cb\u003eArtificial Intelligence\u003c/b\u003e (AI). Discuss the applications area of AI.",
+                      "snippetStatus": "SUCCESS"
+                    }
+                  ]
+                },
+                {
+                  "document": "projects/124734118875/locations/global/collections/default_collection/dataStores/pyqdeck_1787542746373/branches/0/documents/800fd27bc37e897676424ee33ba6771c",
+                  "uri": "https://www.pyqdeck.in/sem5/sem5_artificial_intelligence/2025/Q117",
+                  "title": "Explain what you understand by Artificial Intelligence. Describe the T — PYQDeck",
+                  "snippetInfo": [
+                    {
+                      "snippet": "Explain what you understand by \u003cb\u003eArtificial Intelligence\u003c/b\u003e. Describe the Turing Test in detail and discuss its significance in the field of AI.",
+                      "snippetStatus": "SUCCESS"
+                    }
+                  ]
+                },
+                {
+                  "document": "projects/124734118875/locations/global/collections/default_collection/dataStores/pyqdeck_1787542746373/branches/0/documents/0106772ed13e6bf552a7859c67f3d94d",
+                  "uri": "https://www.pyqdeck.in/syllabus/subject/sem1-100105-introduction-to-ai/topic/6a96312b0b50dbcb551eb58a",
+                  "title": "History and evolution of AI — Introduction to AI — PYQDeck",
+                  "snippetInfo": [
+                    {
+                      "snippet": "Introduction to \u003cb\u003eArtificial Intelligence\u003c/b\u003e (8hrs) · Introduction to AI. History ... Dartmouth Conference — John McCarthy coins &quot;\u003cb\u003eArtificial Intelligence\u003c/b\u003e&quot;, AI&nbsp;...",
+                      "snippetStatus": "SUCCESS"
+                    }
+                  ]
+                },
+                {
+                  "document": "projects/124734118875/locations/global/collections/default_collection/dataStores/pyqdeck_1787542746373/branches/0/documents/14ce531fd4d3e4394c05e37dcdf16b6b",
+                  "uri": "https://www.pyqdeck.in/sem5/sem5_artificial_intelligence/2022",
+                  "title": "Artificial intelligence — 2022 question paper — PYQDeck",
+                  "snippetInfo": [
+                    {
+                      "snippet": "\u003cb\u003eArtificial intelligence\u003c/b\u003e. 22 questions. Q1a. In LISP, the function returns the list that result after the first element is&nbsp;...",
+                      "snippetStatus": "SUCCESS"
+                    }
+                  ]
+                },
+                {
+                  "document": "projects/124734118875/locations/global/collections/default_collection/dataStores/pyqdeck_1787542746373/branches/0/documents/3a27b9295f6abed0f9b7797c30e242f7",
+                  "uri": "https://www.pyqdeck.in/syllabus/subject/sem1-100105-introduction-to-ai/topic/6a96312b0b50dbcb551eb58b",
+                  "title": "Foundations of AI: philosophy — Introduction to AI — PYQDeck",
+                  "snippetInfo": [
+                    {
+                      "snippet": "Introduction to \u003cb\u003eArtificial Intelligence\u003c/b\u003e (8hrs) · Introduction to AI ... Philosophy asks the big questions AI tries to answer: What is intelligence? Can&nbsp;...",
+                      "snippetStatus": "SUCCESS"
+                    }
+                  ]
+                },
+                {
+                  "document": "projects/124734118875/locations/global/collections/default_collection/dataStores/pyqdeck_1787542746373/branches/0/documents/ea4cec8356684adf48c51e2381db5711",
+                  "uri": "https://www.pyqdeck.in/sem5/sem5_artificial_intelligence",
+                  "title": "Artificial intelligence — PYQDeck",
+                  "snippetInfo": [
+                    {
+                      "snippet": "126 previous-year \u003cb\u003eArtificial intelligence\u003c/b\u003e questions from 5 BEU papers (2019-2025), sorted by module and year, with a breakdown of which topics the papers&nbsp;...",
+                      "snippetStatus": "SUCCESS"
+                    }
+                  ]
+                },
+                {
+                  "document": "projects/124734118875/locations/global/collections/default_collection/dataStores/pyqdeck_1787542746373/branches/0/documents/89835fb655d5e340486e23a1740e3b2c",
+                  "uri": "https://www.pyqdeck.in/sem5/sem5_artificial_intelligence/2022/Q41",
+                  "title": "What do you mean by learning? Explain briefly the learning methods. Di — PYQDeck",
+                  "snippetInfo": [
+                    {
+                      "snippet": "Similar questions. \u003cb\u003eArtificial intelligence\u003c/b\u003eExplain the working of rule-based Expert Systems. Create a small rule base for diagnosing common cold vs. flu using&nbsp;...",
+                      "snippetStatus": "SUCCESS"
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "answerQueryToken": "NMwKDAjVvvPVBhDB_4PWAhIkNmFkNWY3MTAtMDAwMC0yNjUyLTlkNjQtOTg5OGZiYmNkYzc1"
+}
