@@ -28,6 +28,7 @@ import {
 } from '../utils/settings';
 import { openStoreListing, checkForUpdateInteractive } from '../utils/appUpdate';
 import * as Cache from '../db/cacheService';
+import { clearQueryCache } from '../api/queryClient';
 import { isAuthEnabled } from '../config/features';
 import { resetOnboarding } from '../utils/onboarding';
 
@@ -85,6 +86,7 @@ export const SettingsScreen = ({ navigation }: any) => {
           style: 'destructive',
           onPress: async () => {
             setClearing(true);
+            await clearQueryCache();
             await Cache.clearAllCache();
             setClearing(false);
             setCleared(true);
@@ -150,7 +152,7 @@ export const SettingsScreen = ({ navigation }: any) => {
     } catch {}
   };
 
-  const version = Constants.expoConfig?.version || '1.0.3';
+  const version = Constants.expoConfig?.version || '1.0.4';
   const versionCode = Constants.expoConfig?.android?.versionCode;
 
   return (

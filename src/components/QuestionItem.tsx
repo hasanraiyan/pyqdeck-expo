@@ -16,7 +16,10 @@ import { Feather } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { NativeContentRenderer } from './NativeContentRenderer';
 import { QuestionSummary, Solution } from '../types';
-import { getSolution, voteSolution, reportSolution } from '../api';
+import { useQueryClient } from '@tanstack/react-query';
+import { voteSolution, reportSolution } from '../api';
+import { useSolution } from '../api/queries';
+import { qk } from '../api/queryKeys';
 import { useRequireAuth } from '../auth/useRequireAuth';
 import { getMyVote, setMyVote } from '../utils/votes';
 import { COLORS, FONTS } from '../theme/colors';
@@ -47,9 +50,14 @@ export const QuestionItem: React.FC<QuestionItemProps> = React.memo(({
 }) => {
   const navigation = useNavigation<any>();
   const [expanded, setExpanded] = useState(false);
-  const [solution, setSolution] = useState<Solution | null>(null);
-  const [loadingSolution, setLoadingSolution] = useState(false);
-  const [solutionError, setSolutionError] = useState(false);
+  const queryClient = useQueryClient();
+  // Fetch only after the user asks for it (see handleToggleSolution). A solution
+  // already in the query cache is still returned while `enabled` is false.
+  const [wantSolution, setWantSolution] = useState(false);
+  const solutionQ = useSolution(subjectId, question.questionId, { enabled: wantSolution });
+  const solution: Solution | null = solutionQ.data ?? null;
+  const loadingSolution = solutionQ.isFetching && !solution;
+  const solutionError = solutionQ.isError && !solution;
   const [copied, setCopied] = useState(false);
   const [myVote, setMyVoteState] = useState<1 | -1 | null>(null);
   const [voteCounts, setVoteCounts] = useState({ upvotes: 0, downvotes: 0 });
@@ -77,25 +85,18 @@ export const QuestionItem: React.FC<QuestionItemProps> = React.memo(({
     setExpanded((prev) => !prev);
   };
 
-  const handleToggleSolution = async () => {
+  const handleToggleSolution = () => {
     if (solution) {
       Haptics.selectionAsync();
       setShowSolution((prev) => !prev);
       return;
     }
+    if (loadingSolution) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setLoadingSolution(true);
-    setSolutionError(false);
-    try {
-      const sol = await getSolution(subjectId, question.questionId);
-      setSolution(sol);
-      setShowSolution(true);
-    } catch (e) {
-      console.error('Failed to load solution', e);
-      setSolutionError(true);
-    } finally {
-      setLoadingSolution(false);
-    }
+    setShowSolution(true);
+    // First request enables the query; a retry after a failure refetches it.
+    if (wantSolution) void solutionQ.refetch();
+    else setWantSolution(true);
   };
 
   useEffect(() => {
@@ -103,8 +104,8 @@ export const QuestionItem: React.FC<QuestionItemProps> = React.memo(({
   }, [solution]);
 
   useEffect(() => {
-    if (expanded && question.questionId) getMyVote(question.questionId).then(setMyVoteState);
-  }, [expanded, question.questionId]);
+    if (expanded && question.questionId) getMyVote(subjectId, question.questionId).then(setMyVoteState);
+  }, [expanded, subjectId, question.questionId]);
 
   useEffect(() => {
     myVoteRef.current = myVote;
@@ -172,7 +173,11 @@ export const QuestionItem: React.FC<QuestionItemProps> = React.memo(({
       const clamped = { upvotes: Math.max(0, result.upvotes ?? 0), downvotes: Math.max(0, result.downvotes ?? 0) };
       setVoteCounts(clamped);
       voteCountsRef.current = clamped;
-      await setMyVote(question.questionId, nextValue);
+      // Keep the cached solution's counts in step with the server.
+      queryClient.setQueryData<Solution>(qk.solution(subjectId, question.questionId), (s) =>
+        s ? { ...s, ...clamped } : s
+      );
+      await setMyVote(subjectId, question.questionId, nextValue);
     } catch (e) {
       if (actionId !== actionIdRef.current) return;
       setVoteCounts(prevCounts);

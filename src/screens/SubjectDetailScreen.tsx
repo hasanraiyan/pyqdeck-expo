@@ -11,7 +11,7 @@ import {
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
-import { getSubjectMeta } from '../api';
+import { useSubjectMeta } from '../api/queries';
 import { SubjectMeta } from '../types';
 import { COLORS, FONTS } from '../theme/colors';
 import { WaveLoader } from '../components/WaveLoader';
@@ -27,8 +27,9 @@ export const SubjectDetailScreen = () => {
   const { width, bp, wideMaxWidth, hPadding } = useResponsive();
   const { semesterId, subjectId, subjectName, subjectCode } = route.params || {};
 
-  const [meta, setMeta] = useState<SubjectMeta | null>(null);
-  const [loading, setLoading] = useState(true);
+  const metaQ = useSubjectMeta(subjectId);
+  const meta: SubjectMeta | null = metaQ.data ?? null;
+  const loading = metaQ.isPending;
   const [refreshing, setRefreshing] = useState(false);
 
   // Both grids size off the measured wrapper, never off the window: on web
@@ -59,33 +60,24 @@ export const SubjectDetailScreen = () => {
       ? (track - MODULE_GAP * (moduleColumns - 1)) / moduleColumns
       : undefined;
 
-  const loadData = async (forceRefresh = false) => {
+  useEffect(() => {
+    if (!meta) return;
+    void recordRecentStudy({
+      subjectId,
+      subjectName: meta.name || subjectName,
+      semesterId,
+      subjectCode: meta.code || subjectCode,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [meta?.id, subjectId]);
+
+  const onRefresh = async () => {
+    setRefreshing(true);
     try {
-      const data = await getSubjectMeta(subjectId, forceRefresh);
-      setMeta(data);
-      if (data) {
-        void recordRecentStudy({
-          subjectId,
-          subjectName: data.name || subjectName,
-          semesterId,
-          subjectCode: data.code || subjectCode,
-        });
-      }
-    } catch (e) {
-      console.error(e);
+      await metaQ.refetch();
     } finally {
-      setLoading(false);
       setRefreshing(false);
     }
-  };
-
-  useEffect(() => {
-    loadData();
-  }, [subjectId]);
-
-  const onRefresh = () => {
-    setRefreshing(true);
-    loadData(true);
   };
 
   return (

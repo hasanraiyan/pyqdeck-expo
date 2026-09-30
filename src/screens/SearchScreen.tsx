@@ -23,7 +23,7 @@ import {
 } from '../api';
 import { TopicNoteSearchResultItem, AiOverview, AiOverviewReference } from '../types';
 import { AiOverviewCard } from '../components/AiOverviewCard';
-import * as Cache from '../db/cacheService';
+import { searchLocalCache } from '../api/offlineSearch';
 import { COLORS, FONTS } from '../theme/colors';
 import { Badge, MarksBadge, YearBadge } from '../components/Badge';
 import { WaveLoader } from '../components/WaveLoader';
@@ -295,9 +295,9 @@ export const SearchScreen = () => {
       } else {
         // Fallback to local cache if no online results
         try {
-          const local = await Cache.searchLocalCache(normalized);
+          const local = await searchLocalCache(normalized);
           setSubjectResults((local?.subjects || []).map((s: any) => ({ ...s, semester: { id: '', number: 0 } })));
-          setQuestionResults((local?.questions || []).map((qu: any) => ({ ...qu, subject: { id: '', name: '', semesterId: '' } })));
+          setQuestionResults((local?.questions || []).map((qu: any) => ({ ...qu, subject: qu.subject ?? { id: '', name: '', semesterId: '' } })));
           setNoteResults([]);
           setActiveTab('all');
         } catch {
@@ -310,9 +310,9 @@ export const SearchScreen = () => {
     } catch (e: any) {
       // Complete offline fallback for network errors
       try {
-        const local = await Cache.searchLocalCache(normalized);
+        const local = await searchLocalCache(normalized);
         setSubjectResults((local?.subjects || []).map((s: any) => ({ ...s, semester: { id: '', number: 0 } })));
-        setQuestionResults((local?.questions || []).map((qu: any) => ({ ...qu, subject: { id: '', name: '', semesterId: '' } })));
+        setQuestionResults((local?.questions || []).map((qu: any) => ({ ...qu, subject: qu.subject ?? { id: '', name: '', semesterId: '' } })));
         setNoteResults([]);
         setActiveTab('all');
       } catch {

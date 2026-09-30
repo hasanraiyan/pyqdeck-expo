@@ -15,7 +15,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import * as Haptics from 'expo-haptics';
 import { COLORS, FONTS } from '../theme/colors';
-import { getBranchSemester } from '../api';
+import { useSyllabusSemester } from '../api/queries';
 import { BranchSemester, SyllabusSubjectSummary } from '../types/syllabus';
 import { getDoneCounts } from '../db/syllabusProgress';
 import { recordContentOpenedAndMaybeShowInterstitial } from '../utils/ads';
@@ -46,8 +46,11 @@ export const SyllabusOverviewScreen = () => {
   // this covers any programmatic string pass-through).
   const semesterNumber: number = Number(route.params?.semester ?? 5);
 
-  const [data, setData] = useState<BranchSemester | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const semesterQ = useSyllabusSemester(branchId, semesterNumber);
+  const data: BranchSemester | null = semesterQ.data ?? null;
+  // Only an error when there is nothing (not even a persisted copy) to show.
+  const error =
+    semesterQ.isError && !semesterQ.data ? userMessage(semesterQ.error, 'Could not load this semester.') : null;
   const [refreshing, setRefreshing] = useState(false);
   const [counts, setCounts] = useState<Record<string, number>>({});
   // Closed on arrival: the credit table is a term-planning reference, checked
@@ -62,21 +65,6 @@ export const SyllabusOverviewScreen = () => {
     void recordContentOpenedAndMaybeShowInterstitial();
   }, []);
 
-  const load = useCallback(
-    async (force = false) => {
-      try {
-        setError(null);
-        setData(await getBranchSemester(branchId, semesterNumber, force));
-      } catch (e: any) {
-        setError(userMessage(e, 'Could not load this semester.'));
-      }
-    },
-    [branchId, semesterNumber]
-  );
-
-  useEffect(() => {
-    void load();
-  }, [load]);
 
   useFocusEffect(
     useCallback(() => {
@@ -93,7 +81,7 @@ export const SyllabusOverviewScreen = () => {
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await load(true);
+    await semesterQ.refetch();
     setRefreshing(false);
   };
 
@@ -101,7 +89,7 @@ export const SyllabusOverviewScreen = () => {
     return (
       <View style={styles.centerContainer}>
         {error ? (
-          <ScreenError message={error} onRetry={() => load(true)} />
+          <ScreenError message={error} onRetry={() => void semesterQ.refetch()} />
         ) : (
           <CircleLoader color={COLORS.primary} dotSize={6} size={40} />
         )}

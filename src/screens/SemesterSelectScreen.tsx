@@ -12,7 +12,8 @@ import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/nativ
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { COLORS, FONTS } from '../theme/colors';
-import { getBranches, getBranchSemesters, getBranchSemester } from '../api';
+import { useQueryClient } from '@tanstack/react-query';
+import { useSyllabusBranches, useSyllabusSemesters, syllabusSemesterQuery } from '../api/queries';
 import { Branch, BranchSemesters } from '../types/syllabus';
 import { getDoneCounts } from '../db/syllabusProgress';
 import { getSelectedBranch, setSelectedBranch } from '../utils/settings';
@@ -29,11 +30,20 @@ export const SemesterSelectScreen = () => {
   // shared `pyqdeck.in/syllabus?branch=` deep link (see App.tsx linking).
   const paramBranch = route.params?.branchId ?? route.params?.branch ?? '';
 
-  const [branches, setBranches] = useState<Branch[] | null>(null);
+  const queryClient = useQueryClient();
   const [selectedBranchId, setSelectedBranchId] = useState<string>(paramBranch);
   const [isBranchReady, setIsBranchReady] = useState<boolean>(!!paramBranch);
-  const [data, setData] = useState<BranchSemesters | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const branchesQ = useSyllabusBranches();
+  const semestersQ = useSyllabusSemesters(selectedBranchId, {
+    enabled: isBranchReady && !!selectedBranchId,
+  });
+  const branches: Branch[] | null = branchesQ.data ?? null;
+  const data: BranchSemesters | null = semestersQ.data ?? null;
+  // Only an error when there is nothing (not even a persisted copy) to show.
+  const error =
+    semestersQ.isError && !semestersQ.data
+      ? userMessage(semestersQ.error, 'Could not load semesters for this branch.')
+      : null;
   const [refreshing, setRefreshing] = useState(false);
   const [progress, setProgress] = useState<Record<number, { done: number; total: number }>>({});
 
@@ -56,48 +66,16 @@ export const SemesterSelectScreen = () => {
     };
   }, [paramBranch]);
 
-  // 2. Load all available branches
-  const loadBranches = useCallback(async (force = false) => {
-    try {
-      const list = await getBranches(force);
-      setBranches(list);
-    } catch (e) {
-      console.error('Failed to load branches', e);
-    }
-  }, []);
-
-  // 3. Load semesters for selected branch
-  const loadSemesters = useCallback(
-    async (branchId: string, force = false) => {
-      if (!branchId) return;
-      try {
-        setError(null);
-        const res = await getBranchSemesters(branchId, force);
-        setData(res);
-      } catch (e: any) {
-        setError(userMessage(e, 'Could not load semesters for this branch.'));
-      }
-    },
-    []
-  );
-
-  useEffect(() => {
-    void loadBranches();
-  }, [loadBranches]);
-
-  useEffect(() => {
-    if (isBranchReady && selectedBranchId) {
-      void loadSemesters(selectedBranchId);
-    }
-  }, [isBranchReady, selectedBranchId, loadSemesters]);
-
-  // Prefetch first few semester sheets for instant navigation
+  // Prefetch the semester sheets for instant navigation
   useEffect(() => {
     if (!data) return;
     for (const s of data.semesters) {
-      void getBranchSemester(selectedBranchId, s.semester).catch(() => {});
+      void queryClient.prefetchQuery({
+        ...syllabusSemesterQuery(selectedBranchId, s.semester),
+        staleTime: 60_000,
+      });
     }
-  }, [data, selectedBranchId]);
+  }, [data, selectedBranchId, queryClient]);
 
   // Track progress counts across subjects
   useFocusEffect(
@@ -123,7 +101,7 @@ export const SemesterSelectScreen = () => {
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await Promise.all([loadBranches(true), loadSemesters(selectedBranchId, true)]);
+    await Promise.all([branchesQ.refetch(), semestersQ.refetch()]);
     setRefreshing(false);
   };
 
@@ -224,7 +202,7 @@ export const SemesterSelectScreen = () => {
         )}
 
         {error && (
-          <ScreenError message={error} onRetry={() => loadSemesters(selectedBranchId, true)} />
+          <ScreenError message={error} onRetry={() => void semestersQ.refetch()} />
         )}
 
         {data && live.length === 0 && (
