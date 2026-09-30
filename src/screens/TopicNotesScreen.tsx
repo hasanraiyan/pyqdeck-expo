@@ -8,8 +8,8 @@ import * as WebBrowser from 'expo-web-browser';
 import { NativeContentRenderer } from '../components/NativeContentRenderer';
 import { COLORS, FONTS } from '../theme/colors';
 import { Topic } from '../types/syllabus';
-import { useQueryClient } from '@tanstack/react-query';
-import { getTopicNotes } from '../api';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { topicNotesQuery } from '../api/queries';
 import { syllabusSubjectQuery } from '../api/queries';
 import { qk } from '../api/queryKeys';
 import { getDoneTopics, saveDoneTopics } from '../db/syllabusProgress';
@@ -124,9 +124,18 @@ export const TopicNotesScreen = () => {
     };
   }, [navigation, subjectId, paramTopicId, topic]);
 
-  const [notes, setNotes] = useState<string | undefined>(topic?.notes);
-  const [loading, setLoading] = useState(Boolean(subjectId && topic?.id));
-  const [error, setError] = useState<string | null>(null);
+  const notesEnabled = Boolean(subjectId && topic?.id);
+  const notesQ = useQuery({
+    ...topicNotesQuery(subjectId ?? '', topic?.id ?? ''),
+    enabled: notesEnabled,
+  });
+  // A cached copy shows at once while React Query revalidates in the
+  // background (staleTime 0, never persisted - see topicNotesQuery).
+  const notes: string | undefined = notesQ.data ? notesQ.data.notes || undefined : topic?.notes;
+  const loading = notesEnabled && notesQ.isPending;
+  const error: string | null = notesQ.error
+    ? userMessage(notesQ.error, 'Could not load notes.')
+    : null;
   const [done, setDone] = useState(false);
   const [localNotesList, setLocalNotesList] = useState<NotesListEntry[] | undefined>(notesList);
 
@@ -214,43 +223,28 @@ export const TopicNotesScreen = () => {
     });
   }, [navigation, topic?.title, subjectName]);
 
+  // Once the notes arrive: remember them as recently read.
+  const fetchedNotes = notesQ.data?.notes;
   useEffect(() => {
-    if (!subjectId || !topic?.id) return;
-    let cancelled = false;
-    setLoading(true);
-    setError(null);
-    getTopicNotes(subjectId, topic.id)
-      .then((res) => {
-        if (cancelled) return;
-        setNotes(res.notes || undefined);
-        if (res.notes && moduleId && topic.title) {
-          void recordRecentNote({
-            topicId: topic.id,
-            topicTitle: topic.title,
-            moduleId,
-            moduleName: moduleName || 'Module',
-            subjectId,
-            subjectName: subjectName || 'Subject',
-            semesterId,
-          });
-        }
-      })
-      .catch((e: any) => {
-        if (cancelled) return;
-        const msg = userMessage(e, 'Could not load notes.');
-        if (msg.includes('not found') && subjectId) {
-          // The cached syllabus lists a topic the server no longer has.
-          void queryClient.invalidateQueries({ queryKey: qk.syllabusSubject(subjectId) });
-        }
-        setError(msg);
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [subjectId, topic?.id, moduleId, moduleName, subjectName, semesterId]);
+    if (!fetchedNotes || !subjectId || !topic?.id || !moduleId || !topic.title) return;
+    void recordRecentNote({
+      topicId: topic.id,
+      topicTitle: topic.title,
+      moduleId,
+      moduleName: moduleName || 'Module',
+      subjectId,
+      subjectName: subjectName || 'Subject',
+      semesterId,
+    });
+  }, [fetchedNotes, subjectId, topic?.id, topic?.title, moduleId, moduleName, subjectName, semesterId]);
+
+  // The cached syllabus lists a topic the server no longer has.
+  useEffect(() => {
+    if (!notesQ.error || !subjectId) return;
+    if (userMessage(notesQ.error, '').includes('not found')) {
+      void queryClient.invalidateQueries({ queryKey: qk.syllabusSubject(subjectId) });
+    }
+  }, [notesQ.error, subjectId, queryClient]);
 
   useEffect(() => {
     if (!subjectId || !moduleId || !topic?.id) return;

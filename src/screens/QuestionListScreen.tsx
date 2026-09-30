@@ -82,11 +82,13 @@ export const QuestionListScreen = () => {
   const [draftYear, setDraftYear] = useState<number | undefined>(selectedYear);
   const [draftChapter, setDraftChapter] = useState<string | undefined>(selectedChapter);
 
-  const openFilterModal = () => {
+  // Stable identity: the header button below depends on it, and a fresh
+  // function every render made the header re-apply its options on each one.
+  const openFilterModal = useCallback(() => {
     setDraftYear(selectedYear);
     setDraftChapter(selectedChapter);
     setFilterModalVisible(true);
-  };
+  }, [selectedYear, selectedChapter]);
 
   const applyFilters = () => {
     setSelectedYear(draftYear);

@@ -287,14 +287,14 @@ function AppContent() {
     hasSeenOnboarding().then((seen) => setOnboarded(seen));
   }, []);
 
+  // Silent boot work: shows nothing to the student, so it starts immediately.
   useEffect(() => {
     mobileAds().initialize();
-    registerForPushNotificationsAsync();
+    // A tap on a notification must never be missed, even mid-onboarding.
     const unsubscribe = subscribeToNotificationResponses();
 
-    // Start backend selection alongside the rest of boot instead of letting
-    // the first screen's fetch trigger it, so the ping RTT overlaps app
-    // startup rather than delaying the first request.
+    // Start backend selection alongside the rest of boot. It runs in the
+    // background; requests do not wait for it (see src/api/backend.ts).
     void Backend.ready();
 
     // A session that fell back to Render should climb back onto EC2 once it
@@ -304,16 +304,25 @@ function AppContent() {
       if (state === 'active') Backend.recheckIfStale();
     });
 
-    // Sequenced so a store-update prompt and a review prompt never show back to back.
-    checkForStoreUpdate().finally(() => {
-      maybeRequestReview();
-    });
-
     return () => {
       unsubscribe();
       appStateSub.remove();
     };
   }, []);
+
+  // Anything a student can SEE (OS permission prompt, store-update dialog,
+  // review prompt) waits until onboarding is done, so a first-time user is
+  // never interrupted before they have seen what the app does. Runs once:
+  // `onboarded` only ever goes null -> boolean -> true.
+  useEffect(() => {
+    if (onboarded !== true) return;
+    registerForPushNotificationsAsync();
+
+    // Sequenced so a store-update prompt and a review prompt never show back to back.
+    checkForStoreUpdate().finally(() => {
+      maybeRequestReview();
+    });
+  }, [onboarded]);
 
   // Still reading AsyncStorage — render nothing to avoid a flash of wrong screen
   if (onboarded === null) return null;

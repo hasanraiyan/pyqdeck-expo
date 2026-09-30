@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   View,
   Text,
@@ -12,16 +12,19 @@ import { useLinkTo, useNavigation, useRoute } from '@react-navigation/native';
 import * as Haptics from 'expo-haptics';
 import { Feather } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query';
+import { ApiError } from '../api';
 import {
-  searchAllQuestions,
-  searchSubjects,
-  searchTopicNotes,
-  getAiOverview,
-  getAiOverviewStatus,
-  listAllSubjects,
-  ApiError,
-} from '../api';
-import { TopicNoteSearchResultItem, AiOverview, AiOverviewReference } from '../types';
+  searchSubjectsQuery,
+  searchQuestionsQuery,
+  searchNotesQuery,
+  aiOverviewStatusQuery,
+  aiOverviewQuery,
+  allSubjectsQuery,
+  isSearchCached,
+} from '../api/queries';
+import { prefetchSubject } from '../api/prefetch';
+import { TopicNoteSearchResultItem, AiOverviewReference } from '../types';
 import { AiOverviewCard } from '../components/AiOverviewCard';
 import { searchLocalCache } from '../api/offlineSearch';
 import { COLORS, FONTS } from '../theme/colors';
@@ -42,40 +45,96 @@ export const SearchScreen = () => {
   const { readMaxWidth, hPadding } = useResponsive();
   const [query, setQuery] = useState('');
   const [activeTab, setActiveTab] = useState<SearchTab>('all');
-  const [subjectResults, setSubjectResults] = useState<any[]>([]);
-  const [questionResults, setQuestionResults] = useState<any[]>([]);
-  const [noteResults, setNoteResults] = useState<TopicNoteSearchResultItem[]>([]);
+  const queryClient = useQueryClient();
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
-  const [dynamicSuggestions, setDynamicSuggestions] = useState<string[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [hasSearched, setHasSearched] = useState(false);
   const [cooldownSec, setCooldownSec] = useState(0);
   const [validationError, setValidationError] = useState<string | null>(null);
-  const [aiOverview, setAiOverview] = useState<AiOverview | null>(null);
-  const [aiLoading, setAiLoading] = useState(false);
-  // Asked once per mount; until it answers the card is simply not rendered.
-  const aiEnabledRef = useRef<boolean | null>(null);
-  const aiOverviewQueryRef = useRef('');
+  // The validated query the results below belong to. null = nothing submitted.
+  // Everything on screen is derived from React Query for this string, so a new
+  // submit cancels the old requests and a repeat is served from cache.
+  const [submitted, setSubmitted] = useState<string | null>(null);
+  const hasSearched = submitted !== null;
+  const q = submitted ?? '';
 
+  const subsQ = useQuery({ ...searchSubjectsQuery(q), enabled: hasSearched });
+  const qsQ = useQuery({ ...searchQuestionsQuery(q), enabled: hasSearched });
+  const notesQ = useQuery({ ...searchNotesQuery(q), enabled: hasSearched });
+  const loading = hasSearched && (subsQ.isFetching || qsQ.isFetching || notesQ.isFetching);
 
-  const cooldownTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const lastQueryRef = useRef<string>('');
+  // The overview is a bonus on top of real results: it starts only once the
+  // three searches have settled, and a failure just means no card.
+  const aiStatusQ = useQuery(aiOverviewStatusQuery());
+  const aiQ = useQuery({
+    ...aiOverviewQuery(q),
+    enabled: hasSearched && !loading && aiStatusQ.data === true,
+  });
+  const aiOverview = aiQ.data ?? null;
+  const aiLoading = aiQ.isFetching;
 
-  // Fetch subjects with actual questions to populate search suggestions
+  const onlineSubjects = Array.isArray(subsQ.data?.subjects) ? subsQ.data.subjects : [];
+  const onlineQuestions = Array.isArray(qsQ.data?.questions) ? qsQ.data.questions : [];
+  const noteResults: TopicNoteSearchResultItem[] = Array.isArray(notesQ.data?.results)
+    ? notesQ.data.results
+    : [];
+  const onlineEmpty =
+    hasSearched &&
+    !loading &&
+    onlineSubjects.length === 0 &&
+    onlineQuestions.length === 0 &&
+    noteResults.length === 0;
+
+  // Offline / no-hit fallback over whatever React Query already holds.
+  const [localResults, setLocalResults] = useState<{ subjects: any[]; questions: any[] } | null>(
+    null
+  );
   useEffect(() => {
-    listAllSubjects()
-      .then((res) => {
-        if (res && res.subjects && res.subjects.length > 0) {
-          const activeSubjects = res.subjects.filter((s) => (s.questionCount || 0) > 0);
-          const names = (activeSubjects.length > 0 ? activeSubjects : res.subjects)
-            .slice(0, 6)
-            .map((s) => (s.name || '').trim())
-            .filter((n) => n.length > 0);
-          setDynamicSuggestions(names);
-        }
+    if (!onlineEmpty || !submitted) {
+      setLocalResults(null);
+      return;
+    }
+    let current = true;
+    searchLocalCache(submitted)
+      .then((local) => {
+        if (current) setLocalResults({ subjects: local?.subjects ?? [], questions: local?.questions ?? [] });
       })
-      .catch(() => {});
-  }, []);
+      .catch(() => {
+        if (current) setLocalResults(null);
+      });
+    return () => {
+      current = false;
+    };
+  }, [onlineEmpty, submitted]);
+
+  const subjectResults: any[] = useMemo(
+    () =>
+      onlineEmpty
+        ? (localResults?.subjects ?? []).map((s: any) => ({ ...s, semester: { id: '', number: 0 } }))
+        : onlineSubjects,
+    [onlineEmpty, localResults, onlineSubjects]
+  );
+  const questionResults: any[] = useMemo(
+    () =>
+      onlineEmpty
+        ? (localResults?.questions ?? []).map((qu: any) => ({
+            ...qu,
+            subject: qu.subject ?? { id: '', name: '', semesterId: '' },
+          }))
+        : onlineQuestions,
+    [onlineEmpty, localResults, onlineQuestions]
+  );
+
+  // Suggestion chips reuse the All Subjects cache (first page) instead of
+  // fetching on every mount.
+  const suggestionsQ = useInfiniteQuery(allSubjectsQuery(''));
+  const dynamicSuggestions = useMemo(() => {
+    const subjects = suggestionsQ.data?.pages[0]?.subjects ?? [];
+    const active = subjects.filter((s) => (s.questionCount || 0) > 0);
+    return (active.length > 0 ? active : subjects)
+      .slice(0, 6)
+      .map((s) => (s.name || '').trim())
+      .filter((n) => n.length > 0);
+  }, [suggestionsQ.data]);
+  const cooldownTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Load recent searches from AsyncStorage on mount
   useEffect(() => {
@@ -212,122 +271,56 @@ export const SearchScreen = () => {
     });
   };
 
-  const runAiOverview = async (normalized: string) => {
-    if (aiEnabledRef.current === null) {
-      aiEnabledRef.current = await getAiOverviewStatus();
-    }
-    if (!aiEnabledRef.current) return;
-
-    aiOverviewQueryRef.current = normalized;
-    setAiOverview(null);
-    setAiLoading(true);
-    try {
-      const res = await getAiOverview(normalized);
-      // A slower earlier query must not overwrite a newer one's answer.
-      if (aiOverviewQueryRef.current !== normalized) return;
-      setAiOverview(res);
-    } catch {
-      // Never surfaced: the overview is a bonus on top of real results, so a
-      // failure means no card rather than an error the student must dismiss.
-      if (aiOverviewQueryRef.current === normalized) setAiOverview(null);
-    } finally {
-      if (aiOverviewQueryRef.current === normalized) setAiLoading(false);
-    }
-  };
-
-  const runSearch = async (normalized: string) => {
-    // inflight guard — handled by caller, but double-check
-    if (loading) return;
-    // dedup: skip if same as last successful query and we already have results
-    if (
-      normalized.toLowerCase() === lastQueryRef.current.toLowerCase() &&
-      hasSearched &&
-      (subjectResults.length > 0 || questionResults.length > 0 || noteResults.length > 0)
-    ) {
-      return;
-    }
-    setLoading(true);
-    setHasSearched(true);
+  // Shared by typed searches, suggestion taps and deep links. A new value here
+  // unmounts the previous query's observers, which cancels its in-flight
+  // requests (each fetcher forwards React Query's signal).
+  const submitQuery = (normalized: string) => {
     setValidationError(null);
-    try {
-      const [subsResult, qsResult, notesResult] = await Promise.allSettled([
-        searchSubjects(normalized),
-        searchAllQuestions(normalized),
-        searchTopicNotes(normalized),
-      ]);
-
-      const subsData = subsResult.status === 'fulfilled' ? subsResult.value : null;
-      const qsData = qsResult.status === 'fulfilled' ? qsResult.value : null;
-      const notesData = notesResult.status === 'fulfilled' ? notesResult.value : null;
-
-      // Deliberately not awaited and not part of the Promise.allSettled above:
-      // the overview takes ~4s cold while the three searches return in under
-      // one, so the results render immediately and the card fills in behind.
-      void runAiOverview(normalized);
-
-      const subjectList = Array.isArray(subsData?.subjects) ? subsData.subjects : [];
-      const questionList = Array.isArray(qsData?.questions) ? qsData.questions : [];
-      const noteList = Array.isArray(notesData?.results) ? notesData.results : [];
-
-      lastQueryRef.current = normalized;
-
-      // Check if rate limited (429) across failing requests
-      const isRateLimited =
-        (subsResult.status === 'rejected' && (subsResult.reason as any)?.status === 429) ||
-        (qsResult.status === 'rejected' && (qsResult.reason as any)?.status === 429) ||
-        (notesResult.status === 'rejected' && (notesResult.reason as any)?.status === 429);
-
-      if (isRateLimited && subjectList.length === 0 && questionList.length === 0 && noteList.length === 0) {
-        const retry = 15;
-        applyServerRetryAfter(retry);
-        startCooldown(retry);
-        setValidationError(`Too many searches — try again in ${retry}s`);
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
-        return;
-      }
-
-      // If online results found, set them
-      if (subjectList.length > 0 || questionList.length > 0 || noteList.length > 0) {
-        setSubjectResults(subjectList);
-        setQuestionResults(questionList);
-        setNoteResults(noteList);
-        setActiveTab('all');
-      } else {
-        // Fallback to local cache if no online results
-        try {
-          const local = await searchLocalCache(normalized);
-          setSubjectResults((local?.subjects || []).map((s: any) => ({ ...s, semester: { id: '', number: 0 } })));
-          setQuestionResults((local?.questions || []).map((qu: any) => ({ ...qu, subject: qu.subject ?? { id: '', name: '', semesterId: '' } })));
-          setNoteResults([]);
-          setActiveTab('all');
-        } catch {
-          setSubjectResults([]);
-          setQuestionResults([]);
-          setNoteResults([]);
-          setActiveTab('all');
-        }
-      }
-    } catch (e: any) {
-      // Complete offline fallback for network errors
-      try {
-        const local = await searchLocalCache(normalized);
-        setSubjectResults((local?.subjects || []).map((s: any) => ({ ...s, semester: { id: '', number: 0 } })));
-        setQuestionResults((local?.questions || []).map((qu: any) => ({ ...qu, subject: qu.subject ?? { id: '', name: '', semesterId: '' } })));
-        setNoteResults([]);
-        setActiveTab('all');
-      } catch {
-        setSubjectResults([]);
-        setQuestionResults([]);
-        setNoteResults([]);
-        setActiveTab('all');
-      }
-    } finally {
-      setLoading(false);
+    setActiveTab('all');
+    // Re-submitting the same text: React Query sees no key change, and the
+    // search options disable retries, so a failed search would just sit in its
+    // error state. Re-run whichever of the three failed.
+    if (normalized.toLowerCase() === submitted?.toLowerCase()) {
+      [subsQ, qsQ, notesQ].forEach((x) => {
+        if (x.isError) void x.refetch();
+      });
     }
+    setSubmitted(normalized);
+    saveRecentSearch(normalized);
   };
 
-  const handleSearch = async () => {
-    if (loading || cooldownSec > 0) return;
+  // Spends a rate-limit token only when a request will really be sent: a repeat
+  // of a search still in the cache is free, so re-running a query never trips
+  // the cooldown. Returns false (and shows the message) when blocked.
+  const allowSearch = (normalized: string): boolean => {
+    if (isSearchCached(queryClient, normalized)) return true;
+    const bucket = consumeSearchToken();
+    if (bucket.allowed) return true;
+    startCooldown(bucket.retryAfterSec);
+    setValidationError(`Slow down — try again in ${bucket.retryAfterSec}s`);
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
+    return false;
+  };
+
+  // A real server 429 (from any of the three searches) starts a cooldown using
+  // the server's own Retry-After, falling back to 15s when it sent none. Only
+  // when nothing else came back, so a partial result is never hidden.
+  useEffect(() => {
+    if (!hasSearched || loading) return;
+    const limited = [subsQ.error, qsQ.error, notesQ.error].find(
+      (e) => e instanceof ApiError && e.status === 429
+    ) as ApiError | undefined;
+    if (!limited || !onlineEmpty) return;
+    const retry = limited.retryAfterSec && limited.retryAfterSec > 0 ? limited.retryAfterSec : 15;
+    applyServerRetryAfter(retry);
+    startCooldown(retry);
+    setValidationError(`Too many searches — try again in ${Math.min(60, Math.round(retry))}s`);
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasSearched, loading, onlineEmpty, subsQ.error, qsQ.error, notesQ.error]);
+
+  const handleSearch = () => {
+    if (cooldownSec > 0) return;
 
     const norm = normalizeQuery(query);
     if (!norm.ok) {
@@ -335,32 +328,19 @@ export const SearchScreen = () => {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
       return;
     }
-
-    const bucket = consumeSearchToken();
-    if (!bucket.allowed) {
-      startCooldown(bucket.retryAfterSec);
-      setValidationError(`Slow down — try again in ${bucket.retryAfterSec}s`);
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
-      return;
-    }
-
-    saveRecentSearch(norm.query);
-    await runSearch(norm.query);
+    if (!allowSearch(norm.query)) return;
+    submitQuery(norm.query);
   };
 
   const handleClear = () => {
     setQuery('');
-    setSubjectResults([]);
-    setQuestionResults([]);
-    setNoteResults([]);
+    setSubmitted(null);
     setActiveTab('all');
-    setHasSearched(false);
     setValidationError(null);
-    lastQueryRef.current = '';
   };
 
-  const handleSuggestionPress = async (term: string) => {
-    if (loading || cooldownSec > 0) return;
+  const handleSuggestionPress = (term: string) => {
+    if (cooldownSec > 0) return;
     if (shouldDebounceTap()) return;
 
     const norm = normalizeQuery(term);
@@ -368,18 +348,10 @@ export const SearchScreen = () => {
       setValidationError(norm.error);
       return;
     }
-
-    const bucket = consumeSearchToken();
-    if (!bucket.allowed) {
-      startCooldown(bucket.retryAfterSec);
-      setValidationError(`Slow down — try again in ${bucket.retryAfterSec}s`);
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
-      return;
-    }
+    if (!allowSearch(norm.query)) return;
 
     setQuery(norm.query);
-    saveRecentSearch(norm.query);
-    await runSearch(norm.query);
+    submitQuery(norm.query);
   };
 
   const clearRecentSearches = () => {
@@ -403,19 +375,12 @@ export const SearchScreen = () => {
       setValidationError(norm.error);
       return;
     }
-    const bucket = consumeSearchToken();
-    if (!bucket.allowed) {
-      startCooldown(bucket.retryAfterSec);
-      setValidationError(`Slow down — try again in ${bucket.retryAfterSec}s`);
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
-      return;
-    }
+    if (!allowSearch(norm.query)) return;
     deepLinkQueryRef.current = initQ;
     setQuery(norm.query);
-    saveRecentSearch(norm.query);
-    void runSearch(norm.query);
-    // runSearch is intentionally read from the first render's closure: a deep
-    // link always starts from a pristine (no results, not loading) state.
+    submitQuery(norm.query);
+    // allowSearch/submitQuery are read from this render's closure on purpose:
+    // the effect must run once per deep-linked query value, not per render.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [route.params?.q]);
 
@@ -437,7 +402,9 @@ export const SearchScreen = () => {
     cooldownSec === 0 &&
     totalResultsCount === 0;
 
-  const isInputDisabled = loading || cooldownSec > 0;
+  // Only a cooldown locks the input. A search in flight never does: typing a
+  // new query and submitting simply cancels the old one.
+  const isInputDisabled = cooldownSec > 0;
 
   const renderNoteCard = (note: TopicNoteSearchResultItem) => (
     <TouchableOpacity
@@ -526,12 +493,8 @@ export const SearchScreen = () => {
                 setQuery(text);
                 if (validationError) setValidationError(null);
                 if (!text) {
-                  setHasSearched(false);
-                  setSubjectResults([]);
-                  setQuestionResults([]);
-                  setNoteResults([]);
+                  setSubmitted(null);
                   setActiveTab('all');
-                  lastQueryRef.current = '';
                 }
               }}
               onSubmitEditing={handleSearch}
@@ -541,13 +504,13 @@ export const SearchScreen = () => {
               autoCorrect={false}
               style={[styles.searchInput, isInputDisabled && { opacity: 0.6 }]}
             />
-            {query.length > 0 && !loading && cooldownSec === 0 && (
+            {query.length > 0 && cooldownSec === 0 && (
               <TouchableOpacity onPress={handleClear} style={styles.clearBtn} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
                 <Feather name="x" size={15} color={COLORS.textMuted} />
               </TouchableOpacity>
             )}
 
-            {query.trim().length > 0 && !loading && cooldownSec === 0 && (
+            {query.trim().length > 0 && cooldownSec === 0 && (
               <TouchableOpacity
                 onPress={handleSearch}
                 style={styles.searchActionBtn}
@@ -752,14 +715,15 @@ export const SearchScreen = () => {
                     key={item.id}
                     style={styles.subjectCard}
                     activeOpacity={0.7}
-                    onPress={() =>
+                    onPress={() => {
+                      prefetchSubject(item.id);
                       navigation.navigate('SubjectDetail', {
                         semesterId: item.semester?.id,
                         subjectId: item.id,
                         subjectName: item.name,
                         subjectCode: item.code,
-                      })
-                    }
+                      });
+                    }}
                   >
                     <View style={styles.subjectLeft}>
                       <Text style={styles.subjectName}>{item.name}</Text>

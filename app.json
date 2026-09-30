@@ -2,7 +2,7 @@
   "expo": {
     "name": "PyQdeck",
     "slug": "pyqdeck",
-    "version": "1.0.4",
+    "version": "1.0.5",
     "orientation": "default",
     "icon": "./assets/app-icon.png",
     "userInterfaceStyle": "light",

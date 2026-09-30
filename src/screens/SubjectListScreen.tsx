@@ -15,6 +15,7 @@ import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useQueries, useQueryClient } from '@tanstack/react-query';
 import { subjectsQuery } from '../api/queries';
+import { prefetchSubject } from '../api/prefetch';
 import { SubjectSummary } from '../types';
 import { COLORS, FONTS } from '../theme/colors';
 import { SubjectCardSkeleton } from '../components/Skeleton';
@@ -68,15 +69,16 @@ const SemesterTabContent = ({
           ]}
           activeOpacity={isComingSoon ? 1 : 0.7}
           disabled={isComingSoon}
-          onPress={() =>
+          onPress={() => {
+            prefetchSubject(item.id);
             navigation.navigate('SubjectDetail', {
               semesterId: item.semesterId,
               semesterNumber: item.semesterNumber,
               subjectId: item.id,
               subjectName: item.name,
               subjectCode: item.code,
-            })
-          }
+            });
+          }}
         >
           <View style={styles.cardLeft}>
             <View style={styles.codeRow}>

@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useMemo, useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -12,7 +12,9 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
-import { listAllSubjects } from '../api';
+import { useInfiniteQuery, keepPreviousData } from '@tanstack/react-query';
+import { allSubjectsQuery } from '../api/queries';
+import { prefetchSubject } from '../api/prefetch';
 import { SubjectSummary, Semester } from '../types';
 import { COLORS, FONTS } from '../theme/colors';
 import { Skeleton } from '../components/Skeleton';
@@ -45,60 +47,39 @@ export const AllSubjectsScreen = () => {
   const cardWidth = isGrid ? (contentWidth - GAP * (columns - 1)) / columns : undefined;
 
   const [query, setQuery] = useState('');
-  const [page, setPage] = useState(1);
-  const [subjects, setSubjects] = useState<(SubjectSummary & { semester: Semester })[]>([]);
-  const [pageCount, setPageCount] = useState(1);
-  const [total, setTotal] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
+  // What the list is currently filtered by; only changes on submit, so typing
+  // in the box never fires a request.
+  const [appliedQuery, setAppliedQuery] = useState('');
   const [refreshing, setRefreshing] = useState(false);
 
-  const loadData = async (q: string, p: number, append = false) => {
-    if (append) {
-      setLoadingMore(true);
-    } else {
-      setLoading(true);
-    }
+  const listQ = useInfiniteQuery({
+    ...allSubjectsQuery(appliedQuery),
+    // Keep the previous list visible while a new search loads.
+    placeholderData: keepPreviousData,
+  });
+  const subjects = useMemo(
+    () => listQ.data?.pages.flatMap((p) => p.subjects || []) ?? [],
+    [listQ.data]
+  );
+  const total = listQ.data?.pages[0]?.total ?? 0;
+  const loading = listQ.isPending;
+  const loadingMore = listQ.isFetchNextPageError ? false : listQ.isFetchingNextPage;
 
-    try {
-      const res = await listAllSubjects({ q: q.trim() || undefined, page: p });
-      if (append) {
-        setSubjects((prev) => [...prev, ...(res.subjects || [])]);
-      } else {
-        setSubjects(res.subjects || []);
-      }
-      setPageCount(res.pageCount || 1);
-      setTotal(res.total || 0);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoading(false);
-      setLoadingMore(false);
-      setRefreshing(false);
-    }
-  };
-
-  useEffect(() => {
-    loadData(query, 1, false);
-  }, []);
-
-  const handleSearch = () => {
-    setPage(1);
-    loadData(query, 1, false);
-  };
+  const handleSearch = () => setAppliedQuery(query.trim());
 
   const handleEndReached = () => {
-    if (!loading && !loadingMore && page < pageCount) {
-      const nextPage = page + 1;
-      setPage(nextPage);
-      loadData(query, nextPage, true);
+    if (listQ.hasNextPage && !listQ.isFetchingNextPage && !listQ.isFetching) {
+      void listQ.fetchNextPage();
     }
   };
 
-  const handleRefresh = () => {
+  const handleRefresh = async () => {
     setRefreshing(true);
-    setPage(1);
-    loadData(query, 1, false);
+    try {
+      await listQ.refetch();
+    } finally {
+      setRefreshing(false);
+    }
   };
 
   const renderSubjectCard = useCallback(
@@ -113,14 +94,15 @@ export const AllSubjectsScreen = () => {
           ]}
           activeOpacity={isComingSoon ? 1 : 0.7}
           disabled={isComingSoon}
-          onPress={() =>
+          onPress={() => {
+            prefetchSubject(item.id);
             navigation.navigate('SubjectDetail', {
               semesterId: item.semester?.id,
               subjectId: item.id,
               subjectName: item.name,
               subjectCode: item.code,
-            })
-          }
+            });
+          }}
         >
           <View style={styles.cardLeft}>
             <View style={styles.codeRow}>
@@ -175,10 +157,7 @@ export const AllSubjectsScreen = () => {
               value={query}
               onChangeText={(text) => {
                 setQuery(text);
-                if (!text) {
-                  setPage(1);
-                  loadData('', 1, false);
-                }
+                if (!text) setAppliedQuery('');
               }}
               onSubmitEditing={handleSearch}
               returnKeyType="search"

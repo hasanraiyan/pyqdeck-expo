@@ -43,6 +43,7 @@ import { WaveLoader } from '../components/WaveLoader';
 import { CircleLoader } from '../components/CircleLoader';
 import { isAiEnabled } from '../config/features';
 import { userMessage } from '../utils/netError';
+import { recordLastPosition } from '../utils/lastPosition';
 
 export const QuestionDetailScreen = () => {
   const insets = useSafeAreaInsets();
@@ -111,6 +112,23 @@ export const QuestionDetailScreen = () => {
   useEffect(() => {
     recordQuestionOpenedAndMaybeShowInterstitial();
   }, [questionId]);
+
+  // Remember the place in the paper for Home's "Continue" card. Runs again on
+  // Prev/Next (which swaps `question` in place), fire-and-forget so it can
+  // never delay a render or a tap.
+  useEffect(() => {
+    if (!question?.questionId || !subjectId) return;
+    const name = subjectName || paramSubjectName;
+    if (!name) return;
+    void recordLastPosition({
+      subjectId,
+      subjectName: name,
+      semesterId,
+      year: question.year ?? (year ? Number(year) : undefined),
+      questionId: question.questionId,
+      qNumber: question.qNumber,
+    });
+  }, [question?.questionId, question?.year, subjectId, semesterId, subjectName]);
 
   useEffect(() => {
     if (solution) {
