@@ -10,10 +10,13 @@ import {
   Platform,
   Modal,
   ScrollView,
+  Share,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import { COLORS, FONTS } from '../theme/colors';
+import * as Clipboard from 'expo-clipboard';
+import Svg, { Defs, LinearGradient as SvgGradient, Stop, Rect } from 'react-native-svg';
+import { COLORS, FONTS, RADIUS, SHADOWS } from '../theme/colors';
 import { markdownRules } from '../theme/markdownStyles';
 import { AiOverview, AiOverviewReference } from '../types';
 import { NativeContentRenderer } from './NativeContentRenderer';
@@ -91,6 +94,7 @@ interface Props {
 
 export const AiOverviewCard: React.FC<Props> = ({ overview, loading, onPressReference }) => {
   const [expanded, setExpanded] = useState(false);
+  const [copied, setCopied] = useState(false);
   // Which span's sources the sheet is showing; null keeps it closed.
   const [sheetRefs, setSheetRefs] = useState<AiOverviewReference[] | null>(null);
 
@@ -194,6 +198,27 @@ export const AiOverviewCard: React.FC<Props> = ({ overview, loading, onPressRefe
     setSheetRefs(overview.references);
   };
 
+  const handleCopy = async () => {
+    if (!overview?.text) return;
+    try {
+      await Clipboard.setStringAsync(overview.text);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {}
+  };
+
+  const handleShare = async () => {
+    if (!overview?.text) return;
+    try {
+      Haptics.selectionAsync().catch(() => {});
+      await Share.share({
+        message: overview.text,
+        title: 'AI Overview',
+      });
+    } catch {}
+  };
+
   // Plain http(s) links inside the summary stay tappable; everything else
   // renders as normal text.
   const overviewRules = {
@@ -233,8 +258,8 @@ export const AiOverviewCard: React.FC<Props> = ({ overview, loading, onPressRefe
           as flat text. No inline chips - one Sources button below opens the
           slide-up sheet with every source. Slicing for the typewriter can
           briefly cut a markdown token in half; it resolves on the next tick. */}
-      <View>
-        <View style={!expanded ? { maxHeight: COLLAPSED_H, overflow: 'hidden' } : undefined}>
+      <View style={styles.contentWrapper}>
+        <View style={!expanded ? styles.clippedContent : undefined}>
           {visible.map((seg, i) => (
             <NativeContentRenderer
               key={i}
@@ -243,48 +268,91 @@ export const AiOverviewCard: React.FC<Props> = ({ overview, loading, onPressRefe
               rules={overviewRules}
             />
           ))}
+          {!expanded && (
+            <View pointerEvents="none" style={styles.fadeContainer}>
+              <Svg height="100%" width="100%">
+                <Defs>
+                  <SvgGradient id="cardFade" x1="0" y1="0" x2="0" y2="1">
+                    <Stop offset="0" stopColor={COLORS.card} stopOpacity="0" />
+                    <Stop offset="0.6" stopColor={COLORS.card} stopOpacity="0.85" />
+                    <Stop offset="1" stopColor={COLORS.card} stopOpacity="1" />
+                  </SvgGradient>
+                </Defs>
+                <Rect x="0" y="0" width="100%" height="100%" fill="url(#cardFade)" />
+              </Svg>
+            </View>
+          )}
         </View>
-        {/* Inline “… Show more” pinned to the cut end of the clipped text -
-            no separate button below the card body. */}
+
         {!expanded && (
-          <TouchableOpacity
-            style={styles.moreOverlay}
-            activeOpacity={0.7}
-            onPress={() => {
-              Haptics.selectionAsync().catch(() => {});
-              finishTyping();
-              setExpanded(true);
-            }}
-          >
-            <Text style={styles.moreText}>… Show more</Text>
-          </TouchableOpacity>
+          <View style={styles.showMoreOverlay}>
+            <TouchableOpacity
+              style={styles.pillToggleBtn}
+              activeOpacity={0.8}
+              onPress={() => {
+                Haptics.selectionAsync().catch(() => {});
+                finishTyping();
+                setExpanded(true);
+              }}
+            >
+              <Text style={styles.pillToggleText}>Show more</Text>
+              <Feather name="chevron-down" size={15} color={COLORS.primary} />
+            </TouchableOpacity>
+          </View>
         )}
       </View>
 
       {expanded && (
-        <TouchableOpacity
-          style={styles.lessLink}
-          activeOpacity={0.7}
-          onPress={() => {
-            Haptics.selectionAsync().catch(() => {});
-            setExpanded(false);
-          }}
-        >
-          <Text style={styles.lessText}>Show less</Text>
-        </TouchableOpacity>
-      )}
+        <View style={styles.expandedFooter}>
+          {overview.references.length > 0 && (
+            <TouchableOpacity
+              style={styles.sourcesPill}
+              activeOpacity={0.7}
+              onPress={openAllSources}
+            >
+              <Feather name="link" size={13} color={COLORS.textMuted} />
+              <Text style={styles.sourcesPillText}>Sources</Text>
+            </TouchableOpacity>
+          )}
 
-      {overview.references.length > 0 && (
-        <TouchableOpacity
-          style={styles.sourcesBtn}
-          activeOpacity={0.7}
-          onPress={openAllSources}
-        >
-          <Feather name="book-open" size={13} color={COLORS.secondary} />
-          <Text style={styles.sourcesBtnText}>
-            Sources · {overview.references.length}
-          </Text>
-        </TouchableOpacity>
+          <View style={styles.actionRow}>
+            <TouchableOpacity
+              style={styles.actionIconBtn}
+              activeOpacity={0.6}
+              onPress={handleCopy}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Feather
+                name={copied ? 'check' : 'copy'}
+                size={16}
+                color={copied ? COLORS.success : COLORS.textMuted}
+              />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.actionIconBtn}
+              activeOpacity={0.6}
+              onPress={handleShare}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Feather name="more-vertical" size={16} color={COLORS.textMuted} />
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.showLessContainer}>
+            <TouchableOpacity
+              style={styles.pillToggleBtn}
+              activeOpacity={0.8}
+              onPress={() => {
+                Haptics.selectionAsync().catch(() => {});
+                setExpanded(false);
+              }}
+            >
+              <Text style={styles.pillToggleText}>Show less</Text>
+              <Feather name="chevron-up" size={15} color={COLORS.primary} />
+            </TouchableOpacity>
+          </View>
+        </View>
       )}
 
       <Modal
@@ -304,56 +372,60 @@ export const AiOverviewCard: React.FC<Props> = ({ overview, loading, onPressRefe
             <Text style={styles.sheetTitle}>Sources · {sheetRefs?.length ?? 0}</Text>
 
             <ScrollView style={styles.sheetList} showsVerticalScrollIndicator={false}>
-              {(sheetRefs ?? []).map((ref) => (
-                <TouchableOpacity
-                  key={ref.index}
-                  style={styles.sourceRow}
-                  activeOpacity={0.7}
-                  disabled={!ref.navigate && !ref.url}
-                  onPress={() => {
-                    setSheetRefs(null);
-                    Haptics.selectionAsync().catch(() => {});
-                    onPressReference(ref);
-                  }}
-                >
-                  <View style={styles.sourceIcon}>
-                    {/* Icon follows the link pattern the server parsed: notes
-                        get a book, PYQs a paper, anything unrecognised keeps
-                        the globe. */}
-                    <Feather
-                      name={
-                        ref.navigate?.target === 'topic'
-                          ? 'book-open'
-                          : ref.navigate
-                            ? 'file-text'
-                            : 'globe'
-                      }
-                      size={13}
-                      color={COLORS.secondary}
-                    />
-                  </View>
-                  <View style={styles.sourceBody}>
-                    <Text style={styles.sourceTitle} numberOfLines={3}>
-                      {ref.title}
-                    </Text>
-                    {ref.navigate && (
-                      <Text style={styles.sourceMeta}>
-                        {ref.navigate.target === 'topic'
-                          ? 'STUDY NOTE'
-                          : ref.navigate.semesterId?.toUpperCase()}
-                        {ref.navigate.year ? ` · ${ref.navigate.year}` : ''}
-                        {ref.navigate.target === 'topic'
-                          ? ''
-                          : ref.navigate.questionId
-                            ? ` · ${ref.navigate.questionId}`
-                            : ' · Full paper'}
+              {(sheetRefs ?? []).map((ref) => {
+                const metaText = (() => {
+                  if (!ref.navigate) return null;
+                  if (ref.navigate.target === 'topic') return 'STUDY NOTE';
+                  const parts: string[] = [];
+                  if (ref.navigate.semesterId) parts.push(ref.navigate.semesterId.toUpperCase());
+                  if (ref.navigate.year) parts.push(String(ref.navigate.year));
+                  if (ref.navigate.questionId) {
+                    parts.push(ref.navigate.questionId);
+                  } else {
+                    parts.push('Full paper');
+                  }
+                  return parts.join(' · ');
+                })();
+
+                return (
+                  <TouchableOpacity
+                    key={ref.index}
+                    style={styles.sourceRow}
+                    activeOpacity={0.7}
+                    disabled={!ref.navigate && !ref.url}
+                    onPress={() => {
+                      setSheetRefs(null);
+                      Haptics.selectionAsync().catch(() => {});
+                      onPressReference(ref);
+                    }}
+                  >
+                    <View style={styles.sourceIcon}>
+                      <Feather
+                        name={
+                          ref.navigate?.target === 'topic'
+                            ? 'book-open'
+                            : ref.navigate
+                              ? 'file-text'
+                              : 'globe'
+                        }
+                        size={13}
+                        color={COLORS.secondary}
+                      />
+                    </View>
+                    <View style={styles.sourceBody}>
+                      <Text style={styles.sourceTitle} numberOfLines={3}>
+                        {ref.title || 'Source'}
                       </Text>
-                    )}
-                  </View>
-                  {(ref.navigate || ref.url) && (
-                    <Feather name="chevron-right" size={16} color={COLORS.textSubtle} />
-                  )}                </TouchableOpacity>
-              ))}
+                      {metaText ? (
+                        <Text style={styles.sourceMeta}>{metaText}</Text>
+                      ) : null}
+                    </View>
+                    {Boolean(ref.navigate || ref.url) ? (
+                      <Feather name="chevron-right" size={16} color={COLORS.textSubtle} />
+                    ) : null}
+                  </TouchableOpacity>
+                );
+              })}
             </ScrollView>
 
             <TouchableOpacity
@@ -377,9 +449,10 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.card,
     borderWidth: 1,
     borderColor: COLORS.border,
-    borderRadius: 4,
+    borderRadius: RADIUS.md,
     padding: 14,
     marginBottom: 16,
+    ...SHADOWS.subtle,
   },
   headerRow: {
     flexDirection: 'row',
@@ -401,7 +474,7 @@ const styles = StyleSheet.create({
     marginLeft: 'auto',
   },
   body: {
-    fontFamily: FONTS.serif,
+    fontFamily: FONTS.sans,
     fontSize: rf(14),
     lineHeight: rf(22),
     color: COLORS.text,
@@ -423,72 +496,84 @@ const styles = StyleSheet.create({
     color: COLORS.primary,
     textDecorationLine: 'underline',
   },
-  toggle: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 4,
-    marginTop: 10,
-    paddingVertical: 8,
-    borderRadius: 6,
-    backgroundColor: COLORS.primaryLight,
+  contentWrapper: {
+    position: 'relative',
   },
-  toggleText: {
-    fontFamily: FONTS.mono,
-    fontSize: rf(11),
-    fontWeight: '700',
-    color: COLORS.primary,
+  clippedContent: {
+    maxHeight: COLLAPSED_H,
+    overflow: 'hidden',
+    paddingBottom: 28,
   },
-  // Inline “… Show more” pinned over the cut end of the clipped body (right
-  // aligned, card background so it reads as the text's own tail). One line
-  // tall so it only ever covers the clipped line, never real content above.
-  moreOverlay: {
+  fadeContainer: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    alignItems: 'flex-end',
+    height: 70,
+  },
+  showMoreOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pillToggleBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingHorizontal: 28,
+    paddingVertical: 7,
+    borderRadius: RADIUS.pill,
+    borderWidth: 1,
+    borderColor: COLORS.primaryBorder,
     backgroundColor: COLORS.card,
-    paddingTop: 2,
+    ...SHADOWS.subtle,
   },
-  moreText: {
-    fontFamily: FONTS.mono,
-    fontSize: rf(11),
-    fontWeight: '700',
+  pillToggleText: {
+    fontFamily: FONTS.sans,
+    fontSize: rf(13),
+    fontWeight: '600',
     color: COLORS.primary,
   },
-  lessLink: {
-    alignSelf: 'flex-end',
-    paddingVertical: 6,
-    paddingLeft: 12,
+  expandedFooter: {
+    marginTop: 12,
   },
-  lessText: {
-    fontFamily: FONTS.mono,
-    fontSize: rf(11),
-    fontWeight: '700',
-    color: COLORS.primary,
-  },
-  // Single entry point to every source behind the answer - a left-aligned
-  // pill (icon + text, white with a border) under the toggle; tapping slides
-  // the sources sheet up from the bottom.
-  sourcesBtn: {
+  sourcesPill: {
     flexDirection: 'row',
     alignItems: 'center',
     alignSelf: 'flex-start',
     gap: 6,
-    marginTop: 8,
     paddingHorizontal: 13,
-    paddingVertical: 7,
-    borderRadius: 20,
+    paddingVertical: 6,
+    borderRadius: RADIUS.pill,
     borderWidth: 1,
     borderColor: COLORS.border,
     backgroundColor: COLORS.card,
   },
-  sourcesBtnText: {
-    fontFamily: FONTS.mono,
-    fontSize: rf(11),
-    fontWeight: '700',
+  sourcesPillText: {
+    fontFamily: FONTS.sans,
+    fontSize: rf(12),
+    fontWeight: '500',
     color: COLORS.text,
+  },
+  actionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 18,
+    marginTop: 12,
+    marginBottom: 8,
+    paddingHorizontal: 4,
+  },
+  actionIconBtn: {
+    padding: 4,
+  },
+  showLessContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 6,
   },
   bone: {
     height: 12,
