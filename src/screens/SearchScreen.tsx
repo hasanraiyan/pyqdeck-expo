@@ -277,6 +277,14 @@ export const SearchScreen = () => {
   const submitQuery = (normalized: string) => {
     setValidationError(null);
     setActiveTab('all');
+    // Re-submitting the same text: React Query sees no key change, and the
+    // search options disable retries, so a failed search would just sit in its
+    // error state. Re-run whichever of the three failed.
+    if (normalized.toLowerCase() === submitted?.toLowerCase()) {
+      [subsQ, qsQ, notesQ].forEach((x) => {
+        if (x.isError) void x.refetch();
+      });
+    }
     setSubmitted(normalized);
     saveRecentSearch(normalized);
   };

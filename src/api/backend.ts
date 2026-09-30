@@ -196,16 +196,21 @@ export function getApiBaseUrl(): string {
   return `${active.root}/api/public`;
 }
 
-// Re-runs selection after a request failed. Returns true only if that landed
-// on a *different* origin - the caller uses it to decide whether retrying is
-// worth anything. If the active origin still probes healthy the request
-// failed for its own reasons and retrying it elsewhere would just double the
-// failure.
-export async function failover(): Promise<boolean> {
-  const previous = active.id;
+// Re-runs selection after a request failed. Returns true only if the active
+// origin now differs from the one that request was actually SENT to - the
+// caller uses it to decide whether retrying is worth anything. If that origin
+// still probes healthy the request failed for its own reasons and retrying it
+// elsewhere would just double the failure.
+//
+// The attempted origin is passed in rather than read from `active` here: on a
+// cold start the background health check can move `active` (say Render ->
+// EC2) while the first request is still in flight to Render. Comparing against
+// a snapshot taken after that move would report "no switch" and skip a retry
+// that would have succeeded.
+export async function failover(attempted: OriginId): Promise<boolean> {
   await run();
-  const switched = active.id !== previous;
-  if (switched) console.log(`[Backend] Switched: ${previous} -> ${active.id}`);
+  const switched = active.id !== attempted;
+  if (switched) console.log(`[Backend] Switched: ${attempted} -> ${active.id}`);
   return switched;
 }
 

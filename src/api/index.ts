@@ -75,8 +75,10 @@ function trimName<T extends { name: string }>(item: T): T {
 // constant, which is what lets a failover move the whole app between
 // deployments without an APK update.
 async function request<T>(path: string, init?: RequestInit, isRetry = false): Promise<T> {
-  await Backend.ready();
-  const url = `${Backend.getApiBaseUrl()}${path}`;
+  // The origin this attempt is sent to, kept so failover() can tell whether
+  // selection has since moved elsewhere (see Backend.failover).
+  const origin = await Backend.ready();
+  const url = `${origin.root}/api/public${path}`;
 
   try {
     const res = await fetchWithTimeout(url, init);
@@ -87,7 +89,7 @@ async function request<T>(path: string, init?: RequestInit, isRetry = false): Pr
       // question or a 429 from the rate limiter says nothing about the
       // origin's health, and retrying a 429 elsewhere would dodge a limit the
       // app is supposed to respect (and lose the Retry-After below).
-      if (res.status >= 500 && !isRetry && (await Backend.failover())) {
+      if (res.status >= 500 && !isRetry && (await Backend.failover(origin.id))) {
         return request<T>(path, init, true);
       }
 
@@ -118,7 +120,7 @@ async function request<T>(path: string, init?: RequestInit, isRetry = false): Pr
     // origin is gone rather than unhappy. isRetry caps this at one extra
     // attempt, so a genuinely offline device fails fast into the React Query cache
     // the callers below fall back on, instead of ping-ponging between origins.
-    if (!isRetry && (await Backend.failover())) {
+    if (!isRetry && (await Backend.failover(origin.id))) {
       return request<T>(path, init, true);
     }
 
