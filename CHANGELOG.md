@@ -2,7 +2,7 @@
 
 All notable changes to PYQDeck are listed here, newest first.
 
-## Unreleased
+## 1.0.5
 
 ### Added
 - **Continue where you left off.** Home shows a card that reopens the last question you were reading.
