@@ -19,8 +19,6 @@ import {
   BranchSemester,
   SyllabusSubject,
 } from '../types/syllabus';
-import * as Cache from '../db/cacheService';
-import * as SylCache from '../db/syllabusCache';
 import * as Backend from './backend';
 import { authHeader } from '../auth/token';
 import {
@@ -113,7 +111,7 @@ async function request<T>(path: string, init?: RequestInit, isRetry = false): Pr
 
     // Transport-level failure (DNS, refused, timeout) - the classic sign the
     // origin is gone rather than unhappy. isRetry caps this at one extra
-    // attempt, so a genuinely offline device fails fast into the SQLite cache
+    // attempt, so a genuinely offline device fails fast into the React Query cache
     // the callers below fall back on, instead of ping-ponging between origins.
     if (!isRetry && (await Backend.failover())) {
       return request<T>(path, init, true);
@@ -164,168 +162,41 @@ const postApiAuthed = async <T,>(path: string, body: unknown): Promise<T> =>
   });
 
 // -------------------------------------------------------------
-// CACHE-FIRST API ENDPOINTS WITH SILENT BACKGROUND REVALIDATION
+// CATALOG ENDPOINTS
 // -------------------------------------------------------------
+// Plain fetchers: no caching in here. Caching, freshness, de-duplication and
+// the offline fallback live in React Query (see queryClient.ts / queries.ts).
 
-const SEMESTERS_CACHE_KEY = 'semesters';
+export const getSemesters = (): Promise<Semester[]> => fetchApi<Semester[]>('/semesters');
 
-export const getSemesters = async (forceRefresh = false): Promise<Semester[]> => {
-  const cached = await Cache.getCachedSemesters();
-  const isFresh = !forceRefresh && (await Cache.isSubjectCacheFresh(SEMESTERS_CACHE_KEY));
-
-  // Semester list barely changes - skip the network entirely while cache is fresh.
-  if (cached && cached.length > 0 && isFresh) {
-    return cached;
-  }
-
-  try {
-    const live = await fetchApi<Semester[]>('/semesters');
-    Cache.saveCachedSemesters(live);
-    await Cache.updateSubjectCacheMeta(SEMESTERS_CACHE_KEY, `count_${live.length}`);
-    return live;
-  } catch (e) {
-    if (cached && cached.length > 0) return cached;
-    throw e;
-  }
+export const getSubjects = async (semesterId: string): Promise<SubjectSummary[]> => {
+  const live = await fetchApi<SubjectSummary[]>(`/semesters/${semesterId}/subjects`);
+  return live.map(trimName);
 };
 
-export const getSubjects = async (
-  semesterId: string,
-  forceRefresh = false
-): Promise<SubjectSummary[]> => {
-  const cacheKey = `subjects_${semesterId}`;
-  const cached = await Cache.getCachedSubjects(semesterId);
-  const isFresh = !forceRefresh && (await Cache.isSubjectCacheFresh(cacheKey));
+export const getSubjectMeta = async (subjectId: string): Promise<SubjectMeta> =>
+  trimName(await fetchApi<SubjectMeta>(`/subjects/${subjectId}/meta`));
 
-  if (cached && cached.length > 0 && isFresh) {
-    return cached.map(trimName);
-  }
-
-  try {
-    const live = await fetchApi<SubjectSummary[]>(`/semesters/${semesterId}/subjects`);
-    Cache.saveCachedSubjects(semesterId, live);
-    await Cache.updateSubjectCacheMeta(cacheKey, `count_${live.length}`);
-    return live.map(trimName);
-  } catch (e) {
-    if (cached && cached.length > 0) return cached.map(trimName);
-    throw e;
-  }
-};
-
-/**
- * Fetch Subject Meta with 12h hash comparison
- */
-export const getSubjectMeta = async (
+export const getQuestions = (
   subjectId: string,
-  forceRefresh = false
-): Promise<SubjectMeta> => {
-  // 1. Try local cache first
-  const cachedMeta = await Cache.getCachedSubjectMeta(subjectId);
-  const isFresh = !forceRefresh && (await Cache.isSubjectCacheFresh(subjectId));
-
-  // If cached and fresh (within 12 hours), return immediately
-  if (cachedMeta && isFresh) {
-    return trimName(cachedMeta);
-  }
-
-  try {
-    const liveMeta = await fetchApi<SubjectMeta>(`/subjects/${subjectId}/meta`);
-    const newHash = Cache.generateSubjectHash(liveMeta);
-    await Cache.saveCachedSubjectMeta(subjectId, liveMeta);
-    await Cache.updateSubjectCacheMeta(subjectId, newHash);
-    return trimName(liveMeta);
-  } catch (e) {
-    if (cachedMeta) return trimName(cachedMeta);
-    throw e;
-  }
-};
-
-/**
- * Fetch Questions with local SQLite retrieval & background refresh
- */
-export const getQuestions = async (
-  subjectId: string,
-  params: { year?: number; chapter?: string; search?: string; limit?: number; offset?: number } = {},
-  forceRefresh = false
+  params: { year?: number; chapter?: string; search?: string; limit?: number; offset?: number } = {}
 ): Promise<QuestionListResult> => {
-  const queryKey = Cache.getQueryCacheKey(subjectId, {
-    year: params.year,
-    chapter: params.chapter,
-  });
-
-  // 1. Read local SQLite cache
-  const cachedQuestions = await Cache.getCachedQuestions(subjectId, {
-    year: params.year,
-    chapter: params.chapter,
-  });
-
-  const cachedMeta = await Cache.getCachedSubjectMeta(subjectId);
-  // Check if THIS SPECIFIC query (e.g. Module 1 across all years) was previously fetched & fresh
-  const isQueryFresh = !forceRefresh && (await Cache.isSubjectCacheFresh(queryKey));
-
-  // If we already have fresh cached data for this exact query, return immediately
-  if (cachedQuestions && cachedQuestions.length > 0 && isQueryFresh) {
-    return {
-      subject: { id: subjectId, name: cachedMeta?.name || '' },
-      total: cachedQuestions.length,
-      returned: cachedQuestions.length,
-      offset: 0,
-      questions: cachedQuestions,
-    };
-  }
-
-  // 2. Fetch full question set for this query from API
-  try {
-    const qs = new URLSearchParams();
-    if (params.year !== undefined) qs.set('year', String(params.year));
-    if (params.chapter) qs.set('chapter', params.chapter);
-    if (params.search) qs.set('search', params.search);
-    qs.set('limit', String(params.limit ?? 50));
-    if (params.offset) qs.set('offset', String(params.offset));
-
-    const liveResult = await fetchApi<QuestionListResult>(`/subjects/${subjectId}/questions?${qs.toString()}`);
-    if (liveResult && liveResult.questions) {
-      await Cache.saveCachedQuestions(subjectId, liveResult.questions);
-      // Mark THIS query as fresh
-      await Cache.updateSubjectCacheMeta(queryKey, `count_${liveResult.questions.length}`);
-    }
-    return liveResult;
-  } catch (e) {
-    // If network fails (offline), return whatever questions we have in SQLite for this filter.
-    if (cachedQuestions && cachedQuestions.length > 0) {
-      return {
-        subject: { id: subjectId, name: cachedMeta?.name || '' },
-        total: cachedQuestions.length,
-        returned: cachedQuestions.length,
-        offset: 0,
-        questions: cachedQuestions,
-      };
-    }
-    throw e;
-  }
+  const qs = new URLSearchParams();
+  if (params.year !== undefined) qs.set('year', String(params.year));
+  if (params.chapter) qs.set('chapter', params.chapter);
+  if (params.search) qs.set('search', params.search);
+  qs.set('limit', String(params.limit ?? 50));
+  if (params.offset) qs.set('offset', String(params.offset));
+  return fetchApi<QuestionListResult>(`/subjects/${subjectId}/questions?${qs.toString()}`);
 };
 
 export const getQuestion = (subjectId: string, questionId: string) =>
   fetchApi<QuestionListResult>(`/subjects/${subjectId}/questions/${encodeURIComponent(questionId)}`);
 
-export const getSolution = async (subjectId: string, questionId: string): Promise<Solution> => {
-  // 1. Check local solution cache
-  const cached = await Cache.getCachedSolution(subjectId, questionId);
-  if (cached) return cached;
-
-  try {
-    const live = await fetchApi<Solution>(
-      `/subjects/${subjectId}/questions/${encodeURIComponent(questionId)}/solution`
-    );
-    if (live) {
-      Cache.saveCachedSolution(subjectId, live);
-    }
-    return live;
-  } catch (e) {
-    if (cached) return cached;
-    throw e;
-  }
-};
+export const getSolution = (subjectId: string, questionId: string): Promise<Solution> =>
+  fetchApi<Solution>(
+    `/subjects/${subjectId}/questions/${encodeURIComponent(questionId)}/solution`
+  );
 
 export const searchSubjects = async (query: string, limit = 20) => {
   const res = await fetchApi<SubjectSearchResult>(`/subjects/search?q=${encodeURIComponent(query)}&limit=${limit}`);
@@ -387,54 +258,27 @@ export const registerPushToken = (token: string, platform: 'ios' | 'android') =>
 // -------------------------------------------------------------
 // SYLLABUS
 // -------------------------------------------------------------
-// Network-first (see syllabusRead below): always try live, AsyncStorage is
-// only the offline fallback. A student on a train with no signal still gets
-// whatever was last fetched, however old.
+// Plain fetchers. The syllabus is network-first (staleTime 0 in queries.ts) so
+// an admin's edit reaches every install without waiting out a TTL; the
+// persisted React Query copy is only the offline fallback. Notes are fetched
+// separately, on demand - see getTopicNotes.
 
-const fetchAndCache = async <T,>(key: string, path: string): Promise<T> => {
-  const live = await fetchApi<T>(path);
-  await SylCache.write(key, live);
-  return live;
-};
+const syllabusRead = <T,>(path: string): Promise<T> => fetchApi<T>(path);
 
-// Network-first: the syllabus payload is lean enough (notes are fetched
-// separately, on demand - see getTopicNotes below) that there's no real cost
-// to always hitting the network, and it means an admin's edit shows up for
-// every install - a real student's included, not just a __DEV__ bundle -
-// without waiting out a cache TTL. AsyncStorage is kept purely as an offline
-// fallback: a student with no signal still gets whatever was last fetched.
-const syllabusRead = async <T,>(key: string, path: string): Promise<T> => {
-  try {
-    return await fetchAndCache(key, path);
-  } catch (e) {
-    const cached = await SylCache.read<T>(key);
-    if (cached != null) return cached;
-    throw e;
-  }
-};
+export const getBranches = () => syllabusRead<Branch[]>('/syllabus/branches');
 
-// forceRefresh is kept on these signatures for callers (e.g. pull-to-refresh)
-// but is a no-op now that syllabusRead is always network-first - it's just
-// not worth touching every call site for a parameter that no longer changes
-// behavior.
-export const getBranches = (_forceRefresh = false) =>
-  syllabusRead<Branch[]>(SylCache.branchesKey(), '/syllabus/branches');
-
-export const getBranchSemesters = (branch: string, _forceRefresh = false) =>
+export const getBranchSemesters = (branch: string) =>
   syllabusRead<BranchSemesters>(
-    SylCache.semestersKey(branch),
     `/syllabus/branches/${encodeURIComponent(branch)}/semesters`
   );
 
-export const getBranchSemester = (branch: string, semester: number, _forceRefresh = false) =>
+export const getBranchSemester = (branch: string, semester: number) =>
   syllabusRead<BranchSemester>(
-    SylCache.semesterKey(branch, semester),
     `/syllabus/branches/${encodeURIComponent(branch)}/semesters/${semester}`
   );
 
-export const getSyllabusSubject = (subject: string, _forceRefresh = false) =>
+export const getSyllabusSubject = (subject: string) =>
   syllabusRead<SyllabusSubject>(
-    SylCache.subjectKey(subject),
     `/syllabus/subjects/${encodeURIComponent(subject)}`
   );
 

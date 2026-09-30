@@ -132,7 +132,7 @@ async function choose(): Promise<Origin> {
 
   // Both unreachable. Keep whatever was active rather than blanking it: the
   // device is most likely offline, and the read paths in index.ts serve their
-  // SQLite cache off the resulting error. When connectivity returns, the next
+  // persisted cache off the resulting error. When connectivity returns, the next
   // failed request re-runs this.
   lastCheckedAt = Date.now();
   console.log(`[Backend] No backend available - staying on ${active.label}`);

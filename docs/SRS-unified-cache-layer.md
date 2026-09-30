@@ -163,3 +163,14 @@ Tests: `queryKeys` uniqueness (FR-4), migration idempotence, mutation rollback, 
 
 ## 9. Files affected
 `package.json`, `App.tsx`, `src/api/index.ts`, new `src/api/queryKeys.ts`, new `src/api/hooks.ts`, `src/db/cacheService.ts` and `src/db/syllabusCache.ts` (removed at the end), `src/screens/*` and `src/components/QuestionItem.tsx` (the 12 importers of `../api`), `src/screens/SettingsScreen.tsx` (clear cache).
+
+## 10. Implementation notes (as built)
+
+- **Retention:** one 30-day `maxAge`/`gcTime` for everything persisted (the persister has a single window), not 7 days for catalog data. Freshness is still governed by `staleTime` (12h catalog/questions/solutions, 0 for syllabus).
+- **Votes/reports (FR-15):** the existing race-safe vote state machine (refs, `actionId`, coalescing) was kept rather than rewritten as `useMutation`; on a successful vote it now calls `setQueryData` to update the cached solution's counts. Rollback remains local state; the cache is only touched on success.
+- **Size guard:** Android AsyncStorage reads rows through a ~2 MB window, so the persister prunes the least recently updated queries to stay under ~1.8 MB.
+- **Persisted key:** `pyq_rq_cache` (swept by "Clear cache").
+- **Migration (FR-22):** `migrateToQueryCache()` in `src/db/cacheService.ts`, flag `pyq_cache_migrated_rq`.
+- **Offline search (FR-14):** `src/api/offlineSearch.ts` searches the in-memory/restored `['questions']` and `['question']` queries.
+- **Not migrated to hooks:** `AllSubjectsScreen` (paginated, uncached), `SearchScreen` online search, topic notes and AI overview (deliberately uncached); the vote/report calls stay imperative.
+- **Behaviour fix:** the old question-list cache stored results under a year/chapter-only key even when `search`/`offset` were set; keys now include every param.

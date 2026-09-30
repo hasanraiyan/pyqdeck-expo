@@ -16,7 +16,9 @@ import { clerkPublishableKey } from './src/auth/publishableKey';
 import { mobileAds } from './src/utils/mobileAds';
 import { navigationRef } from './src/utils/navigationRef';
 import * as Backend from './src/api/backend';
-import { migrateSubjectScopedKeys } from './src/db/cacheService';
+import { migrateToQueryCache } from './src/db/cacheService';
+import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
+import { queryClient, persistOptions } from './src/api/queryClient';
 import { BackendDebugBanner } from './src/components/BackendDebugBanner';
 import {
   registerForPushNotificationsAsync,
@@ -263,9 +265,11 @@ export default Sentry.wrap(function App() {
     // bearing: every screen except the AI tutor works signed out, so auth must
     // never sit on the critical path to first paint.
     <ClerkProvider publishableKey={clerkPublishableKey} tokenCache={tokenCache}>
-      <SafeAreaProvider>
-        <AppContent />
-      </SafeAreaProvider>
+      <PersistQueryClientProvider client={queryClient} persistOptions={persistOptions}>
+        <SafeAreaProvider>
+          <AppContent />
+        </SafeAreaProvider>
+      </PersistQueryClientProvider>
     </ClerkProvider>
   );
 });
@@ -276,7 +280,7 @@ function AppContent() {
   const [onboarded, setOnboarded] = useState<boolean | null>(null);
 
   useEffect(() => {
-    void migrateSubjectScopedKeys();
+    void migrateToQueryCache();
   }, []);
 
   useEffect(() => {

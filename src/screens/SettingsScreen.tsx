@@ -28,6 +28,7 @@ import {
 } from '../utils/settings';
 import { openStoreListing, checkForUpdateInteractive } from '../utils/appUpdate';
 import * as Cache from '../db/cacheService';
+import { clearQueryCache } from '../api/queryClient';
 import { isAuthEnabled } from '../config/features';
 import { resetOnboarding } from '../utils/onboarding';
 
@@ -85,6 +86,7 @@ export const SettingsScreen = ({ navigation }: any) => {
           style: 'destructive',
           onPress: async () => {
             setClearing(true);
+            await clearQueryCache();
             await Cache.clearAllCache();
             setClearing(false);
             setCleared(true);

@@ -15,7 +15,8 @@ import { useRoute, useNavigation, useFocusEffect } from '@react-navigation/nativ
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import { getSubjectMeta, getQuestions } from '../api';
+import { useQuery, keepPreviousData } from '@tanstack/react-query';
+import { useSubjectMeta, questionsQuery } from '../api/queries';
 import { SubjectMeta, QuestionSummary } from '../types';
 import { COLORS, FONTS } from '../theme/colors';
 import { QuestionItem } from '../components/QuestionItem';
@@ -47,15 +48,24 @@ export const QuestionListScreen = () => {
     initialChapter,
   } = route.params || {};
 
-  const [meta, setMeta] = useState<SubjectMeta | null>(null);
+  const metaQ = useSubjectMeta(subjectId);
+  const meta: SubjectMeta | null = metaQ.data ?? null;
   const [selectedYear, setSelectedYear] = useState<number | undefined>(
     initialYear || undefined
   );
   const [selectedChapter, setSelectedChapter] = useState<string | undefined>(
     initialChapter || undefined
   );
-  const [questions, setQuestions] = useState<QuestionSummary[]>([]);
-  const [loading, setLoading] = useState(true);
+  // False until the default year (from meta) has been decided, so the first
+  // question fetch isn't fired for "all years" and then again for the default.
+  const [yearResolved, setYearResolved] = useState(Boolean(initialYear || initialChapter));
+  const questionsQ = useQuery({
+    ...questionsQuery(subjectId, { year: selectedYear, chapter: selectedChapter }),
+    enabled: !!subjectId && yearResolved,
+    placeholderData: keepPreviousData,
+  });
+  const questions: QuestionSummary[] = questionsQ.data?.questions ?? [];
+  const loading = !yearResolved || questionsQ.isPending || questionsQ.isPlaceholderData;
   const [refreshing, setRefreshing] = useState(false);
   const [filterModalVisible, setFilterModalVisible] = useState(false);
   const [isOldUi, setIsOldUi] = useState(false);
@@ -81,72 +91,44 @@ export const QuestionListScreen = () => {
   const applyFilters = () => {
     setSelectedYear(draftYear);
     setSelectedChapter(draftChapter);
-    fetchFilteredQuestions(draftYear, draftChapter);
     setFilterModalVisible(false);
   };
 
-  const loadData = async (forceRefresh = false) => {
-    try {
-      const metaData = await getSubjectMeta(subjectId, forceRefresh);
-      setMeta(metaData);
-
-      // Only default to first year if neither a specific year NOR a specific chapter was requested
-      const shouldDefaultYear = selectedYear === undefined && selectedChapter === undefined;
-      const defaultYear = shouldDefaultYear ? (metaData.years[0]?.year || undefined) : undefined;
-
-      if (shouldDefaultYear && defaultYear) {
-        setSelectedYear(defaultYear);
-      }
-
-      const queryYear = selectedYear ?? defaultYear;
-      const questionsData = await getQuestions(
-        subjectId,
-        { year: queryYear, chapter: selectedChapter },
-        forceRefresh
-      );
-      setQuestions(questionsData.questions);
-
-      if (metaData) {
-        void recordRecentStudy({
-          subjectId,
-          subjectName: metaData.name || subjectName,
-          semesterId,
-          subjectCode: metaData.code || subjectCode,
-          year: queryYear,
-        });
-      }
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  };
-
-  const fetchFilteredQuestions = async (year?: number, chapter?: string) => {
-    setLoading(true);
-    try {
-      const questionsData = await getQuestions(subjectId, { year, chapter });
-      setQuestions(questionsData.questions);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  // Reset when the route params change (same screen instance, new subject/filter).
   useEffect(() => {
     setSelectedYear(initialYear || undefined);
     setSelectedChapter(initialChapter || undefined);
-    loadData();
+    setYearResolved(Boolean(initialYear || initialChapter));
   }, [subjectId, initialYear, initialChapter]);
+
+  // Only default to the latest year if neither a specific year NOR a specific
+  // chapter was requested. Resolved once per subject so that a later explicit
+  // "All years" pick isn't re-defaulted.
+  useEffect(() => {
+    if (yearResolved || !meta) return;
+    const defaultYear = meta.years[0]?.year || undefined;
+    if (defaultYear) setSelectedYear(defaultYear);
+    setYearResolved(true);
+  }, [meta, yearResolved]);
+
+  useEffect(() => {
+    if (!meta || !yearResolved) return;
+    void recordRecentStudy({
+      subjectId,
+      subjectName: meta.name || subjectName,
+      semesterId,
+      subjectCode: meta.code || subjectCode,
+      year: selectedYear,
+    });
+    // Record once per subject visit; year picks are recorded in handleYearSelect.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [meta?.id, yearResolved]);
 
   const handleYearSelect = (year?: number) => {
     if (year === selectedYear) return;
     Haptics.selectionAsync();
     setSelectedYear(year);
     listRef.current?.scrollToOffset({ offset: 0, animated: false });
-    fetchFilteredQuestions(year, selectedChapter);
     void recordRecentStudy({
       subjectId,
       subjectName: meta?.name || subjectName,
@@ -158,7 +140,6 @@ export const QuestionListScreen = () => {
 
   const handleChapterSelect = (chapter?: string) => {
     setSelectedChapter(chapter);
-    fetchFilteredQuestions(selectedYear, chapter);
   };
 
   // Prev / Next Year Navigation
@@ -306,9 +287,13 @@ export const QuestionListScreen = () => {
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
-            onRefresh={() => {
+            onRefresh={async () => {
               setRefreshing(true);
-              loadData(true);
+              try {
+                await Promise.all([metaQ.refetch(), questionsQ.refetch()]);
+              } finally {
+                setRefreshing(false);
+              }
             }}
             tintColor={COLORS.primary}
           />

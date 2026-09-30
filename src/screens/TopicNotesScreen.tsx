@@ -8,10 +8,12 @@ import * as WebBrowser from 'expo-web-browser';
 import { NativeContentRenderer } from '../components/NativeContentRenderer';
 import { COLORS, FONTS } from '../theme/colors';
 import { Topic } from '../types/syllabus';
-import { getTopicNotes, getSyllabusSubject } from '../api';
+import { useQueryClient } from '@tanstack/react-query';
+import { getTopicNotes } from '../api';
+import { syllabusSubjectQuery } from '../api/queries';
+import { qk } from '../api/queryKeys';
 import { getDoneTopics, saveDoneTopics } from '../db/syllabusProgress';
 import { cleanMarkdown } from '../utils/responsive';
-import * as SylCache from '../db/syllabusCache';
 import { solutionMarkdownStyles, markdownRules } from '../theme/markdownStyles';
 import { ScreenEmpty } from '../components/ScreenState';
 import { AdBanner } from '../components/AdBanner';
@@ -58,6 +60,7 @@ export const TopicNotesScreen = () => {
   const insets = useSafeAreaInsets();
   const route = useRoute<any>();
   const navigation = useNavigation<any>();
+  const queryClient = useQueryClient();
   const { topic, subjectId, moduleId, moduleName, notesList, subjectName, semesterId } =
     (route.params ?? {}) as {
       topic?: Topic;
@@ -94,11 +97,9 @@ export const TopicNotesScreen = () => {
     setTopicNotFound(false);
     (async () => {
       try {
-        let modules: any[] | undefined =
-          (await SylCache.read<any>(SylCache.subjectKey(subjectId)).catch(() => null))?.modules;
-        if (!Array.isArray(modules)) {
-          modules = (await getSyllabusSubject(subjectId))?.modules ?? [];
-        }
+        // Cached copy if present, otherwise fetched.
+        const modules: any[] =
+          (await queryClient.ensureQueryData(syllabusSubjectQuery(subjectId)))?.modules ?? [];
         if (cancelled) return;
         for (const m of modules) {
           const t = (m.topics || []).find((x: any) => x.id === paramTopicId);
@@ -148,20 +149,12 @@ export const TopicNotesScreen = () => {
       );
 
     (async () => {
-      const cached = await SylCache.read<any>(SylCache.subjectKey(subjectId)).catch(() => null);
-      if (cancelled) return;
-      if (cached && Array.isArray(cached.modules)) {
-        const flattened = flatten(cached.modules);
-        if (flattened.length > 0) {
-          setLocalNotesList(flattened);
-          return;
-        }
-      }
-      // Reached straight from search, a notification or Jump Back In, without
-      // the subject's syllabus ever having been opened - nothing is cached,
-      // so fetch it rather than leaving the reader with no way onward.
+      // Cached subject if present; reached straight from search, a
+      // notification or Jump Back In, without the subject's syllabus ever
+      // having been opened, ensureQueryData fetches it so the reader still
+      // has a way onward.
       try {
-        const subject = await getSyllabusSubject(subjectId);
+        const subject = await queryClient.ensureQueryData(syllabusSubjectQuery(subjectId));
         if (cancelled) return;
         const flattened = flatten((subject as any)?.modules ?? []);
         if (flattened.length > 0) setLocalNotesList(flattened);
@@ -246,7 +239,8 @@ export const TopicNotesScreen = () => {
         if (cancelled) return;
         const msg = userMessage(e, 'Could not load notes.');
         if (msg.includes('not found') && subjectId) {
-          void SylCache.remove(SylCache.subjectKey(subjectId));
+          // The cached syllabus lists a topic the server no longer has.
+          void queryClient.invalidateQueries({ queryKey: qk.syllabusSubject(subjectId) });
         }
         setError(msg);
       })

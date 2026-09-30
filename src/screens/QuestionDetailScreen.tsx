@@ -17,15 +17,16 @@ import * as Haptics from 'expo-haptics';
 import * as WebBrowser from 'expo-web-browser';
 import { Feather, FontAwesome } from '@expo/vector-icons';
 import { NativeContentRenderer } from '../components/NativeContentRenderer';
+import { useQueryClient } from '@tanstack/react-query';
+import { voteSolution, reportSolution } from '../api';
 import {
-  getQuestion,
-  getQuestions,
-  getSolution,
-  getSimilarQuestions,
-  getRepeatedQuestions,
-  voteSolution,
-  reportSolution,
-} from '../api';
+  useSolution,
+  questionQuery,
+  questionsQuery,
+  similarQuery,
+  repeatsQuery,
+} from '../api/queries';
+import { qk } from '../api/queryKeys';
 import { QuestionSummary, Solution } from '../types';
 import { COLORS, FONTS } from '../theme/colors';
 import { Badge, MarksBadge, AskAiBadge, YearBadge, ShowSolnBadge, QNumBadge } from '../components/Badge';
@@ -61,11 +62,18 @@ export const QuestionDetailScreen = () => {
   const [question, setQuestion] = useState<QuestionSummary | null>(
     initialQuestion || null
   );
-  const [solution, setSolution] = useState<Solution | null>(
-    initialSolution || null
-  );
-  const [loadingSolution, setLoadingSolution] = useState(false);
-  const [solutionError, setSolutionError] = useState(false);
+  const queryClient = useQueryClient();
+  // Fetched only after the user asks (see handleToggleSolution). A solution
+  // already in the query cache is still returned while `enabled` is false.
+  const [wantSolution, setWantSolution] = useState(false);
+  const solutionQ = useSolution(subjectId, questionId, { enabled: wantSolution });
+  const usableInitialSolution =
+    initialSolution && (!initialSolution.questionId || initialSolution.questionId === questionId)
+      ? (initialSolution as Solution)
+      : null;
+  const solution: Solution | null = solutionQ.data ?? usableInitialSolution;
+  const loadingSolution = solutionQ.isFetching && !solution;
+  const solutionError = solutionQ.isError && !solution;
   const [showSolution, setShowSolution] = useState(false);
   // Deep links (see App.tsx's `linking` config) only carry semesterId/subjectId/
   // year/questionId - no subjectName - so backfill it from getQuestion's response.
@@ -123,24 +131,6 @@ export const QuestionDetailScreen = () => {
     voteCountsRef.current = voteCounts;
   }, [voteCounts]);
 
-  const loadSolution = useCallback(
-    async (targetSubjectId: string = subjectId, targetQuestionId: string = questionId) => {
-      if (!targetSubjectId || !targetQuestionId) return;
-      setLoadingSolution(true);
-      setSolutionError(false);
-      try {
-        const sol = await getSolution(targetSubjectId, targetQuestionId);
-        setSolution(sol);
-      } catch (e) {
-        console.error('Failed to load solution', e);
-        setSolutionError(true);
-      } finally {
-        setLoadingSolution(false);
-      }
-    },
-    [subjectId, questionId]
-  );
-
   const handleToggleSolution = () => {
     if (solution) {
       Haptics.selectionAsync();
@@ -150,7 +140,9 @@ export const QuestionDetailScreen = () => {
     if (loadingSolution) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setShowSolution(true);
-    void loadSolution();
+    // First request enables the query; a retry after a failure refetches it.
+    if (wantSolution) void solutionQ.refetch();
+    else setWantSolution(true);
   };
 
   const handleLoadSimilar = async () => {
@@ -165,7 +157,7 @@ export const QuestionDetailScreen = () => {
     setSimilarError(false);
     setShowSimilar(true);
     try {
-      const simData = await getSimilarQuestions(subjectId, questionId);
+      const simData = await queryClient.fetchQuery(similarQuery(subjectId, questionId));
       setSimilar(simData.questions || []);
       setHasLoadedSimilar(true);
     } catch (e) {
@@ -180,7 +172,11 @@ export const QuestionDetailScreen = () => {
     const loadAll = async () => {
       try {
         if (!initialQuestion) {
-          const res = await getQuestion(subjectId, questionId);
+          // Cached copy if present (revalidated in the background), else fetched.
+          const res = await queryClient.ensureQueryData({
+            ...questionQuery(subjectId, questionId),
+            revalidateIfStale: true,
+          });
           if (res.questions && res.questions.length > 0) {
             setQuestion(res.questions[0]);
           }
@@ -188,15 +184,15 @@ export const QuestionDetailScreen = () => {
             setSubjectName(res.subject.name);
           }
         }
-        if (initialSolution && (!initialSolution.questionId || initialSolution.questionId === questionId)) {
-          setSolution(initialSolution);
-          setLoadingSolution(false);
-          setSolutionError(false);
-        }
         const [repData, paperData] = await Promise.all([
-          getRepeatedQuestions(subjectId, questionId).catch(() => ({ questions: [] })),
+          queryClient.fetchQuery(repeatsQuery(subjectId, questionId)).catch(() => ({ questions: [] })),
           currentYear
-            ? getQuestions(subjectId, { year: Number(currentYear), limit: 50 }).catch(() => null)
+            ? queryClient
+                .ensureQueryData({
+                  ...questionsQuery(subjectId, { year: Number(currentYear), limit: 50 }),
+                  revalidateIfStale: true,
+                })
+                .catch(() => null)
             : Promise.resolve(null),
         ]);
         setRepeats(repData.questions || []);
@@ -210,7 +206,7 @@ export const QuestionDetailScreen = () => {
       }
     };
     loadAll();
-  }, [subjectId, questionId, currentYear, loadSolution]);
+  }, [subjectId, questionId, currentYear]);
 
   // Prev/Next-in-paper stays on this same screen instance (setParams, not
   // push) so AdBanner never unmounts - rapid-fire next/next/next taps would
@@ -222,10 +218,8 @@ export const QuestionDetailScreen = () => {
   const goToQuestion = (q: QuestionSummary) => {
     scrollRef.current?.scrollTo({ y: 0, animated: false });
     setQuestion(q);
-    setSolution(null);
+    setWantSolution(false);
     setShowSolution(false);
-    setLoadingSolution(false);
-    setSolutionError(false);
     setRepeats([]);
     setSimilar([]);
     setHasLoadedSimilar(false);
@@ -329,6 +323,10 @@ export const QuestionDetailScreen = () => {
       const clamped = { upvotes: Math.max(0, result.upvotes ?? 0), downvotes: Math.max(0, result.downvotes ?? 0) };
       setVoteCounts(clamped);
       voteCountsRef.current = clamped;
+      // Keep the cached solution's counts in step with the server.
+      queryClient.setQueryData<Solution>(qk.solution(subjectId, questionId), (s) =>
+        s ? { ...s, ...clamped } : s
+      );
       await setMyVote(subjectId, questionId, nextValue);
     } catch (e) {
       if (actionId !== actionIdRef.current) return;

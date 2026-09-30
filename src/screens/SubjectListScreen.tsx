@@ -13,7 +13,8 @@ import { useRoute, useNavigation } from '@react-navigation/native';
 import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import { getSubjects } from '../api';
+import { useQueries, useQueryClient } from '@tanstack/react-query';
+import { subjectsQuery } from '../api/queries';
 import { SubjectSummary } from '../types';
 import { COLORS, FONTS } from '../theme/colors';
 import { SubjectCardSkeleton } from '../components/Skeleton';
@@ -197,43 +198,42 @@ export const SubjectListScreen = () => {
     Math.min(trackWidth, frameMaxWidth) - (isGrid ? hPadding * 2 : 0);
   const cardWidth = isGrid ? (contentWidth - GAP * (columns - 1)) / columns : undefined;
 
-  const [subjects, setSubjects] = useState<(SubjectSummary & { semesterId: string; semesterNumber: number })[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
+  const ids: string[] = Array.isArray(semesterIds) ? semesterIds : [];
+  const idsSig = ids.join(',');
+  const subjectQs = useQueries({ queries: ids.map((id) => subjectsQuery(id)) });
+  const loading = ids.length > 0 && subjectQs.some((q) => q.isPending);
   const [refreshing, setRefreshing] = useState(false);
 
-  const loadData = useCallback(async (isManual = false) => {
-    if (!semesterIds || !Array.isArray(semesterIds)) {
-      setLoading(false);
-      return;
-    }
-    if (isManual) setRefreshing(true);
-    try {
-      const results = await Promise.all(
-        (semesterIds as string[]).map(async (id: string, idx: number) => {
-          const data = await getSubjects(id, isManual);
+  // useQueries returns a new array every render; dataUpdatedAt is a stable proxy.
+  const dataSig = subjectQs.map((q) => q.dataUpdatedAt).join(',');
+  const subjects = useMemo<(SubjectSummary & { semesterId: string; semesterNumber: number })[]>(
+    () =>
+      subjectQs
+        .flatMap((q, idx) => {
           const semNum = availableSemesters[idx] ?? (yearNumber ? yearNumber * 2 - 1 + idx : 1);
-          return data.map((subject) => ({
+          return (q.data ?? []).map((subject) => ({
             ...subject,
-            semesterId: id,
+            semesterId: ids[idx],
             semesterNumber: semNum,
           }));
         })
-      );
-      const merged = results
-        .flat()
-        .sort((a, b) => a.semesterNumber - b.semesterNumber || a.name.localeCompare(b.name));
-      setSubjects(merged);
+        .sort((a, b) => a.semesterNumber - b.semesterNumber || a.name.localeCompare(b.name)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [dataSig, availableSemesters, yearNumber, idsSig]
+  );
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await Promise.all(ids.map((id) => queryClient.refetchQueries({ queryKey: ['subjects', id] })));
     } catch (e) {
       console.error(e);
     } finally {
-      setLoading(false);
       setRefreshing(false);
     }
-  }, [semesterIds, availableSemesters, yearNumber]);
-
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [queryClient, idsSig]);
 
   const subjectsBySemester = useMemo(() => {
     const map: Record<number, (SubjectSummary & { semesterId: string; semesterNumber: number })[]> = {};
@@ -327,7 +327,7 @@ export const SubjectListScreen = () => {
                   subjects={subjectsBySemester[semNum] || []}
                   loading={loading}
                   refreshing={refreshing}
-                  onRefresh={() => loadData(true)}
+                  onRefresh={onRefresh}
                   isGrid={isGrid}
                   columns={columns}
                   cardWidth={cardWidth}
@@ -347,7 +347,7 @@ export const SubjectListScreen = () => {
           subjects={subjects}
           loading={loading}
           refreshing={refreshing}
-          onRefresh={() => loadData(true)}
+          onRefresh={onRefresh}
           isGrid={isGrid}
           columns={columns}
           cardWidth={cardWidth}

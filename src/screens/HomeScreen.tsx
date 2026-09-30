@@ -13,8 +13,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import { getSemesters, getSubjects } from '../api';
-import { getCachedSemesters, getCachedSubjects, saveCachedSemesters } from '../db/cacheService';
+import { useQueries, useQueryClient } from '@tanstack/react-query';
+import { useSemesters, subjectsQuery } from '../api/queries';
 import { Semester } from '../types';
 import { COLORS, FONTS } from '../theme/colors';
 import { WaveLoader } from '../components/WaveLoader';
@@ -57,10 +57,24 @@ export const HomeScreen = () => {
   // actually reflows when a browser window is resized.
   const heroTitleSize = bp({ phone: rf(27), tablet: rf(30), laptop: rf(34), desktop: rf(37) });
   const heroSubtitleSize = bp({ phone: rf(13.5), laptop: rf(15) });
-  const [semestersData, setSemestersData] = useState<
-    { semester: Semester; subjectCount: number }[]
-  >([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
+  const semestersQ = useSemesters();
+  const subjectQs = useQueries({
+    queries: (semestersQ.data ?? []).map((sem) => subjectsQuery(sem.id)),
+  });
+  // A failed/again-pending subject fetch just counts as 0, as before.
+  const subjectCounts = subjectQs.map((q) => q.data?.length ?? 0).join(',');
+  const semestersData = useMemo<{ semester: Semester; subjectCount: number }[]>(
+    () =>
+      (semestersQ.data ?? []).map((semester, i) => ({
+        semester,
+        subjectCount: subjectQs[i]?.data?.length ?? 0,
+      })),
+    // subjectCounts is a stable string proxy for the per-query data
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [semestersQ.data, subjectCounts]
+  );
+  const loading = semestersQ.isPending;
   const [refreshing, setRefreshing] = useState(false);
   const [recentStudies, setRecentStudies] = useState<RecentStudy[]>([]);
   const [recentNotes, setRecentNotes] = useState<RecentNote[]>([]);
@@ -117,53 +131,16 @@ export const HomeScreen = () => {
     return items.sort((a, b) => b.visitedAt - a.visitedAt);
   }, [recentStudies, recentNotes]);
 
-  const loadData = async (isManualRefresh = false) => {
-    // 1. Instant 0ms load from cache if available
-    if (!isManualRefresh) {
-      const cached = await getCachedSemesters();
-      if (cached && cached.length > 0) {
-        const cachedWithCounts = await Promise.all(
-          cached.map(async (sem) => {
-            const subs = (await getCachedSubjects(sem.id)) || [];
-            return { semester: sem, subjectCount: subs.length };
-          })
-        );
-        setSemestersData(cachedWithCounts);
-        setLoading(false);
-      }
-    }
-
-    // 2. Fetch fresh data from API
+  const onRefresh = async () => {
+    setRefreshing(true);
     try {
-      const semesters = await getSemesters(isManualRefresh);
-
-      const withCounts = await Promise.all(
-        semesters.map(async (sem) => {
-          try {
-            const subs = await getSubjects(sem.id, isManualRefresh);
-            return { semester: sem, subjectCount: subs.length };
-          } catch {
-            return { semester: sem, subjectCount: 0 };
-          }
-        })
-      );
-
-      setSemestersData(withCounts);
+      await queryClient.refetchQueries({ queryKey: ['semesters'] });
+      await queryClient.refetchQueries({ queryKey: ['subjects'] });
     } catch (e) {
       console.error(e);
     } finally {
-      setLoading(false);
       setRefreshing(false);
     }
-  };
-
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  const onRefresh = () => {
-    setRefreshing(true);
-    loadData(true);
   };
 
   const yearsData = useMemo(

@@ -18,7 +18,7 @@ import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
 import * as WebBrowser from 'expo-web-browser';
 import { COLORS, FONTS } from '../theme/colors';
-import { getSyllabusSubject } from '../api';
+import { useSyllabusSubject } from '../api/queries';
 import { SyllabusModule, SyllabusSubject, Topic } from '../types/syllabus';
 import { getDoneTopics, saveDoneTopics, pruneOrphanedDoneTopics } from '../db/syllabusProgress';
 import { DoneStamp } from '../components/Badge';
@@ -57,8 +57,11 @@ export const SubjectSyllabusScreen = () => {
   const navigation = useNavigation<any>();
   const { subjectId } = route.params ?? {};
 
-  const [subject, setSubject] = useState<SyllabusSubject | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const subjectQ = useSyllabusSubject(subjectId);
+  const subject: SyllabusSubject | null = subjectQ.data ?? null;
+  // Only an error when there is nothing (not even a persisted copy) to show.
+  const error =
+    subjectQ.isError && !subjectQ.data ? userMessage(subjectQ.error, 'Could not load this subject.') : null;
   const [refreshing, setRefreshing] = useState(false);
   const [done, setDone] = useState<Set<string>>(new Set());
   const [open, setOpen] = useState<Set<string>>(new Set());
@@ -85,39 +88,16 @@ export const SubjectSyllabusScreen = () => {
     };
   }, []);
 
-  const load = useCallback(
-    async (force = false) => {
-      if (!subjectId) return;
-      try {
-        setError(null);
-        const next = await getSyllabusSubject(subjectId, force);
-        setSubject(next);
-        // Progress is device-local. Prune any orphaned keys from deleted/re-created topics.
-        const validKeys = new Set<string>();
-        for (const m of next.modules || []) {
-          for (const t of m.topics || []) {
-            validKeys.add(topicKey(m.id, t.id));
-          }
-        }
-        const d = await pruneOrphanedDoneTopics(next.id, validKeys);
-        setDone(d);
-        // Keep all modules collapsed by default; user taps to expand.
-        setOpen(new Set());
-      } catch (e: any) {
-        setError(userMessage(e, 'Could not load this subject.'));
-      }
-    },
-    [subjectId]
-  );
-
+  // Keep all modules collapsed by default; user taps to expand.
   useEffect(() => {
-    void load();
-  }, [load]);
+    setOpen(new Set());
+  }, [subjectId]);
 
-  // Re-read done topics (not a full network refetch) whenever this screen
-  // regains focus - marking a topic complete from TopicNotesScreen writes
-  // straight to the same AsyncStorage key, and this is what picks that up
-  // on the way back without a pull-to-refresh.
+  // Progress is device-local. Re-read done topics (pruning any orphaned keys
+  // from deleted/re-created topics) when the subject loads and whenever this
+  // screen regains focus - marking a topic complete from TopicNotesScreen
+  // writes straight to the same AsyncStorage key, and this is what picks that
+  // up on the way back without a pull-to-refresh.
   useFocusEffect(
     useCallback(() => {
       if (!subject) return;
@@ -133,7 +113,7 @@ export const SubjectSyllabusScreen = () => {
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await load(true);
+    await subjectQ.refetch();
     setRefreshing(false);
   };
 
@@ -230,7 +210,7 @@ export const SubjectSyllabusScreen = () => {
     return (
       <View style={styles.centerContainer}>
         {error ? (
-          <ScreenError message={error} onRetry={() => load(true)} />
+          <ScreenError message={error} onRetry={() => void subjectQ.refetch()} />
         ) : (
           <CircleLoader color={COLORS.primary} dotSize={6} size={40} />
         )}
