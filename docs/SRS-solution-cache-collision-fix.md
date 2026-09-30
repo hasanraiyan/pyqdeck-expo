@@ -25,7 +25,7 @@ Solutions are cached in AsyncStorage under `pyq_solution_${questionId}`, with no
 
 ### 1.4 Scope
 In scope: solution cache, per-question cache, migration of existing bad entries, tests.
-Out of scope: server API changes, vote storage redesign (see 5, open questions), UI changes.
+Out of scope: server API changes, UI changes. The solution TTL (section 5) is a separate follow-up commit.
 
 ### 1.5 Definitions
 - **Subject id**: id in `/subjects/{subjectId}/...` API routes.
@@ -49,23 +49,27 @@ Out of scope: server API changes, vote storage redesign (see 5, open questions),
 | FR-6 | `searchOfflineQuestions` MUST scan the new `pyq2_question_` prefix only. |
 | FR-7 | On app start, a one-time migration MUST delete all legacy `pyq_solution_*` and `pyq_question_*` keys, guarded by a flag key (e.g. `pyq_cache_migrated_v2`) so it runs once. |
 | FR-8 | Before caching or returning a cached solution, the client SHOULD verify `solution.questionId === questionId`; on mismatch, discard the entry and fetch live. |
-| FR-9 | If the year is required to make a question unique within a subject (see Q1 in section 5), the year MUST be added to the key of FR-1 and FR-4. |
+| FR-9 | Year is NOT part of any key. `questionId` is unique per subject (resolved decision D1). |
 | FR-10 | Offline fallback behaviour is unchanged: on network failure return the subject-scoped cached solution if present, else throw. |
 
 ## 4. Non-functional requirements
 
 | ID | Requirement |
 |---|---|
+| FR-11 | The local vote mirror in `src/utils/votes.ts` (`my_solution_votes`) MUST be keyed `${subjectId}:${questionId}`. `getMyVote` and `setMyVote` take `(subjectId, questionId, ...)`; callers (`QuestionItem.tsx`, `QuestionDetailScreen.tsx`) pass the `subjectId` already in scope. |
+| FR-12 | The migration (FR-7) MUST also clear the legacy `my_solution_votes` key. Old entries carry no subject and cannot be re-keyed safely; highlight state repopulates from the server's per-account vote state on next fetch. |
 | NFR-1 | No extra network requests in the normal (cache-hit) path. |
 | NFR-2 | Migration MUST be non-blocking to first render (run async after startup, errors swallowed and logged). |
 | NFR-3 | Follow existing code style and try/catch pattern in `cacheService.ts`. |
 | NFR-4 | Implementation uses only existing dependencies (AsyncStorage); no native code (per AGENTS.md). |
 
-## 5. Open questions
+## 5. Resolved decisions and follow-ups
 
-1. **Is `questionId` unique per subject across years?** If `Q6` repeats between 2024 and 2025 papers of the same subject, subject-only keys still collide; then FR-9 applies. Verify against the API (e.g. `browse_content` for the SE subject).
-2. **Votes.** `src/utils/votes.ts` stores `my_solution_votes`; confirm its key includes the subject id, or apply the same fix.
-3. Should solutions get a TTL (like the 12h question cache) so edited or moderated solutions refresh? Recommended follow-up, not required here.
+**D1. Year is not needed in the key.** The server enforces `questionSchema.index({ questionId: 1, subject: 1 }, { unique: true })` (`server/server/models/Question.js:43`, "Local ID per subject"). Live data for `sem6_software_engineering`: 2025 Q1f = Q6, 2024 Q1f = Q54, 2023 Q1f = Q131; ids increment and never repeat within a subject. `subjectId + questionId` is a complete key; the reported bug is a missing subject, not a missing year.
+
+**D2. Votes need the same fix, at smaller scope.** `votes.ts:8,23,29` store `Record<questionId, 1|-1>`, so voting on SE Q6 highlights Web Technology Q6 too. The server side is correct: votes are keyed by the solution ObjectId (`models/SolutionVote.js:14,28`) through a subject-scoped route (`publicDataRoutes.js:113-120`). Only the local highlight mirror is affected (FR-11, FR-12).
+
+**D3. Solution TTL: agreed, separate follow-up commit.** Today `getSolution` (`src/api/index.ts:313-314`) is cache-first with no freshness check, so a solution is served until `clearAllCache()`. Solutions are mutable (admin fixes after reports, cached `upvotes`/`downvotes` go stale, `isAnswerAvailable` flips). Proposed shape: store `{ solution, cachedAt }`; serve cached if under `CACHE_TTL_MS` (12h, `cacheService.ts:11`), otherwise revalidate in the background and fall back to the stale copy on network failure, matching `getQuestions:295-303`. Not part of this change.
 
 ## 6. Design summary
 
@@ -98,17 +102,19 @@ await AsyncStorage.setItem('pyq_cache_migrated_v2', '1');
 | AC-5 | Offline after viewing a solution | Cached subject-scoped solution shown |
 | AC-6 | Offline search | Returns only subject-correct questions, no duplicates from key collisions |
 | AC-7 | Migration runs twice | Second run is a no-op |
+| AC-8 | Upvote SE Q6 | Web Technology Q6 is not highlighted; SE Q6 is |
+| AC-9 | Upgrade with legacy `my_solution_votes` | Key cleared; highlights repopulate from server state |
 
-Unit tests: key builders, `getSolution` cache hit/miss/mismatch, migration idempotence (mock AsyncStorage).
+Unit tests: vote key builder and get/set round-trip, key builders, `getSolution` cache hit/miss/mismatch, migration idempotence (mock AsyncStorage).
 
 ## 8. Risks
 
 - Users lose offline solution cache once after upgrade (acceptable; re-fetched on demand).
-- If FR-9 is needed and skipped, collisions persist within a subject.
+- Users lose their local vote highlights once after upgrade until the server state is refetched.
 
 ## 9. Files affected
 
 - `src/db/cacheService.ts`
 - `src/api/index.ts`
 - App startup (e.g. `App.tsx`) for the migration call
-- Possibly `src/utils/votes.ts` (open question 2)
+- `src/utils/votes.ts` and its callers `src/components/QuestionItem.tsx` (~line 106) and `src/screens/QuestionDetailScreen.tsx`
