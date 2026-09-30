@@ -211,9 +211,9 @@ export const HomeScreen = () => {
               style={styles.headerLogo}
               resizeMode="contain"
             />
-            <View>
-              <Text style={styles.brandTitle}>PyQdeck</Text>
-              <Text style={styles.brandSubtitle}>BEU PYQ ARCHIVE</Text>
+            <View style={styles.brandText}>
+              <Text style={styles.brandTitle} numberOfLines={1}>PyQdeck</Text>
+              <Text style={styles.brandSubtitle} numberOfLines={1}>BEU PYQ ARCHIVE</Text>
             </View>
           </View>
           <View style={styles.headerActions}>
@@ -221,7 +221,7 @@ export const HomeScreen = () => {
               onPress={() => navigation.navigate('AllSubjects')}
               style={styles.headerLink}
             >
-              <Text style={styles.headerLinkText}>Subjects</Text>
+              <Text style={styles.headerLinkText} numberOfLines={1}>Subjects</Text>
             </TouchableOpacity>
             <TouchableOpacity
               onPress={() => navigation.navigate('Settings')}
@@ -277,7 +277,9 @@ export const HomeScreen = () => {
                 onPress={() => navigation.navigate('Search')}
               >
                 <Feather name="search" size={16} color={COLORS.textMuted} />
-                <Text style={styles.heroSearchPlaceholder}>Search subjects, questions, theorems...</Text>
+                <Text style={styles.heroSearchPlaceholder} numberOfLines={1}>
+                  Search subjects, questions, theorems...
+                </Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -606,11 +608,20 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
+    // Lets the brand yield space to the actions instead of pushing them off
+    // (or squashing them) on narrow screens / large font settings.
+    flexShrink: 1,
+    minWidth: 0,
+  },
+  brandText: {
+    flexShrink: 1,
+    minWidth: 0,
   },
   headerLogo: {
     width: 32,
     height: 32,
     borderRadius: 6,
+    flexShrink: 0,
   },
   brandTitle: {
     fontFamily: FONTS.serif,
@@ -631,6 +642,8 @@ const styles = StyleSheet.create({
   headerActions: {
     flexDirection: 'row',
     alignItems: 'center',
+    flexShrink: 0,
+    marginLeft: 8,
   },
   headerLink: {
     paddingVertical: 4,
@@ -701,6 +714,7 @@ const styles = StyleSheet.create({
     marginTop: 14,
   },
   heroSearchPlaceholder: {
+    flex: 1,
     fontFamily: FONTS.sans,
     fontSize: rf(13),
     color: COLORS.textMuted,

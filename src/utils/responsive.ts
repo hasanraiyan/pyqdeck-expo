@@ -109,14 +109,24 @@ export const moderateScale = (size: number, factor = 0.5): number => {
   return Math.round(PixelRatio.roundToNearestPixel(newSize));
 };
 
+// Highest system font scale we let text reach. Beyond this the header, cards
+// and chips break on phones with "Largest" font / display size enabled.
+const MAX_FONT_SCALE = 1.25;
+
 /**
- * Responsive Font Size - respects system accessibility font scaling
+ * Responsive Font Size.
+ *
+ * <Text> already multiplies every fontSize by the system font scale, so this
+ * must NOT multiply by it too - doing so scaled text twice (font scale 1.3
+ * rendered as ~1.7x). Instead the value is pre-divided so that after <Text>
+ * applies the system scale, the effective scale is clamped to MAX_FONT_SCALE.
+ * Accessibility scaling still works, just capped.
  */
 export const rf = (size: number): number => {
   const fontScale = PixelRatio.getFontScale();
   const scaled = moderateScale(size, 0.3);
-  // Cap extreme font scaling to prevent UI breakage
-  return Math.min(scaled * fontScale, size * 1.4);
+  const effective = Math.min(fontScale, MAX_FONT_SCALE);
+  return scaled * (effective / fontScale);
 };
 
 /**
