@@ -103,6 +103,7 @@
       "expo-font",
       "expo-notifications",
       "./plugins/withVolumeScroll",
+      "./plugins/withR8Optimization",
       [
         "expo-build-properties",
         {
