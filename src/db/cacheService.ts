@@ -10,6 +10,15 @@ import {
 
 const CACHE_TTL_MS = 12 * 60 * 60 * 1000; // 12 Hours
 
+// questionId is only unique per subject ("Q6" exists in every subject), so
+// per-question and solution keys MUST carry the subject id. Keep the `pyq_`
+// prefix so clearAllCache() still sweeps them.
+const solutionKey = (subjectId: string, questionId: string) =>
+  `pyq_v2_solution_${subjectId}_${questionId}`;
+const questionKey = (subjectId: string, questionId: string) =>
+  `pyq_v2_question_${subjectId}_${questionId}`;
+const QUESTION_KEY_PREFIX = 'pyq_v2_question_';
+
 /**
  * Generate a deterministic fingerprint hash for a subject's metadata
  */
@@ -174,7 +183,7 @@ export async function saveCachedQuestions(
     // Also cache individual questions for fast detail lookup
     for (const q of questions) {
       if (q.questionId) {
-        await AsyncStorage.setItem(`pyq_question_${q.questionId}`, JSON.stringify(q));
+        await AsyncStorage.setItem(questionKey(subjectId, q.questionId), JSON.stringify(q));
       }
     }
   } catch (e) {
@@ -182,9 +191,12 @@ export async function saveCachedQuestions(
   }
 }
 
-export async function getCachedQuestion(questionId: string): Promise<QuestionSummary | null> {
+export async function getCachedQuestion(
+  subjectId: string,
+  questionId: string
+): Promise<QuestionSummary | null> {
   try {
-    const raw = await AsyncStorage.getItem(`pyq_question_${questionId}`);
+    const raw = await AsyncStorage.getItem(questionKey(subjectId, questionId));
     return raw ? JSON.parse(raw) : null;
   } catch {
     return null;
@@ -195,10 +207,16 @@ export async function getCachedQuestion(questionId: string): Promise<QuestionSum
 // SOLUTIONS
 // -------------------------------------------------------------
 
-export async function getCachedSolution(questionId: string): Promise<Solution | null> {
+export async function getCachedSolution(
+  subjectId: string,
+  questionId: string
+): Promise<Solution | null> {
   try {
-    const raw = await AsyncStorage.getItem(`pyq_solution_${questionId}`);
-    return raw ? JSON.parse(raw) : null;
+    const raw = await AsyncStorage.getItem(solutionKey(subjectId, questionId));
+    if (!raw) return null;
+    const solution: Solution = JSON.parse(raw);
+    // Defensive: never serve a payload that belongs to a different question.
+    return solution?.questionId === questionId ? solution : null;
   } catch {
     return null;
   }
@@ -207,7 +225,10 @@ export async function getCachedSolution(questionId: string): Promise<Solution | 
 export async function saveCachedSolution(subjectId: string, solution: Solution) {
   try {
     if (solution && solution.questionId) {
-      await AsyncStorage.setItem(`pyq_solution_${solution.questionId}`, JSON.stringify(solution));
+      await AsyncStorage.setItem(
+        solutionKey(subjectId, solution.questionId),
+        JSON.stringify(solution)
+      );
     }
   } catch (e) {
     console.error('Failed to save cached solution:', e);
@@ -221,7 +242,7 @@ export async function saveCachedSolution(subjectId: string, solution: Solution) 
 export async function searchOfflineQuestions(query: string): Promise<QuestionSummary[]> {
   try {
     const keys = await AsyncStorage.getAllKeys();
-    const qKeys = keys.filter((k) => k.startsWith('pyq_question_'));
+    const qKeys = keys.filter((k) => k.startsWith(QUESTION_KEY_PREFIX));
     if (qKeys.length === 0) return [];
 
     const rawValues = await Promise.all(qKeys.map((k) => AsyncStorage.getItem(k)));
@@ -287,5 +308,34 @@ export async function clearAllCache(): Promise<void> {
   const cacheKeys = keys.filter((k) => k.startsWith('pyq_'));
   if (cacheKeys.length > 0) {
     await AsyncStorage.multiRemove(cacheKeys);
+  }
+}
+
+// -------------------------------------------------------------
+// MIGRATIONS
+// -------------------------------------------------------------
+
+const MIGRATION_V2_FLAG = 'pyq_cache_migrated_v2';
+
+/**
+ * One-time cleanup of entries written before keys were subject-scoped
+ * (`pyq_solution_<qid>`, `pyq_question_<qid>`, `my_solution_votes`). Those
+ * carry no subject id so they can't be re-keyed - some are already poisoned
+ * with another subject's data. Safe to re-run; the flag makes it a no-op.
+ */
+export async function migrateSubjectScopedKeys(): Promise<void> {
+  try {
+    if (await AsyncStorage.getItem(MIGRATION_V2_FLAG)) return;
+    const keys = await AsyncStorage.getAllKeys();
+    const legacy = keys.filter(
+      (k) =>
+        k.startsWith('pyq_solution_') ||
+        k.startsWith('pyq_question_') ||
+        k === 'my_solution_votes'
+    );
+    if (legacy.length > 0) await AsyncStorage.multiRemove(legacy);
+    await AsyncStorage.setItem(MIGRATION_V2_FLAG, '1');
+  } catch (e) {
+    console.error('Cache migration failed:', e);
   }
 }

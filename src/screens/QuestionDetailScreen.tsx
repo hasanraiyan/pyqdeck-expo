@@ -112,8 +112,8 @@ export const QuestionDetailScreen = () => {
 
   useEffect(() => {
     if (!questionId) return;
-    getMyVote(questionId).then(setMyVoteState);
-  }, [questionId]);
+    getMyVote(subjectId, questionId).then(setMyVoteState);
+  }, [subjectId, questionId]);
 
   // Keep refs in sync for stale-closure-free optimistic math
   useEffect(() => {
@@ -329,7 +329,7 @@ export const QuestionDetailScreen = () => {
       const clamped = { upvotes: Math.max(0, result.upvotes ?? 0), downvotes: Math.max(0, result.downvotes ?? 0) };
       setVoteCounts(clamped);
       voteCountsRef.current = clamped;
-      await setMyVote(questionId, nextValue);
+      await setMyVote(subjectId, questionId, nextValue);
     } catch (e) {
       if (actionId !== actionIdRef.current) return;
       setVoteCounts(prevCounts);

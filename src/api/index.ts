@@ -310,7 +310,7 @@ export const getQuestion = (subjectId: string, questionId: string) =>
 
 export const getSolution = async (subjectId: string, questionId: string): Promise<Solution> => {
   // 1. Check local solution cache
-  const cached = await Cache.getCachedSolution(questionId);
+  const cached = await Cache.getCachedSolution(subjectId, questionId);
   if (cached) return cached;
 
   try {

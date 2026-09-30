@@ -103,8 +103,8 @@ export const QuestionItem: React.FC<QuestionItemProps> = React.memo(({
   }, [solution]);
 
   useEffect(() => {
-    if (expanded && question.questionId) getMyVote(question.questionId).then(setMyVoteState);
-  }, [expanded, question.questionId]);
+    if (expanded && question.questionId) getMyVote(subjectId, question.questionId).then(setMyVoteState);
+  }, [expanded, subjectId, question.questionId]);
 
   useEffect(() => {
     myVoteRef.current = myVote;
@@ -172,7 +172,7 @@ export const QuestionItem: React.FC<QuestionItemProps> = React.memo(({
       const clamped = { upvotes: Math.max(0, result.upvotes ?? 0), downvotes: Math.max(0, result.downvotes ?? 0) };
       setVoteCounts(clamped);
       voteCountsRef.current = clamped;
-      await setMyVote(question.questionId, nextValue);
+      await setMyVote(subjectId, question.questionId, nextValue);
     } catch (e) {
       if (actionId !== actionIdRef.current) return;
       setVoteCounts(prevCounts);

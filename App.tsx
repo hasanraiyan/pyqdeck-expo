@@ -16,6 +16,7 @@ import { clerkPublishableKey } from './src/auth/publishableKey';
 import { mobileAds } from './src/utils/mobileAds';
 import { navigationRef } from './src/utils/navigationRef';
 import * as Backend from './src/api/backend';
+import { migrateSubjectScopedKeys } from './src/db/cacheService';
 import { BackendDebugBanner } from './src/components/BackendDebugBanner';
 import {
   registerForPushNotificationsAsync,
@@ -273,6 +274,10 @@ function AppContent() {
   const insets = useSafeAreaInsets();
   // null = still reading AsyncStorage (prevents white flash or wrong screen)
   const [onboarded, setOnboarded] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    void migrateSubjectScopedKeys();
+  }, []);
 
   useEffect(() => {
     hasSeenOnboarding().then((seen) => setOnboarded(seen));

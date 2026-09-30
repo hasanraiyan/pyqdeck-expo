@@ -41,12 +41,12 @@ Out of scope: server API changes, UI changes. The solution TTL (section 5) is a 
 
 | ID | Requirement |
 |---|---|
-| FR-1 | Solution cache keys MUST include the subject id: `pyq2_solution_${subjectId}_${questionId}`. |
+| FR-1 | Solution cache keys MUST include the subject id: `pyq_v2_solution_${subjectId}_${questionId}`. The `pyq_` prefix is kept so `clearAllCache()` sweeps them. |
 | FR-2 | `getCachedSolution` MUST take `(subjectId, questionId)`; `saveCachedSolution` MUST use its `subjectId` argument to build the key. |
 | FR-3 | `getSolution` MUST pass `subjectId` to both cache read and write. |
-| FR-4 | Per-question cache keys MUST include the subject id: `pyq2_question_${subjectId}_${questionId}`; `getCachedQuestion` takes `(subjectId, questionId)`. |
+| FR-4 | Per-question cache keys MUST include the subject id: `pyq_v2_question_${subjectId}_${questionId}`; `getCachedQuestion` takes `(subjectId, questionId)`. |
 | FR-5 | `saveCachedQuestions` MUST write per-question keys using its `subjectId` argument. |
-| FR-6 | `searchOfflineQuestions` MUST scan the new `pyq2_question_` prefix only. |
+| FR-6 | `searchOfflineQuestions` MUST scan the new `pyq_v2_question_` prefix only. |
 | FR-7 | On app start, a one-time migration MUST delete all legacy `pyq_solution_*` and `pyq_question_*` keys, guarded by a flag key (e.g. `pyq_cache_migrated_v2`) so it runs once. |
 | FR-8 | Before caching or returning a cached solution, the client SHOULD verify `solution.questionId === questionId`; on mismatch, discard the entry and fetch live. |
 | FR-9 | Year is NOT part of any key. `questionId` is unique per subject (resolved decision D1). |
@@ -75,7 +75,7 @@ Out of scope: server API changes, UI changes. The solution TTL (section 5) is a 
 
 ```ts
 // cacheService.ts
-const solKey = (s: string, q: string) => `pyq2_solution_${s}_${q}`;
+const solKey = (s: string, q: string) => `pyq_v2_solution_${s}_${q}`;
 export async function getCachedSolution(subjectId: string, questionId: string) { ... }
 export async function saveCachedSolution(subjectId: string, solution: Solution) {
   await AsyncStorage.setItem(solKey(subjectId, solution.questionId), JSON.stringify(solution));
