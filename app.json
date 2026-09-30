@@ -73,12 +73,12 @@
             {
               "scheme": "https",
               "host": "pyqdeck.in",
-              "pathPattern": "/.*/.*/.*/.*"
+              "pathPattern": "/.*/.*/20.*/.*"
             },
             {
               "scheme": "https",
               "host": "www.pyqdeck.in",
-              "pathPattern": "/.*/.*/.*/.*"
+              "pathPattern": "/.*/.*/20.*/.*"
             }
           ],
           "category": [
