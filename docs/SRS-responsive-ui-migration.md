@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | Document | Software Requirements Specification (repo copy) |
-| Status | Approved. Phases 0 to 2 and 4 implemented, Phase 3 partly (Browse only) |
+| Status | Approved. Phases 0 to 2 and 4 implemented, Phase 3 partly (Browse and Study; Search not) |
 | Full document | The claude.ai doc "PYQDeck Responsive UI Migration - SRS" holds the long form, including the gap audit, research notes, feasibility table and risks. This file keeps what code needs to reference |
 
 ## 1. Goals
@@ -43,7 +43,8 @@ Rules: BP-2 crossing a threshold keeps navigation state; BP-3 grid columns come 
 | FR-L1 | Shared `ScreenContainer` | M | Done; used by Home, SubjectDetail, Settings, Search, plus `useContainerStyle` on the four Study screens |
 | FR-L2 | Shared `ResponsiveGrid` (pure logic in `layout.ts`) | M | Done; Home and SubjectDetail year grids. AllSubjects and SubjectList FlatLists use measured-width `getGridColumns` |
 | FR-L3 | List-detail for Browse | M | Done as a list pane inside `QuestionDetailScreen` (the paper's questions beside the open one) when its own box is >= 800 px. Keeps stack, deep links and back button |
-| FR-L4, FR-L5 | List-detail for Study and Search | S | Pending |
+| FR-L4 | List-detail for Study | S | Done as a topic pane inside `TopicNotesScreen` (topics grouped by module, open one highlighted and scrolled into view), same pattern as Browse |
+| FR-L5 | List-detail for Search | S | Not done: `SearchScreen` mixes four result types, so it needs its own design |
 | FR-L6 | Narrow windows get one pane | M | Done (pane is measured, so tablet portrait and phone stay single-pane) |
 | FR-L7 | Prose capped at `readMaxWidth` | M | Existing on 9 screens |
 | FR-L8 | Selected row highlighted in list-detail | M | Done |
@@ -68,7 +69,7 @@ Phone UI unchanged (NFR-1); no new native dependency and no release workflow cha
 0. Foundations: breakpoint consolidation, tokens, pure layout logic with tests, stale `Dimensions` fixes. **Done.**
 1. Navigation shell using `tabBarPosition` / `tabBarVariant` (React Navigation 7.19). **Done** except FR-N4 to N8.
 2. `ScreenContainer`, `ResponsiveGrid`, screen migration. **Done** (QuestionList keeps its own `readMaxWidth` cap): all screens now use `ScreenContainer` / `useContainerStyle` / `ResponsiveGrid`, or measured-width `getGridColumns`.
-3. Master-detail. **Browse done** with a simpler design than the nested navigator first proposed: the detail screen shows the paper's question list beside it, so URLs, deep links and back behave unchanged. Study and Search pending.
+3. Master-detail. **Browse and Study done** with a simpler design than the nested navigator first proposed: the detail screen shows its list beside it, so URLs, deep links and back behave unchanged. Search pending.
 4. Hover/focus/keyboard, dialog modals, skeleton parity, state screens, dev overlay. **Done** except the `compact` density prop (FR-C1) and device QA.
 
 ## 6. Open questions
