@@ -3,6 +3,7 @@ import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Backend from '../api/backend';
 import { COLORS, FONTS } from '../theme/colors';
+import { useResponsive } from '../utils/responsive';
 
 // Dev-only strip showing which backend the app is talking to, with buttons to
 // force one. Exists because backend selection is otherwise invisible - the
@@ -16,6 +17,8 @@ import { COLORS, FONTS } from '../theme/colors';
 // setPinned() is inert, so it cannot affect a production app.
 export function BackendDebugBanner() {
   const insets = useSafeAreaInsets();
+  // Current window class and width, for checking layouts while resizing (FR-R5).
+  const { breakpoint, width } = useResponsive();
   const [state, setState] = useState(Backend.getState);
 
   useEffect(() => {
@@ -39,6 +42,7 @@ export function BackendDebugBanner() {
         <Text style={styles.label} numberOfLines={1}>
           <Text style={styles.dot}>{state.pinned ? '◉ ' : '○ '}</Text>
           {host}
+          <Text style={styles.dot}>{`  ${breakpoint} ${Math.round(width)}px`}</Text>
         </Text>
 
         <View style={styles.buttons}>

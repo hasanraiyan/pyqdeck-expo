@@ -30,6 +30,7 @@ import { rf, verticalScale, useResponsive } from '../utils/responsive';
 import { useVolumeScroll } from '../utils/volumeScroll';
 import { getOldUiEnabled } from '../utils/settings';
 import { recordRecentStudy } from '../utils/recentStudy';
+import { useDialogLayout } from '../utils/dialog';
 
 const VOLUME_SCROLL_STEP = 320;
 
@@ -39,6 +40,7 @@ export const QuestionListScreen = () => {
   const navigation = useNavigation<any>();
   const { readMaxWidth, bp } = useResponsive();
   const showFilterText = bp({ phone: false, tablet: true });
+  const dlg = useDialogLayout();
   const {
     semesterId,
     subjectId,
@@ -353,16 +355,17 @@ export const QuestionListScreen = () => {
       <Modal
         visible={filterModalVisible}
         transparent
-        animationType="slide"
+        animationType={dlg.animationType}
         onRequestClose={() => setFilterModalVisible(false)}
       >
         <TouchableWithoutFeedback onPress={() => setFilterModalVisible(false)}>
-          <View style={styles.modalOverlay}>
+          <View style={[styles.modalOverlay, dlg.overlay]}>
             <TouchableWithoutFeedback>
               <View
                 style={[
                   styles.modalContent,
                   { paddingBottom: insets.bottom + 16, maxWidth: readMaxWidth, width: '100%', alignSelf: 'center' },
+                  dlg.sheet,
                 ]}
               >
                 <View style={styles.modalHeader}>

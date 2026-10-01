@@ -32,6 +32,7 @@ import { Badge, MarksBadge, YearBadge } from '../components/Badge';
 import { WaveLoader } from '../components/WaveLoader';
 import { rf, verticalScale, useResponsive } from '../utils/responsive';
 import { normalizeQuery, consumeSearchToken, shouldDebounceTap, applyServerRetryAfter } from '../utils/searchGuard';
+import { ScreenContainer } from '../components/ScreenContainer';
 
 const RECENT_SEARCHES_KEY = 'pyq_recent_searches';
 
@@ -42,7 +43,7 @@ export const SearchScreen = () => {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const linkTo = useLinkTo();
-  const { readMaxWidth, hPadding } = useResponsive();
+  const { readMaxWidth, hPadding, compact } = useResponsive();
   const [query, setQuery] = useState('');
   const [activeTab, setActiveTab] = useState<SearchTab>('all');
   const queryClient = useQueryClient();
@@ -122,6 +123,16 @@ export const SearchScreen = () => {
         : onlineQuestions,
     [onlineEmpty, localResults, onlineQuestions]
   );
+
+  const questionKey = (q: any) => `${q.subject?.id || 's'}-${q.questionId}`;
+  const openQuestion = (qu: any) =>
+    navigation.navigate('QuestionDetail', {
+      subjectId: qu.subject?.id,
+      semesterId: qu.subject?.semesterId,
+      questionId: qu.questionId,
+      initialQuestion: qu,
+      subjectName: qu.subject?.name,
+    });
 
   // Suggestion chips reuse the All Subjects cache (first page) instead of
   // fetching on every mount.
@@ -409,7 +420,7 @@ export const SearchScreen = () => {
   const renderNoteCard = (note: TopicNoteSearchResultItem) => (
     <TouchableOpacity
       key={`${note.subjectSlug}-${note.topicId}`}
-      style={styles.noteResultCard}
+      style={[styles.noteResultCard, compact && styles.cardCompact]}
       activeOpacity={0.7}
       onPress={() =>
         // Must match the shape TopicNotesScreen destructures - it reads a
@@ -540,10 +551,10 @@ export const SearchScreen = () => {
       <ScrollView
         contentContainerStyle={[
           styles.scroll,
-          { paddingBottom: 24, paddingHorizontal: hPadding },
+          { paddingBottom: 24 },
         ]}
       >
-        <View style={[styles.centerWrapper, { maxWidth: readMaxWidth }]}>
+        <ScreenContainer variant="read">
           {/* Default State: Recent Searches & Suggested Search Topics */}
           {!hasSearched && !loading && (
             <View style={styles.suggestedSection}>
@@ -713,7 +724,7 @@ export const SearchScreen = () => {
                 {subjectResults.map((item) => (
                   <TouchableOpacity
                     key={item.id}
-                    style={styles.subjectCard}
+                    style={[styles.subjectCard, compact && styles.cardCompact]}
                     activeOpacity={0.7}
                     onPress={() => {
                       prefetchSubject(item.id);
@@ -762,18 +773,13 @@ export const SearchScreen = () => {
               <View style={{ gap: 10 }}>
                 {questionResults.map((q) => (
                   <TouchableOpacity
-                    key={`${q.subject?.id || 's'}-${q.questionId}`}
-                    style={styles.questionResultCard}
+                    key={questionKey(q)}
+                    style={[
+                      styles.questionResultCard,
+                      compact && styles.cardCompact,
+                    ]}
                     activeOpacity={0.7}
-                    onPress={() =>
-                      navigation.navigate('QuestionDetail', {
-                        subjectId: q.subject?.id,
-                        semesterId: q.subject?.semesterId,
-                        questionId: q.questionId,
-                        initialQuestion: q,
-                        subjectName: q.subject?.name,
-                      })
-                    }
+                    onPress={() => openQuestion(q)}
                   >
                     <Text style={styles.resultSubjectName}>
                       {q.subject?.name}
@@ -855,7 +861,7 @@ export const SearchScreen = () => {
             </View>
           )}
 
-        </View>
+        </ScreenContainer>
       </ScrollView>
     </View>
   );
@@ -966,10 +972,6 @@ const styles = StyleSheet.create({
   scroll: {
     paddingVertical: verticalScale(16),
   },
-  centerWrapper: {
-    width: '100%',
-    alignSelf: 'center',
-  },
   suggestedSection: {
     width: '100%',
     paddingTop: 8,
@@ -1074,6 +1076,8 @@ const styles = StyleSheet.create({
     fontSize: rf(11.5),
     color: COLORS.textMuted,
   },
+  // Tighter padding on pointer-first windows (FR-C1).
+  cardCompact: { padding: 10 },
   questionResultCard: {
     backgroundColor: COLORS.card,
     borderWidth: 1,

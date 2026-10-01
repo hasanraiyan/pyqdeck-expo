@@ -101,9 +101,9 @@ export const SimilarQuestionSkeleton: React.FC = () => {
   );
 };
 
-export const SubjectCardSkeleton: React.FC = () => {
+export const SubjectCardSkeleton: React.FC<{ style?: StyleProp<ViewStyle> }> = ({ style }) => {
   return (
-    <View style={styles.subjectRowSkeleton}>
+    <View style={[styles.subjectRowSkeleton, style]}>
       <View style={styles.subjectRowLeft}>
         <View style={{ flexDirection: 'row', gap: 6, marginBottom: 4 }}>
           <Skeleton width={48} height={18} borderRadius={4} />

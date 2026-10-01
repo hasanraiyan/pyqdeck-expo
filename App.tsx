@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { AppState, View } from 'react-native';
+import { AppState, Platform, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer, getStateFromPath as defaultGetStateFromPath } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -27,6 +27,11 @@ import {
   handleColdStartNotification,
 } from './src/utils/notifications';
 import { COLORS } from './src/theme/colors';
+import { getShellWidth } from './src/theme/layout';
+import { ShellTabBar } from './src/components/ShellTabBar';
+import { getSidebarCollapsed, setSidebarCollapsed } from './src/utils/settings';
+import { useResponsive } from './src/utils/responsive';
+import { installWebStyles } from './src/utils/webStyles';
 import { HomeScreen } from './src/screens/HomeScreen';
 import { SubjectListScreen } from './src/screens/SubjectListScreen';
 import { SubjectDetailScreen } from './src/screens/SubjectDetailScreen';
@@ -59,6 +64,8 @@ Sentry.init({
   sendDefaultPii: false,
   enableLogs: true,
 });
+
+installWebStyles();
 
 const Stack = createNativeStackNavigator();
 const RootStack = createNativeStackNavigator();
@@ -244,21 +251,71 @@ function SearchStack() {
 /** The tab navigator, wrapped by the root stack so the auth screens can sit above it. */
 function TabsNavigator() {
   const insets = useSafeAreaInsets();
+  const { shellMode } = useResponsive();
+  const isBottom = shellMode === 'bottom';
+  const isLaptopUp = shellMode === 'sidebar';
+  // Collapsing only applies from laptop up; the choice is remembered (FR-N5).
+  const [collapsed, setCollapsed] = useState(false);
+  useEffect(() => {
+    getSidebarCollapsed().then(setCollapsed);
+  }, []);
+  const toggleCollapsed = () =>
+    setCollapsed((c) => {
+      setSidebarCollapsed(!c);
+      return !c;
+    });
+  // A collapsed sidebar looks exactly like the tablet rail.
+  const isSidebar = isLaptopUp && !collapsed;
+  const shellWidth = getShellWidth(shellMode, collapsed);
   return (
     <Tab.Navigator
+        tabBar={
+          isBottom
+            ? undefined
+            : (props) => (
+                <ShellTabBar
+                  {...props}
+                  width={shellWidth}
+                  collapsible={isLaptopUp}
+                  collapsed={collapsed}
+                  onToggle={toggleCollapsed}
+                />
+              )
+        }
         screenOptions={{
           headerShown: false,
-          tabBarStyle: {
-            backgroundColor: COLORS.card,
-            borderTopColor: COLORS.border,
-            borderTopWidth: 1,
-            height: 56 + insets.bottom,
-            paddingBottom: insets.bottom > 0 ? insets.bottom : 6,
-            paddingTop: 6,
-          },
+          // Navigation follows window class (SRS section 4): bottom bar on
+          // phone, 72 px icon rail on tablet, labelled sidebar from laptop up.
+          // React Navigation turns the bar into a sidebar for 'left'.
+          tabBarPosition: isBottom ? 'bottom' : 'left',
+          tabBarVariant: isBottom ? 'uikit' : 'material',
+          tabBarLabelPosition: isSidebar ? 'beside-icon' : 'below-icon',
+          tabBarStyle: isBottom
+            ? {
+                backgroundColor: COLORS.card,
+                borderTopColor: COLORS.border,
+                borderTopWidth: 1,
+                height: 56 + insets.bottom,
+                paddingBottom: insets.bottom > 0 ? insets.bottom : 6,
+                paddingTop: 6,
+              }
+            : {
+                // ShellTabBar owns the column's width and border; the bar fills it.
+                // React Navigation sizes a labelled sidebar by a fraction of the
+                // window (its minWidth), so pin min and max to hold a fixed width.
+                backgroundColor: 'transparent',
+                borderRightWidth: 0,
+                width: shellWidth,
+                minWidth: shellWidth,
+                maxWidth: shellWidth,
+                // Default side padding would leave a 72 px rail ~48 px for its label.
+                ...(isSidebar ? null : { paddingStart: 8, paddingEnd: 8 }),
+              },
+          // Rail labels sit under the icon, so keep them small enough not to clip.
+          tabBarLabelStyle: isSidebar ? undefined : { fontSize: 10 },
           tabBarActiveTintColor: COLORS.primary,
           tabBarInactiveTintColor: COLORS.textMuted,
-          // The bar has a fixed height; scaled labels would clip or push icons.
+          // The bar has a fixed size; scaled labels would clip or push icons.
           tabBarAllowFontScaling: false,
         }}
       >
@@ -378,6 +435,32 @@ function AppContent() {
       maybeRequestReview();
     });
   }, [onboarded]);
+
+  // Keyboard on web / desktop: Escape goes back (FR-N6) and "/" or Ctrl/Cmd+K
+  // opens Search (FR-N8). Both are left alone while a dialog or an editable
+  // field has focus, so they never fight typing or closing a modal.
+  useEffect(() => {
+    if (Platform.OS !== 'web' || typeof document === 'undefined') return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.defaultPrevented) return;
+      const el = document.activeElement as HTMLElement | null;
+      const tag = el?.tagName;
+      const typing = tag === 'INPUT' || tag === 'TEXTAREA' || !!el?.isContentEditable;
+      const dialogOpen = !!document.querySelector('[role="dialog"], [aria-modal="true"]');
+      // Search shortcut (FR-N8): "/" or Ctrl/Cmd+K, never while typing.
+      const isSearchKey = e.key === '/' || ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k');
+      if (isSearchKey && !dialogOpen && (e.key !== '/' || !typing)) {
+        if (!navigationRef.isReady()) return;
+        e.preventDefault();
+        navigationRef.navigate('Tabs', { screen: 'Search' });
+        return;
+      }
+      if (e.key !== 'Escape' || typing || dialogOpen) return;
+      if (navigationRef.isReady() && navigationRef.canGoBack()) navigationRef.goBack();
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, []);
 
   // Still reading AsyncStorage — render nothing to avoid a flash of wrong screen
   if (onboarded === null) return null;

@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Linking } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Linking, type LayoutChangeEvent } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
@@ -21,6 +21,10 @@ import { PrevNextNav } from '../components/PrevNextNav';
 import { VolumeScrollHint } from '../components/VolumeScrollHint';
 import { useVolumeScroll } from '../utils/volumeScroll';
 import { CircleLoader } from '../components/CircleLoader';
+import { useContainerStyle } from '../components/ScreenContainer';
+import { TopicListPane } from '../components/TopicListPane';
+import { canShowTwoPanesIn, getListPaneWidth } from '../theme/layout';
+import { useResponsive } from '../utils/responsive';
 
 import { recordRecentNote } from '../utils/recentStudy';
 import { userMessage } from '../utils/netError';
@@ -57,6 +61,18 @@ type NotesListEntry = { id: string; title: string; moduleId: string; moduleName:
  * instead of a fresh ad load firing on every tap.
  */
 export const TopicNotesScreen = () => {
+  const frame = useContainerStyle('read', false);
+  const { breakpoint } = useResponsive();
+  // Two panes (the subject's topics beside the notes) when this screen's own
+  // box can hold both (FR-L4), measured so the sidebar is already accounted for.
+  const [rootWidth, setRootWidth] = useState(0);
+  // Also set on the loading view below: React reuses that host element for the
+  // real root, and react-native-web only observes an onLayout present at mount.
+  const onRootLayout = useCallback(
+    (e: LayoutChangeEvent) => setRootWidth(e.nativeEvent.layout.width),
+    []
+  );
+  const twoPane = canShowTwoPanesIn(rootWidth);
   const insets = useSafeAreaInsets();
   const route = useRoute<any>();
   const navigation = useNavigation<any>();
@@ -334,7 +350,7 @@ export const TopicNotesScreen = () => {
 
   if (!topic) {
     return (
-      <View style={styles.centerContainer}>
+      <View style={styles.centerContainer} onLayout={onRootLayout}>
         {topicNotFound ? (
           <ScreenEmpty message="Topic not found." />
         ) : (
@@ -345,11 +361,25 @@ export const TopicNotesScreen = () => {
   }
 
   return (
-    <View style={styles.container}>
+    <View
+      style={[styles.container, twoPane && styles.containerRow]}
+      onLayout={onRootLayout}
+    >
+      {twoPane && localNotesList && localNotesList.length > 1 && (
+        <TopicListPane
+          entries={localNotesList}
+          selectedId={topic.id}
+          title={subjectName}
+          width={getListPaneWidth(breakpoint)}
+          onSelect={goToTopic}
+        />
+      )}
+      <View style={styles.detailColumn}>
       <ScrollView
         ref={scrollRef}
         contentContainerStyle={[
           styles.scroll,
+          frame,
           { paddingBottom: insets.bottom + 32 },
           // Centre the loader in the empty content area, as QuestionDetail does.
           loading && styles.scrollLoading,
@@ -404,12 +434,16 @@ export const TopicNotesScreen = () => {
       />
 
       <AdBanner />
+      </View>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
+  containerRow: { flexDirection: 'row' },
+  // Takes the rest of the row beside the topic pane; a plain fill otherwise.
+  detailColumn: { flex: 1, minWidth: 0 },
   centerContainer: {
     flex: 1,
     backgroundColor: COLORS.background,

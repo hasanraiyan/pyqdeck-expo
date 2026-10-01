@@ -1,59 +1,37 @@
 import { Dimensions, PixelRatio, useWindowDimensions } from 'react-native';
 import { latexToUnicode } from './latexToText';
-
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+import {
+  LAYOUT,
+  getBreakpoint,
+  getShellMode,
+  pickByBreakpoint,
+  type BreakpointValues,
+} from '../theme/layout';
 
 // Base guidelines based on standard mobile (375x812)
 const baseWidth = 375;
 const baseHeight = 812;
 
-export const isTablet = SCREEN_WIDTH >= 768;
-export const isSmallDevice = SCREEN_WIDTH < 360;
+// Snapshots at import time; prefer useResponsive() in components so they follow
+// rotation and window resize.
+export const isTablet = Dimensions.get('window').width >= 768;
+export const isSmallDevice = Dimensions.get('window').width < 360;
 
-// Width breakpoints. Only meaningful on web and tablets - a phone never
-// leaves 'phone' in portrait, and lands in 'tablet' at most in landscape.
-export const BREAKPOINTS = { tablet: 600, laptop: 1024, desktop: 1440 } as const;
-
-export type Breakpoint = 'phone' | 'tablet' | 'laptop' | 'desktop';
-
-/**
- * Per-breakpoint values. Only `phone` is required; the rest cascade upward,
- * so `{ phone: 2, laptop: 4 }` means 2 on phone AND tablet, 4 from laptop up.
- */
-export interface BreakpointValues<T> {
-  phone: T;
-  tablet?: T;
-  laptop?: T;
-  desktop?: T;
-}
+// Breakpoint model, tokens and pure layout rules live in src/theme/layout.ts.
+// Re-exported so existing imports from this module keep working.
+export { BREAKPOINTS } from '../theme/layout';
+export type { Breakpoint, BreakpointValues } from '../theme/layout';
 
 export const useResponsive = () => {
   const { width, height } = useWindowDimensions();
   const isLandscape = width > height;
-  const isTabletDevice = width >= 768 || (isLandscape && width >= 900);
+  // Window class comes from width alone (BP-1). The old
+  // `width >= 768 || (landscape && width >= 900)` was equivalent to width >= 768.
+  const isTabletDevice = width >= 768;
   const isSmall = width < 360;
 
-  const contentMaxWidth = isLandscape ? 860 : 720;
-  const gridColumns = isLandscape ? (width > 900 ? 4 : 3) : (width > 600 ? 3 : 2);
-
-  const breakpoint: Breakpoint =
-    width >= BREAKPOINTS.desktop
-      ? 'desktop'
-      : width >= BREAKPOINTS.laptop
-        ? 'laptop'
-        : width >= BREAKPOINTS.tablet
-          ? 'tablet'
-          : 'phone';
-
-  // `??` rather than `||` so a deliberate `false` / `0` at one breakpoint
-  // isn't silently replaced by the smaller breakpoint's value.
-  function bp<T>(values: BreakpointValues<T>): T {
-    if (breakpoint === 'desktop')
-      return values.desktop ?? values.laptop ?? values.tablet ?? values.phone;
-    if (breakpoint === 'laptop') return values.laptop ?? values.tablet ?? values.phone;
-    if (breakpoint === 'tablet') return values.tablet ?? values.phone;
-    return values.phone;
-  }
+  const breakpoint = getBreakpoint(width);
+  const bp = <T,>(values: BreakpointValues<T>): T => pickByBreakpoint(breakpoint, values);
 
   return {
     width,
@@ -61,20 +39,22 @@ export const useResponsive = () => {
     isLandscape,
     isTablet: isTabletDevice,
     isSmallDevice: isSmall,
-    contentMaxWidth,
-    gridColumns,
     breakpoint,
+    shellMode: getShellMode(breakpoint),
+    // Pointer-first window classes get tighter cards and rows (FR-C1); touch
+    // sizes on phone and tablet are never reduced.
+    compact: breakpoint === 'laptop' || breakpoint === 'desktop',
     bp,
-    // Deliberately separate from contentMaxWidth: that one is a *reading*
+    // Deliberately separate from readMaxWidth: that one is a *reading*
     // column (long prose at 1100px is unreadable), this one is for index and
     // grid screens, where wide is the whole point.
-    wideMaxWidth: bp({ phone: 720, tablet: 900, laptop: 1100, desktop: 1240 }),
+    wideMaxWidth: bp(LAYOUT.wideMaxWidth),
     // The counterpart, for prose and forms: question text, solutions,
     // settings rows. Caps out around 70-75 characters per line, which is
     // where long-form text stays comfortable to read - growing this with the
     // window would make those screens worse, not better.
-    readMaxWidth: bp({ phone: 720, tablet: 680, laptop: 720, desktop: 760 }),
-    hPadding: bp({ phone: 16, tablet: 24, laptop: 32, desktop: 40 }),
+    readMaxWidth: bp(LAYOUT.readMaxWidth),
+    hPadding: bp(LAYOUT.gutter),
   };
 };
 
@@ -82,8 +62,9 @@ export const useResponsive = () => {
  * Scale horizontal sizes (padding, width, margin)
  */
 export const scale = (size: number): number => {
-  const newSize = (SCREEN_WIDTH / baseWidth) * size;
-  if (isTablet) {
+  const { width } = Dimensions.get('window');
+  const newSize = (width / baseWidth) * size;
+  if (width >= 768) {
     // Clamp tablet scaling so elements don't get absurdly huge
     return Math.min(newSize, size * 1.35);
   }
@@ -94,8 +75,9 @@ export const scale = (size: number): number => {
  * Scale vertical sizes (heights, vertical margins)
  */
 export const verticalScale = (size: number): number => {
-  const newSize = (SCREEN_HEIGHT / baseHeight) * size;
-  if (isTablet) {
+  const { width, height } = Dimensions.get('window');
+  const newSize = (height / baseHeight) * size;
+  if (width >= 768) {
     return Math.min(newSize, size * 1.35);
   }
   return Math.round(PixelRatio.roundToNearestPixel(newSize));
@@ -184,4 +166,3 @@ export const cleanMarkdown = (text: string | null | undefined): string => {
     .trim();
 };
 
-export const MAX_CONTENT_WIDTH = 720;

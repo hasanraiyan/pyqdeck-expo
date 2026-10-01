@@ -21,27 +21,30 @@ import { Skeleton } from '../components/Skeleton';
 import { Badge } from '../components/Badge';
 import { AdBanner } from '../components/AdBanner';
 import { WaveLoader } from '../components/WaveLoader';
+import { getGridColumns } from '../theme/layout';
 import { useResponsive } from '../utils/responsive';
 
 export const AllSubjectsScreen = () => {
   const navigation = useNavigation<any>();
-  const { width, bp, wideMaxWidth, hPadding } = useResponsive();
+  const { width, wideMaxWidth, hPadding } = useResponsive();
 
-  // Same reasoning as SubjectListScreen: a phone keeps the dense full-bleed
-  // rows, wider screens get a card grid so a subject name and its count stop
-  // sitting at opposite ends of an empty band.
-  const columns = bp({ phone: 1, tablet: 2, laptop: 3 });
-  const isGrid = columns > 1;
   const GAP = 12;
-  const frameMaxWidth = wideMaxWidth + (isGrid ? hPadding * 2 : 0);
   // Measured, not window-derived - useWindowDimensions() on web includes the
-  // scrollbar the content box doesn't get.
+  // scrollbar, and with a sidebar the window is wider than the content box.
   const [listWidth, setListWidth] = useState(0);
   const onContentLayout = useCallback(
     (e: LayoutChangeEvent) => setListWidth(e.nativeEvent.layout.width),
     []
   );
   const trackWidth = listWidth || width;
+  // A phone keeps the dense full-bleed rows; wider content gets a card grid so
+  // a name and its count stop sitting at opposite ends of an empty band.
+  const columns = getGridColumns(
+    Math.min(trackWidth, wideMaxWidth + hPadding * 2) - hPadding * 2,
+    { minCardWidth: 260, gap: GAP, maxColumns: 3 }
+  );
+  const isGrid = columns > 1;
+  const frameMaxWidth = wideMaxWidth + (isGrid ? hPadding * 2 : 0);
   const contentWidth =
     Math.min(trackWidth, frameMaxWidth) - (isGrid ? hPadding * 2 : 0);
   const cardWidth = isGrid ? (contentWidth - GAP * (columns - 1)) / columns : undefined;
@@ -170,15 +173,17 @@ export const AllSubjectsScreen = () => {
       <View style={styles.content} onLayout={onContentLayout}>
         {loading && !refreshing ? (
           <View
-            style={{
-              padding: 16,
-              width: '100%',
-              maxWidth: frameMaxWidth,
-              alignSelf: 'center',
-            }}
+            style={[
+              { padding: 16, width: '100%', maxWidth: frameMaxWidth, alignSelf: 'center' },
+              // Match the loaded card grid so the page doesn't reflow when data lands.
+              isGrid && { flexDirection: 'row', flexWrap: 'wrap', gap: GAP, paddingHorizontal: hPadding },
+            ]}
           >
-            {[1, 2, 3, 4, 5].map((i) => (
-              <View key={i} style={styles.skeletonCard}>
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <View
+                key={i}
+                style={[styles.skeletonCard, isGrid && { width: cardWidth, marginBottom: 0 }]}
+              >
                 <Skeleton width="40%" height={16} style={{ marginBottom: 8 }} />
                 <Skeleton width="70%" height={14} />
               </View>

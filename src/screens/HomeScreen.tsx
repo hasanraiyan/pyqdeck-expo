@@ -7,7 +7,6 @@ import {
   StyleSheet,
   RefreshControl,
   ScrollView,
-  LayoutChangeEvent,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
@@ -19,6 +18,8 @@ import { Semester } from '../types';
 import { COLORS, FONTS } from '../theme/colors';
 import { WaveLoader } from '../components/WaveLoader';
 import { rf, scale, verticalScale, useResponsive } from '../utils/responsive';
+import { ScreenContainer } from '../components/ScreenContainer';
+import { ResponsiveGrid } from '../components/ResponsiveGrid';
 import { yearNumberOf, YEAR_NUMBERS } from '../utils/year';
 import { getRecentStudies, RecentStudy, getRecentNotes, RecentNote } from '../utils/recentStudy';
 import { prefetchSubject } from '../api/prefetch';
@@ -36,24 +37,8 @@ export const HomeScreen = () => {
   const ctaRow = bp({ phone: false, tablet: true });
 
   const GRID_GAP = 12;
-  // The grid measures itself rather than deriving its width from the window.
-  // useWindowDimensions() reports window.innerWidth on web, which *includes*
-  // the vertical scrollbar (~15-20px) that the content box does not get - so
-  // window-derived card widths overflow and drop a card onto the next row.
-  // onLayout reports the box that actually exists, on native and web alike.
-  const [gridWidth, setGridWidth] = useState(0);
-  const onGridLayout = useCallback(
-    (e: LayoutChangeEvent) => setGridWidth(e.nativeEvent.layout.width),
-    []
-  );
-  // Before the first layout pass, estimate so the initial paint is close.
-  const trackWidth = gridWidth || Math.min(width - hPadding * 2, wideMaxWidth);
-  // There are exactly 4 year cards, so only 2 and 4 tile without leaving an
-  // orphan row - hence a width threshold rather than a per-breakpoint count.
-  // 640 is where 4-up stops squeezing the cards below ~150px.
-  const columns = trackWidth >= 640 ? 4 : 2;
-  const cardWidth = (trackWidth - GRID_GAP * (columns - 1)) / columns;
-
+  // Year cards: exactly 4, so only 2 or 4 columns tile without an orphan row.
+  // ResponsiveGrid measures its own box (see its doc comment for why).
   // Driven by the live hook, not the module-level rf() snapshot, so type
   // actually reflows when a browser window is resized.
   const heroTitleSize = bp({ phone: rf(27), tablet: rf(30), laptop: rf(34), desktop: rf(37) });
@@ -205,7 +190,7 @@ export const HomeScreen = () => {
       <ScrollView
         contentContainerStyle={[
           styles.scrollContent,
-          { paddingBottom: 24, paddingHorizontal: hPadding },
+          { paddingBottom: 24 },
         ]}
         refreshControl={
           <RefreshControl
@@ -215,7 +200,7 @@ export const HomeScreen = () => {
           />
         }
       >
-        <View style={[styles.centerWrapper, { maxWidth: wideMaxWidth }]}>
+        <ScreenContainer variant="wide">
           {/* Hero Section */}
           <View style={[styles.hero, heroTwoCol && styles.heroRow]}>
             <View style={heroTwoCol ? styles.heroCopyCol : undefined}>
@@ -444,12 +429,17 @@ export const HomeScreen = () => {
                 <WaveLoader color={COLORS.primary} dotSize={6} />
               </View>
             ) : (
-              <View style={[styles.grid, { gap: GRID_GAP }]} onLayout={onGridLayout}>
-                {yearsData.map(({ year, semesters, subjectCount }) => {
+              <ResponsiveGrid
+                data={yearsData}
+                keyExtractor={(d) => String(d.year)}
+                minCardWidth={148}
+                gap={GRID_GAP}
+                allowedColumns={[2, 4]}
+                estimatedWidth={Math.min(width - hPadding * 2, wideMaxWidth)}
+                renderItem={({ year, semesters, subjectCount }, { cardWidth }) => {
                   const isComingSoon = subjectCount === 0;
                   return (
                     <TouchableOpacity
-                      key={year}
                       style={[
                         styles.gridCard,
                         { width: cardWidth },
@@ -482,8 +472,8 @@ export const HomeScreen = () => {
                       </Text>
                     </TouchableOpacity>
                   );
-                })}
-              </View>
+                }}
+              />
             )}
           </View>
 
@@ -506,7 +496,7 @@ export const HomeScreen = () => {
               </TouchableOpacity>
             </View>
           )}
-        </View>
+        </ScreenContainer>
       </ScrollView>
     </View>
   );

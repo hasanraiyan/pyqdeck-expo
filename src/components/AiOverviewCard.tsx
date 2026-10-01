@@ -21,6 +21,7 @@ import { markdownRules } from '../theme/markdownStyles';
 import { AiOverview, AiOverviewReference } from '../types';
 import { NativeContentRenderer } from './NativeContentRenderer';
 import { rf } from '../utils/responsive';
+import { useDialogLayout } from '../utils/dialog';
 
 /**
  * The generated answer above the search results.
@@ -93,6 +94,7 @@ interface Props {
 }
 
 export const AiOverviewCard: React.FC<Props> = ({ overview, loading, onPressReference }) => {
+  const dlg = useDialogLayout();
   const [expanded, setExpanded] = useState(false);
   const [copied, setCopied] = useState(false);
   // Which span's sources the sheet is showing; null keeps it closed.
@@ -358,16 +360,16 @@ export const AiOverviewCard: React.FC<Props> = ({ overview, loading, onPressRefe
       <Modal
         visible={sheetRefs !== null}
         transparent
-        animationType="slide"
+        animationType={dlg.animationType}
         onRequestClose={() => setSheetRefs(null)}
       >
         <TouchableOpacity
-          style={styles.sheetBackdrop}
+          style={[styles.sheetBackdrop, dlg.overlay]}
           activeOpacity={1}
           onPress={() => setSheetRefs(null)}
         >
           {/* Swallows taps so a press inside the sheet does not dismiss it. */}
-          <TouchableOpacity style={styles.sheet} activeOpacity={1}>
+          <TouchableOpacity style={[styles.sheet, dlg.sheet]} activeOpacity={1}>
             <View style={styles.sheetHandle} />
             <Text style={styles.sheetTitle}>Sources · {sheetRefs?.length ?? 0}</Text>
 

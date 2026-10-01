@@ -9,6 +9,7 @@ import {
   TextInput,
   Modal,
   TouchableWithoutFeedback,
+  type LayoutChangeEvent,
 } from 'react-native';
 import { useRoute, useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -31,6 +32,8 @@ import { QuestionSummary, Solution } from '../types';
 import { COLORS, FONTS } from '../theme/colors';
 import { Badge, MarksBadge, AskAiBadge, YearBadge, ShowSolnBadge, QNumBadge } from '../components/Badge';
 import { PrevNextNav } from '../components/PrevNextNav';
+import { QuestionListPane } from '../components/QuestionListPane';
+import { canShowTwoPanesIn, getListPaneWidth } from '../theme/layout';
 import { SolutionSkeleton, SimilarQuestionSkeleton } from '../components/Skeleton';
 import { rf, cleanMarkdown, useResponsive } from '../utils/responsive';
 import { shareQuestion } from '../utils/links';
@@ -43,12 +46,14 @@ import { WaveLoader } from '../components/WaveLoader';
 import { CircleLoader } from '../components/CircleLoader';
 import { isAiEnabled } from '../config/features';
 import { userMessage } from '../utils/netError';
+import { useDialogLayout } from '../utils/dialog';
 
 export const QuestionDetailScreen = () => {
   const insets = useSafeAreaInsets();
   const route = useRoute<any>();
   const navigation = useNavigation<any>();
-  const { readMaxWidth, hPadding, isTablet } = useResponsive();
+  const { readMaxWidth, hPadding, isTablet, breakpoint } = useResponsive();
+  const dlg = useDialogLayout();
   const {
     subjectId,
     semesterId,
@@ -107,6 +112,16 @@ export const QuestionDetailScreen = () => {
 
   const currentYear = question?.year || year;
   const scrollRef = useRef<ScrollView>(null);
+
+  // Two panes (the paper's question list beside the question) when this
+  // screen's own box can hold both (FR-L3). Measured, not window-derived, so
+  // the sidebar and its collapsed state are already accounted for (BP-4).
+  const [rootWidth, setRootWidth] = useState(0);
+  const onRootLayout = useCallback(
+    (e: LayoutChangeEvent) => setRootWidth(e.nativeEvent.layout.width),
+    []
+  );
+  const twoPane = canShowTwoPanesIn(rootWidth);
 
   useEffect(() => {
     recordQuestionOpenedAndMaybeShowInterstitial();
@@ -430,14 +445,24 @@ export const QuestionDetailScreen = () => {
 
   if (loading || !question) {
     return (
-      <View style={[styles.container, styles.centerLoading]}>
+      <View style={[styles.container, styles.centerLoading]} onLayout={onRootLayout}>
         <CircleLoader color={COLORS.primary} dotSize={6} size={40} />
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, twoPane && styles.containerRow]} onLayout={onRootLayout}>
+      {twoPane && (
+        <QuestionListPane
+          questions={paperQuestions}
+          selectedId={questionId}
+          year={currentYear}
+          width={getListPaneWidth(breakpoint)}
+          onSelect={goToQuestion}
+        />
+      )}
+      <View style={styles.detailColumn}>
       <ScrollView
         ref={scrollRef}
         style={styles.scrollFlex}
@@ -838,11 +863,11 @@ export const QuestionDetailScreen = () => {
         </View>
       </ScrollView>
 
-      <Modal visible={showReport} transparent animationType="slide" onRequestClose={() => { setShowReport(false); setReportError(null); }}>
+      <Modal visible={showReport} transparent animationType={dlg.animationType} onRequestClose={() => { setShowReport(false); setReportError(null); }}>
         <TouchableWithoutFeedback onPress={() => { setShowReport(false); setReportError(null); }}>
-          <View style={styles.reportOverlay}>
+          <View style={[styles.reportOverlay, dlg.overlay]}>
             <TouchableWithoutFeedback>
-              <View style={[styles.reportSheet, { paddingBottom: 24 + 16 }]}>
+              <View style={[styles.reportSheet, { paddingBottom: 24 + 16 }, dlg.sheet]}>
                 <View style={styles.reportHandle} />
                 <ScrollView
                   keyboardShouldPersistTaps="handled"
@@ -892,6 +917,7 @@ export const QuestionDetailScreen = () => {
       </Modal>
 
       <AdBanner />
+      </View>
     </View>
   );
 };
@@ -901,6 +927,9 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.background,
   },
+  containerRow: { flexDirection: 'row' },
+  // Takes the rest of the row beside the list pane; a plain fill otherwise.
+  detailColumn: { flex: 1, minWidth: 0 },
   centerLoading: {
     alignItems: 'center',
     justifyContent: 'center',

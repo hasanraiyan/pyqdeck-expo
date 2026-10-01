@@ -20,8 +20,10 @@ import { getSelectedBranch, setSelectedBranch } from '../utils/settings';
 import { ScreenError, ScreenEmpty } from '../components/ScreenState';
 import { WaveLoader } from '../components/WaveLoader';
 import { userMessage } from '../utils/netError';
+import { useContainerStyle } from '../components/ScreenContainer';
 
 export const SemesterSelectScreen = () => {
+  const frame = useContainerStyle('read', false);
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
@@ -126,7 +128,7 @@ export const SemesterSelectScreen = () => {
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <ScrollView
-        contentContainerStyle={{ paddingBottom: insets.bottom + 28 }}
+        contentContainerStyle={[frame, { paddingBottom: insets.bottom + 28 }]}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}

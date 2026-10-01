@@ -18,6 +18,8 @@ import { WaveLoader } from '../components/WaveLoader';
 import { Badge } from '../components/Badge';
 import { AdBanner } from '../components/AdBanner';
 import { useResponsive } from '../utils/responsive';
+import { ScreenContainer } from '../components/ScreenContainer';
+import { ResponsiveGrid } from '../components/ResponsiveGrid';
 import { recordRecentStudy } from '../utils/recentStudy';
 
 export const SubjectDetailScreen = () => {
@@ -42,14 +44,13 @@ export const SubjectDetailScreen = () => {
   );
   const track = wrapperWidth || Math.min(width - hPadding * 2, wideMaxWidth);
 
-  // Unlike Home's fixed 4 years, a subject can have any number of papers, so
-  // the column count comes from how many ~190px cards fit - then capped to
-  // the number of years, so 3 papers fill the row instead of leaving a
-  // quarter of it blank.
+  // A subject can have any number of papers, so the year grid picks columns
+  // from how many ~190px cards fit, capped to the number of years (3 papers
+  // fill the row) and never fewer than 2.
   const YEAR_GAP = 12;
   const yearCount = meta?.years?.length || 4;
-  const yearColumns = Math.max(2, Math.min(Math.floor(track / 190) || 2, 4, yearCount));
-  const yearCardWidth = (track - YEAR_GAP * (yearColumns - 1)) / yearColumns;
+  const yearMaxColumns = Math.max(2, Math.min(4, yearCount));
+  const yearAllowedColumns = [2, 3, 4].filter((c) => c <= yearMaxColumns);
 
   // Module rows are text-heavy (name + count + chevron), so they get two
   // columns at most - three would clip the longer chapter names.
@@ -83,7 +84,7 @@ export const SubjectDetailScreen = () => {
   return (
     <View style={styles.container}>
       <ScrollView
-        contentContainerStyle={[styles.scroll, { paddingBottom: 24, paddingHorizontal: hPadding }]}
+        contentContainerStyle={[styles.scroll, { paddingBottom: 24 }]}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -92,10 +93,8 @@ export const SubjectDetailScreen = () => {
           />
         }
       >
-        <View
-          style={{ maxWidth: wideMaxWidth, width: '100%', alignSelf: 'center' }}
-          onLayout={onWrapperLayout}
-        >
+        <ScreenContainer variant="wide">
+        <View onLayout={onWrapperLayout}>
           {/* Subject Header */}
           <View style={styles.header}>
             <View style={styles.badgeRow}>
@@ -119,15 +118,21 @@ export const SubjectDetailScreen = () => {
                 <WaveLoader color={COLORS.primary} dotSize={6} />
               </View>
             ) : meta?.years && meta.years.length > 0 ? (
-              <View style={[styles.grid, { gap: YEAR_GAP }]}>
-                {meta.years.map((y) => {
+              <ResponsiveGrid
+                data={meta.years}
+                keyExtractor={(y) => String(y.year)}
+                minCardWidth={178}
+                gap={YEAR_GAP}
+                maxColumns={yearMaxColumns}
+                allowedColumns={yearAllowedColumns}
+                estimatedWidth={track}
+                renderItem={(y, { cardWidth }) => {
                   const isComingSoon = y.questionCount === 0;
                   return (
                     <TouchableOpacity
-                      key={y.year}
                       style={[
                         styles.yearCard,
-                        { width: yearCardWidth },
+                        { width: cardWidth },
                         isComingSoon && styles.cardComingSoon,
                       ]}
                       activeOpacity={0.7}
@@ -156,8 +161,8 @@ export const SubjectDetailScreen = () => {
                       </Text>
                     </TouchableOpacity>
                   );
-                })}
-              </View>
+                }}
+              />
             ) : (
             <View style={styles.sectionEmptyBox}>
               <Feather name="clock" size={14} color={COLORS.primary} />
@@ -221,6 +226,7 @@ export const SubjectDetailScreen = () => {
         </View>
         )}
       </View>
+        </ScreenContainer>
       </ScrollView>
       <AdBanner />
     </View>

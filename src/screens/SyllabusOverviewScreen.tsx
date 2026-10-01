@@ -22,6 +22,7 @@ import { recordContentOpenedAndMaybeShowInterstitial } from '../utils/ads';
 import { ScreenError, ScreenEmpty } from '../components/ScreenState';
 import { CircleLoader } from '../components/CircleLoader';
 import { userMessage } from '../utils/netError';
+import { useContainerStyle } from '../components/ScreenContainer';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -37,6 +38,7 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
  * read-through cache.
  */
 export const SyllabusOverviewScreen = () => {
+  const frame = useContainerStyle('read', false);
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
@@ -224,7 +226,7 @@ export const SyllabusOverviewScreen = () => {
   return (
     <View style={styles.container}>
       <ScrollView
-        contentContainerStyle={{ paddingBottom: insets.bottom + 32, paddingTop: 12 }}
+        contentContainerStyle={[frame, { paddingBottom: insets.bottom + 32, paddingTop: 12 }]}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
