@@ -95,11 +95,23 @@ export function getCardWidth(containerWidth: number, columns: number, gap = 12):
 }
 
 /**
- * Two panes only when each can hold its minimum width (BP-4) and the window
- * is at least tablet class. `shellWidth` is what the rail / sidebar already
- * takes from the window.
+ * Two panes only when each can hold its minimum width (BP-4). Pass the
+ * *measured* width of the screen's own box, so the rail / sidebar (collapsed
+ * or not), a web scrollbar and split-screen are all already accounted for.
  */
+export function canShowTwoPanesIn(containerWidth: number): boolean {
+  return containerWidth >= LAYOUT.pane.listMin + LAYOUT.pane.detailMin;
+}
+
+/** Same rule from the window width, when only the shell width is known. Never on phone. */
 export function canShowTwoPanes(width: number, shellWidth: number): boolean {
   if (getBreakpoint(width) === 'phone') return false;
-  return width - shellWidth >= LAYOUT.pane.listMin + LAYOUT.pane.detailMin;
+  return canShowTwoPanesIn(width - shellWidth);
+}
+
+/** List-pane width for a window class: fixed tokens from laptop, a compact 320 below. */
+export function getListPaneWidth(breakpoint: Breakpoint): number {
+  if (breakpoint === 'desktop') return LAYOUT.pane.list.desktop;
+  if (breakpoint === 'laptop') return LAYOUT.pane.list.laptop;
+  return LAYOUT.pane.listMin;
 }

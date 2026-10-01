@@ -8,6 +8,8 @@ import {
   getGridColumns,
   getCardWidth,
   canShowTwoPanes,
+  canShowTwoPanesIn,
+  getListPaneWidth,
   getShellWidth,
   LAYOUT,
 } from './layout.ts';
@@ -75,4 +77,16 @@ test('getGridColumns honours allowedColumns (no orphan rows)', () => {
   assert.equal(getGridColumns(640, opts), 4);
   assert.equal(getGridColumns(0, opts), 2);
   assert.equal(getGridColumns(100, opts), 2);
+});
+
+test('two panes from measured container width', () => {
+  assert.equal(canShowTwoPanesIn(799), false);
+  assert.equal(canShowTwoPanesIn(800), true);
+});
+
+test('list pane width by window class', () => {
+  assert.equal(getListPaneWidth('phone'), 320);
+  assert.equal(getListPaneWidth('tablet'), 320);
+  assert.equal(getListPaneWidth('laptop'), 360);
+  assert.equal(getListPaneWidth('desktop'), 400);
 });

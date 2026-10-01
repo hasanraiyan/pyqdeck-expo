@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | Document | Software Requirements Specification (repo copy) |
-| Status | Approved. Phases 0 to 2 implemented, Phases 3 and 4 pending |
+| Status | Approved. Phases 0 to 2 implemented, Phase 3 partly (Browse), Phase 4 pending |
 | Full document | The claude.ai doc "PYQDeck Responsive UI Migration - SRS" holds the long form, including the gap audit, research notes, feasibility table and risks. This file keeps what code needs to reference |
 
 ## 1. Goals
@@ -42,10 +42,11 @@ Rules: BP-2 crossing a threshold keeps navigation state; BP-3 grid columns come 
 | FR-N8 | Search shortcut (`/`, Ctrl/Cmd+K) | C | Pending |
 | FR-L1 | Shared `ScreenContainer` | M | Done; used by Home, SubjectDetail, Settings, Search, plus `useContainerStyle` on the four Study screens |
 | FR-L2 | Shared `ResponsiveGrid` (pure logic in `layout.ts`) | M | Done; Home and SubjectDetail year grids. AllSubjects and SubjectList FlatLists use measured-width `getGridColumns` |
-| FR-L3..L5 | List-detail for Browse, Study, Search | M/S | Pending (Phase 3) |
-| FR-L6 | Tablet portrait pushes full-screen detail | M | Pending (Phase 3) |
+| FR-L3 | List-detail for Browse | M | Done as a list pane inside `QuestionDetailScreen` (the paper's questions beside the open one) when its own box is >= 800 px. Keeps stack, deep links and back button |
+| FR-L4, FR-L5 | List-detail for Study and Search | S | Pending |
+| FR-L6 | Narrow windows get one pane | M | Done (pane is measured, so tablet portrait and phone stay single-pane) |
 | FR-L7 | Prose capped at `readMaxWidth` | M | Existing on 9 screens |
-| FR-L8 | Selected row highlighted in list-detail | M | Pending (Phase 3) |
+| FR-L8 | Selected row highlighted in list-detail | M | Done |
 | FR-L9 | Auth/onboarding modals as centred dialog on laptop+ | S | Pending (Phase 4) |
 | FR-C1..C7 | Density, hover/focus, skeleton parity, container-width reflow, ads placement, state centring | M/S | Pending (Phase 4) |
 | FR-R1 | Scaling helpers do not use import-time `Dimensions` | M | Done for `scale` / `verticalScale`; `rf()` is still evaluated when a `StyleSheet` is created |
@@ -61,7 +62,7 @@ Phone UI unchanged (NFR-1); no new native dependency and no release workflow cha
 0. Foundations: breakpoint consolidation, tokens, pure layout logic with tests, stale `Dimensions` fixes. **Done.**
 1. Navigation shell using `tabBarPosition` / `tabBarVariant` (React Navigation 7.19). **Done** except FR-N4 to N8.
 2. `ScreenContainer`, `ResponsiveGrid`, screen migration. **Done** (QuestionList keeps its own `readMaxWidth` cap): all screens now use `ScreenContainer` / `useContainerStyle` / `ResponsiveGrid`, or measured-width `getGridColumns`.
-3. Master-detail (nested navigator in the right pane; fallback: widen content only). Pending.
+3. Master-detail. **Browse done** with a simpler design than the nested navigator first proposed: the detail screen shows the paper's question list beside it, so URLs, deep links and back behave unchanged. Study and Search pending.
 4. Hover/focus/keyboard, dialog modals, density, ads placement, QA. Pending.
 
 ## 6. Open questions
