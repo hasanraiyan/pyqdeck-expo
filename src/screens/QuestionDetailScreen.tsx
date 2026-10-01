@@ -62,15 +62,16 @@ export const QuestionDetailScreen = () => {
     initialQuestion,
     initialSolution,
     subjectName: paramSubjectName,
+    autoOpenSolution,
   } = route.params || {};
 
   const [question, setQuestion] = useState<QuestionSummary | null>(
     initialQuestion || null
   );
   const queryClient = useQueryClient();
-  // Fetched only after the user asks (see handleToggleSolution). A solution
-  // already in the query cache is still returned while `enabled` is false.
-  const [wantSolution, setWantSolution] = useState(false);
+  // Fetched only after the user asks (see handleToggleSolution), or automatically
+  // if navigated with autoOpenSolution (e.g. from "Solution Available" button).
+  const [wantSolution, setWantSolution] = useState(Boolean(autoOpenSolution));
   const solutionQ = useSolution(subjectId, questionId, { enabled: wantSolution });
   const usableInitialSolution =
     initialSolution && (!initialSolution.questionId || initialSolution.questionId === questionId)
@@ -79,7 +80,7 @@ export const QuestionDetailScreen = () => {
   const solution: Solution | null = solutionQ.data ?? usableInitialSolution;
   const loadingSolution = solutionQ.isFetching && !solution;
   const solutionError = solutionQ.isError && !solution;
-  const [showSolution, setShowSolution] = useState(false);
+  const [showSolution, setShowSolution] = useState(Boolean(autoOpenSolution));
   // Deep links (see App.tsx's `linking` config) only carry semesterId/subjectId/
   // year/questionId - no subjectName - so backfill it from getQuestion's response.
   const [subjectName, setSubjectName] = useState<string | undefined>(paramSubjectName);
@@ -145,6 +146,13 @@ export const QuestionDetailScreen = () => {
   useEffect(() => {
     voteCountsRef.current = voteCounts;
   }, [voteCounts]);
+
+  useEffect(() => {
+    if (autoOpenSolution) {
+      setWantSolution(true);
+      setShowSolution(true);
+    }
+  }, [autoOpenSolution, questionId]);
 
   const handleToggleSolution = () => {
     if (solution) {

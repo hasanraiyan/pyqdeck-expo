@@ -16,7 +16,7 @@ import { AskAiBadge, YearBadge, MarksBadge, QNumBadge } from './Badge';
 import { cleanMarkdown } from '../utils/responsive';
 import { shareQuestion } from '../utils/links';
 import { questionMarkdownStyles, markdownRules } from '../theme/markdownStyles';
-import { COLORS, FONTS } from '../theme/colors';
+import { COLORS, FONTS, RADIUS } from '../theme/colors';
 import { isAiEnabled } from '../config/features';
 
 interface QuestionItemClassicProps {
@@ -93,7 +93,8 @@ export const QuestionItemClassic: React.FC<QuestionItemClassicProps> = React.mem
     }
   };
 
-  const handleOpenDetail = () => {
+  const handleOpenDetail = (autoOpenSolution?: boolean) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     navigation.navigate('QuestionDetail', {
       subjectId,
       semesterId,
@@ -101,6 +102,7 @@ export const QuestionItemClassic: React.FC<QuestionItemClassicProps> = React.mem
       questionId: question.questionId,
       initialQuestion: question,
       subjectName,
+      autoOpenSolution: autoOpenSolution ?? Boolean(question.hasSolution),
     });
   };
 
@@ -116,7 +118,7 @@ export const QuestionItemClassic: React.FC<QuestionItemClassicProps> = React.mem
 
         <View style={styles.rightCluster}>
           <TouchableOpacity
-            onPress={handleOpenDetail}
+            onPress={() => handleOpenDetail(false)}
             activeOpacity={0.7}
             hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
           >
@@ -147,7 +149,7 @@ export const QuestionItemClassic: React.FC<QuestionItemClassicProps> = React.mem
       {/* Question Body - tap anywhere to open detail */}
       <TouchableOpacity
         activeOpacity={0.8}
-        onPress={handleOpenDetail}
+        onPress={() => handleOpenDetail(question.hasSolution)}
         style={styles.bodyPressable}
       >
         <View pointerEvents="none">
@@ -158,6 +160,44 @@ export const QuestionItemClassic: React.FC<QuestionItemClassicProps> = React.mem
             variant="question"
           />
         </View>
+      </TouchableOpacity>
+
+      {/* High-CTR Navigation CTA */}
+      <TouchableOpacity
+        style={[
+          styles.ctaButton,
+          question.hasSolution ? styles.ctaButtonSolution : styles.ctaButtonDefault,
+        ]}
+        onPress={() => handleOpenDetail(question.hasSolution)}
+        activeOpacity={0.82}
+        accessibilityLabel={
+          question.hasSolution
+            ? 'Solution available, view question and solution details'
+            : 'View question details'
+        }
+      >
+        {question.hasSolution ? (
+          <View style={styles.ctaRow}>
+            <View style={styles.ctaBadgeWrapper}>
+              <View style={styles.ctaCheckIcon}>
+                <Feather name="check" size={12} color={COLORS.secondary} />
+              </View>
+              <Text style={styles.ctaSolutionText}>Solution Available</Text>
+            </View>
+            <View style={styles.ctaActionWrapper}>
+              <Text style={styles.ctaActionText}>View Details</Text>
+              <Feather name="arrow-right" size={14} color="#FFFFFF" />
+            </View>
+          </View>
+        ) : (
+          <View style={styles.ctaRow}>
+            <View style={styles.ctaDefaultLeft}>
+              <Feather name="file-text" size={14} color={COLORS.textMuted} />
+              <Text style={styles.ctaDefaultText}>View Question Details</Text>
+            </View>
+            <Feather name="arrow-right" size={14} color={COLORS.textMuted} />
+          </View>
+        )}
       </TouchableOpacity>
 
       {/* Bottom Action Footer: Google, Copy, Share on left; Ask AI on right */}
@@ -199,7 +239,7 @@ export const QuestionItemClassic: React.FC<QuestionItemClassicProps> = React.mem
 
           <TouchableOpacity
             style={styles.iconButton}
-            onPress={handleOpenDetail}
+            onPress={() => handleOpenDetail()}
             activeOpacity={0.6}
             accessibilityLabel="Open question detail screen"
             hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
@@ -285,5 +325,72 @@ const styles = StyleSheet.create({
     padding: 4,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  ctaButton: {
+    borderRadius: RADIUS.md,
+    marginHorizontal: 14,
+    marginTop: 6,
+    marginBottom: 6,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+  },
+  ctaButtonSolution: {
+    backgroundColor: COLORS.secondary,
+    shadowColor: COLORS.secondary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.18,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  ctaButtonDefault: {
+    backgroundColor: COLORS.background,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  ctaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  ctaBadgeWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  ctaCheckIcon: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  ctaSolutionText: {
+    fontFamily: FONTS.mono,
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    letterSpacing: 0.2,
+  },
+  ctaActionWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  ctaActionText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  ctaDefaultLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  ctaDefaultText: {
+    fontFamily: FONTS.mono,
+    fontSize: 12,
+    fontWeight: '600',
+    color: COLORS.text,
   },
 });
