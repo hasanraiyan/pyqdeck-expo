@@ -27,7 +27,9 @@ import {
   handleColdStartNotification,
 } from './src/utils/notifications';
 import { COLORS } from './src/theme/colors';
-import { LAYOUT } from './src/theme/layout';
+import { getShellWidth } from './src/theme/layout';
+import { ShellTabBar } from './src/components/ShellTabBar';
+import { getSidebarCollapsed, setSidebarCollapsed } from './src/utils/settings';
 import { useResponsive } from './src/utils/responsive';
 import { HomeScreen } from './src/screens/HomeScreen';
 import { SubjectListScreen } from './src/screens/SubjectListScreen';
@@ -248,10 +250,35 @@ function TabsNavigator() {
   const insets = useSafeAreaInsets();
   const { shellMode } = useResponsive();
   const isBottom = shellMode === 'bottom';
-  const isSidebar = shellMode === 'sidebar';
-  const shellWidth = isSidebar ? LAYOUT.shellWidth.sidebar : LAYOUT.shellWidth.rail;
+  const isLaptopUp = shellMode === 'sidebar';
+  // Collapsing only applies from laptop up; the choice is remembered (FR-N5).
+  const [collapsed, setCollapsed] = useState(false);
+  useEffect(() => {
+    getSidebarCollapsed().then(setCollapsed);
+  }, []);
+  const toggleCollapsed = () =>
+    setCollapsed((c) => {
+      setSidebarCollapsed(!c);
+      return !c;
+    });
+  // A collapsed sidebar looks exactly like the tablet rail.
+  const isSidebar = isLaptopUp && !collapsed;
+  const shellWidth = getShellWidth(shellMode, collapsed);
   return (
     <Tab.Navigator
+        tabBar={
+          isBottom
+            ? undefined
+            : (props) => (
+                <ShellTabBar
+                  {...props}
+                  width={shellWidth}
+                  collapsible={isLaptopUp}
+                  collapsed={collapsed}
+                  onToggle={toggleCollapsed}
+                />
+              )
+        }
         screenOptions={{
           headerShown: false,
           // Navigation follows window class (SRS section 4): bottom bar on
@@ -270,11 +297,11 @@ function TabsNavigator() {
                 paddingTop: 6,
               }
             : {
-                backgroundColor: COLORS.card,
-                borderRightColor: COLORS.border,
-                borderRightWidth: 1,
+                // ShellTabBar owns the column's width and border; the bar fills it.
                 // React Navigation sizes a labelled sidebar by a fraction of the
                 // window (its minWidth), so pin min and max to hold a fixed width.
+                backgroundColor: 'transparent',
+                borderRightWidth: 0,
                 width: shellWidth,
                 minWidth: shellWidth,
                 maxWidth: shellWidth,

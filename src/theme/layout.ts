@@ -58,6 +58,13 @@ export function getShellMode(breakpoint: Breakpoint): ShellMode {
   return 'sidebar';
 }
 
+/** Width taken by the shell, or 0 for the bottom bar. A collapsed sidebar is the rail width (FR-N5). */
+export function getShellWidth(mode: ShellMode, collapsed = false): number {
+  if (mode === 'bottom') return 0;
+  if (mode === 'rail' || collapsed) return LAYOUT.shellWidth.rail;
+  return LAYOUT.shellWidth.sidebar;
+}
+
 /**
  * Column count for a grid, from the *measured container* width (BP-3), so it
  * stays right beside a sidebar and on web where the scrollbar eats width.

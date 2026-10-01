@@ -36,7 +36,7 @@ Rules: BP-2 crossing a threshold keeps navigation state; BP-3 grid columns come 
 | FR-N2 | Same destinations in every shell | M | Done |
 | FR-N3 | Tab stack state kept on switch | M | Done (unchanged tab navigator) |
 | FR-N4 | Logo, Settings and account slots in the sidebar | M | Pending: needs a custom `tabBar` |
-| FR-N5 | Collapsible sidebar, remembered | S | Pending |
+| FR-N5 | Collapsible sidebar, remembered | S | Done (`ShellTabBar`, persisted in AsyncStorage) |
 | FR-N6 | Back control, browser/OS back, Escape | M | Pending |
 | FR-N7 | URL and deep links identical at every width | M | Verify per phase (config untouched so far) |
 | FR-N8 | Search shortcut (`/`, Ctrl/Cmd+K) | C | Pending |
@@ -65,6 +65,6 @@ Phone UI unchanged (NFR-1); no new native dependency and no release workflow cha
 4. Hover/focus/keyboard, dialog modals, density, ads placement, QA. Pending.
 
 ## 6. Open questions
-- Collapsible sidebar by default on laptop widths (FR-N5)?
+- Should the sidebar start collapsed by default on laptop widths? (Today it starts expanded.)
 - Wide-window ad format: leaderboard banner or today's banner?
 - Is Study master-detail (FR-L4) required in the first release?

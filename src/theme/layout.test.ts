@@ -8,6 +8,7 @@ import {
   getGridColumns,
   getCardWidth,
   canShowTwoPanes,
+  getShellWidth,
   LAYOUT,
 } from './layout.ts';
 
@@ -57,4 +58,12 @@ test('two panes need both minimum widths beside the shell, and not on phone', ()
   assert.equal(canShowTwoPanes(840, LAYOUT.shellWidth.rail), false);
   assert.equal(canShowTwoPanes(900, LAYOUT.shellWidth.rail), true);
   assert.equal(canShowTwoPanes(1280, LAYOUT.shellWidth.sidebar), true);
+});
+
+test('shell width: none on phone, rail on tablet, sidebar collapses to rail', () => {
+  assert.equal(getShellWidth('bottom'), 0);
+  assert.equal(getShellWidth('bottom', true), 0);
+  assert.equal(getShellWidth('rail'), LAYOUT.shellWidth.rail);
+  assert.equal(getShellWidth('sidebar'), LAYOUT.shellWidth.sidebar);
+  assert.equal(getShellWidth('sidebar', true), LAYOUT.shellWidth.rail);
 });

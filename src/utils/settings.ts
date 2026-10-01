@@ -54,3 +54,20 @@ export async function setSelectedBranch(branchId: string): Promise<void> {
     await AsyncStorage.setItem(SELECTED_BRANCH_KEY, branchId);
   } catch {}
 }
+
+const SIDEBAR_COLLAPSED_KEY = 'sidebar_collapsed';
+
+/** Whether the laptop/desktop sidebar is collapsed to the icon rail. Defaults to expanded. */
+export async function getSidebarCollapsed(): Promise<boolean> {
+  try {
+    return (await AsyncStorage.getItem(SIDEBAR_COLLAPSED_KEY)) === '1';
+  } catch {
+    return false;
+  }
+}
+
+export async function setSidebarCollapsed(value: boolean): Promise<void> {
+  try {
+    await AsyncStorage.setItem(SIDEBAR_COLLAPSED_KEY, value ? '1' : '0');
+  } catch {}
+}
