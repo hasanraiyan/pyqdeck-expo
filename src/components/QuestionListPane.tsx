@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback, useEffect, useRef } from 'react';
 import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
@@ -21,6 +21,40 @@ interface Props {
  * and state resets behave exactly as they do for Prev / Next.
  */
 export function QuestionListPane({ questions, selectedId, year, width, onSelect }: Props) {
+  const listRef = useRef<FlatList<QuestionSummary>>(null);
+  const visibleIds = useRef<Set<string>>(new Set());
+  // FlatList wants these stable for the lifetime of the list.
+  const viewabilityConfig = useRef({ itemVisiblePercentThreshold: 60 }).current;
+  const onViewableItemsChanged = useRef(
+    ({ viewableItems }: { viewableItems: { item: QuestionSummary }[] }) => {
+      visibleIds.current = new Set(viewableItems.map((v) => v.item.questionId));
+    }
+  ).current;
+
+  // Bring the open question into view when it isn't (opened by deep link, or
+  // reached with Prev / Next). Skipped when it is already visible, so tapping a
+  // row you can see never makes the list jump under the pointer.
+  const index = questions.findIndex((q) => q.questionId === selectedId);
+  useEffect(() => {
+    if (index < 0 || visibleIds.current.has(selectedId as string)) return;
+    // Rows differ in height, so this can fail before they are measured; the
+    // fallback in onScrollToIndexFailed retries once they are.
+    listRef.current?.scrollToIndex({ index, viewPosition: 0.35, animated: false });
+  }, [index, selectedId]);
+
+  const onScrollToIndexFailed = useCallback(
+    (info: { index: number; averageItemLength: number }) => {
+      listRef.current?.scrollToOffset({
+        offset: info.averageItemLength * info.index,
+        animated: false,
+      });
+      setTimeout(() => {
+        listRef.current?.scrollToIndex({ index: info.index, viewPosition: 0.35, animated: false });
+      }, 100);
+    },
+    []
+  );
+
   return (
     <View style={[styles.pane, { width, minWidth: width, maxWidth: width }]}>
       <View style={styles.header}>
@@ -28,7 +62,11 @@ export function QuestionListPane({ questions, selectedId, year, width, onSelect 
         <Text style={styles.headerCount}>{questions.length} questions</Text>
       </View>
       <FlatList
+        ref={listRef}
         data={questions}
+        viewabilityConfig={viewabilityConfig}
+        onViewableItemsChanged={onViewableItemsChanged}
+        onScrollToIndexFailed={onScrollToIndexFailed}
         keyExtractor={(q) => q.questionId}
         extraData={selectedId}
         renderItem={({ item }) => {
