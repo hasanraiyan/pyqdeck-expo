@@ -26,7 +26,7 @@ import { COLORS, FONTS } from '../theme/colors';
 import { Badge, MarksBadge, AskAiBadge, YearBadge, ShowSolnBadge } from './Badge';
 import { WaveLoader } from './WaveLoader';
 import { InlineMathText } from './InlineMathText';
-import { cleanMarkdown } from '../utils/responsive';
+import { cleanMarkdown, useResponsive } from '../utils/responsive';
 import { questionMarkdownStyles, solutionMarkdownStyles, markdownRules } from '../theme/markdownStyles';
 import { isAiEnabled } from '../config/features';
 import { shareQuestion } from '../utils/links';
@@ -39,6 +39,8 @@ interface QuestionItemProps {
   subjectName?: string;
   showOpenButton?: boolean;
   hideYearBadge?: boolean;
+  /** Tighter header for pointer-first windows. Defaults to the window class. */
+  compact?: boolean;
 }
 
 export const QuestionItem: React.FC<QuestionItemProps> = React.memo(({
@@ -48,7 +50,10 @@ export const QuestionItem: React.FC<QuestionItemProps> = React.memo(({
   subjectName,
   showOpenButton = true,
   hideYearBadge = false,
+  compact: compactProp,
 }) => {
+  const { compact: windowCompact } = useResponsive();
+  const compact = compactProp ?? windowCompact;
   const navigation = useNavigation<any>();
   // Measured, not window-derived (FR-C4): in a 360 px list pane on a 1440 px
   // window the card is narrow, and in a sidebar layout the window overstates it.
@@ -264,7 +269,7 @@ export const QuestionItem: React.FC<QuestionItemProps> = React.memo(({
       <TouchableOpacity
         activeOpacity={0.7}
         onPress={toggleExpand}
-        style={[styles.header, expanded && styles.headerExpanded]}
+        style={[styles.header, compact && styles.headerCompact, expanded && styles.headerExpanded]}
       >
         <View style={styles.headerLeft}>
           <InlineMathText
@@ -486,6 +491,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     gap: 12,
   },
+  headerCompact: { paddingVertical: 10 },
   headerExpanded: {
     backgroundColor: COLORS.cardSecondary,
   },

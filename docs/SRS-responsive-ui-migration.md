@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | Document | Software Requirements Specification (repo copy) |
-| Status | Approved. Phases 0 to 2 and 4 implemented, Phase 3 |
+| Status | Approved. Phases 0 to 4 implemented. Remaining: device QA with the real backend and Clerk. Phase 3 |
 | Full document | The claude.ai doc "PYQDeck Responsive UI Migration - SRS" holds the long form, including the gap audit, research notes, feasibility table and risks. This file keeps what code needs to reference |
 
 ## 1. Goals
@@ -49,7 +49,7 @@ Rules: BP-2 crossing a threshold keeps navigation state; BP-3 grid columns come 
 | FR-L7 | Prose capped at `readMaxWidth` | M | Existing on 9 screens |
 | FR-L8 | Selected row highlighted in list-detail | M | Done |
 | FR-L9 | Sheets as centred dialogs on laptop+ | S | Done for the four in-app sheets (filter, two report sheets, AI sources) via `useDialogLayout`. The Clerk sign-in and account screens are full-screen route presentations and are unchanged |
-| FR-C1 | `compact` density prop | S | Not done: no screen needed it yet |
+| FR-C1 | `compact` density | S | Done for cards and rows: `useResponsive().compact` (laptop and up) tightens Search result cards and the `QuestionItem` header (`compact` prop, defaults to the window class). Chips and badges are unchanged; touch sizes on phone and tablet are never reduced |
 | FR-C2 | Hover, focus-visible, pressed on web/desktop | M | Done by one stylesheet (`webStyles.ts`) covering every focusable element, plus hover on the new sidebar and list-pane rows |
 | FR-C3 | Skeletons match final layout | S | Done for SubjectList and AllSubjects; the Study skeletons were already fluid |
 | FR-C4 | Reflow by container width | M | Done for `QuestionItem` (measured). `AiOverviewCard` never used window width |
@@ -70,7 +70,7 @@ Phone UI unchanged (NFR-1); no new native dependency and no release workflow cha
 1. Navigation shell using `tabBarPosition` / `tabBarVariant` (React Navigation 7.19). **Done** except FR-N4 to N8.
 2. `ScreenContainer`, `ResponsiveGrid`, screen migration. **Done** (QuestionList keeps its own `readMaxWidth` cap): all screens now use `ScreenContainer` / `useContainerStyle` / `ResponsiveGrid`, or measured-width `getGridColumns`.
 3. Master-detail. **Done.** Browse and Study use a simpler design than the nested navigator first proposed: the detail screen shows its list beside it, so URLs, deep links and back behave unchanged. Search shows a preview pane for question hits.
-4. Hover/focus/keyboard, dialog modals, skeleton parity, state screens, dev overlay. **Done** except the `compact` density prop (FR-C1) and device QA.
+4. Hover/focus/keyboard, dialog modals, skeleton parity, state screens, dev overlay. **Done** except device QA.
 
 ## 6. Open questions
 - Should the sidebar start collapsed by default on laptop widths? (Today it starts expanded.)

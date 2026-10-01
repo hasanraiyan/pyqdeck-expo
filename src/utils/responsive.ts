@@ -41,6 +41,9 @@ export const useResponsive = () => {
     isSmallDevice: isSmall,
     breakpoint,
     shellMode: getShellMode(breakpoint),
+    // Pointer-first window classes get tighter cards and rows (FR-C1); touch
+    // sizes on phone and tablet are never reduced.
+    compact: breakpoint === 'laptop' || breakpoint === 'desktop',
     bp,
     // Deliberately separate from readMaxWidth: that one is a *reading*
     // column (long prose at 1100px is unreadable), this one is for index and

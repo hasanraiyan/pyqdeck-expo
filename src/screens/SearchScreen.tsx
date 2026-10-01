@@ -46,7 +46,7 @@ export const SearchScreen = () => {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const linkTo = useLinkTo();
-  const { readMaxWidth, hPadding, breakpoint } = useResponsive();
+  const { readMaxWidth, hPadding, breakpoint, compact } = useResponsive();
   // Two panes (results beside a question preview) when this screen's own box
   // can hold both (FR-L5). Measured, so the sidebar is already accounted for.
   const [rootWidth, setRootWidth] = useState(0);
@@ -438,7 +438,7 @@ export const SearchScreen = () => {
   const renderNoteCard = (note: TopicNoteSearchResultItem) => (
     <TouchableOpacity
       key={`${note.subjectSlug}-${note.topicId}`}
-      style={styles.noteResultCard}
+      style={[styles.noteResultCard, compact && styles.cardCompact]}
       activeOpacity={0.7}
       onPress={() =>
         // Must match the shape TopicNotesScreen destructures - it reads a
@@ -650,7 +650,10 @@ export const SearchScreen = () => {
               <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.filterTabsRow}
+                // With a mouse there is no swipe, so a clipped tab (Subjects) would be
+                // unreachable in the narrow results pane: wrap instead of scroll.
+                scrollEnabled={!twoPane}
+                contentContainerStyle={[styles.filterTabsRow, twoPane && { flexWrap: 'wrap', width: '100%' }]}
               >
                 <TouchableOpacity
                   style={[styles.filterTabPill, activeTab === 'all' && styles.filterTabPillActive]}
@@ -745,7 +748,7 @@ export const SearchScreen = () => {
                 {subjectResults.map((item) => (
                   <TouchableOpacity
                     key={item.id}
-                    style={styles.subjectCard}
+                    style={[styles.subjectCard, compact && styles.cardCompact]}
                     activeOpacity={0.7}
                     onPress={() => {
                       prefetchSubject(item.id);
@@ -797,6 +800,7 @@ export const SearchScreen = () => {
                     key={questionKey(q)}
                     style={[
                       styles.questionResultCard,
+                      compact && styles.cardCompact,
                       twoPane && selectedQuestion && questionKey(q) === questionKey(selectedQuestion) && styles.questionResultCardSelected,
                     ]}
                     activeOpacity={0.7}
@@ -1113,6 +1117,8 @@ const styles = StyleSheet.create({
     fontSize: rf(11.5),
     color: COLORS.textMuted,
   },
+  // Tighter padding on pointer-first windows (FR-C1).
+  cardCompact: { padding: 10 },
   body: { flex: 1 },
   bodyRow: { flexDirection: 'row' },
   resultsPane: {
