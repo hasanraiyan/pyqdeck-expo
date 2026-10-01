@@ -4,6 +4,8 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
+  type StyleProp,
+  type ViewStyle,
 } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
@@ -25,6 +27,7 @@ interface QuestionItemClassicProps {
   semesterId: string;
   subjectName?: string;
   hideYearBadge?: boolean;
+  style?: StyleProp<ViewStyle>;
 }
 
 export const QuestionItemClassic: React.FC<QuestionItemClassicProps> = React.memo(({
@@ -33,6 +36,7 @@ export const QuestionItemClassic: React.FC<QuestionItemClassicProps> = React.mem
   semesterId,
   subjectName,
   hideYearBadge = false,
+  style,
 }) => {
   const navigation = useNavigation<any>();
   const [copied, setCopied] = useState(false);
@@ -107,7 +111,7 @@ export const QuestionItemClassic: React.FC<QuestionItemClassicProps> = React.mem
   };
 
   return (
-    <View style={styles.card}>
+    <View style={[styles.card, style]}>
       {/* Top Meta Row: Year on LEFT, Q Number & Marks on RIGHT */}
       <View style={styles.headerRow}>
         <View style={styles.leftCluster}>

@@ -688,9 +688,9 @@ export const QuestionDetailScreen = () => {
                   </View>
                 </View>
               ) : loadingSolution ? (
-                <View style={{ paddingVertical: 14, alignItems: 'center' }}>
-                  <WaveLoader color={COLORS.primary} dotSize={5} />
-                  <Text style={[styles.loadingText, { marginTop: 4 }]}>Loading solution…</Text>
+                <View style={{ paddingVertical: 18, alignItems: 'center' }}>
+                  <CircleLoader color={COLORS.primary} dotSize={5} size={36} />
+                  <Text style={[styles.loadingText, { marginTop: 10 }]}>Loading solution…</Text>
                 </View>
               ) : solutionError ? (
                 <TouchableOpacity

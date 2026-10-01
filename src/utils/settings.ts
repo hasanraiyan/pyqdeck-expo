@@ -22,6 +22,7 @@ export async function setVolumeScrollEnabled(value: boolean): Promise<void> {
 }
 
 const OLD_UI_ENABLED_KEY = 'old_ui_enabled';
+const QUESTION_LAYOUT_CHOSEN_KEY = 'question_layout_chosen';
 
 export async function getOldUiEnabled(): Promise<boolean> {
   try {
@@ -35,6 +36,33 @@ export async function getOldUiEnabled(): Promise<boolean> {
 export async function setOldUiEnabled(value: boolean): Promise<void> {
   try {
     await AsyncStorage.setItem(OLD_UI_ENABLED_KEY, value ? '1' : '0');
+    await AsyncStorage.setItem(QUESTION_LAYOUT_CHOSEN_KEY, '1');
+  } catch {}
+}
+
+/**
+ * Checks whether the user has already chosen their preferred question layout
+ * (via the first-time prompt or by explicitly toggling it in Settings).
+ */
+export async function hasChosenQuestionLayout(): Promise<boolean> {
+  try {
+    const chosen = await AsyncStorage.getItem(QUESTION_LAYOUT_CHOSEN_KEY);
+    if (chosen === '1') return true;
+    // If the user already explicitly set old_ui_enabled in the past, treat as chosen
+    const oldUi = await AsyncStorage.getItem(OLD_UI_ENABLED_KEY);
+    return oldUi !== null;
+  } catch {
+    return true; // Fail safe on storage error so users are not blocked
+  }
+}
+
+/**
+ * Marks that the user has chosen their question reading layout,
+ * preventing the first-time prompt from appearing again.
+ */
+export async function markQuestionLayoutChosen(): Promise<void> {
+  try {
+    await AsyncStorage.setItem(QUESTION_LAYOUT_CHOSEN_KEY, '1');
   } catch {}
 }
 
