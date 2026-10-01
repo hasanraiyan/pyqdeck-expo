@@ -26,7 +26,7 @@ import { COLORS, FONTS } from '../theme/colors';
 import { Badge, MarksBadge, AskAiBadge, YearBadge, ShowSolnBadge } from './Badge';
 import { WaveLoader } from './WaveLoader';
 import { InlineMathText } from './InlineMathText';
-import { cleanMarkdown, isTablet } from '../utils/responsive';
+import { cleanMarkdown, useResponsive } from '../utils/responsive';
 import { questionMarkdownStyles, solutionMarkdownStyles, markdownRules } from '../theme/markdownStyles';
 import { isAiEnabled } from '../config/features';
 import { shareQuestion } from '../utils/links';
@@ -49,6 +49,7 @@ export const QuestionItem: React.FC<QuestionItemProps> = React.memo(({
   hideYearBadge = false,
 }) => {
   const navigation = useNavigation<any>();
+  const { isTablet } = useResponsive();
   const [expanded, setExpanded] = useState(false);
   const queryClient = useQueryClient();
   // Fetch only after the user asks for it (see handleToggleSolution). A solution

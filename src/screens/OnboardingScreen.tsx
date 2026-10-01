@@ -1,11 +1,11 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
   ScrollView,
   TouchableOpacity,
   StyleSheet,
-  Dimensions,
+  useWindowDimensions,
   NativeSyntheticEvent,
   NativeScrollEvent,
 } from 'react-native';
@@ -19,7 +19,8 @@ import { QuestionItemClassic } from '../components/QuestionItemClassic';
 import { QuestionSummary } from '../types';
 import { rf } from '../utils/responsive';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
+// Onboarding is a centred column on wide windows, not a stretched phone slide.
+const CONTENT_MAX_WIDTH = 560;
 
 const DEMO_QUESTION: QuestionSummary = {
   questionId: 'demo-q1',
@@ -157,8 +158,17 @@ interface Props {
 
 export function OnboardingScreen({ onDone }: Props) {
   const insets = useSafeAreaInsets();
+  const { width: SCREEN_WIDTH } = useWindowDimensions();
   const scrollRef = useRef<ScrollView>(null);
   const [activeIndex, setActiveIndex] = useState(0);
+  const contentCap = { maxWidth: CONTENT_MAX_WIDTH, alignSelf: 'center' as const };
+
+  // Pages are one window wide; keep the current one in view across rotation / resize.
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ x: SCREEN_WIDTH * activeIndex, animated: false });
+    // activeIndex is intentionally omitted: goNext animates its own scroll.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [SCREEN_WIDTH]);
 
   const goNext = async () => {
     Haptics.selectionAsync();
@@ -204,14 +214,14 @@ export function OnboardingScreen({ onDone }: Props) {
         {SLIDES.map((slide, idx) => (
           <View key={idx} style={[styles.slide, { width: SCREEN_WIDTH }]}>
             {/* Visual Demo UI Mockup */}
-            <View style={styles.demoWrapper}>
+            <View style={[styles.demoWrapper, contentCap]}>
               {idx === 0 && <DemoQuestionCard />}
               {idx === 1 && <DemoJumpBackIn />}
               {idx === 2 && <DemoSearch />}
             </View>
 
             {/* Slide Information */}
-            <View style={styles.copyWrapper}>
+            <View style={[styles.copyWrapper, contentCap]}>
               <Text style={styles.kicker}>{slide.kicker}</Text>
               <Text style={styles.heading}>{slide.heading}</Text>
               <View style={styles.divider} />
@@ -222,7 +232,7 @@ export function OnboardingScreen({ onDone }: Props) {
       </ScrollView>
 
       {/* Bottom bar */}
-      <View style={styles.bottomBar}>
+      <View style={[styles.bottomBar, contentCap, { width: '100%' }]}>
         {/* Skip */}
         <TouchableOpacity
           onPress={skip}

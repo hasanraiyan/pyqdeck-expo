@@ -27,6 +27,8 @@ import {
   handleColdStartNotification,
 } from './src/utils/notifications';
 import { COLORS } from './src/theme/colors';
+import { LAYOUT } from './src/theme/layout';
+import { useResponsive } from './src/utils/responsive';
 import { HomeScreen } from './src/screens/HomeScreen';
 import { SubjectListScreen } from './src/screens/SubjectListScreen';
 import { SubjectDetailScreen } from './src/screens/SubjectDetailScreen';
@@ -244,21 +246,46 @@ function SearchStack() {
 /** The tab navigator, wrapped by the root stack so the auth screens can sit above it. */
 function TabsNavigator() {
   const insets = useSafeAreaInsets();
+  const { shellMode } = useResponsive();
+  const isBottom = shellMode === 'bottom';
+  const isSidebar = shellMode === 'sidebar';
+  const shellWidth = isSidebar ? LAYOUT.shellWidth.sidebar : LAYOUT.shellWidth.rail;
   return (
     <Tab.Navigator
         screenOptions={{
           headerShown: false,
-          tabBarStyle: {
-            backgroundColor: COLORS.card,
-            borderTopColor: COLORS.border,
-            borderTopWidth: 1,
-            height: 56 + insets.bottom,
-            paddingBottom: insets.bottom > 0 ? insets.bottom : 6,
-            paddingTop: 6,
-          },
+          // Navigation follows window class (SRS section 4): bottom bar on
+          // phone, 72 px icon rail on tablet, labelled sidebar from laptop up.
+          // React Navigation turns the bar into a sidebar for 'left'.
+          tabBarPosition: isBottom ? 'bottom' : 'left',
+          tabBarVariant: isBottom ? 'uikit' : 'material',
+          tabBarLabelPosition: isSidebar ? 'beside-icon' : 'below-icon',
+          tabBarStyle: isBottom
+            ? {
+                backgroundColor: COLORS.card,
+                borderTopColor: COLORS.border,
+                borderTopWidth: 1,
+                height: 56 + insets.bottom,
+                paddingBottom: insets.bottom > 0 ? insets.bottom : 6,
+                paddingTop: 6,
+              }
+            : {
+                backgroundColor: COLORS.card,
+                borderRightColor: COLORS.border,
+                borderRightWidth: 1,
+                // React Navigation sizes a labelled sidebar by a fraction of the
+                // window (its minWidth), so pin min and max to hold a fixed width.
+                width: shellWidth,
+                minWidth: shellWidth,
+                maxWidth: shellWidth,
+                // Default side padding would leave a 72 px rail ~48 px for its label.
+                ...(isSidebar ? null : { paddingStart: 8, paddingEnd: 8 }),
+              },
+          // Rail labels sit under the icon, so keep them small enough not to clip.
+          tabBarLabelStyle: isSidebar ? undefined : { fontSize: 10 },
           tabBarActiveTintColor: COLORS.primary,
           tabBarInactiveTintColor: COLORS.textMuted,
-          // The bar has a fixed height; scaled labels would clip or push icons.
+          // The bar has a fixed size; scaled labels would clip or push icons.
           tabBarAllowFontScaling: false,
         }}
       >
