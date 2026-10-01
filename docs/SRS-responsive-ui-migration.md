@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | Document | Software Requirements Specification (repo copy) |
-| Status | Approved. Phases 0 to 4 implemented. Remaining: device QA with the real backend and Clerk. Phase 3 |
+| Status | Approved. Phases 0 to 4 implemented. Remaining: device QA with the real backend and Clerk |
 | Full document | The claude.ai doc "PYQDeck Responsive UI Migration - SRS" holds the long form, including the gap audit, research notes, feasibility table and risks. This file keeps what code needs to reference |
 
 ## 1. Goals
