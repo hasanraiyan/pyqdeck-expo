@@ -173,15 +173,17 @@ export const AllSubjectsScreen = () => {
       <View style={styles.content} onLayout={onContentLayout}>
         {loading && !refreshing ? (
           <View
-            style={{
-              padding: 16,
-              width: '100%',
-              maxWidth: frameMaxWidth,
-              alignSelf: 'center',
-            }}
+            style={[
+              { padding: 16, width: '100%', maxWidth: frameMaxWidth, alignSelf: 'center' },
+              // Match the loaded card grid so the page doesn't reflow when data lands.
+              isGrid && { flexDirection: 'row', flexWrap: 'wrap', gap: GAP, paddingHorizontal: hPadding },
+            ]}
           >
-            {[1, 2, 3, 4, 5].map((i) => (
-              <View key={i} style={styles.skeletonCard}>
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <View
+                key={i}
+                style={[styles.skeletonCard, isGrid && { width: cardWidth, marginBottom: 0 }]}
+              >
                 <Skeleton width="40%" height={16} style={{ marginBottom: 8 }} />
                 <Skeleton width="70%" height={14} />
               </View>

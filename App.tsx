@@ -31,6 +31,7 @@ import { getShellWidth } from './src/theme/layout';
 import { ShellTabBar } from './src/components/ShellTabBar';
 import { getSidebarCollapsed, setSidebarCollapsed } from './src/utils/settings';
 import { useResponsive } from './src/utils/responsive';
+import { installWebStyles } from './src/utils/webStyles';
 import { HomeScreen } from './src/screens/HomeScreen';
 import { SubjectListScreen } from './src/screens/SubjectListScreen';
 import { SubjectDetailScreen } from './src/screens/SubjectDetailScreen';
@@ -63,6 +64,8 @@ Sentry.init({
   sendDefaultPii: false,
   enableLogs: true,
 });
+
+installWebStyles();
 
 const Stack = createNativeStackNavigator();
 const RootStack = createNativeStackNavigator();
@@ -433,16 +436,26 @@ function AppContent() {
     });
   }, [onboarded]);
 
-  // Escape goes back on web / desktop (FR-N6). Left alone while a dialog or an
-  // editable field has focus, so it still closes modals and clears inputs.
+  // Keyboard on web / desktop: Escape goes back (FR-N6) and "/" or Ctrl/Cmd+K
+  // opens Search (FR-N8). Both are left alone while a dialog or an editable
+  // field has focus, so they never fight typing or closing a modal.
   useEffect(() => {
     if (Platform.OS !== 'web' || typeof document === 'undefined') return;
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key !== 'Escape' || e.defaultPrevented) return;
+      if (e.defaultPrevented) return;
       const el = document.activeElement as HTMLElement | null;
       const tag = el?.tagName;
-      if (tag === 'INPUT' || tag === 'TEXTAREA' || el?.isContentEditable) return;
-      if (document.querySelector('[role="dialog"], [aria-modal="true"]')) return;
+      const typing = tag === 'INPUT' || tag === 'TEXTAREA' || !!el?.isContentEditable;
+      const dialogOpen = !!document.querySelector('[role="dialog"], [aria-modal="true"]');
+      // Search shortcut (FR-N8): "/" or Ctrl/Cmd+K, never while typing.
+      const isSearchKey = e.key === '/' || ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k');
+      if (isSearchKey && !dialogOpen && (e.key !== '/' || !typing)) {
+        if (!navigationRef.isReady()) return;
+        e.preventDefault();
+        navigationRef.navigate('Tabs', { screen: 'Search' });
+        return;
+      }
+      if (e.key !== 'Escape' || typing || dialogOpen) return;
       if (navigationRef.isReady() && navigationRef.canGoBack()) navigationRef.goBack();
     };
     document.addEventListener('keydown', onKeyDown);

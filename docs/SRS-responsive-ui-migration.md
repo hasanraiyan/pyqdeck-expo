@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | Document | Software Requirements Specification (repo copy) |
-| Status | Approved. Phases 0 to 2 implemented, Phase 3 partly (Browse), Phase 4 pending |
+| Status | Approved. Phases 0 to 2 and 4 implemented, Phase 3 partly (Browse only) |
 | Full document | The claude.ai doc "PYQDeck Responsive UI Migration - SRS" holds the long form, including the gap audit, research notes, feasibility table and risks. This file keeps what code needs to reference |
 
 ## 1. Goals
@@ -39,7 +39,7 @@ Rules: BP-2 crossing a threshold keeps navigation state; BP-3 grid columns come 
 | FR-N5 | Collapsible sidebar, remembered | S | Done (`ShellTabBar`, persisted in AsyncStorage) |
 | FR-N6 | Back control, browser/OS back, Escape | M | Done (header back arrow, router history on web, Escape handler in `App.tsx`) |
 | FR-N7 | URL and deep links identical at every width | M | Verify per phase (config untouched so far) |
-| FR-N8 | Search shortcut (`/`, Ctrl/Cmd+K) | C | Pending |
+| FR-N8 | Search shortcut (`/`, Ctrl/Cmd+K) | C | Done (`App.tsx`; ignored while typing or in a dialog) |
 | FR-L1 | Shared `ScreenContainer` | M | Done; used by Home, SubjectDetail, Settings, Search, plus `useContainerStyle` on the four Study screens |
 | FR-L2 | Shared `ResponsiveGrid` (pure logic in `layout.ts`) | M | Done; Home and SubjectDetail year grids. AllSubjects and SubjectList FlatLists use measured-width `getGridColumns` |
 | FR-L3 | List-detail for Browse | M | Done as a list pane inside `QuestionDetailScreen` (the paper's questions beside the open one) when its own box is >= 800 px. Keeps stack, deep links and back button |
@@ -47,13 +47,19 @@ Rules: BP-2 crossing a threshold keeps navigation state; BP-3 grid columns come 
 | FR-L6 | Narrow windows get one pane | M | Done (pane is measured, so tablet portrait and phone stay single-pane) |
 | FR-L7 | Prose capped at `readMaxWidth` | M | Existing on 9 screens |
 | FR-L8 | Selected row highlighted in list-detail | M | Done |
-| FR-L9 | Auth/onboarding modals as centred dialog on laptop+ | S | Pending (Phase 4) |
-| FR-C1..C7 | Density, hover/focus, skeleton parity, container-width reflow, ads placement, state centring | M/S | Pending (Phase 4) |
+| FR-L9 | Sheets as centred dialogs on laptop+ | S | Done for the four in-app sheets (filter, two report sheets, AI sources) via `useDialogLayout`. The Clerk sign-in and account screens are full-screen route presentations and are unchanged |
+| FR-C1 | `compact` density prop | S | Not done: no screen needed it yet |
+| FR-C2 | Hover, focus-visible, pressed on web/desktop | M | Done by one stylesheet (`webStyles.ts`) covering every focusable element, plus hover on the new sidebar and list-pane rows |
+| FR-C3 | Skeletons match final layout | S | Done for SubjectList and AllSubjects; the Study skeletons were already fluid |
+| FR-C4 | Reflow by container width | M | Done for `QuestionItem` (measured). `AiOverviewCard` never used window width |
+| FR-C5 | Math, code, images fit the reading column | M | Verified by code review only: code scrolls horizontally, math and content are width 100% |
+| FR-C6 | Ad placement | M | Banner stays under the detail pane, not in the reading column; policy unchanged. Not checked with a live ad |
+| FR-C7 | State screens centred, max 420 px | S | Done (`ScreenError`) |
 | FR-R1 | Scaling helpers do not use import-time `Dimensions` | M | Done for `scale` / `verticalScale`; `rf()` is still evaluated when a `StyleSheet` is created |
 | FR-R2 | Onboarding follows live window width, capped width | M | Done |
 | FR-R3 | Rotation/resize without remount or refetch | M | Verify per phase |
 | FR-R4 | Remove legacy `contentMaxWidth`, `gridColumns`, `MAX_CONTENT_WIDTH` | S | Done |
-| FR-R5 | Dev breakpoint overlay | C | Pending |
+| FR-R5 | Dev breakpoint overlay | C | Done (breakpoint and width in the dev backend banner) |
 
 ## 4. Non-functional
 Phone UI unchanged (NFR-1); no new native dependency and no release workflow change (NFR-7, NFR-8); layout logic is pure and unit tested (`npm test`); verify at 360, 768, 1024, 1280 and 1920 px.
@@ -63,7 +69,7 @@ Phone UI unchanged (NFR-1); no new native dependency and no release workflow cha
 1. Navigation shell using `tabBarPosition` / `tabBarVariant` (React Navigation 7.19). **Done** except FR-N4 to N8.
 2. `ScreenContainer`, `ResponsiveGrid`, screen migration. **Done** (QuestionList keeps its own `readMaxWidth` cap): all screens now use `ScreenContainer` / `useContainerStyle` / `ResponsiveGrid`, or measured-width `getGridColumns`.
 3. Master-detail. **Browse done** with a simpler design than the nested navigator first proposed: the detail screen shows the paper's question list beside it, so URLs, deep links and back behave unchanged. Study and Search pending.
-4. Hover/focus/keyboard, dialog modals, density, ads placement, QA. Pending.
+4. Hover/focus/keyboard, dialog modals, skeleton parity, state screens, dev overlay. **Done** except the `compact` density prop (FR-C1) and device QA.
 
 ## 6. Open questions
 - Should the sidebar start collapsed by default on laptop widths? (Today it starts expanded.)

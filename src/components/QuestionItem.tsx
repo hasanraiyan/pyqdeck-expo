@@ -26,10 +26,11 @@ import { COLORS, FONTS } from '../theme/colors';
 import { Badge, MarksBadge, AskAiBadge, YearBadge, ShowSolnBadge } from './Badge';
 import { WaveLoader } from './WaveLoader';
 import { InlineMathText } from './InlineMathText';
-import { cleanMarkdown, useResponsive } from '../utils/responsive';
+import { cleanMarkdown } from '../utils/responsive';
 import { questionMarkdownStyles, solutionMarkdownStyles, markdownRules } from '../theme/markdownStyles';
 import { isAiEnabled } from '../config/features';
 import { shareQuestion } from '../utils/links';
+import { useDialogLayout } from '../utils/dialog';
 
 interface QuestionItemProps {
   question: QuestionSummary;
@@ -49,7 +50,11 @@ export const QuestionItem: React.FC<QuestionItemProps> = React.memo(({
   hideYearBadge = false,
 }) => {
   const navigation = useNavigation<any>();
-  const { isTablet } = useResponsive();
+  // Measured, not window-derived (FR-C4): in a 360 px list pane on a 1440 px
+  // window the card is narrow, and in a sidebar layout the window overstates it.
+  const [cardW, setCardW] = useState(0);
+  const showActionLabels = cardW >= 520;
+  const dlg = useDialogLayout();
   const [expanded, setExpanded] = useState(false);
   const queryClient = useQueryClient();
   // Fetch only after the user asks for it (see handleToggleSolution). A solution
@@ -255,7 +260,7 @@ export const QuestionItem: React.FC<QuestionItemProps> = React.memo(({
   };
 
   return (
-    <View style={styles.container}>
+    <View style={styles.container} onLayout={(e) => setCardW(e.nativeEvent.layout.width)}>
       <TouchableOpacity
         activeOpacity={0.7}
         onPress={toggleExpand}
@@ -344,7 +349,7 @@ export const QuestionItem: React.FC<QuestionItemProps> = React.memo(({
                   size={16}
                   color={copied ? COLORS.primary : COLORS.textMuted}
                 />
-                {isTablet && (
+                {showActionLabels && (
                   <Text style={[styles.actionIconLabel, copied && { color: COLORS.primary }]}>
                     {copied ? 'Copied' : 'Copy'}
                   </Text>
@@ -359,7 +364,7 @@ export const QuestionItem: React.FC<QuestionItemProps> = React.memo(({
                 hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
               >
                 <Feather name="share-2" size={16} color={COLORS.textMuted} />
-                {isTablet && <Text style={styles.actionIconLabel}>Share</Text>}
+                {showActionLabels && <Text style={styles.actionIconLabel}>Share</Text>}
               </TouchableOpacity>
             </View>
           </View>
@@ -415,11 +420,11 @@ export const QuestionItem: React.FC<QuestionItemProps> = React.memo(({
           )}
         </View>
       )}
-      <Modal visible={showReport} transparent animationType="slide" onRequestClose={() => setShowReport(false)}>
+      <Modal visible={showReport} transparent animationType={dlg.animationType} onRequestClose={() => setShowReport(false)}>
         <TouchableWithoutFeedback onPress={() => setShowReport(false)}>
-          <View style={styles.reportOverlay}>
+          <View style={[styles.reportOverlay, dlg.overlay]}>
             <TouchableWithoutFeedback>
-              <View style={[styles.reportSheet, { paddingBottom: 24 }]}>
+              <View style={[styles.reportSheet, { paddingBottom: 24 }, dlg.sheet]}>
                 <View style={styles.reportHandle} />
                 <ScrollView
                   keyboardShouldPersistTaps="handled"

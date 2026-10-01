@@ -46,12 +46,14 @@ import { WaveLoader } from '../components/WaveLoader';
 import { CircleLoader } from '../components/CircleLoader';
 import { isAiEnabled } from '../config/features';
 import { userMessage } from '../utils/netError';
+import { useDialogLayout } from '../utils/dialog';
 
 export const QuestionDetailScreen = () => {
   const insets = useSafeAreaInsets();
   const route = useRoute<any>();
   const navigation = useNavigation<any>();
   const { readMaxWidth, hPadding, isTablet, breakpoint } = useResponsive();
+  const dlg = useDialogLayout();
   const {
     subjectId,
     semesterId,
@@ -861,11 +863,11 @@ export const QuestionDetailScreen = () => {
         </View>
       </ScrollView>
 
-      <Modal visible={showReport} transparent animationType="slide" onRequestClose={() => { setShowReport(false); setReportError(null); }}>
+      <Modal visible={showReport} transparent animationType={dlg.animationType} onRequestClose={() => { setShowReport(false); setReportError(null); }}>
         <TouchableWithoutFeedback onPress={() => { setShowReport(false); setReportError(null); }}>
-          <View style={styles.reportOverlay}>
+          <View style={[styles.reportOverlay, dlg.overlay]}>
             <TouchableWithoutFeedback>
-              <View style={[styles.reportSheet, { paddingBottom: 24 + 16 }]}>
+              <View style={[styles.reportSheet, { paddingBottom: 24 + 16 }, dlg.sheet]}>
                 <View style={styles.reportHandle} />
                 <ScrollView
                   keyboardShouldPersistTaps="handled"

@@ -111,9 +111,18 @@ const SemesterTabContent = ({
   return (
     <View style={styles.tabContent}>
       {loading ? (
-        <View style={{ maxWidth: frameMaxWidth, width: '100%', alignSelf: 'center', paddingTop: 8 }}>
+        // Same shape as the loaded list: rows on phone, the card grid when wide.
+        <View
+          style={[
+            { maxWidth: frameMaxWidth, width: '100%', alignSelf: 'center', paddingTop: isGrid ? GAP : 8 },
+            isGrid && { flexDirection: 'row', flexWrap: 'wrap', gap: GAP, paddingHorizontal: hPadding },
+          ]}
+        >
           {[1, 2, 3, 4, 5, 6].map((i) => (
-            <SubjectCardSkeleton key={i} />
+            <SubjectCardSkeleton
+              key={i}
+              style={isGrid ? { width: cardWidth, borderWidth: 1, borderRadius: 4 } : undefined}
+            />
           ))}
         </View>
       ) : (

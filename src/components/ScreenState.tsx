@@ -38,6 +38,10 @@ export const ScreenEmpty = ({ message }: { message: string }) => (
 const styles = StyleSheet.create({
   center: {
     flex: 1,
+    // Centred, with a readable line length, on wide windows (FR-C7).
+    width: '100%',
+    maxWidth: 420,
+    alignSelf: 'center',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 12,
