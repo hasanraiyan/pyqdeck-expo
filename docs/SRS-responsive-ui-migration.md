@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | Document | Software Requirements Specification (repo copy) |
-| Status | Approved. Phases 0 and 1 implemented, Phases 2 to 4 pending |
+| Status | Approved. Phases 0 to 2 implemented, Phases 3 and 4 pending |
 | Full document | The claude.ai doc "PYQDeck Responsive UI Migration - SRS" holds the long form, including the gap audit, research notes, feasibility table and risks. This file keeps what code needs to reference |
 
 ## 1. Goals
@@ -40,8 +40,8 @@ Rules: BP-2 crossing a threshold keeps navigation state; BP-3 grid columns come 
 | FR-N6 | Back control, browser/OS back, Escape | M | Pending |
 | FR-N7 | URL and deep links identical at every width | M | Verify per phase (config untouched so far) |
 | FR-N8 | Search shortcut (`/`, Ctrl/Cmd+K) | C | Pending |
-| FR-L1 | Shared `ScreenContainer` | M | Done; used by Home, SubjectDetail, Settings. Remaining screens pending |
-| FR-L2 | Shared `ResponsiveGrid` (pure logic in `layout.ts`) | M | Done; used by Home and SubjectDetail year grids. AllSubjects and SubjectList FlatLists pending |
+| FR-L1 | Shared `ScreenContainer` | M | Done; used by Home, SubjectDetail, Settings, Search, plus `useContainerStyle` on the four Study screens |
+| FR-L2 | Shared `ResponsiveGrid` (pure logic in `layout.ts`) | M | Done; Home and SubjectDetail year grids. AllSubjects and SubjectList FlatLists use measured-width `getGridColumns` |
 | FR-L3..L5 | List-detail for Browse, Study, Search | M/S | Pending (Phase 3) |
 | FR-L6 | Tablet portrait pushes full-screen detail | M | Pending (Phase 3) |
 | FR-L7 | Prose capped at `readMaxWidth` | M | Existing on 9 screens |
@@ -60,7 +60,7 @@ Phone UI unchanged (NFR-1); no new native dependency and no release workflow cha
 ## 5. Phases
 0. Foundations: breakpoint consolidation, tokens, pure layout logic with tests, stale `Dimensions` fixes. **Done.**
 1. Navigation shell using `tabBarPosition` / `tabBarVariant` (React Navigation 7.19). **Done** except FR-N4 to N8.
-2. `ScreenContainer`, `ResponsiveGrid`, screen migration. **Partly done:** Home, SubjectDetail, Settings migrated; AllSubjects, SubjectList, QuestionList, Search, Syllabus screens pending.
+2. `ScreenContainer`, `ResponsiveGrid`, screen migration. **Done** (QuestionList keeps its own `readMaxWidth` cap): all screens now use `ScreenContainer` / `useContainerStyle` / `ResponsiveGrid`, or measured-width `getGridColumns`.
 3. Master-detail (nested navigator in the right pane; fallback: widen content only). Pending.
 4. Hover/focus/keyboard, dialog modals, density, ads placement, QA. Pending.
 

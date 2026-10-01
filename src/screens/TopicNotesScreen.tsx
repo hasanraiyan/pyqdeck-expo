@@ -21,6 +21,7 @@ import { PrevNextNav } from '../components/PrevNextNav';
 import { VolumeScrollHint } from '../components/VolumeScrollHint';
 import { useVolumeScroll } from '../utils/volumeScroll';
 import { CircleLoader } from '../components/CircleLoader';
+import { useContainerStyle } from '../components/ScreenContainer';
 
 import { recordRecentNote } from '../utils/recentStudy';
 import { userMessage } from '../utils/netError';
@@ -57,6 +58,7 @@ type NotesListEntry = { id: string; title: string; moduleId: string; moduleName:
  * instead of a fresh ad load firing on every tap.
  */
 export const TopicNotesScreen = () => {
+  const frame = useContainerStyle('read', false);
   const insets = useSafeAreaInsets();
   const route = useRoute<any>();
   const navigation = useNavigation<any>();
@@ -350,6 +352,7 @@ export const TopicNotesScreen = () => {
         ref={scrollRef}
         contentContainerStyle={[
           styles.scroll,
+          frame,
           { paddingBottom: insets.bottom + 32 },
           // Centre the loader in the empty content area, as QuestionDetail does.
           loading && styles.scrollLoading,

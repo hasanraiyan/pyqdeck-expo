@@ -32,6 +32,7 @@ import { Badge, MarksBadge, YearBadge } from '../components/Badge';
 import { WaveLoader } from '../components/WaveLoader';
 import { rf, verticalScale, useResponsive } from '../utils/responsive';
 import { normalizeQuery, consumeSearchToken, shouldDebounceTap, applyServerRetryAfter } from '../utils/searchGuard';
+import { ScreenContainer } from '../components/ScreenContainer';
 
 const RECENT_SEARCHES_KEY = 'pyq_recent_searches';
 
@@ -540,10 +541,10 @@ export const SearchScreen = () => {
       <ScrollView
         contentContainerStyle={[
           styles.scroll,
-          { paddingBottom: 24, paddingHorizontal: hPadding },
+          { paddingBottom: 24 },
         ]}
       >
-        <View style={[styles.centerWrapper, { maxWidth: readMaxWidth }]}>
+        <ScreenContainer variant="read">
           {/* Default State: Recent Searches & Suggested Search Topics */}
           {!hasSearched && !loading && (
             <View style={styles.suggestedSection}>
@@ -855,7 +856,7 @@ export const SearchScreen = () => {
             </View>
           )}
 
-        </View>
+        </ScreenContainer>
       </ScrollView>
     </View>
   );
@@ -965,10 +966,6 @@ const styles = StyleSheet.create({
   },
   scroll: {
     paddingVertical: verticalScale(16),
-  },
-  centerWrapper: {
-    width: '100%',
-    alignSelf: 'center',
   },
   suggestedSection: {
     width: '100%',

@@ -21,6 +21,7 @@ import { COLORS, FONTS } from '../theme/colors';
 import { SubjectCardSkeleton } from '../components/Skeleton';
 import { Badge } from '../components/Badge';
 import { AdBanner } from '../components/AdBanner';
+import { getGridColumns } from '../theme/layout';
 import { useResponsive } from '../utils/responsive';
 import { semesterNumbersForYear } from '../utils/year';
 
@@ -173,7 +174,7 @@ const SemesterTabContent = ({
 export const SubjectListScreen = () => {
   const route = useRoute<any>();
   const navigation = useNavigation<any>();
-  const { width, bp, wideMaxWidth, hPadding } = useResponsive();
+  const { width, wideMaxWidth, hPadding } = useResponsive();
   const { yearNumber, semesterIds, semesterNumbers: passedSemNumbers } = route.params || {};
 
   const availableSemesters = useMemo<number[]>(() => {
@@ -186,16 +187,23 @@ export const SubjectListScreen = () => {
     return [];
   }, [passedSemNumbers, yearNumber]);
 
-  const columns = bp({ phone: 1, tablet: 2, laptop: 3 });
-  const isGrid = columns > 1;
   const GAP = 12;
-  const frameMaxWidth = wideMaxWidth + (isGrid ? hPadding * 2 : 0);
+  // Measured, not window-derived - useWindowDimensions() on web includes the
+  // scrollbar, and with a sidebar the window is wider than the content box.
   const [listWidth, setListWidth] = useState(0);
   const onContentLayout = useCallback(
     (e: LayoutChangeEvent) => setListWidth(e.nativeEvent.layout.width),
     []
   );
   const trackWidth = listWidth || width;
+  // A phone keeps the dense full-bleed rows; wider content gets a card grid so
+  // a name and its count stop sitting at opposite ends of an empty band.
+  const columns = getGridColumns(
+    Math.min(trackWidth, wideMaxWidth + hPadding * 2) - hPadding * 2,
+    { minCardWidth: 260, gap: GAP, maxColumns: 3 }
+  );
+  const isGrid = columns > 1;
+  const frameMaxWidth = wideMaxWidth + (isGrid ? hPadding * 2 : 0);
   const contentWidth =
     Math.min(trackWidth, frameMaxWidth) - (isGrid ? hPadding * 2 : 0);
   const cardWidth = isGrid ? (contentWidth - GAP * (columns - 1)) / columns : undefined;

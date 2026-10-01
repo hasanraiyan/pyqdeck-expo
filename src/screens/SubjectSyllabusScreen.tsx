@@ -25,6 +25,7 @@ import { DoneStamp } from '../components/Badge';
 import { ScreenError, ScreenEmpty } from '../components/ScreenState';
 import { CircleLoader } from '../components/CircleLoader';
 import { userMessage } from '../utils/netError';
+import { useContainerStyle } from '../components/ScreenContainer';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -52,6 +53,7 @@ const topicKey = (moduleId: string, topicId: string) => `${moduleId}:${topicId}`
  * Fetched whole via /syllabus/subjects/:slug, through the read-through cache.
  */
 export const SubjectSyllabusScreen = () => {
+  const frame = useContainerStyle('read', false);
   const insets = useSafeAreaInsets();
   const route = useRoute<any>();
   const navigation = useNavigation<any>();
@@ -327,7 +329,7 @@ export const SubjectSyllabusScreen = () => {
   return (
     <View style={styles.container}>
       <ScrollView
-        contentContainerStyle={{ paddingBottom: insets.bottom + 32, paddingTop: 10 }}
+        contentContainerStyle={[frame, { paddingBottom: insets.bottom + 32, paddingTop: 10 }]}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
