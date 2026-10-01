@@ -67,3 +67,12 @@ test('shell width: none on phone, rail on tablet, sidebar collapses to rail', ()
   assert.equal(getShellWidth('sidebar'), LAYOUT.shellWidth.sidebar);
   assert.equal(getShellWidth('sidebar', true), LAYOUT.shellWidth.rail);
 });
+
+test('getGridColumns honours allowedColumns (no orphan rows)', () => {
+  const opts = { minCardWidth: 148, gap: 12, allowedColumns: [2, 4] };
+  assert.equal(getGridColumns(358, opts), 2);
+  assert.equal(getGridColumns(600, opts), 2);
+  assert.equal(getGridColumns(640, opts), 4);
+  assert.equal(getGridColumns(0, opts), 2);
+  assert.equal(getGridColumns(100, opts), 2);
+});

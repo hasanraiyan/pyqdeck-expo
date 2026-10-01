@@ -19,7 +19,8 @@ import Constants from 'expo-constants';
 import { useAuth, useUser } from '@clerk/expo';
 import { COLORS, FONTS } from '../theme/colors';
 import { SettingsRow } from '../components/SettingsRow';
-import { rf, verticalScale, useResponsive } from '../utils/responsive';
+import { rf, verticalScale } from '../utils/responsive';
+import { ScreenContainer } from '../components/ScreenContainer';
 import {
   getVolumeScrollEnabled,
   setVolumeScrollEnabled,
@@ -44,7 +45,6 @@ const browserOptions = {
 
 export const SettingsScreen = ({ navigation }: any) => {
   const insets = useSafeAreaInsets();
-  const { readMaxWidth, hPadding } = useResponsive();
   const { isLoaded: authLoaded, isSignedIn, signOut } = useAuth();
   const { user } = useUser();
 
@@ -160,10 +160,10 @@ export const SettingsScreen = ({ navigation }: any) => {
       style={styles.container}
       contentContainerStyle={[
         styles.scroll,
-        { paddingBottom: insets.bottom + 24, paddingHorizontal: hPadding },
+        { paddingBottom: insets.bottom + 24 },
       ]}
     >
-      <View style={[styles.centerWrapper, { maxWidth: readMaxWidth }]}>
+      <ScreenContainer variant="read">
         {isAuthEnabled && authLoaded && (
           <>
             <Text style={styles.sectionHeading}>ACCOUNT</Text>
@@ -330,7 +330,7 @@ export const SettingsScreen = ({ navigation }: any) => {
             PyQdeck v{version}{versionCode ? ` (${versionCode})` : ''}
           </Text>
         ) : null}
-      </View>
+      </ScreenContainer>
     </ScrollView>
   );
 };
@@ -342,10 +342,6 @@ const styles = StyleSheet.create({
   },
   scroll: {
     paddingTop: verticalScale(16),
-  },
-  centerWrapper: {
-    width: '100%',
-    alignSelf: 'center',
   },
   sectionHeading: {
     fontFamily: FONTS.mono,

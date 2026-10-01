@@ -72,11 +72,20 @@ export function getShellWidth(mode: ShellMode, collapsed = false): number {
  */
 export function getGridColumns(
   containerWidth: number,
-  { minCardWidth, gap = 12, maxColumns = 6 }: { minCardWidth: number; gap?: number; maxColumns?: number }
+  {
+    minCardWidth,
+    gap = 12,
+    maxColumns = 6,
+    allowedColumns,
+  }: { minCardWidth: number; gap?: number; maxColumns?: number; allowedColumns?: number[] }
 ): number {
-  if (!(containerWidth > 0) || !(minCardWidth > 0)) return 1;
-  const fit = Math.floor((containerWidth + gap) / (minCardWidth + gap));
-  return Math.max(1, Math.min(maxColumns, fit));
+  if (!(containerWidth > 0) || !(minCardWidth > 0)) return allowedColumns?.length ? Math.min(...allowedColumns) : 1;
+  const fit = Math.max(1, Math.min(maxColumns, Math.floor((containerWidth + gap) / (minCardWidth + gap))));
+  if (!allowedColumns?.length) return fit;
+  // Only some counts tile cleanly (e.g. 4 cards: 2 or 4, never 3 with an orphan):
+  // take the largest allowed count that fits, else the smallest allowed.
+  const fitting = allowedColumns.filter((c) => c <= fit);
+  return fitting.length ? Math.max(...fitting) : Math.min(...allowedColumns);
 }
 
 /** Card width for `columns` columns across `containerWidth`, gaps included. */
