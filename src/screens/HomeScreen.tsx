@@ -21,13 +21,7 @@ import { WaveLoader } from '../components/WaveLoader';
 import { rf, scale, verticalScale, useResponsive } from '../utils/responsive';
 import { yearNumberOf, YEAR_NUMBERS } from '../utils/year';
 import { getRecentStudies, RecentStudy, getRecentNotes, RecentNote } from '../utils/recentStudy';
-import { prefetchSubject, prefetchQuestion } from '../api/prefetch';
-import {
-  getLastPosition,
-  clearLastPosition,
-  timeAgo,
-  LastPosition,
-} from '../utils/lastPosition';
+import { prefetchSubject } from '../api/prefetch';
 
 export const HomeScreen = () => {
   const insets = useSafeAreaInsets();
@@ -85,7 +79,6 @@ export const HomeScreen = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [recentStudies, setRecentStudies] = useState<RecentStudy[]>([]);
   const [recentNotes, setRecentNotes] = useState<RecentNote[]>([]);
-  const [lastPosition, setLastPosition] = useState<LastPosition | null>(null);
 
   // TopicNotes is registered in the Syllabus tab's stack, not this one, so a
   // plain navigate('TopicNotes') from here is dropped by the tab navigator.
@@ -115,12 +108,11 @@ export const HomeScreen = () => {
   useFocusEffect(
     useCallback(() => {
       let isCurrent = true;
-      Promise.all([getRecentStudies(), getRecentNotes(), getLastPosition()]).then(
-        ([studies, notes, position]) => {
+      Promise.all([getRecentStudies(), getRecentNotes()]).then(
+        ([studies, notes]) => {
           if (isCurrent) {
             setRecentStudies(studies);
             setRecentNotes(notes);
-            setLastPosition(position);
           }
         }
       );
@@ -141,30 +133,6 @@ export const HomeScreen = () => {
     ];
     return items.sort((a, b) => b.visitedAt - a.visitedAt);
   }, [recentStudies, recentNotes]);
-
-  // Straight back into the question. The subject and the question are
-  // prefetched first, so the screen finds them in the cache and renders
-  // without a loading state (it backfills the rest from there, like a deep link).
-  const openLastPosition = useCallback(
-    (pos: LastPosition) => {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      prefetchSubject(pos.subjectId, { year: pos.year });
-      prefetchQuestion(pos.subjectId, pos.questionId);
-      navigation.navigate('QuestionDetail', {
-        semesterId: pos.semesterId,
-        subjectId: pos.subjectId,
-        subjectName: pos.subjectName,
-        year: pos.year,
-        questionId: pos.questionId,
-      });
-    },
-    [navigation]
-  );
-
-  const dismissLastPosition = useCallback(() => {
-    setLastPosition(null);
-    void clearLastPosition();
-  }, []);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -283,48 +251,6 @@ export const HomeScreen = () => {
               </TouchableOpacity>
             </View>
           </View>
-
-          {/* Continue where you left off: the last paper + question */}
-          {lastPosition && (
-            <View style={styles.continueCard}>
-              <TouchableOpacity
-                style={styles.continueMain}
-                activeOpacity={0.7}
-                onPress={() => openLastPosition(lastPosition)}
-                accessibilityRole="button"
-                accessibilityLabel={`Continue ${lastPosition.subjectName}${lastPosition.year ? ` ${lastPosition.year}` : ''}${lastPosition.qNumber ? ` question ${lastPosition.qNumber}` : ''}`}
-              >
-                <View style={styles.continueIcon}>
-                  <Feather name="play" size={16} color={COLORS.primary} />
-                </View>
-                <View style={styles.continueText}>
-                  <Text style={styles.continueLabel}>CONTINUE WHERE YOU LEFT OFF</Text>
-                  <Text style={styles.continueTitle} numberOfLines={1}>
-                    {lastPosition.subjectName}
-                  </Text>
-                  <Text style={styles.continueMeta} numberOfLines={1}>
-                    {[
-                      lastPosition.year ? String(lastPosition.year) : null,
-                      lastPosition.qNumber ? `Q${String(lastPosition.qNumber).replace(/^Q/i, '')}` : null,
-                      timeAgo(lastPosition.updatedAt),
-                    ]
-                      .filter(Boolean)
-                      .join(' · ')}
-                  </Text>
-                </View>
-                <Feather name="chevron-right" size={18} color={COLORS.textMuted} />
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={dismissLastPosition}
-                style={styles.continueDismiss}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                accessibilityRole="button"
-                accessibilityLabel="Dismiss continue card"
-              >
-                <Feather name="x" size={15} color={COLORS.textMuted} />
-              </TouchableOpacity>
-            </View>
-          )}
 
           {/* Jump Back In Section */}
           {recentItems.length > 0 && (
@@ -773,56 +699,6 @@ const styles = StyleSheet.create({
   },
   recentSection: {
     marginTop: 20,
-  },
-  continueCard: {
-    marginTop: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.card,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: 14,
-  },
-  continueMain: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 14,
-  },
-  continueIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: COLORS.background,
-    marginRight: 12,
-  },
-  continueText: {
-    flex: 1,
-    marginRight: 8,
-  },
-  continueLabel: {
-    fontSize: 10,
-    fontWeight: '700',
-    letterSpacing: 0.6,
-    color: COLORS.primary,
-    marginBottom: 2,
-  },
-  continueTitle: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: COLORS.text,
-  },
-  continueMeta: {
-    fontSize: 12,
-    color: COLORS.textMuted,
-    marginTop: 2,
-  },
-  continueDismiss: {
-    paddingHorizontal: 14,
-    alignSelf: 'stretch',
-    justifyContent: 'center',
   },
   recentHeaderRow: {
     flexDirection: 'row',
