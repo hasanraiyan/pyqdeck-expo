@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { AppState, View } from 'react-native';
+import { AppState, Platform, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer, getStateFromPath as defaultGetStateFromPath } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -432,6 +432,22 @@ function AppContent() {
       maybeRequestReview();
     });
   }, [onboarded]);
+
+  // Escape goes back on web / desktop (FR-N6). Left alone while a dialog or an
+  // editable field has focus, so it still closes modals and clears inputs.
+  useEffect(() => {
+    if (Platform.OS !== 'web' || typeof document === 'undefined') return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape' || e.defaultPrevented) return;
+      const el = document.activeElement as HTMLElement | null;
+      const tag = el?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || el?.isContentEditable) return;
+      if (document.querySelector('[role="dialog"], [aria-modal="true"]')) return;
+      if (navigationRef.isReady() && navigationRef.canGoBack()) navigationRef.goBack();
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, []);
 
   // Still reading AsyncStorage — render nothing to avoid a flash of wrong screen
   if (onboarded === null) return null;

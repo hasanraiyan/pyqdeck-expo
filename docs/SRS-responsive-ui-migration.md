@@ -35,9 +35,9 @@ Rules: BP-2 crossing a threshold keeps navigation state; BP-3 grid columns come 
 | FR-N1 | Bottom bar / rail / sidebar by window class | M | Done (`App.tsx` `TabsNavigator`) |
 | FR-N2 | Same destinations in every shell | M | Done |
 | FR-N3 | Tab stack state kept on switch | M | Done (unchanged tab navigator) |
-| FR-N4 | Logo, Settings and account slots in the sidebar | M | Pending: needs a custom `tabBar` |
+| FR-N4 | Logo, Settings and account slots in the sidebar | M | Done (`ShellTabBar`). Account item shows only when Clerk loads; not verified here |
 | FR-N5 | Collapsible sidebar, remembered | S | Done (`ShellTabBar`, persisted in AsyncStorage) |
-| FR-N6 | Back control, browser/OS back, Escape | M | Pending |
+| FR-N6 | Back control, browser/OS back, Escape | M | Done (header back arrow, router history on web, Escape handler in `App.tsx`) |
 | FR-N7 | URL and deep links identical at every width | M | Verify per phase (config untouched so far) |
 | FR-N8 | Search shortcut (`/`, Ctrl/Cmd+K) | C | Pending |
 | FR-L1 | Shared `ScreenContainer` | M | Done; used by Home, SubjectDetail, Settings, Search, plus `useContainerStyle` on the four Study screens |
