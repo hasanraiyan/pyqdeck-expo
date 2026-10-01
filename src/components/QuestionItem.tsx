@@ -4,6 +4,8 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
+  type StyleProp,
+  type ViewStyle,
 } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
@@ -28,6 +30,7 @@ interface QuestionItemProps {
   hideYearBadge?: boolean;
   /** Tighter header for pointer-first windows. Defaults to the window class. */
   compact?: boolean;
+  style?: StyleProp<ViewStyle>;
 }
 
 export const QuestionItem: React.FC<QuestionItemProps> = React.memo(({
@@ -38,6 +41,7 @@ export const QuestionItem: React.FC<QuestionItemProps> = React.memo(({
   showOpenButton = true,
   hideYearBadge = false,
   compact: compactProp,
+  style,
 }) => {
   const { compact: windowCompact } = useResponsive();
   const compact = compactProp ?? windowCompact;
@@ -105,7 +109,7 @@ export const QuestionItem: React.FC<QuestionItemProps> = React.memo(({
   };
 
   return (
-    <View style={styles.container} onLayout={(e) => setCardW(e.nativeEvent.layout.width)}>
+    <View style={[styles.container, style]} onLayout={(e) => setCardW(e.nativeEvent.layout.width)}>
       <TouchableOpacity
         activeOpacity={0.7}
         onPress={toggleExpand}

@@ -26,9 +26,15 @@ import { CircleLoader } from '../components/CircleLoader';
 import { PrevNextNav } from '../components/PrevNextNav';
 import { AdBanner } from '../components/AdBanner';
 import { VolumeScrollHint } from '../components/VolumeScrollHint';
+import { QuestionLayoutPromptModal } from '../components/QuestionLayoutPromptModal';
 import { rf, verticalScale, useResponsive } from '../utils/responsive';
 import { useVolumeScroll } from '../utils/volumeScroll';
-import { getOldUiEnabled } from '../utils/settings';
+import {
+  getOldUiEnabled,
+  setOldUiEnabled,
+  hasChosenQuestionLayout,
+  markQuestionLayoutChosen,
+} from '../utils/settings';
 import { recordRecentStudy } from '../utils/recentStudy';
 import { useDialogLayout } from '../utils/dialog';
 
@@ -71,12 +77,25 @@ export const QuestionListScreen = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [filterModalVisible, setFilterModalVisible] = useState(false);
   const [isOldUi, setIsOldUi] = useState(false);
+  const [layoutPromptVisible, setLayoutPromptVisible] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
       getOldUiEnabled().then(setIsOldUi);
+      hasChosenQuestionLayout().then((chosen) => {
+        if (!chosen) {
+          setLayoutPromptVisible(true);
+        }
+      });
     }, [])
   );
+
+  const handleSelectLayoutMode = async (isCards: boolean) => {
+    setIsOldUi(isCards);
+    setLayoutPromptVisible(false);
+    await setOldUiEnabled(isCards);
+    await markQuestionLayoutChosen();
+  };
   // Draft selections inside the filter sheet - chip taps only update these,
   // not selectedYear/selectedChapter, so browsing the sheet (tapping
   // several years/modules before deciding) doesn't fire an API call per
@@ -456,6 +475,11 @@ export const QuestionListScreen = () => {
         visible={showVolumeHint}
         onHide={() => setShowVolumeHint(false)}
         bottomOffset={insets.bottom + 16}
+      />
+
+      <QuestionLayoutPromptModal
+        visible={layoutPromptVisible}
+        onSelect={handleSelectLayoutMode}
       />
     </View>
   );
