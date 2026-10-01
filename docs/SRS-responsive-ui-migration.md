@@ -48,6 +48,7 @@ Rules: BP-2 crossing a threshold keeps navigation state; BP-3 grid columns come 
 | FR-L6 | Narrow windows get one pane | M | Done (pane is measured, so tablet portrait and phone stay single-pane) |
 | FR-L7 | Prose capped at `readMaxWidth` | M | Existing on 9 screens |
 | FR-L8 | Selected row highlighted in list-detail | M | Done |
+| FR-L10 | List panes fold sideways to a 44 px strip (remembered) and fold by module | S | Done: `PaneFrame` (shared by the question and topic panes), `paneState`. Topic pane groups by module, open topic's module open, others folded, expand / collapse all. Question pane has an optional Group by module toggle (off by default so Prev / Next order stays the paper order) |
 | FR-L9 | Sheets as centred dialogs on laptop+ | S | Done for the four in-app sheets (filter, two report sheets, AI sources) via `useDialogLayout`. The Clerk sign-in and account screens are full-screen route presentations and are unchanged |
 | FR-C1 | `compact` density | S | Done for cards and rows: `useResponsive().compact` (laptop and up) tightens Search result cards and the `QuestionItem` header (`compact` prop, defaults to the window class). Chips and badges are unchanged; touch sizes on phone and tablet are never reduced |
 | FR-C2 | Hover, focus-visible, pressed on web/desktop | M | Done by one stylesheet (`webStyles.ts`) covering every focusable element, plus hover on the new sidebar and list-pane rows |
