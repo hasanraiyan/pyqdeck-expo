@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   View,
   Text,
@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   ScrollView,
   StyleSheet,
-  type LayoutChangeEvent,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLinkTo, useNavigation, useRoute } from '@react-navigation/native';
@@ -30,8 +29,6 @@ import { AiOverviewCard } from '../components/AiOverviewCard';
 import { searchLocalCache } from '../api/offlineSearch';
 import { COLORS, FONTS } from '../theme/colors';
 import { Badge, MarksBadge, YearBadge } from '../components/Badge';
-import { QuestionPreviewPane } from '../components/QuestionPreviewPane';
-import { canShowTwoPanesIn, getListPaneWidth } from '../theme/layout';
 import { WaveLoader } from '../components/WaveLoader';
 import { rf, verticalScale, useResponsive } from '../utils/responsive';
 import { normalizeQuery, consumeSearchToken, shouldDebounceTap, applyServerRetryAfter } from '../utils/searchGuard';
@@ -46,16 +43,7 @@ export const SearchScreen = () => {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const linkTo = useLinkTo();
-  const { readMaxWidth, hPadding, breakpoint, compact } = useResponsive();
-  // Two panes (results beside a question preview) when this screen's own box
-  // can hold both (FR-L5). Measured, so the sidebar is already accounted for.
-  const [rootWidth, setRootWidth] = useState(0);
-  const onRootLayout = useCallback(
-    (e: LayoutChangeEvent) => setRootWidth(e.nativeEvent.layout.width),
-    []
-  );
-  const twoPane = canShowTwoPanesIn(rootWidth);
-  const [selectedKey, setSelectedKey] = useState<string | null>(null);
+  const { readMaxWidth, hPadding, compact } = useResponsive();
   const [query, setQuery] = useState('');
   const [activeTab, setActiveTab] = useState<SearchTab>('all');
   const queryClient = useQueryClient();
@@ -137,12 +125,6 @@ export const SearchScreen = () => {
   );
 
   const questionKey = (q: any) => `${q.subject?.id || 's'}-${q.questionId}`;
-  // The preview follows the tapped hit; before any tap (or after a new search
-  // drops it) it shows the first hit, so the right pane is never empty when
-  // there are questions.
-  const selectedQuestion: any | null = twoPane
-    ? (questionResults.find((qu) => questionKey(qu) === selectedKey) ?? questionResults[0] ?? null)
-    : null;
   const openQuestion = (qu: any) =>
     navigation.navigate('QuestionDetail', {
       subjectId: qu.subject?.id,
@@ -488,7 +470,7 @@ export const SearchScreen = () => {
   );
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]} onLayout={onRootLayout}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       {/* Header with Search Input */}
       <View style={styles.header}>
         <View
@@ -566,16 +548,13 @@ export const SearchScreen = () => {
         </View>
       </View>
 
-      <View style={[styles.body, twoPane && styles.bodyRow]}>
       <ScrollView
-        style={twoPane ? [styles.resultsPane, { width: getListPaneWidth(breakpoint) }] : undefined}
         contentContainerStyle={[
           styles.scroll,
           { paddingBottom: 24 },
-          twoPane && { paddingHorizontal: 16 },
         ]}
       >
-        <ScreenContainer variant="read" gutter={!twoPane}>
+        <ScreenContainer variant="read">
           {/* Default State: Recent Searches & Suggested Search Topics */}
           {!hasSearched && !loading && (
             <View style={styles.suggestedSection}>
@@ -650,10 +629,7 @@ export const SearchScreen = () => {
               <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
-                // With a mouse there is no swipe, so a clipped tab (Subjects) would be
-                // unreachable in the narrow results pane: wrap instead of scroll.
-                scrollEnabled={!twoPane}
-                contentContainerStyle={[styles.filterTabsRow, twoPane && { flexWrap: 'wrap', width: '100%' }]}
+                contentContainerStyle={styles.filterTabsRow}
               >
                 <TouchableOpacity
                   style={[styles.filterTabPill, activeTab === 'all' && styles.filterTabPillActive]}
@@ -801,11 +777,9 @@ export const SearchScreen = () => {
                     style={[
                       styles.questionResultCard,
                       compact && styles.cardCompact,
-                      twoPane && selectedQuestion && questionKey(q) === questionKey(selectedQuestion) && styles.questionResultCardSelected,
                     ]}
                     activeOpacity={0.7}
-                    // Wide: select it for the preview pane. Narrow: open it, as before.
-                    onPress={() => (twoPane ? setSelectedKey(questionKey(q)) : openQuestion(q))}
+                    onPress={() => openQuestion(q)}
                   >
                     <Text style={styles.resultSubjectName}>
                       {q.subject?.name}
@@ -889,21 +863,6 @@ export const SearchScreen = () => {
 
         </ScreenContainer>
       </ScrollView>
-      {twoPane && (
-        <QuestionPreviewPane
-          question={selectedQuestion}
-          onOpenQuestion={() => selectedQuestion && openQuestion(selectedQuestion)}
-          onOpenSubject={() =>
-            selectedQuestion?.subject?.id &&
-            navigation.navigate('SubjectDetail', {
-              semesterId: selectedQuestion.subject.semesterId,
-              subjectId: selectedQuestion.subject.id,
-              subjectName: selectedQuestion.subject.name,
-            })
-          }
-        />
-      )}
-      </View>
     </View>
   );
 };
@@ -1119,16 +1078,6 @@ const styles = StyleSheet.create({
   },
   // Tighter padding on pointer-first windows (FR-C1).
   cardCompact: { padding: 10 },
-  body: { flex: 1 },
-  bodyRow: { flexDirection: 'row' },
-  resultsPane: {
-    flexGrow: 0,
-    flexShrink: 0,
-    backgroundColor: COLORS.card,
-    borderRightWidth: 1,
-    borderRightColor: COLORS.border,
-  },
-  questionResultCardSelected: { borderColor: COLORS.primary, backgroundColor: COLORS.background },
   questionResultCard: {
     backgroundColor: COLORS.card,
     borderWidth: 1,

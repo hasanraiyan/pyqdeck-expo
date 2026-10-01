@@ -44,7 +44,7 @@ Rules: BP-2 crossing a threshold keeps navigation state; BP-3 grid columns come 
 | FR-L2 | Shared `ResponsiveGrid` (pure logic in `layout.ts`) | M | Done; Home and SubjectDetail year grids. AllSubjects and SubjectList FlatLists use measured-width `getGridColumns` |
 | FR-L3 | List-detail for Browse | M | Done as a list pane inside `QuestionDetailScreen` (the paper's questions beside the open one) when its own box is >= 800 px. Keeps stack, deep links and back button |
 | FR-L4 | List-detail for Study | S | Done as a topic pane inside `TopicNotesScreen` (topics grouped by module, open one highlighted and scrolled into view), same pattern as Browse |
-| FR-L5 | List-detail for Search | S | Done for question hits: results stay on the left, the selected question's full text is previewed on the right (`QuestionPreviewPane`) with Open full question / Open subject. Subjects and study notes have no preview and still navigate |
+| FR-L5 | List-detail for Search | S | Dropped by decision: Search stays a single centred column at every width (a results-plus-preview split was built, reviewed on a laptop window and removed) |
 | FR-L6 | Narrow windows get one pane | M | Done (pane is measured, so tablet portrait and phone stay single-pane) |
 | FR-L7 | Prose capped at `readMaxWidth` | M | Existing on 9 screens |
 | FR-L8 | Selected row highlighted in list-detail | M | Done |
@@ -70,7 +70,7 @@ Phone UI unchanged (NFR-1); no new native dependency and no release workflow cha
 0. Foundations: breakpoint consolidation, tokens, pure layout logic with tests, stale `Dimensions` fixes. **Done.**
 1. Navigation shell using `tabBarPosition` / `tabBarVariant` (React Navigation 7.19). **Done** except FR-N4 to N8.
 2. `ScreenContainer`, `ResponsiveGrid`, screen migration. **Done** (QuestionList keeps its own `readMaxWidth` cap): all screens now use `ScreenContainer` / `useContainerStyle` / `ResponsiveGrid`, or measured-width `getGridColumns`.
-3. Master-detail. **Done.** Browse and Study use a simpler design than the nested navigator first proposed: the detail screen shows its list beside it, so URLs, deep links and back behave unchanged. Search shows a preview pane for question hits.
+3. Master-detail. **Done.** Browse and Study use a simpler design than the nested navigator first proposed: the detail screen shows its list beside it, so URLs, deep links and back behave unchanged. Search stays single-column.
 4. Hover/focus/keyboard, dialog modals, skeleton parity, state screens, dev overlay. **Done** except device QA.
 
 ## 6. Open questions
