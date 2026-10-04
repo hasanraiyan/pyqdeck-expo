@@ -7,6 +7,7 @@ import { parseContentBlocks, ContentBlock } from '../utils/nativeContentParser';
 import { NativeMathView } from './NativeMathView';
 import { NativeCodeBlock } from './NativeCodeBlock';
 import { cleanMarkdown } from '../utils/responsive';
+import { ContentErrorBoundary } from './ContentErrorBoundary';
 
 export interface NativeContentRendererProps {
   content?: string | null;
@@ -32,7 +33,11 @@ export const NativeContentRenderer: React.FC<NativeContentRendererProps> = React
   }) => {
     const blocks = useMemo(() => {
       if (!content || content.trim().length === 0) return [];
-      return parseContentBlocks(content);
+      try {
+        return parseContentBlocks(content);
+      } catch {
+        return [{ type: 'markdown', content } as ContentBlock];
+      }
     }, [content]);
 
     if (!blocks || blocks.length === 0) {
@@ -47,35 +52,33 @@ export const NativeContentRenderer: React.FC<NativeContentRendererProps> = React
         {blocks.map((block: ContentBlock, index: number) => {
           if (block.type === 'code') {
             return (
-              <NativeCodeBlock
-                key={`code-${index}`}
-                code={block.code}
-                language={block.language}
-              />
+              <ContentErrorBoundary key={`code-${index}`} fallbackText={block.code}>
+                <NativeCodeBlock code={block.code} language={block.language} />
+              </ContentErrorBoundary>
             );
           }
 
           if (block.type === 'display_math') {
             return (
-              <NativeMathView
-                key={`math-${index}`}
-                math={block.math}
-                displayMode={true}
-                fontSize={fontSize}
-                color={textColor}
-              />
+              <ContentErrorBoundary key={`math-${index}`} fallbackText={block.math}>
+                <NativeMathView
+                  math={block.math}
+                  displayMode={true}
+                  fontSize={fontSize}
+                  color={textColor}
+                />
+              </ContentErrorBoundary>
             );
           }
 
           // Markdown prose
           return (
             <View key={`md-${index}`} style={styles.markdownBlock}>
-              <Markdown
-                style={mdStyles}
-                rules={rules}
-              >
-                {cleanMarkdown(block.content)}
-              </Markdown>
+              <ContentErrorBoundary fallbackText={block.content}>
+                <Markdown style={mdStyles} rules={rules}>
+                  {cleanMarkdown(block.content)}
+                </Markdown>
+              </ContentErrorBoundary>
             </View>
           );
         })}
