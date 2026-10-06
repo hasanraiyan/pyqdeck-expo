@@ -152,14 +152,13 @@ export const QuestionItem: React.FC<QuestionItemProps> = React.memo(({
             />
           </View>
 
-          {/* High-CTR Navigation CTA */}
+          {/* Navigation link to the detail screen */}
           <TouchableOpacity
-            style={[
-              styles.ctaButton,
-              question.hasSolution ? styles.ctaButtonSolution : styles.ctaButtonDefault,
-            ]}
+            style={styles.ctaLink}
             onPress={() => handleOpenDetail(question.hasSolution)}
-            activeOpacity={0.82}
+            activeOpacity={0.6}
+            hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
+            accessibilityRole="link"
             accessibilityLabel={
               question.hasSolution
                 ? 'Solution available, view question and solution details'
@@ -167,26 +166,21 @@ export const QuestionItem: React.FC<QuestionItemProps> = React.memo(({
             }
           >
             {question.hasSolution ? (
-              <View style={styles.ctaRow}>
-                <View style={styles.ctaBadgeWrapper}>
-                  <View style={styles.ctaCheckIcon}>
-                    <Feather name="check" size={12} color={COLORS.secondary} />
-                  </View>
-                  <Text style={styles.ctaSolutionText}>Solution Available</Text>
-                </View>
-                <View style={styles.ctaActionWrapper}>
-                  <Text style={styles.ctaActionText}>View Details</Text>
-                  <Feather name="arrow-right" size={14} color="#FFFFFF" />
-                </View>
-              </View>
+              <>
+                <Feather name="check-circle" size={14} color={COLORS.secondary} />
+                <Text style={[styles.ctaLinkText, { color: COLORS.secondary }]} numberOfLines={1}>
+                  Solution available
+                  <Text style={styles.ctaLinkUnderline}>{' \u00b7 View details'}</Text>
+                </Text>
+                <Feather name="arrow-right" size={14} color={COLORS.secondary} />
+              </>
             ) : (
-              <View style={styles.ctaRow}>
-                <View style={styles.ctaDefaultLeft}>
-                  <Feather name="file-text" size={14} color={COLORS.textMuted} />
-                  <Text style={styles.ctaDefaultText}>View Question Details</Text>
-                </View>
-                <Feather name="arrow-right" size={14} color={COLORS.textMuted} />
-              </View>
+              <>
+                <Text style={[styles.ctaLinkText, { color: COLORS.primary }]} numberOfLines={1}>
+                  <Text style={styles.ctaLinkUnderline}>View question details</Text>
+                </Text>
+                <Feather name="arrow-right" size={14} color={COLORS.primary} />
+              </>
             )}
           </TouchableOpacity>
 
@@ -302,71 +296,24 @@ const styles = StyleSheet.create({
   markdownWrapper: {
     marginVertical: 4,
   },
-  ctaButton: {
-    borderRadius: RADIUS.md,
+  ctaLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: 6,
+    marginHorizontal: 0,
     marginTop: 12,
     marginBottom: 4,
-    paddingVertical: 10,
-    paddingHorizontal: 14,
+    paddingVertical: 4,
   },
-  ctaButtonSolution: {
-    backgroundColor: COLORS.secondary,
-    shadowColor: COLORS.secondary,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.18,
-    shadowRadius: 3,
-    elevation: 2,
-  },
-  ctaButtonDefault: {
-    backgroundColor: COLORS.card,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  ctaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  ctaBadgeWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  ctaCheckIcon: {
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    backgroundColor: '#FFFFFF',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  ctaSolutionText: {
-    fontFamily: FONTS.mono,
-    fontSize: 12.5,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    letterSpacing: 0.2,
-  },
-  ctaActionWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  ctaActionText: {
-    fontSize: 12.5,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
-  ctaDefaultLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  ctaDefaultText: {
+  ctaLinkText: {
+    flexShrink: 1,
     fontFamily: FONTS.mono,
     fontSize: 12.5,
     fontWeight: '600',
-    color: COLORS.text,
+  },
+  ctaLinkUnderline: {
+    textDecorationLine: 'underline',
   },
   actionsRow: {
     flexDirection: 'row',
