@@ -8,6 +8,10 @@ config.resolver.extraNodeModules = {
   punycode: require.resolve('punycode/'),
 };
 
+if (!config.resolver.assetExts.includes('txt')) {
+  config.resolver.assetExts.push('txt');
+}
+
 // Native-only packages that don't ship a web build. Metro resolves require()
 // statically, so the guarded try/catch requires in src/utils/* aren't enough -
 // the bundler still has to resolve the module, and these fail on web (e.g.

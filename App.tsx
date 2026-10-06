@@ -41,6 +41,7 @@ import { QuestionListScreen } from './src/screens/QuestionListScreen';
 import { QuestionDetailScreen } from './src/screens/QuestionDetailScreen';
 import { SearchScreen } from './src/screens/SearchScreen';
 import { SettingsScreen } from './src/screens/SettingsScreen';
+import { MermaidDemoScreen } from './src/screens/MermaidDemoScreen';
 import { SignInScreen } from './src/screens/SignInScreen';
 import { ManageAccountScreen } from './src/screens/ManageAccountScreen';
 import { SemesterSelectScreen } from './src/screens/SemesterSelectScreen';
@@ -54,6 +55,7 @@ import { isSyllabusEnabled } from './src/config/features';
 import * as Sentry from '@sentry/react-native';
 import { OnboardingScreen } from './src/screens/OnboardingScreen';
 import { hasSeenOnboarding } from './src/utils/onboarding';
+import { MermaidWorker } from './src/components/MermaidWorker';
 
 // Crash/error monitoring only - deliberately not sendDefaultPii (would send
 // IP address etc, undisclosed in the Play Store Data Safety form) and no
@@ -182,6 +184,11 @@ function renderSharedScreens(StackNav: typeof Stack, syllabusTitle = 'Syllabus')
         name="SubjectSyllabus"
         component={SubjectSyllabusScreen}
         options={({ route }: any) => ({ title: route.params?.subjectName || syllabusTitle })}
+      />
+      <StackNav.Screen
+        name="MermaidDemo"
+        component={MermaidDemoScreen}
+        options={{ title: 'Diagram Preview' }}
       />
     </>
   );
@@ -522,7 +529,14 @@ function AppContent() {
   );
 
   // Production renders exactly what it rendered before this banner existed.
-  if (!__DEV__) return tree;
+  if (!__DEV__) {
+    return (
+      <>
+        {tree}
+        <MermaidWorker />
+      </>
+    );
+  }
 
   // The banner eats the top safe-area inset itself, so the navigators below
   // are handed top: 0 - otherwise every screen header would pad for a status
@@ -533,6 +547,7 @@ function AppContent() {
       <SafeAreaInsetsContext.Provider value={{ ...insets, top: 0 }}>
         {tree}
       </SafeAreaInsetsContext.Provider>
+      <MermaidWorker />
     </View>
   );
 }

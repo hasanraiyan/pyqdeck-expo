@@ -6,6 +6,7 @@ import { questionMarkdownStyles, solutionMarkdownStyles, markdownRules } from '.
 import { parseContentBlocks, ContentBlock } from '../utils/nativeContentParser';
 import { NativeMathView } from './NativeMathView';
 import { NativeCodeBlock } from './NativeCodeBlock';
+import { MermaidBlock } from './MermaidBlock';
 import { cleanMarkdown } from '../utils/responsive';
 import { ContentErrorBoundary } from './ContentErrorBoundary';
 
@@ -50,6 +51,14 @@ export const NativeContentRenderer: React.FC<NativeContentRendererProps> = React
     return (
       <View style={[styles.container, style]}>
         {blocks.map((block: ContentBlock, index: number) => {
+          if (block.type === 'mermaid') {
+            return (
+              <ContentErrorBoundary key={`mermaid-${index}`} fallbackText={block.code}>
+                <MermaidBlock code={block.code} />
+              </ContentErrorBoundary>
+            );
+          }
+
           if (block.type === 'code') {
             return (
               <ContentErrorBoundary key={`code-${index}`} fallbackText={block.code}>

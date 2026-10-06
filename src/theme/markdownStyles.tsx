@@ -8,6 +8,7 @@ import { COLORS, FONTS } from './colors';
 import { rf } from '../utils/responsive';
 import { HighlightedCode } from '../utils/syntaxHighlighter';
 import { MarkdownTable, TableRow, TableCell } from '../components/MarkdownTable';
+import { MermaidBlock } from '../components/MermaidBlock';
 
 export const baseMarkdownStyles = {
   body: {
@@ -358,6 +359,10 @@ export const markdownRules = {
       content = content.substring(0, content.length - 1);
     }
     const lang = (node.sourceInfo || node.info || '').trim();
+
+    if (lang.toLowerCase() === 'mermaid') {
+      return <MermaidBlock key={node.key} code={content} />;
+    }
 
     return <CodeBlockComponent key={node.key} content={content} language={lang} />;
   },

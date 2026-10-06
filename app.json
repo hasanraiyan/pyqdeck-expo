@@ -131,7 +131,8 @@
           "theme": "./clerk-theme.json"
         }
       ],
-      "expo-secure-store"
+      "expo-secure-store",
+      "expo-asset"
     ],
     "extra": {
       "eas": {

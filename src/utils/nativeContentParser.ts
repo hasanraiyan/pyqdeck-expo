@@ -1,5 +1,6 @@
 export type ContentBlock =
   | { type: 'code'; code: string; language: string }
+  | { type: 'mermaid'; code: string }
   | { type: 'display_math'; math: string }
   | { type: 'markdown'; content: string };
 
@@ -49,10 +50,14 @@ export function parseContentBlocks(rawText: string): ContentBlock[] {
     }
 
     if (match[1].startsWith('```')) {
-      // Fenced code block
-      const language = match[2] || 'text';
+      // Fenced code block or mermaid diagram
+      const language = (match[2] || 'text').trim();
       const code = match[3] || '';
-      blocks.push({ type: 'code', code, language });
+      if (language.toLowerCase() === 'mermaid') {
+        blocks.push({ type: 'mermaid', code: code.trim() });
+      } else {
+        blocks.push({ type: 'code', code, language });
+      }
     } else if (match[7]) {
       // LaTeX environment block like \begin{pmatrix}...\end{pmatrix}
       const fullEnv = match[0].trim();

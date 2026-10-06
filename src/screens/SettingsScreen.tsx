@@ -289,7 +289,7 @@ export const SettingsScreen = ({ navigation }: any) => {
           />
         </View>
 
-        <Text style={styles.sectionHeading}>APP TOUR</Text>
+        <Text style={styles.sectionHeading}>APP TOUR & DIAGRAMS</Text>
         <View style={styles.card}>
           <SettingsRow
             icon="compass"
@@ -301,6 +301,17 @@ export const SettingsScreen = ({ navigation }: any) => {
               } catch {}
               await resetOnboarding();
               navigation.navigate('Onboarding');
+            }}
+          />
+          <SettingsRow
+            icon="git-merge"
+            label="Diagram Preview"
+            subtitle="Sample notes with rendered Mermaid state & architecture diagrams"
+            onPress={() => {
+              try {
+                Haptics.selectionAsync();
+              } catch {}
+              navigation.navigate('MermaidDemo');
             }}
             last
           />
