@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { logEvent } from '../utils/analytics';
 import {
   View,
   Text,
@@ -126,7 +127,18 @@ export const QuestionDetailScreen = () => {
 
   useEffect(() => {
     recordQuestionOpenedAndMaybeShowInterstitial();
+    if (questionId) {
+      logEvent('view_question', {
+        subject_id: String(subjectId ?? ''),
+        question_id: String(questionId),
+        year: String(year ?? ''),
+      });
+    }
   }, [questionId]);
+
+  useEffect(() => {
+    if (wantSolution) logEvent('open_solution', { subject_id: String(subjectId ?? ''), question_id: String(questionId ?? '') });
+  }, [wantSolution, questionId]);
 
   useEffect(() => {
     if (solution) {
@@ -326,6 +338,7 @@ export const QuestionDetailScreen = () => {
   // optimistic + actionId + clamp. Used by handleVote and coalesced retry.
   const executeVote = async (nextValue: 1 | -1 | 0) => {
     const actionId = ++actionIdRef.current;
+    if (nextValue !== 0) logEvent('vote_solution', { direction: nextValue === 1 ? 'up' : 'down' });
     const prevVote = myVoteRef.current;
     const prevCounts = { ...voteCountsRef.current };
 

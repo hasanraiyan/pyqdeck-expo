@@ -1,4 +1,5 @@
 import React, { useMemo, useState, useCallback } from 'react';
+import { logEvent } from '../utils/analytics';
 import {
   View,
   Text,
@@ -99,6 +100,7 @@ export const AllSubjectsScreen = () => {
           disabled={isComingSoon}
           onPress={() => {
             prefetchSubject(item.id);
+            logEvent('select_subject', { subject_id: String(item.id), subject_name: String(item.name) });
             navigation.navigate('SubjectDetail', {
               semesterId: item.semester?.id,
               subjectId: item.id,
