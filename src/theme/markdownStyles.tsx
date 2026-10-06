@@ -7,6 +7,7 @@ import FitImage from 'react-native-fit-image';
 import { COLORS, FONTS } from './colors';
 import { rf } from '../utils/responsive';
 import { HighlightedCode } from '../utils/syntaxHighlighter';
+import { MarkdownTable, TableRow, TableCell } from '../components/MarkdownTable';
 
 export const baseMarkdownStyles = {
   body: {
@@ -370,117 +371,48 @@ export const markdownRules = {
     return <CodeBlockComponent key={node.key} content={content} />;
   },
 
-  // Responsive, polished Table with horizontal scroll and clean borders
-  table: (node: any, children: any, parent: any, styles: any) => (
-    <View
-      key={node.key}
-      style={{
-        borderRadius: 8,
-        borderWidth: 1,
-        borderColor: COLORS.border,
-        marginVertical: 12,
-        backgroundColor: COLORS.card,
-        overflow: 'hidden',
-      }}
-    >
-      <ScrollView
-        horizontal
-        nestedScrollEnabled
-        showsHorizontalScrollIndicator={true}
-        contentContainerStyle={{ minWidth: '100%' }}
-      >
-        <View style={{ flexDirection: 'column' }}>
-          {children}
-        </View>
-      </ScrollView>
-    </View>
+  // Mobile-first table: shared per-column widths, wrapping text, zebra rows,
+  // horizontal scroll only when the table is genuinely wider than the screen.
+  table: (node: any, children: any) => (
+    <MarkdownTable key={node.key} node={node}>
+      {children}
+    </MarkdownTable>
   ),
 
-  thead: (node: any, children: any, parent: any, styles: any) => (
-    <View
+  thead: (node: any, children: any) => <View key={node.key}>{children}</View>,
+
+  tbody: (node: any, children: any) => <View key={node.key}>{children}</View>,
+
+  tr: (node: any, children: any, parent: any) => {
+    const inHead = Array.isArray(parent) && parent.some((p: any) => p.type === 'thead');
+    const siblings = Array.isArray(parent) ? parent[0]?.children : undefined;
+    const last = !!siblings && node.index === siblings.length - 1;
+    return (
+      <TableRow key={node.key} header={inHead} zebra={!inHead && node.index % 2 === 1} last={last}>
+        {children}
+      </TableRow>
+    );
+  },
+
+  th: (node: any, children: any, parent: any) => (
+    <TableCell
       key={node.key}
-      style={{
-        backgroundColor: COLORS.cardSecondary,
-        borderBottomWidth: 1.5,
-        borderBottomColor: COLORS.border,
-      }}
+      index={node.index}
+      header
+      last={Array.isArray(parent) && node.index === (parent[0]?.children?.length ?? 0) - 1}
     >
       {children}
-    </View>
+    </TableCell>
   ),
 
-  tbody: (node: any, children: any, parent: any, styles: any) => (
-    <View key={node.key}>
-      {children}
-    </View>
-  ),
-
-  tr: (node: any, children: any, parent: any, styles: any) => (
-    <View
+  td: (node: any, children: any, parent: any) => (
+    <TableCell
       key={node.key}
-      style={{
-        flexDirection: 'row',
-        borderBottomWidth: 1,
-        borderBottomColor: COLORS.borderLight,
-        alignItems: 'center',
-      }}
+      index={node.index}
+      last={Array.isArray(parent) && node.index === (parent[0]?.children?.length ?? 0) - 1}
     >
       {children}
-    </View>
-  ),
-
-  th: (node: any, children: any, parent: any, styles: any) => (
-    <View
-      key={node.key}
-      style={{
-        minWidth: 110,
-        flex: 1,
-        paddingHorizontal: 12,
-        paddingVertical: 10,
-        borderRightWidth: 1,
-        borderRightColor: COLORS.border,
-        justifyContent: 'center',
-      }}
-    >
-      {typeof children === 'string' ? (
-        <Text
-          style={{
-            fontFamily: FONTS.mono,
-            fontSize: rf(11.5),
-            fontWeight: '700',
-            color: COLORS.text,
-            letterSpacing: 0.5,
-          }}
-        >
-          {children}
-        </Text>
-      ) : (
-        children
-      )}
-    </View>
-  ),
-
-  td: (node: any, children: any, parent: any, styles: any) => (
-    <View
-      key={node.key}
-      style={{
-        minWidth: 110,
-        flex: 1,
-        paddingHorizontal: 12,
-        paddingVertical: 10,
-        borderRightWidth: 1,
-        borderRightColor: COLORS.borderLight,
-        justifyContent: 'center',
-      }}
-    >
-      {typeof children === 'string' ? (
-        <Text style={{ fontSize: rf(12.5), lineHeight: rf(18), color: COLORS.text }}>
-          {children}
-        </Text>
-      ) : (
-        children
-      )}
-    </View>
+    </TableCell>
   ),
 
   image: (
