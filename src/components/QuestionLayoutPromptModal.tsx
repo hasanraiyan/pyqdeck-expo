@@ -21,12 +21,13 @@ interface QuestionLayoutPromptModalProps {
 }
 
 const SolutionCta: React.FC = () => (
-  <View style={styles.mockCtaSolution}>
-    <Feather name="check-circle" size={13} color="#FFFFFF" />
+  <View style={styles.mockCtaLink}>
+    <Feather name="check-circle" size={13} color={COLORS.secondary} />
     <Text style={styles.mockCtaText} numberOfLines={1}>
-      Solution Available
+      Solution available
+      <Text style={styles.mockCtaUnderline}>{' \u00b7 View details'}</Text>
     </Text>
-    <Feather name="arrow-right" size={13} color="#FFFFFF" />
+    <Feather name="arrow-right" size={13} color={COLORS.secondary} />
   </View>
 );
 
@@ -470,22 +471,22 @@ const styles = StyleSheet.create({
     lineHeight: 19,
     color: COLORS.text,
   },
-  mockCtaSolution: {
+  mockCtaLink: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    marginTop: 8,
-    borderRadius: RADIUS.md,
-    paddingVertical: 9,
-    paddingHorizontal: 12,
-    backgroundColor: COLORS.secondary,
+    alignSelf: 'flex-start',
+    gap: 6,
+    marginTop: 6,
   },
   mockCtaText: {
-    flex: 1,
+    flexShrink: 1,
     fontFamily: FONTS.mono,
     fontSize: 12,
-    fontWeight: '700',
-    color: '#FFFFFF',
+    fontWeight: '600',
+    color: COLORS.secondary,
+  },
+  mockCtaUnderline: {
+    textDecorationLine: 'underline',
   },
   footerHint: {
     fontSize: 11.5,
