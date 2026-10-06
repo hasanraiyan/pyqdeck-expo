@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { AppState, Platform, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer, getStateFromPath as defaultGetStateFromPath } from '@react-navigation/native';
@@ -16,6 +16,7 @@ import { clerkPublishableKey } from './src/auth/publishableKey';
 import { mobileAds } from './src/utils/mobileAds';
 import { initInterstitial } from './src/utils/ads';
 import { navigationRef } from './src/utils/navigationRef';
+import { logScreenView } from './src/utils/analytics';
 import * as Backend from './src/api/backend';
 import { migrateToQueryCache } from './src/db/cacheService';
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
@@ -385,6 +386,7 @@ export default Sentry.wrap(function App() {
 });
 
 function AppContent() {
+  const lastScreenRef = useRef<string | undefined>(undefined);
   const insets = useSafeAreaInsets();
   // null = still reading AsyncStorage (prevents white flash or wrong screen)
   const [onboarded, setOnboarded] = useState<boolean | null>(null);
@@ -469,7 +471,16 @@ function AppContent() {
     <NavigationContainer
       ref={navigationRef}
       linking={linking}
-      onReady={handleColdStartNotification}
+      onReady={() => {
+        lastScreenRef.current = navigationRef.getCurrentRoute()?.name;
+        if (lastScreenRef.current) logScreenView(lastScreenRef.current);
+        handleColdStartNotification();
+      }}
+      onStateChange={() => {
+        const current = navigationRef.getCurrentRoute()?.name;
+        if (current && current !== lastScreenRef.current) logScreenView(current);
+        lastScreenRef.current = current;
+      }}
     >
       <StatusBar style="dark" />
       {/* Auth screens live on a root stack ABOVE the tab navigator, not inside

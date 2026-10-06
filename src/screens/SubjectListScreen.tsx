@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import { logEvent } from '../utils/analytics';
 import {
   View,
   Text,
@@ -72,6 +73,7 @@ const SemesterTabContent = ({
           disabled={isComingSoon}
           onPress={() => {
             prefetchSubject(item.id);
+            logEvent('select_subject', { subject_id: String(item.id), subject_name: String(item.name) });
             navigation.navigate('SubjectDetail', {
               semesterId: item.semesterId,
               semesterNumber: item.semesterNumber,

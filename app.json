@@ -2,7 +2,7 @@
   "expo": {
     "name": "PyQdeck",
     "slug": "pyqdeck",
-    "version": "1.0.6",
+    "version": "1.0.7",
     "orientation": "default",
     "icon": "./assets/app-icon.png",
     "userInterfaceStyle": "light",
@@ -123,6 +123,8 @@
         }
       ],
       "@sentry/react-native",
+      "@react-native-firebase/app",
+      "@react-native-firebase/analytics",
       [
         "@clerk/expo",
         {

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { logEvent } from '../utils/analytics';
 import {
   View,
   Text,
@@ -55,6 +56,10 @@ export const SearchScreen = () => {
   // submit cancels the old requests and a repeat is served from cache.
   const [submitted, setSubmitted] = useState<string | null>(null);
   const hasSearched = submitted !== null;
+  useEffect(() => {
+    // Length only - the query text itself can be personal.
+    if (submitted) logEvent('search', { query_length: submitted.length });
+  }, [submitted]);
   const q = submitted ?? '';
 
   const subsQ = useQuery({ ...searchSubjectsQuery(q), enabled: hasSearched });
