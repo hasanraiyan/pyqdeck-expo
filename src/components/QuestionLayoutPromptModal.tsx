@@ -25,7 +25,7 @@ const SolutionCta: React.FC = () => (
     <Feather name="check-circle" size={13} color={COLORS.secondary} />
     <Text style={styles.mockCtaText} numberOfLines={1}>
       Solution available
-      <Text style={styles.mockCtaUnderline}>{' \u00b7 View details'}</Text>
+      {' \u00b7 '}<Text style={styles.mockCtaUnderline}>View details</Text>
     </Text>
     <Feather name="arrow-right" size={13} color={COLORS.secondary} />
   </View>

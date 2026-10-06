@@ -170,7 +170,7 @@ export const QuestionItem: React.FC<QuestionItemProps> = React.memo(({
                 <Feather name="check-circle" size={14} color={COLORS.secondary} />
                 <Text style={[styles.ctaLinkText, { color: COLORS.secondary }]} numberOfLines={1}>
                   Solution available
-                  <Text style={styles.ctaLinkUnderline}>{' \u00b7 View details'}</Text>
+                  {' \u00b7 '}<Text style={styles.ctaLinkUnderline}>View details</Text>
                 </Text>
                 <Feather name="arrow-right" size={14} color={COLORS.secondary} />
               </>
