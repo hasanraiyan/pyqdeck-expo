@@ -18,7 +18,7 @@ import { Branch, BranchSemesters } from '../types/syllabus';
 import { getDoneCounts } from '../db/syllabusProgress';
 import { getSelectedBranch, setSelectedBranch } from '../utils/settings';
 import { ScreenError, ScreenEmpty } from '../components/ScreenState';
-import { WaveLoader } from '../components/WaveLoader';
+import { CircleLoader } from '../components/CircleLoader';
 import { userMessage } from '../utils/netError';
 import { useContainerStyle } from '../components/ScreenContainer';
 
@@ -199,7 +199,7 @@ export const SemesterSelectScreen = () => {
         {/* Loading / Error / Empty States */}
         {!data && !error && (
           <View style={styles.loaderContainer}>
-            <WaveLoader color={COLORS.primary} dotSize={6} />
+            <CircleLoader color={COLORS.primary} dotSize={6} size={40} />
           </View>
         )}
 

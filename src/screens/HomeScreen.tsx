@@ -16,7 +16,7 @@ import { useQueries, useQueryClient } from '@tanstack/react-query';
 import { useSemesters, subjectsQuery } from '../api/queries';
 import { Semester } from '../types';
 import { COLORS, FONTS } from '../theme/colors';
-import { WaveLoader } from '../components/WaveLoader';
+import { CircleLoader } from '../components/CircleLoader';
 import { rf, scale, verticalScale, useResponsive } from '../utils/responsive';
 import { ScreenContainer } from '../components/ScreenContainer';
 import { ResponsiveGrid } from '../components/ResponsiveGrid';
@@ -426,7 +426,7 @@ export const HomeScreen = () => {
 
             {loading ? (
               <View style={styles.loaderContainer}>
-                <WaveLoader color={COLORS.primary} dotSize={6} />
+                <CircleLoader color={COLORS.primary} dotSize={6} size={40} />
               </View>
             ) : (
               <ResponsiveGrid

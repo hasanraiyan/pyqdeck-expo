@@ -14,7 +14,7 @@ import { Feather } from '@expo/vector-icons';
 import { useSubjectMeta } from '../api/queries';
 import { SubjectMeta } from '../types';
 import { COLORS, FONTS } from '../theme/colors';
-import { WaveLoader } from '../components/WaveLoader';
+import { CircleLoader } from '../components/CircleLoader';
 import { Badge } from '../components/Badge';
 import { AdBanner } from '../components/AdBanner';
 import { useResponsive } from '../utils/responsive';
@@ -115,7 +115,7 @@ export const SubjectDetailScreen = () => {
             <Text style={styles.sectionHeading}>QUESTION PAPERS BY YEAR</Text>
             {loading ? (
               <View style={styles.loaderBox}>
-                <WaveLoader color={COLORS.primary} dotSize={6} />
+                <CircleLoader color={COLORS.primary} dotSize={6} size={40} />
               </View>
             ) : meta?.years && meta.years.length > 0 ? (
               <ResponsiveGrid

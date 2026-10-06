@@ -30,7 +30,7 @@ import { AiOverviewCard } from '../components/AiOverviewCard';
 import { searchLocalCache } from '../api/offlineSearch';
 import { COLORS, FONTS } from '../theme/colors';
 import { Badge, MarksBadge, YearBadge } from '../components/Badge';
-import { WaveLoader } from '../components/WaveLoader';
+import { CircleLoader } from '../components/CircleLoader';
 import { rf, verticalScale, useResponsive } from '../utils/responsive';
 import { normalizeQuery, consumeSearchToken, shouldDebounceTap, applyServerRetryAfter } from '../utils/searchGuard';
 import { ScreenContainer } from '../components/ScreenContainer';
@@ -615,7 +615,7 @@ export const SearchScreen = () => {
           )}
           {loading ? (
             <View style={styles.loaderBox}>
-              <WaveLoader color={COLORS.primary} dotSize={7} />
+              <CircleLoader color={COLORS.primary} dotSize={6} size={40} />
             </View>
           ) : null}
 

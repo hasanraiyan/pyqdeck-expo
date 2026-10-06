@@ -12,47 +12,94 @@ import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { COLORS, FONTS, RADIUS } from '../theme/colors';
 import { useDialogLayout } from '../utils/dialog';
-import { QuestionItem } from './QuestionItem';
-import { QuestionItemClassic } from './QuestionItemClassic';
-import { QuestionSummary } from '../types';
+import { useResponsive } from '../utils/responsive';
+import { MarksBadge, YearBadge, QNumBadge } from './Badge';
 
 interface QuestionLayoutPromptModalProps {
   visible: boolean;
   onSelect: (isCards: boolean) => void;
 }
 
-const DEMO_QUESTION: QuestionSummary = {
-  questionId: 'demo-layout-q1',
-  year: 2024,
-  qNumber: 'Q1',
-  chapter: 'MODULE 1 · PROCESS MANAGEMENT',
-  text: 'Explain the difference between **preemptive** and **non-preemptive** CPU scheduling with suitable examples.',
-  textPreview: 'Explain the difference between preemptive and non-preemptive CPU scheduling...',
-  textHtml: '',
-  type: 'theory',
-  marks: 5,
-  hasSolution: true,
-};
+const SolutionCta: React.FC = () => (
+  <View style={styles.mockCtaSolution}>
+    <Feather name="check-circle" size={13} color="#FFFFFF" />
+    <Text style={styles.mockCtaText} numberOfLines={1}>
+      Solution Available
+    </Text>
+    <Feather name="arrow-right" size={13} color="#FFFFFF" />
+  </View>
+);
 
-const DEMO_QUESTION_2: QuestionSummary = {
-  questionId: 'demo-layout-q2',
-  year: 2024,
-  qNumber: 'Q2',
-  chapter: 'MODULE 1 · PROCESS MANAGEMENT',
-  text: 'What is **virtual memory**? Describe the concept of paging with a neat diagram.',
-  textPreview: 'What is virtual memory? Describe the concept of paging with a neat diagram...',
-  textHtml: '',
-  type: 'theory',
-  marks: 4,
-  hasSolution: false,
-};
+/** Static stand-in for QuestionItem: one collapsed row, one expanded row. */
+const AccordionMock: React.FC = () => (
+  <View style={styles.sampleWrapper} pointerEvents="none">
+    <Text style={styles.sampleKicker}>PREVIEW</Text>
+    <View style={styles.mockBox}>
+      <View style={styles.mockRow}>
+        <Text style={styles.mockRowText} numberOfLines={1}>
+          <Text style={styles.mockQNum}>Q1. </Text>
+          Explain preemptive vs non-preemptive scheduling
+        </Text>
+        <YearBadge year={2024} />
+        <MarksBadge marks={5} />
+        <Feather name="chevron-down" size={16} color={COLORS.textMuted} />
+      </View>
+      <View style={[styles.mockRow, styles.mockRowOpen]}>
+        <Text style={styles.mockRowText} numberOfLines={1}>
+          <Text style={styles.mockQNum}>Q2. </Text>
+          What is virtual memory?
+        </Text>
+        <MarksBadge marks={4} />
+        <Feather name="chevron-up" size={16} color={COLORS.primary} />
+      </View>
+      <View style={styles.mockExpandedBody}>
+        <Text style={styles.mockBody} numberOfLines={2}>
+          Describe the concept of paging with a neat diagram.
+        </Text>
+        <SolutionCta />
+      </View>
+    </View>
+  </View>
+);
+
+/** Static stand-in for QuestionItemClassic: an always-open card. */
+const CardMock: React.FC = () => (
+  <View style={styles.sampleWrapper} pointerEvents="none">
+    <Text style={styles.sampleKicker}>PREVIEW</Text>
+    <View style={styles.mockCard}>
+      <View style={styles.mockMetaRow}>
+        <YearBadge year={2024} variant="teal" />
+        <View style={styles.mockMetaRight}>
+          <QNumBadge qNum="Q1" variant="primary" />
+          <MarksBadge marks={5} />
+        </View>
+      </View>
+      <View style={styles.mockModuleStrip}>
+        <Feather name="layers" size={12} color={COLORS.primary} />
+        <Text style={styles.mockModuleText} numberOfLines={1}>
+          Module 1 · Process Management
+        </Text>
+      </View>
+      <Text style={styles.mockBody} numberOfLines={3}>
+        Explain the difference between preemptive and non-preemptive CPU scheduling with
+        suitable examples.
+      </Text>
+      <SolutionCta />
+    </View>
+  </View>
+);
 
 export const QuestionLayoutPromptModal: React.FC<QuestionLayoutPromptModalProps> = ({
   visible,
   onSelect,
 }) => {
   const dlg = useDialogLayout();
+  const { width } = useResponsive();
   const [selectedMode, setSelectedMode] = useState<'accordion' | 'cards'>('accordion');
+
+  // Tablet-width sheets would otherwise stretch edge to edge; cap and centre.
+  const capped = !dlg.wide && width > 600;
+  const sheetWidth = capped ? { width: '100%' as const, maxWidth: 560, alignSelf: 'center' as const } : null;
 
   const handleSelectMode = (mode: 'accordion' | 'cards') => {
     Haptics.selectionAsync();
@@ -74,7 +121,7 @@ export const QuestionLayoutPromptModal: React.FC<QuestionLayoutPromptModalProps>
       <TouchableWithoutFeedback onPress={handleConfirm}>
         <View style={[styles.overlay, dlg.overlay]}>
           <TouchableWithoutFeedback>
-            <View style={[styles.sheet, dlg.sheet]}>
+            <View style={[styles.sheet, dlg.sheet, sheetWidth]}>
               <View style={styles.handle} />
 
               <ScrollView
@@ -87,7 +134,7 @@ export const QuestionLayoutPromptModal: React.FC<QuestionLayoutPromptModalProps>
                   Select how you would like to browse exam question papers:
                 </Text>
 
-                {/* 1. Accordion Option Card with Real Component */}
+                {/* 1. Accordion */}
                 <TouchableOpacity
                   style={[
                     styles.optionCard,
@@ -108,9 +155,7 @@ export const QuestionLayoutPromptModal: React.FC<QuestionLayoutPromptModalProps>
                           name="list"
                           size={15}
                           color={
-                            selectedMode === 'accordion'
-                              ? COLORS.primary
-                              : COLORS.textMuted
+                            selectedMode === 'accordion' ? COLORS.primary : COLORS.textMuted
                           }
                         />
                       </View>
@@ -119,16 +164,13 @@ export const QuestionLayoutPromptModal: React.FC<QuestionLayoutPromptModalProps>
                           <Text
                             style={[
                               styles.optionTitle,
-                              selectedMode === 'accordion' &&
-                                styles.optionTitleActive,
+                              selectedMode === 'accordion' && styles.optionTitleActive,
                             ]}
                           >
                             Accordion
                           </Text>
                           <View style={styles.recommendedBadge}>
-                            <Text style={styles.recommendedBadgeText}>
-                              Default
-                            </Text>
+                            <Text style={styles.recommendedBadgeText}>Default</Text>
                           </View>
                         </View>
                         <Text style={styles.optionSubtitle}>
@@ -142,37 +184,13 @@ export const QuestionLayoutPromptModal: React.FC<QuestionLayoutPromptModalProps>
                         selectedMode === 'accordion' && styles.radioCircleActive,
                       ]}
                     >
-                      {selectedMode === 'accordion' && (
-                        <View style={styles.radioDot} />
-                      )}
+                      {selectedMode === 'accordion' && <View style={styles.radioDot} />}
                     </View>
                   </View>
-
-                  {/* Real QuestionItem component preview */}
-                  <View style={styles.sampleWrapper} pointerEvents="none">
-                    <View style={styles.sampleHeaderStrip}>
-                      <Text style={styles.sampleKicker}>LIVE PREVIEW</Text>
-                    </View>
-                    <View style={styles.realAccordionBox}>
-                      <QuestionItem
-                        question={DEMO_QUESTION}
-                        subjectId="demo"
-                        semesterId="3"
-                        compact
-                        style={styles.realAccordionRow}
-                      />
-                      <QuestionItem
-                        question={DEMO_QUESTION_2}
-                        subjectId="demo"
-                        semesterId="3"
-                        compact
-                        style={styles.realAccordionRow}
-                      />
-                    </View>
-                  </View>
+                  <AccordionMock />
                 </TouchableOpacity>
 
-                {/* 2. Open Cards Option Card with Real Component */}
+                {/* 2. Open Cards */}
                 <TouchableOpacity
                   style={[
                     styles.optionCard,
@@ -192,11 +210,7 @@ export const QuestionLayoutPromptModal: React.FC<QuestionLayoutPromptModalProps>
                         <Feather
                           name="layout"
                           size={15}
-                          color={
-                            selectedMode === 'cards'
-                              ? COLORS.primary
-                              : COLORS.textMuted
-                          }
+                          color={selectedMode === 'cards' ? COLORS.primary : COLORS.textMuted}
                         />
                       </View>
                       <View style={{ flex: 1 }}>
@@ -219,24 +233,10 @@ export const QuestionLayoutPromptModal: React.FC<QuestionLayoutPromptModalProps>
                         selectedMode === 'cards' && styles.radioCircleActive,
                       ]}
                     >
-                      {selectedMode === 'cards' && (
-                        <View style={styles.radioDot} />
-                      )}
+                      {selectedMode === 'cards' && <View style={styles.radioDot} />}
                     </View>
                   </View>
-
-                  {/* Real QuestionItemClassic component preview */}
-                  <View style={styles.sampleWrapper} pointerEvents="none">
-                    <View style={styles.sampleHeaderStrip}>
-                      <Text style={styles.sampleKicker}>LIVE PREVIEW</Text>
-                    </View>
-                    <QuestionItemClassic
-                      question={DEMO_QUESTION}
-                      subjectId="demo"
-                      semesterId="3"
-                      style={styles.realCardItem}
-                    />
-                  </View>
+                  <CardMock />
                 </TouchableOpacity>
 
                 <Text style={styles.footerHint}>
@@ -390,32 +390,102 @@ const styles = StyleSheet.create({
   sampleWrapper: {
     marginTop: 4,
   },
-  sampleHeaderStrip: {
-    marginBottom: 5,
-  },
   sampleKicker: {
     fontFamily: FONTS.mono,
     fontSize: 9,
     fontWeight: '700',
     color: COLORS.textSubtle,
     letterSpacing: 0.6,
+    marginBottom: 5,
   },
-  realAccordionBox: {
+  mockBox: {
     borderRadius: RADIUS.md,
     borderWidth: 1,
     borderColor: COLORS.border,
     overflow: 'hidden',
     backgroundColor: COLORS.card,
   },
-  realAccordionRow: {
+  mockRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
     borderBottomWidth: 1,
     borderColor: COLORS.borderLight,
+    backgroundColor: COLORS.card,
   },
-  realCardItem: {
-    marginHorizontal: 0,
-    marginBottom: 0,
+  mockRowOpen: {
+    backgroundColor: COLORS.background,
+  },
+  mockRowText: {
+    flex: 1,
+    minWidth: 0,
+    fontSize: 13,
+    color: COLORS.text,
+  },
+  mockQNum: {
+    fontFamily: FONTS.mono,
+    fontSize: 12,
+    fontWeight: '600',
+    color: COLORS.textMuted,
+  },
+  mockExpandedBody: {
+    padding: 12,
+    backgroundColor: COLORS.background,
+  },
+  mockCard: {
+    borderRadius: RADIUS.md,
     borderWidth: 1,
     borderColor: COLORS.border,
+    backgroundColor: COLORS.card,
+    padding: 12,
+    gap: 10,
+  },
+  mockMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  mockMetaRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    flexShrink: 1,
+  },
+  mockModuleStrip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  mockModuleText: {
+    flex: 1,
+    fontFamily: FONTS.mono,
+    fontSize: 11,
+    color: COLORS.textMuted,
+  },
+  mockBody: {
+    fontSize: 13,
+    lineHeight: 19,
+    color: COLORS.text,
+  },
+  mockCtaSolution: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 8,
+    borderRadius: RADIUS.md,
+    paddingVertical: 9,
+    paddingHorizontal: 12,
+    backgroundColor: COLORS.secondary,
+  },
+  mockCtaText: {
+    flex: 1,
+    fontFamily: FONTS.mono,
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#FFFFFF',
   },
   footerHint: {
     fontSize: 11.5,
