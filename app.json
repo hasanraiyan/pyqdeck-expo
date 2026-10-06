@@ -123,6 +123,8 @@
         }
       ],
       "@sentry/react-native",
+      "@react-native-firebase/app",
+      "@react-native-firebase/analytics",
       [
         "@clerk/expo",
         {
