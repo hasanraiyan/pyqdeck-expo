@@ -152,7 +152,7 @@ export const SettingsScreen = ({ navigation }: any) => {
     } catch {}
   };
 
-  const version = Constants.expoConfig?.version || '1.0.6';
+  const version = Constants.expoConfig?.version || '1.0.7';
   const versionCode = Constants.expoConfig?.android?.versionCode;
 
   return (
