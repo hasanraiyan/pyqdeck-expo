@@ -289,7 +289,7 @@ export const SettingsScreen = ({ navigation }: any) => {
           />
         </View>
 
-        <Text style={styles.sectionHeading}>APP TOUR & DIAGRAMS</Text>
+        <Text style={styles.sectionHeading}>APP TOUR</Text>
         <View style={styles.card}>
           <SettingsRow
             icon="compass"
@@ -302,20 +302,29 @@ export const SettingsScreen = ({ navigation }: any) => {
               await resetOnboarding();
               navigation.navigate('Onboarding');
             }}
-          />
-          <SettingsRow
-            icon="git-merge"
-            label="Diagram Preview"
-            subtitle="Sample notes with rendered Mermaid state & architecture diagrams"
-            onPress={() => {
-              try {
-                Haptics.selectionAsync();
-              } catch {}
-              navigation.navigate('MermaidDemo');
-            }}
             last
           />
         </View>
+
+        {__DEV__ && (
+          <>
+            <Text style={styles.sectionHeading}>DEBUG</Text>
+            <View style={styles.card}>
+              <SettingsRow
+                icon="git-merge"
+                label="Diagram Preview"
+                subtitle="Sample notes with rendered Mermaid state & architecture diagrams"
+                onPress={() => {
+                  try {
+                    Haptics.selectionAsync();
+                  } catch {}
+                  navigation.navigate('MermaidDemo');
+                }}
+                last
+              />
+            </View>
+          </>
+        )}
 
         <Text style={styles.sectionHeading}>SUPPORT PYQDECK</Text>
         <View style={styles.card}>
