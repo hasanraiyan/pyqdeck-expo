@@ -42,6 +42,40 @@ flowchart TD
     Output --> End([End])
 \`\`\`
 
+### Algorithm Implementation (Auto-Tabbed)
+
+\`\`\`java
+// Java Implementation
+public class MaxFinder {
+    public static int findMax(int[] arr) {
+        int max = arr[0];
+        for (int i = 1; i < arr.length; i++) {
+            if (arr[i] > max) max = arr[i];
+        }
+        return max;
+    }
+}
+\`\`\`
+\`\`\`python
+# Python Implementation
+def find_max(arr: list[int]) -> int:
+    max_val = arr[0]
+    for x in arr[1:]:
+        if x > max_val:
+            max_val = x
+    return max_val
+\`\`\`
+\`\`\`cpp
+// C++ Implementation
+int findMax(const vector<int>& arr) {
+    int maxVal = arr[0];
+    for (size_t i = 1; i < arr.size(); ++i) {
+        if (arr[i] > maxVal) maxVal = arr[i];
+    }
+    return maxVal;
+}
+\`\`\`
+
 ---
 
 ## 2. Sequence Diagram (sequenceDiagram)

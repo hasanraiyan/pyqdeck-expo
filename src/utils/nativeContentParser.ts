@@ -1,7 +1,9 @@
 import { type CalloutType, parseCalloutBlock } from './calloutParser';
+import { type CodeTabItem, groupCodeTabs } from './codeTabParser';
 
 export type ContentBlock =
   | { type: 'code'; code: string; language: string }
+  | { type: 'code_tabs'; tabs: CodeTabItem[] }
   | { type: 'mermaid'; code: string }
   | { type: 'display_math'; math: string }
   | { type: 'callout'; calloutType: CalloutType; title?: string; content: string }
@@ -102,5 +104,5 @@ export function parseContentBlocks(rawText: string): ContentBlock[] {
     }
   }
 
-  return blocks;
+  return groupCodeTabs(blocks);
 }

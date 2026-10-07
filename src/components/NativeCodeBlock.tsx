@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, StyleProp, ViewStyle } from 'react-native';
 // @ts-ignore
 import CodeHighlighter from 'react-native-code-highlighter';
 // @ts-ignore
@@ -9,9 +9,11 @@ import * as Haptics from 'expo-haptics';
 import { Feather } from '@expo/vector-icons';
 import { COLORS, FONTS } from '../theme/colors';
 
-interface NativeCodeBlockProps {
+export interface NativeCodeBlockProps {
   code: string;
   language?: string;
+  hideHeader?: boolean;
+  containerStyle?: StyleProp<ViewStyle>;
 }
 
 interface Token {
@@ -73,7 +75,7 @@ const ASCII_LANGS = new Set([
 ]);
 
 export const NativeCodeBlock: React.FC<NativeCodeBlockProps> = React.memo(
-  ({ code, language = 'text' }) => {
+  ({ code, language = 'text', hideHeader = false, containerStyle }) => {
     const [copied, setCopied] = useState(false);
 
     const handleCopy = async () => {
@@ -108,15 +110,16 @@ export const NativeCodeBlock: React.FC<NativeCodeBlockProps> = React.memo(
     }, [cleanLang, isAscii, isMatrixContent]);
 
     return (
-      <View style={styles.container}>
-        <View style={styles.header}>
-          <Text style={styles.langText}>{displayLabel}</Text>
-          <TouchableOpacity
-            style={styles.copyBtn}
-            onPress={handleCopy}
-            activeOpacity={0.7}
-            hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-          >
+      <View style={[styles.container, containerStyle]}>
+        {!hideHeader && (
+          <View style={styles.header}>
+            <Text style={styles.langText}>{displayLabel}</Text>
+            <TouchableOpacity
+              style={styles.copyBtn}
+              onPress={handleCopy}
+              activeOpacity={0.7}
+              hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+            >
             <Feather
               name={copied ? 'check' : 'copy'}
               size={12}
@@ -132,8 +135,9 @@ export const NativeCodeBlock: React.FC<NativeCodeBlockProps> = React.memo(
             </Text>
           </TouchableOpacity>
         </View>
+      )}
 
-        {isAscii ? (
+      {isAscii ? (
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}

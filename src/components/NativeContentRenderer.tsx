@@ -8,6 +8,7 @@ import { NativeMathView } from './NativeMathView';
 import { NativeCodeBlock } from './NativeCodeBlock';
 import { MermaidBlock } from './MermaidBlock';
 import { CalloutCard } from './CalloutCard';
+import { TabbedCodeBlock } from './TabbedCodeBlock';
 import { cleanMarkdown } from '../utils/responsive';
 import { ContentErrorBoundary } from './ContentErrorBoundary';
 
@@ -64,6 +65,14 @@ export const NativeContentRenderer: React.FC<NativeContentRendererProps> = React
             return (
               <ContentErrorBoundary key={`code-${index}`} fallbackText={block.code}>
                 <NativeCodeBlock code={block.code} language={block.language} />
+              </ContentErrorBoundary>
+            );
+          }
+
+          if (block.type === 'code_tabs') {
+            return (
+              <ContentErrorBoundary key={`code-tabs-${index}`}>
+                <TabbedCodeBlock tabs={block.tabs} />
               </ContentErrorBoundary>
             );
           }
