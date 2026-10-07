@@ -7,6 +7,7 @@ import { parseContentBlocks, ContentBlock } from '../utils/nativeContentParser';
 import { NativeMathView } from './NativeMathView';
 import { NativeCodeBlock } from './NativeCodeBlock';
 import { MermaidBlock } from './MermaidBlock';
+import { CalloutCard } from './CalloutCard';
 import { cleanMarkdown } from '../utils/responsive';
 import { ContentErrorBoundary } from './ContentErrorBoundary';
 
@@ -75,6 +76,19 @@ export const NativeContentRenderer: React.FC<NativeContentRendererProps> = React
                   displayMode={true}
                   fontSize={fontSize}
                   color={textColor}
+                />
+              </ContentErrorBoundary>
+            );
+          }
+
+          if (block.type === 'callout') {
+            return (
+              <ContentErrorBoundary key={`callout-${index}`} fallbackText={block.content}>
+                <CalloutCard
+                  type={block.calloutType}
+                  title={block.title}
+                  content={block.content}
+                  rules={rules}
                 />
               </ContentErrorBoundary>
             );

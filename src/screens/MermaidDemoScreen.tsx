@@ -10,6 +10,18 @@ const SAMPLE_NOTES_WITH_MERMAID = `# Comprehensive Mermaid Diagram Showcase
 
 This sample page demonstrates all major diagram types supported by Mermaid running completely offline inside PyQdeck. Tap any diagram to open the interactive pinch-to-zoom viewer.
 
+> [!NOTE]
+> All diagram types compile and render offline using bundled Mermaid.js with zero network requests.
+
+> [!TIP] Interactive Gesture Navigation
+> Tap any diagram to launch the dedicated viewer. Use two fingers to pinch-to-zoom up to 5x or pan smoothly across large graphs.
+
+> [!WARNING]
+> Common exam trap: Do not confuse Interface inheritance with Class extension!
+
+> [!EXAM] High Yield Topic
+> Expect a 5-mark question comparing synchronous RPC and asynchronous event streams in distributed architectures.
+
 ---
 
 ## 1. Flowchart (flowchart TD & LR)

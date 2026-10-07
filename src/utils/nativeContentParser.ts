@@ -1,7 +1,10 @@
+import { type CalloutType, parseCalloutBlock } from './calloutParser';
+
 export type ContentBlock =
   | { type: 'code'; code: string; language: string }
   | { type: 'mermaid'; code: string }
   | { type: 'display_math'; math: string }
+  | { type: 'callout'; calloutType: CalloutType; title?: string; content: string }
   | { type: 'markdown'; content: string };
 
 /**
@@ -21,7 +24,8 @@ export function normalizeBreaks(text: string): string {
  * Splits markdown content into structural blocks:
  * 1. Fenced code blocks (```lang ... ```) -> NativeCodeBlock
  * 2. Display math ($$...$$ or \[...\]) -> NativeMathView (SVG)
- * 3. Markdown prose (with inline math) -> native Markdown display
+ * 3. Markdown alert callouts (> [!NOTE] ...) -> CalloutCard
+ * 4. Markdown prose (with inline math) -> native Markdown display
  */
 export function parseContentBlocks(rawText: string): ContentBlock[] {
   if (!rawText) return [];
@@ -30,9 +34,10 @@ export function parseContentBlocks(rawText: string): ContentBlock[] {
   const blocks: ContentBlock[] = [];
 
   // Match fenced code blocks (```...```), display math ($$...$$ or \[...\]),
-  // or standalone LaTeX environments (\begin{pmatrix}...\end{pmatrix}, etc.)
+  // standalone LaTeX environments (\begin{pmatrix}...\end{pmatrix}, etc.),
+  // or markdown alert callout blocks (> [!NOTE] ...)
   const BLOCK_REGEX =
-    /(```([a-zA-Z0-9_-]*)\r?\n([\s\S]*?)```|`\$\$([\s\S]+?)\$\$`|\$\$([\s\S]+?)\$\$|\\\[([\s\S]+?)\\\]|\\begin\{(matrix|pmatrix|bmatrix|vmatrix|Vmatrix|aligned|align\*?|gather\*?|equation\*?|cases)\}([\s\S]*?)\\end\{\7\})/g;
+    /(```([a-zA-Z0-9_-]*)\r?\n([\s\S]*?)```|`\$\$([\s\S]+?)\$\$`|\$\$([\s\S]+?)\$\$|\\\[([\s\S]+?)\\\]|\\begin\{(matrix|pmatrix|bmatrix|vmatrix|Vmatrix|aligned|align\*?|gather\*?|equation\*?|cases)\}([\s\S]*?)\\end\{\7\}|(?:^|\r?\n)>\s*\[!(?:NOTE|INFO|TIP|HINT|PROTIP|WARNING|WARN|EXAM|EXAM_TRAP|VIVA|CAUTION|CRUCIAL|IMPORTANT|DANGER)\][^\r\n]*(?:\r?\n>\s?[^\r\n]*)*)/gi;
 
   let lastIndex = 0;
   let match: RegExpExecArray | null;
@@ -49,7 +54,7 @@ export function parseContentBlocks(rawText: string): ContentBlock[] {
       }
     }
 
-    if (match[1].startsWith('```')) {
+    if (match[1] && match[1].startsWith('```')) {
       // Fenced code block or mermaid diagram
       const language = (match[2] || 'text').trim();
       const code = match[3] || '';
@@ -64,11 +69,25 @@ export function parseContentBlocks(rawText: string): ContentBlock[] {
       if (fullEnv.length > 0) {
         blocks.push({ type: 'display_math', math: fullEnv });
       }
-    } else {
+    } else if (match[4] || match[5] || match[6]) {
       // Display math ($$...$$ or \[...\])
       const math = (match[4] || match[5] || match[6] || '').trim();
       if (math.length > 0) {
         blocks.push({ type: 'display_math', math });
+      }
+    } else {
+      // Markdown alert callout block
+      const rawCallout = match[0].trim();
+      const calloutData = parseCalloutBlock(rawCallout);
+      if (calloutData) {
+        blocks.push({
+          type: 'callout',
+          calloutType: calloutData.type,
+          title: calloutData.title,
+          content: calloutData.content,
+        });
+      } else {
+        blocks.push({ type: 'markdown', content: rawCallout });
       }
     }
 
