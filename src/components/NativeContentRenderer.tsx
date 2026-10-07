@@ -9,6 +9,7 @@ import { NativeCodeBlock } from './NativeCodeBlock';
 import { MermaidBlock } from './MermaidBlock';
 import { CalloutCard } from './CalloutCard';
 import { TabbedCodeBlock } from './TabbedCodeBlock';
+import { ImageGalleryBlock } from './ImageGalleryBlock';
 import { cleanMarkdown } from '../utils/responsive';
 import { ContentErrorBoundary } from './ContentErrorBoundary';
 
@@ -103,16 +104,27 @@ export const NativeContentRenderer: React.FC<NativeContentRendererProps> = React
             );
           }
 
-          // Markdown prose
-          return (
-            <View key={`md-${index}`} style={styles.markdownBlock}>
-              <ContentErrorBoundary fallbackText={block.content}>
-                <Markdown style={mdStyles} rules={rules}>
-                  {cleanMarkdown(block.content)}
-                </Markdown>
+          if (block.type === 'image_gallery') {
+            return (
+              <ContentErrorBoundary key={`gallery-${index}`}>
+                <ImageGalleryBlock images={block.images} />
               </ContentErrorBoundary>
-            </View>
-          );
+            );
+          }
+
+          if (block.type === 'markdown') {
+            return (
+              <View key={`md-${index}`} style={styles.markdownBlock}>
+                <ContentErrorBoundary fallbackText={block.content}>
+                  <Markdown style={mdStyles} rules={rules}>
+                    {cleanMarkdown(block.content)}
+                  </Markdown>
+                </ContentErrorBoundary>
+              </View>
+            );
+          }
+
+          return null;
         })}
       </View>
     );

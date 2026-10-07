@@ -1,5 +1,6 @@
 import { type CalloutType, parseCalloutBlock } from './calloutParser';
 import { type CodeTabItem, groupCodeTabs } from './codeTabParser';
+import { type ImageItem, groupImageGalleries } from './imageGalleryParser';
 
 export type ContentBlock =
   | { type: 'code'; code: string; language: string }
@@ -7,6 +8,8 @@ export type ContentBlock =
   | { type: 'mermaid'; code: string }
   | { type: 'display_math'; math: string }
   | { type: 'callout'; calloutType: CalloutType; title?: string; content: string }
+  | { type: 'image'; src: string; alt?: string }
+  | { type: 'image_gallery'; images: ImageItem[] }
   | { type: 'markdown'; content: string };
 
 /**
@@ -37,9 +40,10 @@ export function parseContentBlocks(rawText: string): ContentBlock[] {
 
   // Match fenced code blocks (```...```), display math ($$...$$ or \[...\]),
   // standalone LaTeX environments (\begin{pmatrix}...\end{pmatrix}, etc.),
-  // or markdown alert callout blocks (> [!NOTE] ...)
+  // markdown alert callout blocks (> [!NOTE] ...),
+  // or standalone markdown images (![alt](url))
   const BLOCK_REGEX =
-    /(```([a-zA-Z0-9_-]*)\r?\n([\s\S]*?)```|`\$\$([\s\S]+?)\$\$`|\$\$([\s\S]+?)\$\$|\\\[([\s\S]+?)\\\]|\\begin\{(matrix|pmatrix|bmatrix|vmatrix|Vmatrix|aligned|align\*?|gather\*?|equation\*?|cases)\}([\s\S]*?)\\end\{\7\}|(?:^|\r?\n)>\s*\[!(?:NOTE|INFO|TIP|HINT|PROTIP|WARNING|WARN|EXAM|EXAM_TRAP|VIVA|CAUTION|CRUCIAL|IMPORTANT|DANGER)\][^\r\n]*(?:\r?\n>\s?[^\r\n]*)*)/gi;
+    /(```([a-zA-Z0-9_-]*)\r?\n([\s\S]*?)```|`\$\$([\s\S]+?)\$\$`|\$\$([\s\S]+?)\$\$|\\\[([\s\S]+?)\\\]|\\begin\{(matrix|pmatrix|bmatrix|vmatrix|Vmatrix|aligned|align\*?|gather\*?|equation\*?|cases)\}([\s\S]*?)\\end\{\7\}|(?:^|\r?\n)>\s*\[!(?:NOTE|INFO|TIP|HINT|PROTIP|WARNING|WARN|EXAM|EXAM_TRAP|VIVA|CAUTION|CRUCIAL|IMPORTANT|DANGER)\][^\r\n]*(?:\r?\n>\s?[^\r\n]*)*|(?:^|\r?\n)!\[(.*?)\]\((https?:\/\/[^\s\)\r\n]+|data:image\/[^\s\)\r\n]+|\/[^\s\)\r\n]+|\.{1,2}\/[^\s\)\r\n]+)\))/gi;
 
   let lastIndex = 0;
   let match: RegExpExecArray | null;
@@ -90,6 +94,15 @@ export function parseContentBlocks(rawText: string): ContentBlock[] {
       if (math.length > 0) {
         blocks.push({ type: 'display_math', math });
       }
+    } else if (match[9]) {
+      // Standalone markdown image: match[8] is alt, match[9] is src
+      const altText = (match[8] || '').trim();
+      const srcUrl = match[9].trim();
+      blocks.push({
+        type: 'image',
+        src: srcUrl,
+        alt: altText.length > 0 ? altText : undefined,
+      });
     } else {
       // Markdown alert callout block
       const rawCallout = match[0].trim();
@@ -117,5 +130,6 @@ export function parseContentBlocks(rawText: string): ContentBlock[] {
     }
   }
 
-  return groupCodeTabs(blocks);
+  const withCodeTabs = groupCodeTabs(blocks);
+  return groupImageGalleries(withCodeTabs);
 }
