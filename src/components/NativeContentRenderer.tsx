@@ -11,6 +11,8 @@ import { CalloutCard } from './CalloutCard';
 import { TabbedCodeBlock } from './TabbedCodeBlock';
 import { ImageGalleryBlock } from './ImageGalleryBlock';
 import { YouTubeCard } from './YouTubeCard';
+import { DetailsSpoilerBlock } from './DetailsSpoilerBlock';
+import { StepperTimelineBlock } from './StepperTimelineBlock';
 import { cleanMarkdown } from '../utils/responsive';
 import { ContentErrorBoundary } from './ContentErrorBoundary';
 
@@ -122,6 +124,26 @@ export const NativeContentRenderer: React.FC<NativeContentRendererProps> = React
                   url={block.url}
                   startTime={block.startTime}
                 />
+              </ContentErrorBoundary>
+            );
+          }
+
+          if (block.type === 'details') {
+            return (
+              <ContentErrorBoundary key={`details-${index}`}>
+                <DetailsSpoilerBlock
+                  summary={block.summary}
+                  content={block.content}
+                  defaultOpen={block.defaultOpen}
+                />
+              </ContentErrorBoundary>
+            );
+          }
+
+          if (block.type === 'stepper') {
+            return (
+              <ContentErrorBoundary key={`stepper-${index}`}>
+                <StepperTimelineBlock steps={block.steps} />
               </ContentErrorBoundary>
             );
           }

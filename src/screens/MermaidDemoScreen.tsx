@@ -157,6 +157,43 @@ YouTube videos inserted as markdown links, embed tags \`@[youtube](...)\`, or ra
 
 ---
 
+### 2.5 Algorithmic Step-by-Step Stepper / Timeline
+Complex sequential algorithms, protocol handshakes, and compilation phases are rendered as interactive connected vertical timelines with numbered badge nodes:
+
+:::step 1: Lexical Analysis (Scanning)
+Reads raw source characters and converts them into a stream of meaningful tokens (keywords, identifiers, literals, operators) while stripping comments and whitespace.
+:::step 2: Syntax Analysis (Parsing)
+Constructs the **Abstract Syntax Tree (AST)** according to formal grammar rules (Context-Free Grammar). Detects syntax errors like mismatched brackets or missing semicolons.
+:::step 3: Semantic Analysis & Type Checking
+Verifies semantic consistency, type compatibility, variable declarations, and scope resolution across the AST.
+:::step 4: Intermediate Code Generation (IR)
+Transforms the AST into machine-independent intermediate representation (Three-Address Code / Quadruples) suitable for platform-agnostic optimization.
+:::step 5: Code Optimization
+Applies loop unrolling, dead code elimination, and constant folding to maximize execution efficiency.
+:::step 6: Target Code Generation
+Translates optimized IR into target assembly or machine code with optimal register allocation.
+
+---
+
+### 2.6 Interactive Collapsible Hints & Spoilers (<details><summary>)
+Standard \`<details><summary>\` blocks render as native accordion cards with smooth toggle animations and haptic feedback to conceal hints, proofs, and intermediate calculation steps:
+
+<details>
+<summary>💡 Hint: Matrix Exponentiation for O(log N) Fibonacci</summary>
+
+Recall that the Fibonacci recurrence can be expressed as a $2 \\times 2$ state transition matrix:
+$$ \\begin{pmatrix} F_{n+1} \\\\ F_n \\end{pmatrix} = \\begin{pmatrix} 1 & 1 \\\\ 1 & 0 \\end{pmatrix}^n \\begin{pmatrix} F_1 \\\\ F_0 \\end{pmatrix} $$
+Using binary exponentiation, $\\begin{pmatrix} 1 & 1 \\\\ 1 & 0 \\end{pmatrix}^n$ is computed in exactly $O(\\log N)$ arithmetic operations!
+</details>
+
+<details>
+<summary>🔍 Proof of Time Complexity</summary>
+
+Since the exponent $n$ is halved at each recursive step ($n \\to \\lfloor n/2 \\rfloor$), the call stack depth is strictly bounded by $\\lfloor \\log_2 n \\rfloor + 1$. Each $2 \\times 2$ matrix multiplication requires 8 scalar multiplications and 4 additions ($O(1)$), yielding an overall runtime of $O(\\log N)$ and auxiliary space of $O(1)$.
+</details>
+
+---
+
 ## 3. Sequence Diagram (sequenceDiagram)
 
 Sequence diagrams depict message exchanges between distributed actors, servers, and databases.
