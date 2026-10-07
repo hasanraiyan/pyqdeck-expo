@@ -17,6 +17,7 @@ import * as Haptics from 'expo-haptics';
 import { Feather } from '@expo/vector-icons';
 import { COLORS, FONTS, RADIUS } from '../theme/colors';
 import { ImageItem } from '../utils/imageGalleryParser';
+import { useImageDimensions } from '../utils/useImageDimensions';
 
 interface ImageViewerModalProps {
   visible: boolean;
@@ -63,6 +64,7 @@ export const ImageViewerModal: React.FC<ImageViewerModalProps> = ({
 
   const activeImage = images[activeIndex] || images[0];
   const activeSrc = (activeImage?.src || '').trim();
+  const { dims, orientation } = useImageDimensions(visible ? activeSrc : null);
 
   // Warm the expo-image disk cache so a WebView retry usually hits cache.
   React.useEffect(() => {
