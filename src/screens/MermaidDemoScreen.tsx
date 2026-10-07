@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet, ScrollView, Text } from 'react-native';
+import { View, StyleSheet, ScrollView, Text, ActivityIndicator, InteractionManager } from 'react-native';
 import { ScreenContainer } from '../components/ScreenContainer';
 import { NativeContentRenderer } from '../components/NativeContentRenderer';
 import { FaqAccordion } from '../components/FaqAccordion';
@@ -209,159 +209,53 @@ Since the exponent $n$ is halved at each recursive step ($n \\to \\lfloor n/2 \\
 In addition to algorithmic Mermaid charts, PyQdeck renders native SVG vector graphics with infinite sharpness, responsive aspect ratios, tap-to-zoom pinch exploration, and an optional raw XML source viewer. Both fenced \`\`\`svg blocks and raw \`<svg>\` markup are natively supported:
 
 \`\`\`svg
-<svg viewBox="0 0 800 450" xmlns="http://www.w3.org/2000/svg">
+<svg viewBox="0 0 800 420" width="800" height="420" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-      <path d="M 0 1 L 10 5 L 0 9 z" fill="#64748B"/>
+    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#475569"/>
     </marker>
-    <marker id="arrow-blue" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+    <marker id="arr-b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
       <path d="M 0 1 L 10 5 L 0 9 z" fill="#2563EB"/>
     </marker>
-    <marker id="arrow-green" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+    <marker id="arr-g" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
       <path d="M 0 1 L 10 5 L 0 9 z" fill="#059669"/>
-    </marker>
-    <marker id="arrow-purple" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-      <path d="M 0 1 L 10 5 L 0 9 z" fill="#7C3AED"/>
     </marker>
   </defs>
 
-  <!-- Title & Subtitle Banner -->
-  <rect x="0" y="0" width="800" height="450" rx="12" fill="#F8FAFC"/>
-  <text x="30" y="32" font-family="system-ui, -apple-system, sans-serif" font-size="16" font-weight="700" fill="#0F172A">Out-of-Order (OoO) SuperScalar CPU Architecture</text>
-  <text x="30" y="48" font-family="system-ui, -apple-system, sans-serif" font-size="11" fill="#64748B">Speculative Front-End • Dynamic Scheduling Engine • Non-Blocking Memory Subsystem</text>
+  <rect width="800" height="420" rx="12" fill="#F8FAFC"/>
+  <text x="400" y="34" text-anchor="middle" font-family="sans-serif" font-size="18" font-weight="700" fill="#0F172A">TCP Three-Way Handshake</text>
+  <text x="400" y="54" text-anchor="middle" font-family="sans-serif" font-size="12" fill="#64748B">Connection establishment between client and server</text>
 
-  <!-- ZONE 1: INSTRUCTION FRONT-END (BLUE) -->
-  <rect x="20" y="65" width="230" height="365" rx="8" fill="#EFF6FF" stroke="#BFDBFE" stroke-width="1.5"/>
-  <rect x="30" y="75" width="125" height="20" rx="4" fill="#DBEAFE"/>
-  <text x="36" y="89" font-family="monospace" font-size="9.5" font-weight="700" fill="#1D4ED8">IN-ORDER FRONT-END</text>
+  <!-- Client -->
+  <rect x="80" y="80" width="140" height="44" rx="8" fill="#DBEAFE" stroke="#2563EB" stroke-width="2"/>
+  <text x="150" y="108" text-anchor="middle" font-family="sans-serif" font-size="15" font-weight="700" fill="#1E3A8A">Client</text>
+  <line x1="150" y1="124" x2="150" y2="395" stroke="#94A3B8" stroke-width="2" stroke-dasharray="6 5"/>
 
-  <!-- PC & Branch Target Buffer -->
-  <rect x="35" y="105" width="200" height="42" rx="6" fill="#FFFFFF" stroke="#93C5FD" stroke-width="1.5"/>
-  <text x="45" y="122" font-family="system-ui, -apple-system, sans-serif" font-size="11" font-weight="700" fill="#1E3A8A">Program Counter & BTB</text>
-  <text x="45" y="137" font-family="monospace" font-size="9.5" fill="#3B82F6">TAGE Branch Predictor • PC + 16</text>
+  <!-- Server -->
+  <rect x="580" y="80" width="140" height="44" rx="8" fill="#D1FAE5" stroke="#059669" stroke-width="2"/>
+  <text x="650" y="108" text-anchor="middle" font-family="sans-serif" font-size="15" font-weight="700" fill="#065F46">Server</text>
+  <line x1="650" y1="124" x2="650" y2="395" stroke="#94A3B8" stroke-width="2" stroke-dasharray="6 5"/>
 
-  <!-- L1 Instruction Cache -->
-  <rect x="35" y="160" width="200" height="42" rx="6" fill="#FFFFFF" stroke="#93C5FD" stroke-width="1.5"/>
-  <text x="45" y="177" font-family="system-ui, -apple-system, sans-serif" font-size="11" font-weight="700" fill="#1E3A8A">L1 Instruction Cache</text>
-  <text x="45" y="192" font-family="monospace" font-size="9.5" fill="#3B82F6">32 KB • 8-Way • 4-Wide Fetch</text>
+  <!-- Step 1: SYN -->
+  <line x1="150" y1="170" x2="648" y2="215" stroke="#2563EB" stroke-width="2.5" marker-end="url(#arr-b)"/>
+  <rect x="290" y="168" width="220" height="26" rx="13" fill="#FFFFFF" stroke="#2563EB"/>
+  <text x="400" y="186" text-anchor="middle" font-family="monospace" font-size="12" font-weight="700" fill="#1D4ED8">1. SYN  seq=x</text>
+  <text x="60" y="176" text-anchor="middle" font-family="sans-serif" font-size="11" fill="#64748B">CLOSED</text>
+  <text x="740" y="226" text-anchor="middle" font-family="sans-serif" font-size="11" fill="#64748B">LISTEN</text>
 
-  <!-- 4-Wide Instruction Decoder -->
-  <rect x="35" y="215" width="200" height="42" rx="6" fill="#FFFFFF" stroke="#93C5FD" stroke-width="1.5"/>
-  <text x="45" y="232" font-family="system-ui, -apple-system, sans-serif" font-size="11" font-weight="700" fill="#1E3A8A">4-Wide Macro-Op Decoder</text>
-  <text x="45" y="247" font-family="monospace" font-size="9.5" fill="#3B82F6">x86 / RISC-V → Micro-op Fusion</text>
+  <!-- Step 2: SYN-ACK -->
+  <line x1="650" y1="250" x2="152" y2="295" stroke="#059669" stroke-width="2.5" marker-end="url(#arr-g)"/>
+  <rect x="270" y="248" width="260" height="26" rx="13" fill="#FFFFFF" stroke="#059669"/>
+  <text x="400" y="266" text-anchor="middle" font-family="monospace" font-size="12" font-weight="700" fill="#047857">2. SYN-ACK  seq=y, ack=x+1</text>
+  <text x="60" y="306" text-anchor="middle" font-family="sans-serif" font-size="11" fill="#64748B">SYN_SENT</text>
+  <text x="740" y="256" text-anchor="middle" font-family="sans-serif" font-size="11" fill="#64748B">SYN_RCVD</text>
 
-  <!-- Register Rename & RAT -->
-  <rect x="35" y="270" width="200" height="42" rx="6" fill="#FFFFFF" stroke="#93C5FD" stroke-width="1.5"/>
-  <text x="45" y="287" font-family="system-ui, -apple-system, sans-serif" font-size="11" font-weight="700" fill="#1E3A8A">Register Alias Table (RAT)</text>
-  <text x="45" y="302" font-family="monospace" font-size="9.5" fill="#3B82F6">Eliminates WAR & WAW Hazards</text>
-
-  <!-- Front-End Micro-Op Queue -->
-  <rect x="35" y="325" width="200" height="42" rx="6" fill="#FFFFFF" stroke="#93C5FD" stroke-width="1.5"/>
-  <text x="45" y="342" font-family="system-ui, -apple-system, sans-serif" font-size="11" font-weight="700" fill="#1E3A8A">Decoded Micro-op Queue</text>
-  <text x="45" y="357" font-family="monospace" font-size="9.5" fill="#3B82F6">64 Entries • Speculative Stream</text>
-
-  <!-- Connecting Arrows Inside Front-End -->
-  <path d="M 135 147 L 135 160" stroke="#93C5FD" stroke-width="2" marker-end="url(#arrow-blue)"/>
-  <path d="M 135 202 L 135 215" stroke="#93C5FD" stroke-width="2" marker-end="url(#arrow-blue)"/>
-  <path d="M 135 257 L 135 270" stroke="#93C5FD" stroke-width="2" marker-end="url(#arrow-blue)"/>
-  <path d="M 135 312 L 135 325" stroke="#93C5FD" stroke-width="2" marker-end="url(#arrow-blue)"/>
-
-  <!-- Dispatch Arrow from Front-End to OoO Core -->
-  <path d="M 235 346 L 270 346 L 270 190 L 285 190" stroke="#2563EB" stroke-width="2.5" marker-end="url(#arrow-blue)"/>
-  <text x="242" y="270" font-family="monospace" font-size="9" font-weight="700" fill="#2563EB" transform="rotate(-90, 242, 270)">DISPATCH (4 uOps/cyc)</text>
-
-  <!-- ZONE 2: DYNAMIC EXECUTION CORE (PURPLE / AMBER) -->
-  <rect x="285" y="65" width="280" height="365" rx="8" fill="#FDF4FF" stroke="#F0ABFC" stroke-width="1.5"/>
-  <rect x="295" y="75" width="155" height="20" rx="4" fill="#F5D0FE"/>
-  <text x="301" y="89" font-family="monospace" font-size="9.5" font-weight="700" fill="#86198F">OUT-OF-ORDER EXECUTION</text>
-
-  <!-- Reorder Buffer (ROB) -->
-  <rect x="298" y="105" width="254" height="40" rx="6" fill="#FFFFFF" stroke="#D946EF" stroke-width="1.5"/>
-  <text x="308" y="122" font-family="system-ui, -apple-system, sans-serif" font-size="11" font-weight="700" fill="#701A75">Unified Reorder Buffer (ROB)</text>
-  <text x="308" y="137" font-family="monospace" font-size="9.5" fill="#A21CAF">192 Entries • In-Order Retirement Guard</text>
-
-  <!-- Unified Reservation Stations -->
-  <rect x="298" y="160" width="254" height="42" rx="6" fill="#FFFFFF" stroke="#D946EF" stroke-width="1.5"/>
-  <text x="308" y="177" font-family="system-ui, -apple-system, sans-serif" font-size="11" font-weight="700" fill="#701A75">Unified Reservation Station (RS)</text>
-  <text x="308" y="192" font-family="monospace" font-size="9.5" fill="#A21CAF">Wakeup & Select Logic • 96 Sched Entries</text>
-
-  <!-- Parallel Execution Ports -->
-  <!-- Port 0: Fast ALU + Branch -->
-  <rect x="298" y="222" width="122" height="44" rx="5" fill="#FAF5FF" stroke="#C084FC" stroke-width="1.2"/>
-  <text x="305" y="238" font-family="system-ui, -apple-system, sans-serif" font-size="10.5" font-weight="700" fill="#581C87">Int ALU 0 / BR</text>
-  <text x="305" y="253" font-family="monospace" font-size="9" fill="#7E22CE">Latency: 1 cyc</text>
-
-  <!-- Port 1: Int ALU + Shift -->
-  <rect x="430" y="222" width="122" height="44" rx="5" fill="#FAF5FF" stroke="#C084FC" stroke-width="1.2"/>
-  <text x="437" y="238" font-family="system-ui, -apple-system, sans-serif" font-size="10.5" font-weight="700" fill="#581C87">Int ALU 1 / Shift</text>
-  <text x="437" y="253" font-family="monospace" font-size="9" fill="#7E22CE">Latency: 1 cyc</text>
-
-  <!-- Port 2: Vector & FPU (SIMD) -->
-  <rect x="298" y="276" width="122" height="44" rx="5" fill="#FAF5FF" stroke="#C084FC" stroke-width="1.2"/>
-  <text x="305" y="292" font-family="system-ui, -apple-system, sans-serif" font-size="10.5" font-weight="700" fill="#581C87">Vector / FPU</text>
-  <text x="305" y="307" font-family="monospace" font-size="9" fill="#7E22CE">256-bit FMA (4 cyc)</text>
-
-  <!-- Port 3: Load / Store Queue (LSQ) -->
-  <rect x="430" y="276" width="122" height="44" rx="5" fill="#FAF5FF" stroke="#C084FC" stroke-width="1.2"/>
-  <text x="437" y="292" font-family="system-ui, -apple-system, sans-serif" font-size="10.5" font-weight="700" fill="#581C87">Load / Store Queue</text>
-  <text x="437" y="307" font-family="monospace" font-size="9" fill="#7E22CE">64 Entries • Forwarding</text>
-
-  <!-- Physical Register File (PRF) -->
-  <rect x="298" y="335" width="254" height="42" rx="6" fill="#FFFFFF" stroke="#D946EF" stroke-width="1.5"/>
-  <text x="308" y="352" font-family="system-ui, -apple-system, sans-serif" font-size="11" font-weight="700" fill="#701A75">Physical Register File (PRF)</text>
-  <text x="308" y="367" font-family="monospace" font-size="9.5" fill="#A21CAF">160 Integer + 160 FP Physical Regs</text>
-
-  <!-- Arrows in OoO Engine -->
-  <path d="M 425 145 L 425 160" stroke="#C084FC" stroke-width="2" marker-end="url(#arrow-purple)"/>
-  <path d="M 360 202 L 360 222" stroke="#C084FC" stroke-width="1.8" marker-end="url(#arrow-purple)"/>
-  <path d="M 490 202 L 490 222" stroke="#C084FC" stroke-width="1.8" marker-end="url(#arrow-purple)"/>
-  <path d="M 360 266 L 360 276" stroke="#C084FC" stroke-width="1.8" marker-end="url(#arrow-purple)"/>
-  <path d="M 490 266 L 490 276" stroke="#C084FC" stroke-width="1.8" marker-end="url(#arrow-purple)"/>
-
-  <!-- Common Data Bus (CDB) Bypass -->
-  <path d="M 425 320 L 425 335" stroke="#D946EF" stroke-width="2" marker-end="url(#arrow-purple)"/>
-
-  <!-- ZONE 3: MEMORY & RETIREMENT BACK-END (GREEN / ROSE) -->
-  <rect x="585" y="65" width="195" height="365" rx="8" fill="#F0FDF4" stroke="#BBF7D0" stroke-width="1.5"/>
-  <rect x="595" y="75" width="140" height="20" rx="4" fill="#DCFCE7"/>
-  <text x="601" y="89" font-family="monospace" font-size="9.5" font-weight="700" fill="#15803D">MEMORY & COMMIT</text>
-
-  <!-- Architectural Register File & Retire -->
-  <rect x="595" y="105" width="175" height="52" rx="6" fill="#FFFFFF" stroke="#86EFAC" stroke-width="1.5"/>
-  <text x="605" y="123" font-family="system-ui, -apple-system, sans-serif" font-size="11" font-weight="700" fill="#14532D">In-Order Retirement</text>
-  <text x="605" y="138" font-family="monospace" font-size="9.5" fill="#16A34A">Commit up to 4 uOps</text>
-  <text x="605" y="151" font-family="monospace" font-size="9" fill="#15803D">Updates Arch State (ARF)</text>
-
-  <!-- Translation Lookaside Buffer -->
-  <rect x="595" y="172" width="175" height="44" rx="6" fill="#FFFFFF" stroke="#86EFAC" stroke-width="1.5"/>
-  <text x="605" y="190" font-family="system-ui, -apple-system, sans-serif" font-size="11" font-weight="700" fill="#14532D">Data TLB (dTLB)</text>
-  <text x="605" y="205" font-family="monospace" font-size="9.5" fill="#16A34A">64 Entries • 4-Level MMU</text>
-
-  <!-- L1 Data Cache -->
-  <rect x="595" y="230" width="175" height="52" rx="6" fill="#FFFFFF" stroke="#86EFAC" stroke-width="1.5"/>
-  <text x="605" y="248" font-family="system-ui, -apple-system, sans-serif" font-size="11" font-weight="700" fill="#14532D">L1 Data Cache</text>
-  <text x="605" y="263" font-family="monospace" font-size="9.5" fill="#16A34A">32 KB • 8-Way • Non-blocking</text>
-  <text x="605" y="276" font-family="monospace" font-size="9" fill="#15803D">Hit Latency: 4 Cycles</text>
-
-  <!-- L2 Cache & Coherency Interconnect -->
-  <rect x="595" y="300" width="175" height="56" rx="6" fill="#FFF1F2" stroke="#FECDD3" stroke-width="1.5"/>
-  <text x="605" y="318" font-family="system-ui, -apple-system, sans-serif" font-size="11" font-weight="700" fill="#9F1239">Unified L2 Cache</text>
-  <text x="605" y="333" font-family="monospace" font-size="9.5" fill="#E11D48">512 KB • 8-Way (12 Cycles)</text>
-  <text x="605" y="348" font-family="monospace" font-size="9" fill="#BE123C">MESI Coherence Protocol</text>
-
-  <!-- System Fabric Bus -->
-  <rect x="595" y="370" width="175" height="44" rx="6" fill="#FFF7ED" stroke="#FED7AA" stroke-width="1.5"/>
-  <text x="605" y="388" font-family="system-ui, -apple-system, sans-serif" font-size="11" font-weight="700" fill="#9A3412">L3 Ring / DRAM Bus</text>
-  <text x="605" y="403" font-family="monospace" font-size="9.5" fill="#C2410C">Shared 16 MB • Memory Ctrl</text>
-
-  <!-- Connections from LSQ to D-Cache & Memory -->
-  <path d="M 552 298 L 575 298 L 575 256 L 595 256" stroke="#059669" stroke-width="2" marker-end="url(#arrow-green)"/>
-  <path d="M 682 216 L 682 230" stroke="#059669" stroke-width="1.8" marker-end="url(#arrow-green)"/>
-  <path d="M 682 282 L 682 300" stroke="#E11D48" stroke-width="1.8" marker-end="url(#arrow)"/>
-  <path d="M 682 356 L 682 370" stroke="#C2410C" stroke-width="1.8" marker-end="url(#arrow)"/>
-
-  <!-- ROB to Commit arrow -->
-  <path d="M 552 125 L 595 125" stroke="#7C3AED" stroke-width="2" marker-end="url(#arrow-purple)"/>
+  <!-- Step 3: ACK -->
+  <line x1="150" y1="330" x2="648" y2="365" stroke="#2563EB" stroke-width="2.5" marker-end="url(#arr-b)"/>
+  <rect x="290" y="328" width="220" height="26" rx="13" fill="#FFFFFF" stroke="#2563EB"/>
+  <text x="400" y="346" text-anchor="middle" font-family="monospace" font-size="12" font-weight="700" fill="#1D4ED8">3. ACK  ack=y+1</text>
+  <text x="60" y="346" text-anchor="middle" font-family="sans-serif" font-size="11" font-weight="700" fill="#059669">ESTABLISHED</text>
+  <text x="740" y="386" text-anchor="middle" font-family="sans-serif" font-size="11" font-weight="700" fill="#059669">ESTABLISHED</text>
 </svg>
 \`\`\`
 
@@ -643,6 +537,22 @@ export const MermaidDemoScreen: React.FC = () => {
     () => extractFaqsFromNotes(SAMPLE_NOTES_WITH_MERMAID),
     []
   );
+
+  // Defer the heavy diagram render until the navigation transition finishes,
+  // otherwise the JS thread is blocked and the screen feels stuck.
+  const [ready, setReady] = React.useState(false);
+  React.useEffect(() => {
+    const task = InteractionManager.runAfterInteractions(() => setReady(true));
+    return () => task.cancel();
+  }, []);
+
+  if (!ready) {
+    return (
+      <View style={[styles.container, { alignItems: 'center', justifyContent: 'center' }]}>
+        <ActivityIndicator color={COLORS.primary} />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>

@@ -9,7 +9,7 @@ import {
 import { SvgXml } from 'react-native-svg';
 import * as Haptics from 'expo-haptics';
 import { COLORS, RADIUS } from '../theme/colors';
-import { extractSvgDimensions, extractSvgTitle } from '../utils/svgParser';
+import { extractSvgDimensions, extractSvgTitle, sanitizeSvgForNative } from '../utils/svgParser';
 import { MermaidViewer } from './MermaidViewer';
 import { ContentErrorBoundary } from './ContentErrorBoundary';
 
@@ -33,6 +33,8 @@ export const SvgDiagramBlock: React.FC<SvgDiagramBlockProps> = React.memo(
       };
     }, [xml, title, explicitRatio]);
 
+    const nativeXml = useMemo(() => sanitizeSvgForNative(xml), [xml]);
+
     const handleOpenViewer = () => {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       setViewerOpen(true);
@@ -50,7 +52,7 @@ export const SvgDiagramBlock: React.FC<SvgDiagramBlockProps> = React.memo(
         >
           <View style={[styles.canvas, { aspectRatio: computedRatio }]}>
             <ContentErrorBoundary fallbackText={xml}>
-              <SvgXml xml={xml} width="100%" height="100%" />
+              <SvgXml xml={nativeXml} width="100%" height="100%" />
             </ContentErrorBoundary>
           </View>
         </TouchableOpacity>
@@ -85,12 +87,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 10,
   },
   canvas: {
     width: '100%',
-    maxWidth: 520,
     alignItems: 'center',
     justifyContent: 'center',
   },

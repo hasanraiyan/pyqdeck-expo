@@ -42,47 +42,104 @@ export const MermaidViewer: React.FC<MermaidViewerProps> = ({
   };
 
   // Pure HTML rendering the pre-rendered SVG with pinch-to-zoom and pan enabled
-  // Zero external JavaScript loaded here for instantaneous modal opening
+  // Small inline gesture script only (no external JS) for instant opening
   const htmlContent = React.useMemo(() => {
     if (!visible || !svg) return '';
+
+    // Strip scripts / inline handlers: JS is enabled only for our own gesture code
+    const safeSvg = svg
+      .replace(/<script[\s\S]*?<\/script>/gi, '')
+      .replace(/\son\w+\s*=\s*("[^"]*"|'[^']*')/gi, '');
 
     return `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <style>
     * { box-sizing: border-box; }
     html, body {
-      margin: 0;
-      padding: 0;
-      width: 100%;
-      height: 100%;
+      margin: 0; padding: 0; width: 100%; height: 100%;
       background: ${COLORS.background};
-      overflow: auto;
-      -webkit-overflow-scrolling: touch;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      overflow: hidden;
+      touch-action: none;
+      -webkit-user-select: none; user-select: none;
     }
-    #wrapper {
-      padding: 24px;
-      min-width: 100%;
-      min-height: 100%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+    #stage {
+      position: absolute; top: 0; left: 0;
+      width: 100vw; padding: 16px;
+      transform-origin: 0 0;
+      will-change: transform;
     }
-    svg {
-      max-width: none;
-      height: auto;
+    #stage svg {
+      display: block;
+      width: 100% !important;
+      max-width: none !important;
+      height: auto !important;
     }
   </style>
 </head>
 <body>
-  <div id="wrapper">
-    <div id="container">${svg}</div>
-  </div>
+  <div id="stage">${safeSvg}</div>
+  <script>
+  (function () {
+    var stage = document.getElementById('stage');
+    var MIN = 1, MAX = 6;
+    var s = 1, x = 0, y = 0;
+    function vw() { return window.innerWidth; }
+    function vh() { return window.innerHeight; }
+    function clamp() {
+      var w = stage.offsetWidth * s, h = stage.offsetHeight * s;
+      x = w <= vw() ? (vw() - w) / 2 : Math.min(0, Math.max(vw() - w, x));
+      y = h <= vh() ? (vh() - h) / 2 : Math.min(0, Math.max(vh() - h, y));
+    }
+    function apply() {
+      clamp();
+      stage.style.transform = 'translate(' + x + 'px,' + y + 'px) scale(' + s + ')';
+    }
+    function zoomAt(cx, cy, ns) {
+      ns = Math.min(MAX, Math.max(MIN, ns));
+      x = cx - (cx - x) * (ns / s);
+      y = cy - (cy - y) * (ns / s);
+      s = ns;
+      apply();
+    }
+    function dist(t) { return Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY); }
+    var last = null, startDist = 0, startScale = 1, lastTap = 0;
+    document.addEventListener('touchstart', function (e) {
+      if (e.touches.length === 2) {
+        startDist = dist(e.touches); startScale = s; last = null;
+      } else if (e.touches.length === 1) {
+        last = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+        var now = Date.now();
+        if (now - lastTap < 300) {
+          if (s > 1.01) { s = 1; x = 0; y = 0; apply(); }
+          else zoomAt(last.x, last.y, 2.5);
+          lastTap = 0;
+        } else lastTap = now;
+      }
+    }, { passive: false });
+    document.addEventListener('touchmove', function (e) {
+      e.preventDefault();
+      if (e.touches.length === 2) {
+        var cx = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+        var cy = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+        zoomAt(cx, cy, startScale * dist(e.touches) / startDist);
+      } else if (e.touches.length === 1 && last) {
+        x += e.touches[0].clientX - last.x;
+        y += e.touches[0].clientY - last.y;
+        last = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+        apply();
+      }
+    }, { passive: false });
+    document.addEventListener('touchend', function (e) {
+      last = e.touches.length === 1 ? { x: e.touches[0].clientX, y: e.touches[0].clientY } : null;
+    });
+    window.addEventListener('load', apply);
+    window.addEventListener('resize', apply);
+    apply();
+  })();
+  </script>
 </body>
 </html>`;
   }, [visible, svg]);
@@ -143,7 +200,7 @@ export const MermaidViewer: React.FC<MermaidViewerProps> = ({
             style={styles.webView}
             scrollEnabled={true}
             scalesPageToFit={false}
-            javaScriptEnabled={false}
+            javaScriptEnabled={true}
             domStorageEnabled={false}
             nestedScrollEnabled={true}
           />

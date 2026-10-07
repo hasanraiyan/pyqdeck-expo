@@ -55,6 +55,18 @@ export function extractSvgTitle(xml: string): string | undefined {
 }
 
 /**
+ * react-native-svg's Android MarkerView does Double.parseDouble() on `orient`,
+ * so `auto-start-reverse` throws NumberFormatException and kills the app.
+ * Only numeric angles and `auto` are safe natively.
+ */
+export function sanitizeSvgForNative(xml: string): string {
+  return xml.replace(
+    /(\borient\s*=\s*)(["'])\s*auto-start-reverse\s*\2/gi,
+    '$1$2auto$2'
+  );
+}
+
+/**
  * Regex matching standalone <svg>...</svg> tags.
  */
 export const RAW_SVG_REGEX =
