@@ -7,7 +7,6 @@ import {
   LayoutChangeEvent,
 } from 'react-native';
 import { WebView, WebViewMessageEvent } from 'react-native-webview';
-import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
 import { Feather } from '@expo/vector-icons';
 import { COLORS, FONTS, RADIUS } from '../theme/colors';
@@ -33,21 +32,21 @@ function calculateFittedHeight(
   intrinsicHeight: number,
   containerWidth: number
 ): number {
-  if (!intrinsicHeight || intrinsicHeight <= 0) return 100;
+  if (!intrinsicHeight || intrinsicHeight <= 0) return 90;
 
-  // Available width inside the card (accounting for 20px horizontal padding)
-  const availW = containerWidth > 40 ? containerWidth - 20 : 340;
+  // Available width inside the card (accounting for horizontal padding)
+  const availW = containerWidth > 30 ? containerWidth - 16 : 340;
 
   if (intrinsicWidth && intrinsicWidth > 0) {
     if (intrinsicWidth > availW) {
       const scale = availW / intrinsicWidth;
       const scaledHeight = Math.ceil(intrinsicHeight * scale);
-      return Math.min(520, Math.max(50, scaledHeight + 16));
+      return Math.min(520, Math.max(48, scaledHeight + 14));
     }
-    return Math.min(520, Math.max(50, Math.ceil(intrinsicHeight) + 16));
+    return Math.min(520, Math.max(48, Math.ceil(intrinsicHeight) + 14));
   }
 
-  return Math.min(520, Math.max(50, Math.ceil(intrinsicHeight) + 16));
+  return Math.min(520, Math.max(48, Math.ceil(intrinsicHeight) + 14));
 }
 
 export const MermaidBlock: React.FC<MermaidBlockProps> = React.memo(({ code }) => {
@@ -68,7 +67,6 @@ export const MermaidBlock: React.FC<MermaidBlockProps> = React.memo(({ code }) =
     return 90;
   });
   const [viewerOpen, setViewerOpen] = useState(false);
-  const [copied, setCopied] = useState(false);
 
   const onLayout = (e: LayoutChangeEvent) => {
     const w = e.nativeEvent.layout.width;
@@ -117,13 +115,6 @@ export const MermaidBlock: React.FC<MermaidBlockProps> = React.memo(({ code }) =
     };
   }, [code, cached, containerWidth]);
 
-  const handleCopy = async () => {
-    await Clipboard.setStringAsync(code);
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
   const handleOpenViewer = () => {
     if (!svg) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -134,8 +125,8 @@ export const MermaidBlock: React.FC<MermaidBlockProps> = React.memo(({ code }) =
     try {
       const data = JSON.parse(event.nativeEvent.data);
       if (data.type === 'size' && typeof data.height === 'number' && data.height > 0) {
-        // Precise rendered height from the browser engine + tight 16px padding (8px top, 8px bottom)
-        const fitted = Math.min(520, Math.max(50, Math.ceil(data.height) + 16));
+        // Precise rendered height from the browser engine + tight padding
+        const fitted = Math.min(520, Math.max(48, Math.ceil(data.height) + 14));
         setDiagramHeight(fitted);
       }
     } catch {
@@ -168,7 +159,7 @@ export const MermaidBlock: React.FC<MermaidBlockProps> = React.memo(({ code }) =
       display: flex;
       justify-content: center;
       align-items: center;
-      padding: 8px 10px;
+      padding: 6px 8px;
     }
     svg {
       display: block;
@@ -219,60 +210,18 @@ export const MermaidBlock: React.FC<MermaidBlockProps> = React.memo(({ code }) =
 
   return (
     <View style={styles.card} onLayout={onLayout}>
-      {/* Header bar */}
-      <View style={styles.header}>
-        <View style={styles.headerLeft}>
-          <Feather name="git-merge" size={13} color={COLORS.primary} />
-          <Text style={styles.headerTitle}>DIAGRAM</Text>
-        </View>
-
-        <View style={styles.headerActions}>
-          <TouchableOpacity
-            style={styles.actionBtn}
-            onPress={handleCopy}
-            activeOpacity={0.7}
-            hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-            accessibilityLabel="Copy diagram source"
-          >
-            <Feather
-              name={copied ? 'check' : 'copy'}
-              size={12}
-              color={copied ? COLORS.secondary : COLORS.textMuted}
-            />
-            <Text
-              style={[
-                styles.actionBtnText,
-                copied && { color: COLORS.secondary, fontWeight: '600' },
-              ]}
-            >
-              {copied ? 'Copied' : 'Copy'}
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.expandBtn, loading && { opacity: 0.5 }]}
-            onPress={handleOpenViewer}
-            disabled={loading || !svg}
-            activeOpacity={0.7}
-            hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-            accessibilityLabel="Zoom and expand diagram"
-          >
-            <Feather name="maximize-2" size={12} color={COLORS.primary} />
-            <Text style={styles.expandBtnText}>Zoom</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {/* Diagram container */}
+      {/* Diagram container - clean, headerless figure. Tapping opens fullscreen zoom */}
       <TouchableOpacity
         activeOpacity={0.9}
         onPress={handleOpenViewer}
         disabled={loading || !svg}
         style={[styles.diagramTouchWrap, { height: diagramHeight }]}
+        accessibilityLabel="Diagram figure. Tap to zoom."
+        accessibilityRole="image"
       >
         {loading && (
           <View style={styles.loaderWrap}>
-            <CircleLoader color={COLORS.primary} dotSize={5} size={30} />
+            <CircleLoader color={COLORS.primary} dotSize={5} size={28} />
             <Text style={styles.loadingText}>Rendering diagram…</Text>
           </View>
         )}
@@ -292,7 +241,7 @@ export const MermaidBlock: React.FC<MermaidBlockProps> = React.memo(({ code }) =
         )}
       </TouchableOpacity>
 
-      {/* Fullscreen modal */}
+      {/* Fullscreen zoom & pan modal (includes Copy & Close in its top bar) */}
       {svg && (
         <MermaidViewer
           visible={viewerOpen}
@@ -313,58 +262,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.border,
     overflow: 'hidden',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    backgroundColor: '#eaeef2',
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-  },
-  headerLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  headerTitle: {
-    fontFamily: FONTS.mono,
-    fontSize: 11,
-    fontWeight: '700',
-    color: COLORS.text,
-    letterSpacing: 0.6,
-  },
-  headerActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  actionBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  actionBtnText: {
-    fontSize: 11,
-    fontFamily: FONTS.sans,
-    color: COLORS.textMuted,
-  },
-  expandBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: COLORS.primaryLight,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: RADIUS.sm,
-  },
-  expandBtnText: {
-    fontFamily: FONTS.mono,
-    fontSize: 10,
-    fontWeight: '700',
-    color: COLORS.primary,
   },
   diagramTouchWrap: {
     width: '100%',
