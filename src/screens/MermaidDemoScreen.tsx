@@ -238,6 +238,39 @@ journey
       Copy Question Text: 4: Student
       Bookmark for Exam Night: 5: Student
 \`\`\`
+
+---
+
+## 10. Bar Chart & Line Chart (xychart-beta)
+
+Bar charts and line graphs visualize marks trends, difficulty metrics, and year-by-year question counts.
+
+\`\`\`mermaid
+xychart-beta
+    title "Year-wise Question Frequency & Marks Weightage"
+    x-axis ["2019", "2020", "2021", "2022", "2023"]
+    y-axis "Marks" 0 --> 100
+    bar [45, 60, 75, 82, 90]
+    line [40, 55, 70, 78, 88]
+\`\`\`
+
+---
+
+## 11. Gantt Timeline Bar Chart (gantt)
+
+Gantt charts display revision timelines, study schedules, and project milestone bars.
+
+\`\`\`mermaid
+gantt
+    title Semester Exam Revision Schedule
+    dateFormat YYYY-MM-DD
+    section Unit 1 & 2
+      Process Management & CPU Scheduling :done, u1, 2024-05-01, 2024-05-06
+      Threads, IPC & Synchronization      :active, u2, 2024-05-07, 2024-05-12
+    section Unit 3 & 4
+      Paging & Virtual Memory             :u3, 2024-05-13, 2024-05-18
+      File Systems & Secondary Storage    :u4, 2024-05-19, 2024-05-24
+\`\`\`
 `;
 
 export const MermaidDemoScreen: React.FC = () => {
