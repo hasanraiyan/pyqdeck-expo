@@ -4,11 +4,13 @@ import { type ImageItem, groupImageGalleries } from './imageGalleryParser';
 import { extractYouTubeData } from './youtubeParser';
 import { parseDetailsBlock } from './detailsParser';
 import { type StepperItem, parseSingleStep, groupSteppers } from './stepperParser';
+import { parseSvgContent } from './svgParser';
 
 export type ContentBlock =
   | { type: 'code'; code: string; language: string }
   | { type: 'code_tabs'; tabs: CodeTabItem[] }
   | { type: 'mermaid'; code: string }
+  | { type: 'svg'; xml: string; title?: string; aspectRatio?: number }
   | { type: 'display_math'; math: string }
   | { type: 'callout'; calloutType: CalloutType; title?: string; content: string }
   | { type: 'image'; src: string; alt?: string }
@@ -51,7 +53,7 @@ export function parseContentBlocks(rawText: string): ContentBlock[] {
   const blocks: ContentBlock[] = [];
 
   const BLOCK_REGEX =
-    /(```([a-zA-Z0-9_-]*)\r?\n([\s\S]*?)```|`\$\$([\s\S]+?)\$\$`|\$\$([\s\S]+?)\$\$|\\\[([\s\S]+?)\\\]|\\begin\{(matrix|pmatrix|bmatrix|vmatrix|Vmatrix|aligned|align\*?|gather\*?|equation\*?|cases)\}([\s\S]*?)\\end\{\7\}|(?:^|\r?\n)<details(?:\s+open)?\s*>\s*<summary>[^\r\n<]+<\/summary>[\s\S]*?<\/details>|(?:^|\r?\n):::step(?![a-zA-Z0-9_-])[ \t]*[^\r\n]*\r?\n[\s\S]*?(?:\r?\n:::(?!\w)|\r?\n(?=#{1,6}\s|---|:::step\b|$))|(?:^|\r?\n)>\s*\[!(?:NOTE|INFO|TIP|HINT|PROTIP|WARNING|WARN|EXAM|EXAM_TRAP|VIVA|CAUTION|CRUCIAL|IMPORTANT|DANGER)\][^\r\n]*(?:\r?\n>\s?[^\r\n]*)*|(?:^|\r?\n)!\[(.*?)\]\((https?:\/\/[^\s\)\r\n]+|data:image\/[^\s\)\r\n]+|\/[^\s\)\r\n]+|\.{1,2}\/[^\s\)\r\n]+)\)|(?:^|\r?\n)(?:@\[youtube\]\((https?:\/\/[^\s\)\r\n]+)\)|(https?:\/\/(?:www\.)?(?:youtube\.com\/(?:watch\?(?:[^\s\r\n]*&)?v=|embed\/|v\/|shorts\/)|youtu\.be\/)[^\s\r\n]+)|\[([^\]]*)\]\((https?:\/\/(?:www\.)?(?:youtube\.com\/(?:watch\?(?:[^\s\r\n]*&)?v=|embed\/|v\/|shorts\/)|youtu\.be\/)[^\s\r\n]+)\)))/gi;
+    /(```([a-zA-Z0-9_-]*)\r?\n([\s\S]*?)```|`\$\$([\s\S]+?)\$\$`|\$\$([\s\S]+?)\$\$|\\\[([\s\S]+?)\\\]|\\begin\{(matrix|pmatrix|bmatrix|vmatrix|Vmatrix|aligned|align\*?|gather\*?|equation\*?|cases)\}([\s\S]*?)\\end\{\7\}|(?:^|\r?\n)<details(?:\s+open)?\s*>\s*<summary>[^\r\n<]+<\/summary>[\s\S]*?<\/details>|(?:^|\r?\n):::step(?![a-zA-Z0-9_-])[ \t]*[^\r\n]*\r?\n[\s\S]*?(?:\r?\n:::(?!\w)|\r?\n(?=#{1,6}\s|---|:::step\b|$))|(?:^|\r?\n)>\s*\[!(?:NOTE|INFO|TIP|HINT|PROTIP|WARNING|WARN|EXAM|EXAM_TRAP|VIVA|CAUTION|CRUCIAL|IMPORTANT|DANGER)\][^\r\n]*(?:\r?\n>\s?[^\r\n]*)*|(?:^|\r?\n)!\[(.*?)\]\((https?:\/\/[^\s\)\r\n]+|data:image\/[^\s\)\r\n]+|\/[^\s\)\r\n]+|\.{1,2}\/[^\s\)\r\n]+)\)|(?:^|\r?\n)(?:@\[youtube\]\((https?:\/\/[^\s\)\r\n]+)\)|(https?:\/\/(?:www\.)?(?:youtube\.com\/(?:watch\?(?:[^\s\r\n]*&)?v=|embed\/|v\/|shorts\/)|youtu\.be\/)[^\s\r\n]+)|\[([^\]]*)\]\((https?:\/\/(?:www\.)?(?:youtube\.com\/(?:watch\?(?:[^\s\r\n]*&)?v=|embed\/|v\/|shorts\/)|youtu\.be\/)[^\s\r\n]+)\))|(?:^|\r?\n)<svg\b[^>]*>[\s\S]*?<\/svg>)/gi;
 
   let lastIndex = 0;
   let match: RegExpExecArray | null;
@@ -68,7 +70,13 @@ export function parseContentBlocks(rawText: string): ContentBlock[] {
         // right before this code block, split the heading out into its own markdown block so it can be
         // paired with the code block in groupCodeTabs.
         const trailingHeadingMatch = preceding.match(/(^|\n)(#{2,4}[ \t]+[^\r\n]+)\s*$/);
-        if (trailingHeadingMatch && match[1] && match[1].startsWith('```') && (match[2] || '').trim().toLowerCase() !== 'mermaid') {
+        if (
+          trailingHeadingMatch &&
+          match[1] &&
+          match[1].startsWith('```') &&
+          (match[2] || '').trim().toLowerCase() !== 'mermaid' &&
+          (match[2] || '').trim().toLowerCase() !== 'svg'
+        ) {
           const headingLine = trailingHeadingMatch[2].trim();
           const proseBefore = preceding.substring(0, trailingHeadingMatch.index! + (trailingHeadingMatch[1] ? trailingHeadingMatch[1].length : 0)).trim();
           if (proseBefore.length > 0) {
@@ -84,11 +92,23 @@ export function parseContentBlocks(rawText: string): ContentBlock[] {
     const rawMatch = match[0].trim();
 
     if (match[1] && match[1].startsWith('```')) {
-      // Fenced code block or mermaid diagram
+      // Fenced code block, mermaid diagram, or svg vector diagram
       const language = (match[2] || 'text').trim();
       const code = match[3] || '';
       if (language.toLowerCase() === 'mermaid') {
         blocks.push({ type: 'mermaid', code: code.trim() });
+      } else if (language.toLowerCase() === 'svg') {
+        const svgData = parseSvgContent(code);
+        if (svgData) {
+          blocks.push({
+            type: 'svg',
+            xml: svgData.xml,
+            title: svgData.title,
+            aspectRatio: svgData.aspectRatio,
+          });
+        } else {
+          blocks.push({ type: 'code', code, language });
+        }
       } else {
         blocks.push({ type: 'code', code, language });
       }
@@ -148,6 +168,19 @@ export function parseContentBlocks(rawText: string): ContentBlock[] {
           url: ytData.url,
           startTime: ytData.startTime,
           title: ytData.title,
+        });
+      } else {
+        blocks.push({ type: 'markdown', content: rawMatch });
+      }
+    } else if (rawMatch.toLowerCase().startsWith('<svg')) {
+      // Standalone raw SVG XML block
+      const svgData = parseSvgContent(rawMatch);
+      if (svgData) {
+        blocks.push({
+          type: 'svg',
+          xml: svgData.xml,
+          title: svgData.title,
+          aspectRatio: svgData.aspectRatio,
         });
       } else {
         blocks.push({ type: 'markdown', content: rawMatch });

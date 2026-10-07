@@ -13,6 +13,7 @@ import { ImageGalleryBlock } from './ImageGalleryBlock';
 import { YouTubeCard } from './YouTubeCard';
 import { DetailsSpoilerBlock } from './DetailsSpoilerBlock';
 import { StepperTimelineBlock } from './StepperTimelineBlock';
+import { SvgDiagramBlock } from './SvgDiagramBlock';
 import { cleanMarkdown } from '../utils/responsive';
 import { ContentErrorBoundary } from './ContentErrorBoundary';
 
@@ -61,6 +62,18 @@ export const NativeContentRenderer: React.FC<NativeContentRendererProps> = React
             return (
               <ContentErrorBoundary key={`mermaid-${index}`} fallbackText={block.code}>
                 <MermaidBlock code={block.code} />
+              </ContentErrorBoundary>
+            );
+          }
+
+          if (block.type === 'svg') {
+            return (
+              <ContentErrorBoundary key={`svg-${index}`} fallbackText={block.xml}>
+                <SvgDiagramBlock
+                  xml={block.xml}
+                  title={block.title}
+                  aspectRatio={block.aspectRatio}
+                />
               </ContentErrorBoundary>
             );
           }

@@ -14,10 +14,12 @@ import * as Haptics from 'expo-haptics';
 import { Feather } from '@expo/vector-icons';
 import { COLORS, FONTS } from '../theme/colors';
 
-interface MermaidViewerProps {
+export interface MermaidViewerProps {
   visible: boolean;
   code: string;
   svg: string;
+  title?: string;
+  subtitle?: string;
   onClose: () => void;
 }
 
@@ -25,6 +27,8 @@ export const MermaidViewer: React.FC<MermaidViewerProps> = ({
   visible,
   code,
   svg,
+  title,
+  subtitle,
   onClose,
 }) => {
   const insets = useSafeAreaInsets();
@@ -109,10 +113,10 @@ export const MermaidViewer: React.FC<MermaidViewerProps> = ({
 
             <View style={styles.headerTitleWrap}>
               <Text style={styles.headerTitle} numberOfLines={1}>
-                DIAGRAM VIEWER
+                {title || 'DIAGRAM VIEWER'}
               </Text>
               <Text style={styles.headerSubtitle} numberOfLines={1}>
-                Pinch or double-tap to zoom
+                {subtitle || 'Pinch or double-tap to zoom'}
               </Text>
             </View>
 

@@ -205,6 +205,39 @@ Since the exponent $n$ is halved at each recursive step ($n \\to \\lfloor n/2 \\
 
 ---
 
+### 2.7 Custom SVG Vector Diagrams (Hardware & Engineering Graphics)
+In addition to algorithmic Mermaid charts, PyQdeck renders native SVG vector graphics with infinite sharpness, responsive aspect ratios, tap-to-zoom pinch exploration, and an optional raw XML source viewer. Both fenced \`\`\`svg blocks and raw \`<svg>\` markup are natively supported:
+
+\`\`\`svg
+<svg viewBox="0 0 540 180" xmlns="http://www.w3.org/2000/svg">
+  <title>CPU Memory & Cache Hierarchy</title>
+  <rect x="10" y="20" width="110" height="140" rx="8" fill="#EEF2FF" stroke="#6366F1" stroke-width="2"/>
+  <text x="65" y="70" font-family="sans-serif" font-size="14" font-weight="bold" text-anchor="middle" fill="#312E81">CPU Core</text>
+  <text x="65" y="95" font-family="monospace" font-size="11" text-anchor="middle" fill="#4F46E5">Registers</text>
+  <text x="65" y="115" font-family="monospace" font-size="11" text-anchor="middle" fill="#4F46E5">L1 Cache</text>
+
+  <path d="M 120 90 L 160 90" stroke="#6366F1" stroke-width="2"/>
+
+  <rect x="160" y="35" width="100" height="110" rx="8" fill="#F0FDF4" stroke="#22C55E" stroke-width="2"/>
+  <text x="210" y="85" font-family="sans-serif" font-size="13" font-weight="bold" text-anchor="middle" fill="#14532D">L2 Cache</text>
+  <text x="210" y="105" font-family="monospace" font-size="10" text-anchor="middle" fill="#16A34A">~256 KB</text>
+
+  <path d="M 260 90 L 300 90" stroke="#22C55E" stroke-width="2"/>
+
+  <rect x="300" y="45" width="100" height="90" rx="8" fill="#FEFCE8" stroke="#EAB308" stroke-width="2"/>
+  <text x="350" y="85" font-family="sans-serif" font-size="13" font-weight="bold" text-anchor="middle" fill="#713F12">L3 Cache</text>
+  <text x="350" y="105" font-family="monospace" font-size="10" text-anchor="middle" fill="#CA8A04">~16 MB Shared</text>
+
+  <path d="M 400 90 L 440 90" stroke="#EAB308" stroke-width="2"/>
+
+  <rect x="440" y="55" width="90" height="70" rx="8" fill="#FDF2F8" stroke="#EC4899" stroke-width="2"/>
+  <text x="485" y="90" font-family="sans-serif" font-size="13" font-weight="bold" text-anchor="middle" fill="#831843">Main RAM</text>
+  <text x="485" y="108" font-family="monospace" font-size="10" text-anchor="middle" fill="#DB2777">DDR4 / DDR5</text>
+</svg>
+\`\`\`
+
+---
+
 ## 3. Sequence Diagram (sequenceDiagram)
 
 Sequence diagrams depict message exchanges between distributed actors, servers, and databases.
