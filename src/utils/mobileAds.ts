@@ -6,8 +6,12 @@
  * Every other ads file should import from here, never from the package directly.
  */
 let mod: typeof import('react-native-google-mobile-ads') | null = null;
+// Build-time switch (release.yml `ads_enabled` input sets it to 'false'). With
+// the module left unloaded, every ads file below falls back to its no-op path,
+// so no banner renders and no interstitial is ever requested.
+const ADS_ENABLED = process.env.EXPO_PUBLIC_ADS_ENABLED !== 'false';
 try {
-  mod = require('react-native-google-mobile-ads');
+  if (ADS_ENABLED) mod = require('react-native-google-mobile-ads');
 } catch {
   mod = null;
 }

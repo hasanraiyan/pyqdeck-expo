@@ -12,6 +12,11 @@ on:
           - aab
           - apk
           - both
+      ads_enabled:
+        description: 'Include ads (untick for an ad-free test APK)'
+        required: true
+        default: true
+        type: boolean
 
 permissions:
   contents: write
@@ -142,6 +147,7 @@ jobs:
         working-directory: android
         env:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          EXPO_PUBLIC_ADS_ENABLED: ${{ github.event.inputs.ads_enabled }}
         run: |
           BUILD_CHOICE="${{ github.event.inputs.build_type }}"
           if [ "$BUILD_CHOICE" = "apk" ]; then
