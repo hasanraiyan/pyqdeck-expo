@@ -186,8 +186,8 @@ Translates optimized IR into target assembly or machine code with optimal regist
 
 ---
 
-### 2.6 Interactive Collapsible Hints & Spoilers (<details><summary>)
-Standard \`<details><summary>\` blocks render as native accordion cards with smooth toggle animations and haptic feedback to conceal hints, proofs, and intermediate calculation steps:
+### 2.6 Interactive Collapsible Hints & Spoilers (Details & Summary)
+Standard details and summary blocks render as native accordion cards with smooth toggle animations and haptic feedback to conceal hints, proofs, and intermediate calculation steps:
 
 <details>
 <summary>💡 Hint: Matrix Exponentiation for O(log N) Fibonacci</summary>

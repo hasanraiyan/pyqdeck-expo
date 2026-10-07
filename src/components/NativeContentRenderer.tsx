@@ -135,6 +135,16 @@ export const NativeContentRenderer: React.FC<NativeContentRendererProps> = React
                   summary={block.summary}
                   content={block.content}
                   defaultOpen={block.defaultOpen}
+                  renderContent={(innerContent) => (
+                    <NativeContentRenderer
+                      content={innerContent}
+                      fontSize={fontSize}
+                      textColor={textColor}
+                      variant={variant}
+                      markdownStyles={markdownStyles}
+                      rules={rules}
+                    />
+                  )}
                 />
               </ContentErrorBoundary>
             );
@@ -143,7 +153,19 @@ export const NativeContentRenderer: React.FC<NativeContentRendererProps> = React
           if (block.type === 'stepper') {
             return (
               <ContentErrorBoundary key={`stepper-${index}`}>
-                <StepperTimelineBlock steps={block.steps} />
+                <StepperTimelineBlock
+                  steps={block.steps}
+                  renderContent={(innerContent) => (
+                    <NativeContentRenderer
+                      content={innerContent}
+                      fontSize={fontSize}
+                      textColor={textColor}
+                      variant={variant}
+                      markdownStyles={markdownStyles}
+                      rules={rules}
+                    />
+                  )}
+                />
               </ContentErrorBoundary>
             );
           }

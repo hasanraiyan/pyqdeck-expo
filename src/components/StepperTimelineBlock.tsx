@@ -1,11 +1,9 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
 } from 'react-native';
-import * as Haptics from 'expo-haptics';
 import Markdown from 'react-native-markdown-display';
 import { COLORS, FONTS, RADIUS } from '../theme/colors';
 import { solutionMarkdownStyles, markdownRules } from '../theme/markdownStyles';
@@ -13,17 +11,14 @@ import { StepperItem } from '../utils/stepperParser';
 
 interface StepperTimelineBlockProps {
   steps: StepperItem[];
+  renderContent?: (content: string) => React.ReactNode;
 }
 
-export const StepperTimelineBlock: React.FC<StepperTimelineBlockProps> = React.memo(({ steps }) => {
-  const [activeStep, setActiveStep] = useState<number | null>(null);
-
+export const StepperTimelineBlock: React.FC<StepperTimelineBlockProps> = React.memo(({
+  steps,
+  renderContent,
+}) => {
   if (!steps || steps.length === 0) return null;
-
-  const handleStepPress = (index: number) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setActiveStep((curr) => (curr === index ? null : index));
-  };
 
   return (
     <View style={styles.container}>
@@ -36,57 +31,46 @@ export const StepperTimelineBlock: React.FC<StepperTimelineBlockProps> = React.m
         <View style={styles.timelineBody}>
           {steps.map((step, index) => {
             const isLast = index === steps.length - 1;
-            const isActive = activeStep === index;
 
             return (
               <View key={`step-${index}`} style={styles.stepRow}>
                 {/* Left Timeline Column (Node Circle + Connecting Vertical Line) */}
                 <View style={styles.nodeColumn}>
-                  <TouchableOpacity
-                    style={[
-                      styles.circleNode,
-                      isActive && styles.circleNodeActive,
-                    ]}
-                    activeOpacity={0.8}
-                    onPress={() => handleStepPress(index)}
+                  <View
+                    style={styles.circleNode}
                     accessibilityLabel={`Step ${step.stepNumber}: ${step.title || ''}`}
                   >
-                    <Text
-                      style={[
-                        styles.circleNodeText,
-                        isActive && styles.circleNodeTextActive,
-                      ]}
-                      numberOfLines={1}
-                    >
+                    <Text style={styles.circleNodeText} numberOfLines={1}>
                       {step.stepNumber}
                     </Text>
-                  </TouchableOpacity>
+                  </View>
 
                   {!isLast && <View style={styles.connectingLine} />}
                 </View>
 
                 {/* Right Content Column */}
-                <TouchableOpacity
+                <View
                   style={[
                     styles.contentColumn,
-                    isActive && styles.contentColumnActive,
                     isLast && styles.contentColumnLast,
                   ]}
-                  activeOpacity={0.9}
-                  onPress={() => handleStepPress(index)}
                 >
                   {Boolean(step.title) && (
-                    <Text style={[styles.stepTitle, isActive && styles.stepTitleActive]}>
+                    <Text style={styles.stepTitle}>
                       {step.title}
                     </Text>
                   )}
 
                   <View style={styles.stepContentWrap}>
-                    <Markdown style={solutionMarkdownStyles} rules={markdownRules}>
-                      {step.content}
-                    </Markdown>
+                    {renderContent ? (
+                      renderContent(step.content)
+                    ) : (
+                      <Markdown style={solutionMarkdownStyles} rules={markdownRules}>
+                        {step.content}
+                      </Markdown>
+                    )}
                   </View>
-                </TouchableOpacity>
+                </View>
               </View>
             );
           })}
@@ -157,23 +141,16 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     backgroundColor: COLORS.cardSecondary,
     borderWidth: 2,
-    borderColor: COLORS.border,
+    borderColor: COLORS.primary,
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 2,
-  },
-  circleNodeActive: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
   },
   circleNodeText: {
     fontFamily: FONTS.mono,
     fontSize: 11,
     fontWeight: '700',
-    color: COLORS.text,
-  },
-  circleNodeTextActive: {
-    color: '#ffffff',
+    color: COLORS.primary,
   },
   connectingLine: {
     width: 2,
@@ -189,11 +166,6 @@ const styles = StyleSheet.create({
   contentColumnLast: {
     paddingBottom: 10,
   },
-  contentColumnActive: {
-    backgroundColor: 'rgba(178, 58, 46, 0.03)',
-    borderRadius: RADIUS.sm,
-    paddingHorizontal: 8,
-  },
   stepTitle: {
     fontFamily: FONTS.mono,
     fontSize: 13,
@@ -201,9 +173,6 @@ const styles = StyleSheet.create({
     color: COLORS.text,
     letterSpacing: 0.2,
     marginBottom: 4,
-  },
-  stepTitleActive: {
-    color: COLORS.primary,
   },
   stepContentWrap: {
     marginTop: 2,

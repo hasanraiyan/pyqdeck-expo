@@ -23,12 +23,14 @@ interface DetailsSpoilerBlockProps {
   summary: string;
   content: string;
   defaultOpen?: boolean;
+  renderContent?: (content: string) => React.ReactNode;
 }
 
 export const DetailsSpoilerBlock: React.FC<DetailsSpoilerBlockProps> = React.memo(({
   summary,
   content,
   defaultOpen = false,
+  renderContent,
 }) => {
   const [isOpen, setIsOpen] = useState(defaultOpen);
 
@@ -56,29 +58,29 @@ export const DetailsSpoilerBlock: React.FC<DetailsSpoilerBlockProps> = React.mem
               color={isOpen ? COLORS.primary : COLORS.secondary}
             />
           </View>
-          <Text style={styles.summaryText} numberOfLines={2}>
+          <Text style={styles.summaryText} numberOfLines={1} ellipsizeMode="tail">
             {summary}
           </Text>
         </View>
 
         <View style={styles.headerRight}>
-          <Text style={styles.toggleHintText}>
-            {isOpen ? 'Hide' : 'Reveal'}
-          </Text>
           <Feather
             name={isOpen ? 'chevron-up' : 'chevron-down'}
-            size={16}
+            size={18}
             color={COLORS.textMuted}
-            style={{ marginLeft: 4 }}
           />
         </View>
       </TouchableOpacity>
 
       {isOpen && (
         <View style={styles.contentWrap}>
-          <Markdown style={solutionMarkdownStyles} rules={markdownRules}>
-            {content}
-          </Markdown>
+          {renderContent ? (
+            renderContent(content)
+          ) : (
+            <Markdown style={solutionMarkdownStyles} rules={markdownRules}>
+              {content}
+            </Markdown>
+          )}
         </View>
       )}
     </View>
@@ -136,13 +138,7 @@ const styles = StyleSheet.create({
   headerRight: {
     flexDirection: 'row',
     alignItems: 'center',
-  },
-  toggleHintText: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: COLORS.textMuted,
-    fontFamily: FONTS.mono,
-    letterSpacing: 0.3,
+    marginLeft: 8,
   },
   contentWrap: {
     paddingHorizontal: 14,
