@@ -271,6 +271,21 @@ gantt
       Paging & Virtual Memory             :u3, 2024-05-13, 2024-05-18
       File Systems & Secondary Storage    :u4, 2024-05-19, 2024-05-24
 \`\`\`
+
+---
+
+## 12. Academic & Historical Timeline (timeline)
+
+Timelines illustrate academic semester progressions, syllabus milestones, and chronological history.
+
+\`\`\`mermaid
+timeline
+    title B.Tech Computer Science 4-Year Curriculum Timeline
+    Year 1 : Physics & Math : Engineering Mechanics : Programming in C
+    Year 2 : Data Structures : Digital Logic : Computer Organization : OS
+    Year 3 : Database Management : Algorithms : Computer Networks : Web Tech
+    Year 4 : Compiler Design : Cloud Computing : Machine Learning : Final Capstone
+\`\`\`
 `;
 
 export const MermaidDemoScreen: React.FC = () => {
