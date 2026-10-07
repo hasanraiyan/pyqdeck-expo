@@ -94,10 +94,11 @@ export function parseContentBlocks(rawText: string): ContentBlock[] {
       if (math.length > 0) {
         blocks.push({ type: 'display_math', math });
       }
-    } else if (match[9]) {
-      // Standalone markdown image: match[8] is alt, match[9] is src
-      const altText = (match[8] || '').trim();
-      const srcUrl = match[9].trim();
+    } else if (match[10]) {
+      // Standalone markdown image: match[9] is alt, match[10] is src
+      // (groups 1-8 belong to the code/math/env alternatives)
+      const altText = (match[9] || '').trim();
+      const srcUrl = match[10].trim();
       blocks.push({
         type: 'image',
         src: srcUrl,

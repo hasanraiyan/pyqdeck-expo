@@ -132,21 +132,21 @@ def climb_stairs_matrix(n: int) -> int:
 PyQdeck automatically groups consecutive Markdown images into responsive native grids with pinch-to-zoom (up to 5x), two-finger pan, and swipeable image viewers.
 
 ### 2.1 Single Figure Card (With Caption & Tap-to-Zoom)
-![Intel C8086 16-Bit Microprocessor Ceramic DIP](https://upload.wikimedia.org/wikipedia/commons/a/a2/Intel_C8086.jpg)
+![Demo Figure hosted on Cloudinary](https://res.cloudinary.com/djkpavwmp/image/upload/v1791340887/jc9p5keppvpm0aqowkod.png)
 
 ### 2.2 Dual Comparison (50/50 Side-by-Side)
-![Microcontroller Architecture](https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=600&q=80)
-![Silicon Wafer Fabric](https://images.unsplash.com/photo-1550751827-4bd374c3f58b?auto=format&fit=crop&w=600&q=80)
+![Demo Figure A](https://res.cloudinary.com/djkpavwmp/image/upload/v1791340887/jc9p5keppvpm0aqowkod.png)
+![Demo Figure B](https://res.cloudinary.com/djkpavwmp/image/upload/v1791340887/jc9p5keppvpm0aqowkod.png)
 
 ### 2.3 Multi-Image Hero Grid with +N Overflow (6 Images)
 When 5 or more images appear consecutively, PyQdeck renders the Hero + 3-Slot Column with an automatic overflow badge (+N):
 
-![Intel Ceramic 8086 Microprocessor](https://upload.wikimedia.org/wikipedia/commons/a/a2/Intel_C8086.jpg)
-![Motherboard PCB Traces & Bus System](https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=600&q=80)
-![Microprocessor Silicon Die & Interconnects](https://images.unsplash.com/photo-1550751827-4bd374c3f58b?auto=format&fit=crop&w=600&q=80)
-![Semiconductor Integrated Circuit](https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=600&q=80)
-![Surface Mount Electronics](https://images.unsplash.com/photo-1555680202-c86f0e12f086?auto=format&fit=crop&w=600&q=80)
-![Microcontroller Development Board](https://images.unsplash.com/photo-1584947113973-cb90c09ff5da?auto=format&fit=crop&w=600&q=80)
+![Demo Figure 1](https://res.cloudinary.com/djkpavwmp/image/upload/v1791340887/jc9p5keppvpm0aqowkod.png)
+![Demo Figure 2](https://res.cloudinary.com/djkpavwmp/image/upload/v1791340887/jc9p5keppvpm0aqowkod.png)
+![Demo Figure 3](https://res.cloudinary.com/djkpavwmp/image/upload/v1791340887/jc9p5keppvpm0aqowkod.png)
+![Demo Figure 4](https://res.cloudinary.com/djkpavwmp/image/upload/v1791340887/jc9p5keppvpm0aqowkod.png)
+![Demo Figure 5](https://res.cloudinary.com/djkpavwmp/image/upload/v1791340887/jc9p5keppvpm0aqowkod.png)
+![Demo Figure 6](https://res.cloudinary.com/djkpavwmp/image/upload/v1791340887/jc9p5keppvpm0aqowkod.png)
 
 ---
 
