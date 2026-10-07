@@ -42,7 +42,9 @@ flowchart TD
     Output --> End([End])
 \`\`\`
 
-### Algorithm Implementation (Auto-Tabbed)
+### 1.1 Multi-Language Code Block (Auto-Tabbed by Language)
+
+When consecutive code blocks with different languages appear in notes, they are automatically grouped into an interactive segmented tab bar:
 
 \`\`\`java
 // Java Implementation
@@ -74,6 +76,53 @@ int findMax(const vector<int>& arr) {
     }
     return maxVal;
 }
+\`\`\`
+\`\`\`typescript
+// TypeScript Implementation
+function findMax(arr: number[]): number {
+    return Math.max(...arr);
+}
+\`\`\`
+
+### 1.2 Multi-Approach Code Block (Grouped by Headings)
+
+Different algorithmic solutions under \`### Approach\` headings are automatically unified into interactive tabs with copy buttons and haptic feedback:
+
+### Approach 1: Iterative (O(N) Time, O(1) Space)
+\`\`\`python
+def climb_stairs_iterative(n: int) -> int:
+    if n <= 2:
+        return n
+    prev2, prev1 = 1, 2
+    for _ in range(3, n + 1):
+        prev2, prev1 = prev1, prev2 + prev1
+    return prev1
+\`\`\`
+
+### Approach 2: Recursive with Memoization (O(N) Time, O(N) Space)
+\`\`\`python
+def climb_stairs_memo(n: int, memo: dict = None) -> int:
+    if memo is None:
+        memo = {}
+    if n in memo:
+        return memo[n]
+    if n <= 2:
+        return n
+    memo[n] = climb_stairs_memo(n - 1, memo) + climb_stairs_memo(n - 2, memo)
+    return memo[n]
+\`\`\`
+
+### Approach 3: Matrix Exponentiation (O(log N) Time)
+\`\`\`python
+# O(log N) state-transition matrix [[1, 1], [1, 0]]^(n-1)
+import numpy as np
+
+def climb_stairs_matrix(n: int) -> int:
+    if n <= 2:
+        return n
+    F = np.matrix([[1, 1], [1, 0]], dtype=object)
+    result = np.linalg.matrix_power(F, n)
+    return int(result[0, 1])
 \`\`\`
 
 ---
