@@ -261,6 +261,208 @@ In addition to algorithmic Mermaid charts, PyQdeck renders native SVG vector gra
 
 ---
 
+### 2.8 Illustrated Vector Artwork (University Campus & Student Study Scene)
+In addition to technical protocol diagrams, PyQdeck renders rich artistic vector illustrations, campus scenes, and educational graphics with layered gradients, drop shadows, and clean geometry:
+
+\`\`\`svg
+<svg viewBox="0 0 800 480" width="800" height="480" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="sky" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#EFF6FF"/>
+      <stop offset="100%" stop-color="#F8FAFC"/>
+    </linearGradient>
+    <linearGradient id="bldg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#E2E8F0"/>
+      <stop offset="100%" stop-color="#CBD5E1"/>
+    </linearGradient>
+    <linearGradient id="dome" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#3B82F6"/>
+      <stop offset="100%" stop-color="#1D4ED8"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FCD34D"/>
+      <stop offset="100%" stop-color="#F59E0B"/>
+    </linearGradient>
+    <linearGradient id="desk" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="100%" stop-color="#F1F5F9"/>
+    </linearGradient>
+    <linearGradient id="screen" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1E293B"/>
+      <stop offset="100%" stop-color="#0F172A"/>
+    </linearGradient>
+    <linearGradient id="diploma" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#FFFBEB"/>
+      <stop offset="50%" stop-color="#FEF3C7"/>
+      <stop offset="100%" stop-color="#FDE68A"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Sky Canvas -->
+  <rect width="800" height="480" rx="16" fill="url(#sky)"/>
+
+  <!-- University Sun / Academic Crest Glow -->
+  <circle cx="700" cy="90" r="50" fill="#FEF08A" opacity="0.6"/>
+  <circle cx="700" cy="90" r="32" fill="#FDE047"/>
+
+  <!-- Subtle clouds -->
+  <path d="M 120 70 Q 140 50 170 60 Q 200 50 220 70 Q 230 85 210 95 Q 120 100 120 70 Z" fill="#FFFFFF" opacity="0.8"/>
+  <path d="M 520 85 Q 540 65 570 75 Q 600 65 620 85 Q 630 100 610 110 Q 520 115 520 85 Z" fill="#FFFFFF" opacity="0.7"/>
+
+  <!-- BACKGROUND: University Grand Hall / Library Building -->
+  <!-- Main building body -->
+  <rect x="220" y="110" width="360" height="150" fill="url(#bldg)" stroke="#94A3B8" stroke-width="1.5" rx="4"/>
+  <!-- Central Grand Dome -->
+  <path d="M 340 110 Q 400 30 460 110 Z" fill="url(#dome)"/>
+  <!-- Dome spire & star -->
+  <line x1="400" y1="30" x2="400" y2="10" stroke="#F59E0B" stroke-width="3"/>
+  <polygon points="400,6 403,12 409,12 404,16 406,22 400,18 394,22 396,16 391,12 397,12" fill="url(#gold)"/>
+  <!-- Clock Tower Face -->
+  <circle cx="400" cy="85" r="14" fill="#FFFFFF" stroke="#1D4ED8" stroke-width="2"/>
+  <line x1="400" y1="85" x2="400" y2="76" stroke="#1E293B" stroke-width="2" stroke-linecap="round"/>
+  <line x1="400" y1="85" x2="407" y2="85" stroke="#1E293B" stroke-width="1.5" stroke-linecap="round"/>
+
+  <!-- Triangular Pediment -->
+  <polygon points="310,110 400,65 490,110" fill="#E2E8F0" stroke="#94A3B8" stroke-width="1.5"/>
+  <circle cx="400" cy="95" r="5" fill="#F59E0B"/>
+
+  <!-- Classical Columns / Pillars -->
+  <g fill="#F1F5F9" stroke="#94A3B8" stroke-width="1.2">
+    <rect x="330" y="110" width="16" height="150"/>
+    <rect x="370" y="110" width="16" height="150"/>
+    <rect x="414" y="110" width="16" height="150"/>
+    <rect x="454" y="110" width="16" height="150"/>
+    <!-- Grand Entrance Arched Doorway -->
+    <path d="M 386 260 L 386 210 Q 400 195 414 210 L 414 260 Z" fill="#1E293B"/>
+  </g>
+
+  <!-- Wing Windows Left -->
+  <g fill="#93C5FD" stroke="#60A5FA" stroke-width="1">
+    <rect x="240" y="130" width="22" height="35" rx="10"/>
+    <rect x="275" y="130" width="22" height="35" rx="10"/>
+    <rect x="240" y="180" width="22" height="35" rx="2"/>
+    <rect x="275" y="180" width="22" height="35" rx="2"/>
+  </g>
+  <!-- Wing Windows Right -->
+  <g fill="#93C5FD" stroke="#60A5FA" stroke-width="1">
+    <rect x="502" y="130" width="22" height="35" rx="10"/>
+    <rect x="537" y="130" width="22" height="35" rx="10"/>
+    <rect x="502" y="180" width="22" height="35" rx="2"/>
+    <rect x="537" y="180" width="22" height="35" rx="2"/>
+  </g>
+
+  <!-- Building steps / base -->
+  <polygon points="190,260 610,260 630,285 170,285" fill="#CBD5E1"/>
+
+  <!-- Campus Green Lawns & Trees -->
+  <ellipse cx="140" cy="270" rx="45" ry="55" fill="#10B981" opacity="0.85"/>
+  <ellipse cx="120" cy="280" rx="35" ry="45" fill="#059669"/>
+  <rect x="135" y="295" width="10" height="30" fill="#78350F" rx="2"/>
+
+  <ellipse cx="660" cy="270" rx="45" ry="55" fill="#10B981" opacity="0.85"/>
+  <ellipse cx="680" cy="280" rx="35" ry="45" fill="#059669"/>
+  <rect x="655" y="295" width="10" height="30" fill="#78350F" rx="2"/>
+
+  <!-- FOREGROUND: Student Academic Study Desk (Curved Modern Platform) -->
+  <path d="M 40 330 Q 400 300 760 330 L 760 480 L 40 480 Z" fill="url(#desk)" stroke="#E2E8F0" stroke-width="2"/>
+
+  <!-- 1. Open Academic Textbook (Left) -->
+  <g transform="translate(90, 310)">
+    <!-- Book Shadow -->
+    <path d="M 10 70 Q 110 55 210 70 L 220 95 Q 110 80 0 95 Z" fill="#94A3B8" opacity="0.3"/>
+    <!-- Book Cover -->
+    <path d="M 10 50 Q 110 38 210 50 L 210 85 Q 110 73 10 85 Z" fill="#3B82F6"/>
+    <!-- Pages Left -->
+    <path d="M 15 48 Q 110 35 110 46 L 110 80 Q 110 70 15 82 Z" fill="#FFFFFF" stroke="#E2E8F0"/>
+    <!-- Pages Right -->
+    <path d="M 110 46 Q 110 35 205 48 L 205 82 Q 110 70 110 80 Z" fill="#F8FAFC" stroke="#E2E8F0"/>
+    <!-- Page Lines / Math formulas -->
+    <line x1="30" y1="56" x2="95" y2="52" stroke="#94A3B8" stroke-width="2"/>
+    <line x1="30" y1="63" x2="90" y2="60" stroke="#94A3B8" stroke-width="2"/>
+    <line x1="30" y1="70" x2="75" y2="67" stroke="#3B82F6" stroke-width="2"/>
+    <text x="125" y="60" font-family="monospace" font-size="9" font-weight="700" fill="#2563EB">∫ f(x) dx</text>
+    <line x1="125" y1="67" x2="190" y2="69" stroke="#94A3B8" stroke-width="2"/>
+    <line x1="125" y1="74" x2="180" y2="76" stroke="#94A3B8" stroke-width="2"/>
+    <!-- Bookmark ribbon -->
+    <path d="M 110 42 Q 115 65 125 90 L 120 92 Q 110 65 108 42 Z" fill="#EF4444"/>
+  </g>
+
+  <!-- 2. Modern Open Laptop (Center) -->
+  <g transform="translate(310, 275)">
+    <!-- Laptop Display Lid -->
+    <rect x="15" y="0" width="160" height="106" rx="8" fill="#1E293B" stroke="#475569" stroke-width="2"/>
+    <!-- Screen Glass -->
+    <rect x="22" y="7" width="146" height="92" rx="4" fill="url(#screen)"/>
+    <!-- Screen Header Dots -->
+    <circle cx="30" cy="15" r="2.5" fill="#EF4444"/>
+    <circle cx="38" cy="15" r="2.5" fill="#F59E0B"/>
+    <circle cx="46" cy="15" r="2.5" fill="#10B981"/>
+    <!-- Code Editor UI on screen -->
+    <text x="30" y="32" font-family="monospace" font-size="8" fill="#38BDF8">const exam = solve(pastPapers);</text>
+    <text x="30" y="44" font-family="monospace" font-size="8" fill="#34D399">rank = 1; // Top 0.1%</text>
+    <!-- Code Graph on screen -->
+    <polyline points="30,85 55,65 80,72 105,52 135,45 155,38" fill="none" stroke="#F59E0B" stroke-width="2"/>
+    <circle cx="155" cy="38" r="3" fill="#F59E0B"/>
+    <!-- Laptop Base / Keyboard Deck -->
+    <polygon points="0,118 190,118 175,106 15,106" fill="#CBD5E1" stroke="#94A3B8" stroke-width="1.5"/>
+    <rect x="75" y="112" width="40" height="4" rx="2" fill="#94A3B8"/>
+  </g>
+
+  <!-- 3. Graduation Mortarboard & Diploma (Right) -->
+  <g transform="translate(530, 290)">
+    <!-- Graduation Cap (Diamond Top) -->
+    <polygon points="120,15 210,38 120,60 30,38" fill="url(#screen)" stroke="#0F172A" stroke-width="1.5"/>
+    <!-- Cap Skull Cap Underneath -->
+    <path d="M 75 48 Q 120 75 165 48 L 165 65 Q 120 90 75 65 Z" fill="#0F172A"/>
+    <!-- Cap Button & Golden Tassel -->
+    <circle cx="120" cy="38" r="4" fill="url(#gold)"/>
+    <path d="M 120 38 Q 160 48 175 75 Q 178 85 180 92" fill="none" stroke="#F59E0B" stroke-width="2.5"/>
+    <polygon points="176,92 184,92 182,105 178,105" fill="url(#gold)"/>
+
+    <!-- University Diploma Scroll -->
+    <g transform="translate(50, 85) rotate(-12)">
+      <rect x="0" y="0" width="95" height="24" rx="12" fill="url(#diploma)" stroke="#D97706" stroke-width="1.2"/>
+      <!-- Red Ribbon Tie -->
+      <rect x="42" y="-1" width="12" height="26" fill="#DC2626" rx="2"/>
+      <path d="M 48 24 L 40 40 L 48 36 L 56 40 Z" fill="#DC2626"/>
+    </g>
+  </g>
+
+  <!-- 4. Steaming Coffee Cup (Near Laptop) -->
+  <g transform="translate(265, 365)">
+    <!-- Saucer -->
+    <ellipse cx="20" cy="38" rx="22" ry="6" fill="#CBD5E1"/>
+    <!-- Mug Body -->
+    <rect x="6" y="10" width="28" height="26" rx="4" fill="#3B82F6"/>
+    <!-- Mug Handle -->
+    <path d="M 34 16 Q 44 23 34 30" fill="none" stroke="#3B82F6" stroke-width="3"/>
+    <!-- Hot Coffee Surface -->
+    <ellipse cx="20" cy="12" rx="12" ry="4" fill="#78350F"/>
+    <!-- Steam Swirls -->
+    <path d="M 15 6 Q 13 -4 17 -10" fill="none" stroke="#94A3B8" stroke-width="1.5" stroke-linecap="round" opacity="0.6"/>
+    <path d="M 23 4 Q 26 -6 22 -12" fill="none" stroke="#94A3B8" stroke-width="1.5" stroke-linecap="round" opacity="0.6"/>
+  </g>
+
+  <!-- 5. Floating Knowledge Sparkles & Formulas -->
+  <g opacity="0.85">
+    <text x="60" y="240" font-family="monospace" font-size="14" font-weight="700" fill="#2563EB">E = mc²</text>
+    <text x="680" y="220" font-family="monospace" font-size="13" font-weight="700" fill="#059669">O(N log N)</text>
+    <text x="210" y="325" font-family="monospace" font-size="14" font-weight="700" fill="#D97706">A* ➔ Goal</text>
+
+    <!-- Golden Sparkles -->
+    <path d="M 290 230 L 293 238 L 301 241 L 293 244 L 290 252 L 287 244 L 279 241 L 287 238 Z" fill="#FBBF24"/>
+    <path d="M 515 250 L 517 256 L 523 258 L 517 260 L 515 266 L 513 260 L 507 258 L 513 256 Z" fill="#38BDF8"/>
+    <path d="M 720 370 L 722 376 L 728 378 L 722 380 L 720 386 L 718 380 L 712 378 L 718 376 Z" fill="#FBBF24"/>
+  </g>
+
+  <!-- Bottom Caption Badge -->
+  <rect x="250" y="442" width="300" height="26" rx="13" fill="#FFFFFF" stroke="#E2E8F0"/>
+  <text x="400" y="459" text-anchor="middle" font-family="sans-serif" font-size="11" font-weight="700" fill="#1E293B">🎓 PyQdeck • Empowering Academic Excellence</text>
+</svg>
+\`\`\`
+
+---
+
 ## 3. Sequence Diagram (sequenceDiagram)
 
 Sequence diagrams depict message exchanges between distributed actors, servers, and databases.
