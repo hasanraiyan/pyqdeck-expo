@@ -5,10 +5,17 @@ export interface StepperItem {
 }
 
 /**
- * Parses a header line like ":::step 1: Lexical Analysis" or ":::step 2" or ":::step Handshake"
+ * Regex matching an explicitly enclosed step block starting with :::step and ending with :::
+ * (or bounded by the next :::step, heading, or divider).
+ */
+export const STEP_BLOCK_REGEX =
+  /(?:^|\r?\n):::step(?![a-zA-Z0-9_-])[ \t]*([^\r\n]*)\r?\n([\s\S]*?)(?:\r?\n:::(?!\w)|\r?\n(?=#{1,6}\s|---|:::step\b|$))/gi;
+
+/**
+ * Parses a header line like ":::step 1: Lexical Analysis" or "1: Lexical Analysis" or "Phase 1: Pre-processing"
  */
 export function parseStepHeader(headerLine: string, fallbackIndex = 1): { stepNumber: string; title?: string } {
-  const raw = headerLine.replace(/^:::step\s*/i, '').trim();
+  const raw = headerLine.replace(/^:::step(?![a-zA-Z0-9_-])\s*/i, '').trim();
   if (!raw) {
     return { stepNumber: String(fallbackIndex) };
   }
@@ -42,19 +49,13 @@ export function parseStepHeader(headerLine: string, fallbackIndex = 1): { stepNu
  */
 export function parseSingleStep(rawText: string, fallbackIndex = 1): StepperItem | null {
   if (!rawText) return null;
-  const lines = rawText.trim().split(/\r?\n/);
-  if (lines.length === 0) return null;
+  const trimmed = rawText.trim();
+  const match = trimmed.match(/^:::step(?![a-zA-Z0-9_-])[ \t]*([^\r\n]*)\r?\n([\s\S]*?)(?:\r?\n:::\s*)?$/i);
+  if (!match) return null;
 
-  const header = lines[0];
-  const { stepNumber, title } = parseStepHeader(header, fallbackIndex);
-
-  // Content is all lines after the header, excluding trailing ":::" terminator if present
-  let bodyLines = lines.slice(1);
-  if (bodyLines.length > 0 && bodyLines[bodyLines.length - 1].trim() === ':::') {
-    bodyLines = bodyLines.slice(0, -1);
-  }
-
-  const content = bodyLines.join('\n').trim();
+  const headerStr = match[1] || '';
+  const content = (match[2] || '').trim();
+  const { stepNumber, title } = parseStepHeader(headerStr, fallbackIndex);
 
   return {
     stepNumber,
@@ -64,26 +65,16 @@ export function parseSingleStep(rawText: string, fallbackIndex = 1): StepperItem
 }
 
 /**
- * Parses a container :::stepper ... ::: into an array of StepperItems.
+ * Parses an entire container :::stepper ... ::: into an array of StepperItems.
  */
 export function parseStepperContainer(containerText: string): StepperItem[] {
   if (!containerText) return [];
-  // Strip opening :::stepper and closing :::
-  const stripped = containerText
-    .replace(/^:::stepper\s*/i, '')
-    .replace(/:::\s*$/i, '')
-    .trim();
-
-  // Split by :::step
-  const stepRegex = /(?:^|\r?\n)(:::step[^\r\n]*)/gi;
-  const matches = [...stripped.matchAll(stepRegex)];
+  const matches = [...containerText.matchAll(STEP_BLOCK_REGEX)];
   if (matches.length === 0) return [];
 
   const items: StepperItem[] = [];
   for (let i = 0; i < matches.length; i++) {
-    const matchStart = matches[i].index!;
-    const nextStart = i + 1 < matches.length ? matches[i + 1].index! : stripped.length;
-    const chunk = stripped.substring(matchStart, nextStart).trim();
+    const chunk = matches[i][0].trim();
     const parsed = parseSingleStep(chunk, i + 1);
     if (parsed) {
       items.push(parsed);

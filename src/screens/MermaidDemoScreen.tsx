@@ -162,16 +162,27 @@ Complex sequential algorithms, protocol handshakes, and compilation phases are r
 
 :::step 1: Lexical Analysis (Scanning)
 Reads raw source characters and converts them into a stream of meaningful tokens (keywords, identifiers, literals, operators) while stripping comments and whitespace.
+:::
+
 :::step 2: Syntax Analysis (Parsing)
 Constructs the **Abstract Syntax Tree (AST)** according to formal grammar rules (Context-Free Grammar). Detects syntax errors like mismatched brackets or missing semicolons.
+:::
+
 :::step 3: Semantic Analysis & Type Checking
 Verifies semantic consistency, type compatibility, variable declarations, and scope resolution across the AST.
+:::
+
 :::step 4: Intermediate Code Generation (IR)
 Transforms the AST into machine-independent intermediate representation (Three-Address Code / Quadruples) suitable for platform-agnostic optimization.
+:::
+
 :::step 5: Code Optimization
 Applies loop unrolling, dead code elimination, and constant folding to maximize execution efficiency.
+:::
+
 :::step 6: Target Code Generation
 Translates optimized IR into target assembly or machine code with optimal register allocation.
+:::
 
 ---
 

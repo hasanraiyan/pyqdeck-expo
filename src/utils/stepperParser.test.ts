@@ -4,6 +4,7 @@ import {
   parseStepHeader,
   parseSingleStep,
   parseStepperContainer,
+  STEP_BLOCK_REGEX,
 } from './stepperParser.ts';
 
 test('parseStepHeader parses numbered headers with titles', () => {
@@ -30,7 +31,7 @@ test('parseStepHeader handles header without title or without number', () => {
   assert.equal(h2.title, 'Client sends SYN');
 });
 
-test('parseSingleStep parses step block with content', () => {
+test('parseSingleStep parses step block with content and ::: closing fence', () => {
   const block = `:::step 1: Lexical Analysis
 Converts stream of source characters into tokens (identifiers, keywords, operators).
 :::`;
@@ -45,14 +46,37 @@ Converts stream of source characters into tokens (identifiers, keywords, operato
   );
 });
 
+test('STEP_BLOCK_REGEX stops before subsequent headings and does not swallow rest of document', () => {
+  const doc = `
+:::step 1: Lexical Analysis
+Reads characters and builds tokens.
+:::
+
+:::step 2: Syntax Analysis
+Constructs the AST.
+:::
+
+## 3. Next Section
+This is normal markdown that must not be swallowed!
+`;
+
+  const matches = [...doc.matchAll(STEP_BLOCK_REGEX)];
+  assert.equal(matches.length, 2);
+  assert.ok(!matches[1][0].includes('Next Section'));
+  assert.ok(!matches[1][0].includes('normal markdown'));
+});
+
 test('parseStepperContainer parses full :::stepper container', () => {
   const container = `:::stepper
 :::step 1: SYN
 Client sends SYN packet to server.
+:::
 :::step 2: SYN-ACK
 Server responds with SYN-ACK packet.
+:::
 :::step 3: ACK
 Client completes the 3-way handshake with ACK.
+:::
 :::`;
 
   const items = parseStepperContainer(container);
