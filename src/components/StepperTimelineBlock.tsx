@@ -153,9 +153,11 @@ const styles = StyleSheet.create({
     color: COLORS.primary,
   },
   connectingLine: {
-    width: 2,
+    width: 0,
     flex: 1,
-    backgroundColor: COLORS.border,
+    borderWidth: 1,
+    borderColor: COLORS.borderDashed,
+    borderStyle: 'dotted',
     marginVertical: 4,
     minHeight: 28,
   },
