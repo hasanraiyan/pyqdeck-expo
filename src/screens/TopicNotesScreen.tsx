@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Linking, type LayoutChangeEvent } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRoute, useNavigation } from '@react-navigation/native';
@@ -6,6 +6,8 @@ import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import * as WebBrowser from 'expo-web-browser';
 import { NativeContentRenderer } from '../components/NativeContentRenderer';
+import { FaqAccordion } from '../components/FaqAccordion';
+import { extractFaqsFromNotes } from '../utils/faqParser';
 import { COLORS, FONTS } from '../theme/colors';
 import { Topic } from '../types/syllabus';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -148,6 +150,9 @@ export const TopicNotesScreen = () => {
   // A cached copy shows at once while React Query revalidates in the
   // background (staleTime 0, never persisted - see topicNotesQuery).
   const notes: string | undefined = notesQ.data ? notesQ.data.notes || undefined : topic?.notes;
+  const { notesBody, faqs } = useMemo(() => {
+    return extractFaqsFromNotes(notes);
+  }, [notes]);
   const loading = notesEnabled && notesQ.isPending;
   const error: string | null = notesQ.error
     ? userMessage(notesQ.error, 'Could not load notes.')
@@ -397,7 +402,8 @@ export const TopicNotesScreen = () => {
           <CircleLoader color={COLORS.primary} dotSize={6} size={40} />
         ) : notes ? (
           <View style={styles.notesBody}>
-            <NativeContentRenderer content={notes} fontSize={16} />
+            <NativeContentRenderer content={notesBody} fontSize={16} />
+            {faqs.length > 0 && <FaqAccordion items={faqs} />}
           </View>
         ) : (
           <View style={styles.empty}>

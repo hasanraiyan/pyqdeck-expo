@@ -2,6 +2,8 @@ import React from 'react';
 import { View, StyleSheet, ScrollView, Text } from 'react-native';
 import { ScreenContainer } from '../components/ScreenContainer';
 import { NativeContentRenderer } from '../components/NativeContentRenderer';
+import { FaqAccordion } from '../components/FaqAccordion';
+import { extractFaqsFromNotes } from '../utils/faqParser';
 import { COLORS, FONTS } from '../theme/colors';
 
 const SAMPLE_NOTES_WITH_MERMAID = `# Comprehensive Mermaid Diagram Showcase
@@ -286,9 +288,27 @@ timeline
     Year 3 : Database Management : Algorithms : Computer Networks : Web Tech
     Year 4 : Compiler Design : Cloud Computing : Machine Learning : Final Capstone
 \`\`\`
+
+---
+
+## Frequently Asked Questions
+
+### Q: What diagram types can be rendered offline inside PyQdeck?
+PyQdeck supports all 11+ core Mermaid diagram engines completely offline: Flowcharts, Sequence Diagrams, ER Diagrams, State Machines, Class Diagrams, Git Graphs, Mindmaps, Pie Charts, XY Bar & Line Charts (\`xychart-beta\`), Gantt Charts, and Timelines.
+
+### Q: How do students interact with large diagrams?
+Tapping anywhere on any diagram opens the dedicated Fullscreen Viewer. You can pinch-to-zoom up to 5x with two fingers, pan smoothly across large architectures, and copy diagram syntax.
+
+### Q: Does diagram rendering require an internet connection?
+No. The diagram parser and rendering engine are bundled directly inside the local app bundle. All diagrams compile and render 100% offline with zero external network requests.
 `;
 
 export const MermaidDemoScreen: React.FC = () => {
+  const { notesBody, faqs } = React.useMemo(
+    () => extractFaqsFromNotes(SAMPLE_NOTES_WITH_MERMAID),
+    []
+  );
+
   return (
     <View style={styles.container}>
       <ScrollView
@@ -302,7 +322,8 @@ export const MermaidDemoScreen: React.FC = () => {
               Rendered directly from bundled Mermaid.js. Tap any diagram to pinch-zoom up to 5x, pan across large architectures, or copy diagram source.
             </Text>
           </View>
-          <NativeContentRenderer content={SAMPLE_NOTES_WITH_MERMAID} fontSize={16} />
+          <NativeContentRenderer content={notesBody} fontSize={16} />
+          {faqs.length > 0 && <FaqAccordion items={faqs} />}
         </ScreenContainer>
       </ScrollView>
     </View>
