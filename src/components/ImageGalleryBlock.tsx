@@ -13,6 +13,7 @@ import * as Haptics from 'expo-haptics';
 import { Feather } from '@expo/vector-icons';
 import { COLORS, FONTS, RADIUS } from '../theme/colors';
 import { ImageItem } from '../utils/imageGalleryParser';
+import { useImageDimensions } from '../utils/useImageDimensions';
 import { ImageViewerModal } from './ImageViewerModal';
 
 interface ImageGalleryBlockProps {
@@ -96,6 +97,67 @@ const SafeImageTile: React.FC<{
   );
 };
 
+/**
+ * Single-figure card whose height adapts to the image's real aspect ratio:
+ * wide panoramas get a shorter card, tall portraits get a taller one
+ * (clamped to 160–420px). Falls back to 220px while dimensions load.
+ */
+const AdaptiveSingleImage: React.FC<{
+  img: ImageItem;
+  onPress: () => void;
+}> = ({ img, onPress }) => {
+  const [containerWidth, setContainerWidth] = useState(0);
+  const { aspect, orientation } = useImageDimensions(img.src);
+
+  const height =
+    aspect && containerWidth > 0
+      ? Math.round(Math.min(420, Math.max(160, containerWidth / aspect)))
+      : 220;
+
+  return (
+    <TouchableOpacity
+      activeOpacity={0.85}
+      onPress={onPress}
+      style={styles.singleCard}
+    >
+      <View
+        style={[styles.singleImageWrapper, { height }]}
+        onLayout={(e) => setContainerWidth(e.nativeEvent.layout.width)}
+      >
+        <SafeImageTile
+          src={img.src}
+          alt={img.alt}
+          style={styles.singleImageFill}
+          contentFit="contain"
+          priority="high"
+        />
+        <View style={styles.zoomBadge}>
+          <Feather name="maximize-2" size={13} color={COLORS.text} />
+        </View>
+        {orientation && (
+          <View style={styles.orientationPill}>
+            <Text style={styles.orientationPillText}>
+              {orientation === 'landscape'
+                ? 'Wide'
+                : orientation === 'portrait'
+                  ? 'Tall'
+                  : 'Square'}
+            </Text>
+          </View>
+        )}
+      </View>
+      {Boolean(img.alt) && (
+        <View style={styles.captionBar}>
+          <Feather name="image" size={12} color={COLORS.primary} style={{ marginRight: 6 }} />
+          <Text style={styles.captionText} numberOfLines={2}>
+            {img.alt}
+          </Text>
+        </View>
+      )}
+    </TouchableOpacity>
+  );
+};
+
 export const ImageGalleryBlock: React.FC<ImageGalleryBlockProps> = React.memo(({ images }) => {
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -110,37 +172,12 @@ export const ImageGalleryBlock: React.FC<ImageGalleryBlockProps> = React.memo(({
 
   const count = images.length;
 
-  // 1. Single Image Layout (Full-width card with caption & tap-to-zoom)
+  // 1. Single Image Layout (Adaptive full-width card with caption & tap-to-zoom)
   if (count === 1) {
     const img = images[0];
     return (
       <View style={styles.container}>
-        <TouchableOpacity
-          activeOpacity={0.85}
-          onPress={() => openViewer(0)}
-          style={styles.singleCard}
-        >
-          <View style={styles.singleImageWrapper}>
-            <SafeImageTile
-              src={img.src}
-              alt={img.alt}
-              style={styles.singleImageFill}
-              contentFit="contain"
-              priority="high"
-            />
-            <View style={styles.zoomBadge}>
-              <Feather name="maximize-2" size={13} color={COLORS.text} />
-            </View>
-          </View>
-          {Boolean(img.alt) && (
-            <View style={styles.captionBar}>
-              <Feather name="image" size={12} color={COLORS.primary} style={{ marginRight: 6 }} />
-              <Text style={styles.captionText} numberOfLines={2}>
-                {img.alt}
-              </Text>
-            </View>
-          )}
-        </TouchableOpacity>
+        <AdaptiveSingleImage img={img} onPress={() => openViewer(0)} />
 
         <ImageViewerModal
           visible={modalVisible}
@@ -450,6 +487,21 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border,
     borderRadius: RADIUS.sm,
     padding: 6,
+  },
+  orientationPill: {
+    position: 'absolute',
+    left: 8,
+    top: 8,
+    backgroundColor: 'rgba(27, 36, 48, 0.75)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: RADIUS.full,
+  },
+  orientationPillText: {
+    fontFamily: FONTS.mono,
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#ffffff',
   },
   captionBar: {
     flexDirection: 'row',
