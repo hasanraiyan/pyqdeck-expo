@@ -52,7 +52,20 @@ export function parseContentBlocks(rawText: string): ContentBlock[] {
     if (matchStart > lastIndex) {
       const preceding = text.substring(lastIndex, matchStart).trim();
       if (preceding.length > 0) {
-        blocks.push({ type: 'markdown', content: preceding });
+        // If the preceding markdown ends with a single heading line (e.g. "### Approach 1: Iterative")
+        // right before this code block, split the heading out into its own markdown block so it can be
+        // paired with the code block in groupCodeTabs.
+        const trailingHeadingMatch = preceding.match(/(^|\n)(#{2,4}[ \t]+[^\r\n]+)\s*$/);
+        if (trailingHeadingMatch && match[1] && match[1].startsWith('```') && (match[2] || '').trim().toLowerCase() !== 'mermaid') {
+          const headingLine = trailingHeadingMatch[2].trim();
+          const proseBefore = preceding.substring(0, trailingHeadingMatch.index! + (trailingHeadingMatch[1] ? trailingHeadingMatch[1].length : 0)).trim();
+          if (proseBefore.length > 0) {
+            blocks.push({ type: 'markdown', content: proseBefore });
+          }
+          blocks.push({ type: 'markdown', content: headingLine });
+        } else {
+          blocks.push({ type: 'markdown', content: preceding });
+        }
       }
     }
 
