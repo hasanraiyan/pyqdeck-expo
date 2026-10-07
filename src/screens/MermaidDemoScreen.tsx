@@ -148,6 +148,13 @@ When 5 or more images appear consecutively, PyQdeck renders the Hero + 3-Slot Co
 ![Demo Figure 5](https://res.cloudinary.com/djkpavwmp/image/upload/v1791340887/jc9p5keppvpm0aqowkod.png)
 ![Demo Figure 6](https://res.cloudinary.com/djkpavwmp/image/upload/v1791340887/jc9p5keppvpm0aqowkod.png)
 
+### 2.4 Recommended Video Lectures (Interactive YouTube Embed)
+YouTube videos inserted as markdown links, embed tags \`@[youtube](...)\`, or raw URLs automatically become native interactive video cards with inline playback, poster thumbnails, timestamp seeking, and app deep linking:
+
+[Recommended Lecture: Computer Architecture & Pipelining](https://www.youtube.com/watch?v=tQHAwV9B8hQ&t=385s)
+
+@[youtube](https://www.youtube.com/watch?v=tQHAwV9B8hQ&t=385s)
+
 ---
 
 ## 3. Sequence Diagram (sequenceDiagram)

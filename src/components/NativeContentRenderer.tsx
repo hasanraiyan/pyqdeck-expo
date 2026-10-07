@@ -10,6 +10,7 @@ import { MermaidBlock } from './MermaidBlock';
 import { CalloutCard } from './CalloutCard';
 import { TabbedCodeBlock } from './TabbedCodeBlock';
 import { ImageGalleryBlock } from './ImageGalleryBlock';
+import { YouTubeCard } from './YouTubeCard';
 import { cleanMarkdown } from '../utils/responsive';
 import { ContentErrorBoundary } from './ContentErrorBoundary';
 
@@ -108,6 +109,19 @@ export const NativeContentRenderer: React.FC<NativeContentRendererProps> = React
             return (
               <ContentErrorBoundary key={`gallery-${index}`}>
                 <ImageGalleryBlock images={block.images} />
+              </ContentErrorBoundary>
+            );
+          }
+
+          if (block.type === 'youtube') {
+            return (
+              <ContentErrorBoundary key={`yt-${index}`}>
+                <YouTubeCard
+                  videoId={block.videoId}
+                  title={block.title}
+                  url={block.url}
+                  startTime={block.startTime}
+                />
               </ContentErrorBoundary>
             );
           }

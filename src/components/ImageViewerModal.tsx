@@ -494,26 +494,38 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     gap: 8,
   },
-  thumbPill: {
-    paddingHorizontal: 14,
-    paddingVertical: 7,
-    borderRadius: RADIUS.full,
+  thumbTile: {
+    width: 58,
+    height: 58,
+    borderRadius: RADIUS.md,
+    overflow: 'hidden',
+    borderWidth: 2,
+    borderColor: 'transparent',
     backgroundColor: COLORS.cardSecondary,
-    borderWidth: 1,
-    borderColor: COLORS.border,
   },
-  thumbPillActive: {
-    backgroundColor: COLORS.primaryLight,
+  thumbTileActive: {
     borderColor: COLORS.primary,
   },
-  thumbPillText: {
-    fontFamily: FONTS.mono,
-    fontSize: 11,
-    color: COLORS.textMuted,
-    fontWeight: '600',
+  thumbTileImg: {
+    width: '100%',
+    height: '100%',
   },
-  thumbPillTextActive: {
-    color: COLORS.primary,
+  thumbTileIndex: {
+    position: 'absolute',
+    bottom: 3,
+    right: 3,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: 'rgba(27, 36, 48, 0.8)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 4,
+  },
+  thumbTileIndexText: {
+    fontFamily: FONTS.mono,
+    fontSize: 9,
     fontWeight: '700',
+    color: '#ffffff',
   },
 });
