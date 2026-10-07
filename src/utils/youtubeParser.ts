@@ -59,7 +59,7 @@ export function extractYouTubeData(rawText: string, altTitle?: string): YouTubeV
  */
 export function getYouTubeThumbnailUrl(
   videoId: string,
-  quality: 'maxres' | 'hq' | 'mq' = 'hq'
+  quality: 'maxres' | 'hq' | 'mq' = 'maxres'
 ): string {
   switch (quality) {
     case 'maxres':

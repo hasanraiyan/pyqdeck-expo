@@ -51,6 +51,7 @@
     "react-native-svg": "^15.15.4",
     "react-native-web": "^0.21.2",
     "react-native-webview": "13.16.1",
+    "react-native-youtube-iframe": "^2.4.1",
     "react-syntax-highlighter": "^15.6.6",
     "sp-react-native-in-app-updates": "^2.0.0"
   },
