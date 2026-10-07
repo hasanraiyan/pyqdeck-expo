@@ -190,7 +190,9 @@ export const ImageViewerModal: React.FC<ImageViewerModalProps> = ({
                   : 'FIGURE VIEWER'}
               </Text>
               <Text style={styles.headerSubtitle} numberOfLines={1}>
-                {activeImage?.alt || 'Pinch or double-tap to zoom'}
+                {dims
+                  ? `${activeImage?.alt ? `${activeImage.alt} · ` : ''}${dims.width}×${dims.height} · ${orientation}`
+                  : activeImage?.alt || 'Pinch or double-tap to zoom'}
               </Text>
             </View>
 
@@ -303,7 +305,7 @@ export const ImageViewerModal: React.FC<ImageViewerModalProps> = ({
           )}
         </View>
 
-        {/* Bottom thumbnail strip if multiple images matching app design */}
+        {/* Bottom thumbnail strip: small image previews, tap to swap the main figure */}
         {images.length > 1 && (
           <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 12) }]}>
             <ScrollView
@@ -319,18 +321,25 @@ export const ImageViewerModal: React.FC<ImageViewerModalProps> = ({
                     onPress={() => handleSelectTab(idx)}
                     activeOpacity={0.7}
                     style={[
-                      styles.thumbPill,
-                      isActive && styles.thumbPillActive,
+                      styles.thumbTile,
+                      isActive && styles.thumbTileActive,
                     ]}
+                    accessibilityLabel={img.alt ? `View ${img.alt}` : `View figure ${idx + 1}`}
                   >
-                    <Text
-                      style={[
-                        styles.thumbPillText,
-                        isActive && styles.thumbPillTextActive,
-                      ]}
-                    >
-                      {img.alt ? (img.alt.length > 16 ? `${img.alt.substring(0, 14)}…` : img.alt) : `Fig ${idx + 1}`}
-                    </Text>
+                    <Image
+                      source={{ uri: img.src }}
+                      style={styles.thumbTileImg}
+                      contentFit="cover"
+                      cachePolicy="memory-disk"
+                      priority="low"
+                      transition={150}
+                      recyclingKey={`thumb-${img.src}`}
+                    />
+                    {isActive && (
+                      <View style={styles.thumbTileIndex}>
+                        <Text style={styles.thumbTileIndexText}>{idx + 1}</Text>
+                      </View>
+                    )}
                   </TouchableOpacity>
                 );
               })}
