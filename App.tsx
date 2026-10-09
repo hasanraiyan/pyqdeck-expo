@@ -48,7 +48,6 @@ import { SemesterSelectScreen } from './src/screens/SemesterSelectScreen';
 import { SyllabusOverviewScreen } from './src/screens/SyllabusOverviewScreen';
 import { SubjectSyllabusScreen } from './src/screens/SubjectSyllabusScreen';
 import { TopicNotesScreen } from './src/screens/TopicNotesScreen';
-import { SyllabusTabIcon } from './src/components/SyllabusTabIcon';
 import { checkForStoreUpdate } from './src/utils/appUpdate';
 import { maybeRequestReview } from './src/utils/appReview';
 import { isSyllabusEnabled } from './src/config/features';
@@ -343,8 +342,8 @@ function TabsNavigator() {
             component={SyllabusStack}
             options={{
               tabBarLabel: 'Study',
-              tabBarIcon: ({ color, size, focused }) => (
-                <SyllabusTabIcon size={size} color={color} focused={focused} />
+              tabBarIcon: ({ color, size }) => (
+                <Feather name="book-open" size={size} color={color} />
               ),
             }}
           />
