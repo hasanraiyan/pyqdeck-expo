@@ -1,3 +1,4 @@
+import { Platform } from 'react-native';
 import { Asset } from 'expo-asset';
 import * as FileSystem from 'expo-file-system/legacy';
 
@@ -29,7 +30,11 @@ export async function getMermaidJs(): Promise<string> {
         throw new Error('Local URI not found for Mermaid asset');
       }
 
-      const content = await FileSystem.readAsStringAsync(localUri);
+      // expo-file-system can't read bundled assets in the browser; fetch them.
+      const content =
+        Platform.OS === 'web'
+          ? await (await fetch(localUri)).text()
+          : await FileSystem.readAsStringAsync(localUri);
       if (!content || content.length < 1000) {
         throw new Error('Mermaid asset content is empty or invalid');
       }
