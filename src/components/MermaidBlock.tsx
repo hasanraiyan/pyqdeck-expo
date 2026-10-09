@@ -5,6 +5,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   LayoutChangeEvent,
+  useWindowDimensions,
 } from 'react-native';
 import { WebView, WebViewMessageEvent } from './WebViewCompat';
 import * as Haptics from 'expo-haptics';
@@ -53,7 +54,36 @@ function calculateFittedHeight(
   return Math.min(MAX_INLINE_HEIGHT, Math.max(48, Math.ceil(intrinsicHeight) + 14));
 }
 
+// How often (ms) a mounted block checks whether it is still near the viewport.
+const VISIBILITY_POLL_MS = 500;
+
+/**
+ * Each inline diagram is a full WebView, which is expensive. Only keep the
+ * WebView mounted while the block is within about one screen of the viewport;
+ * otherwise a same-height placeholder holds the layout.
+ */
+function useNearViewport(ref: React.RefObject<View | null>): boolean {
+  const { height: screenH } = useWindowDimensions();
+  const [near, setNear] = useState(true);
+
+  useEffect(() => {
+    const check = () => {
+      ref.current?.measureInWindow((_x, y, _w, h) => {
+        if (h === 0 && y === 0) return; // not laid out yet
+        setNear(y + h > -screenH && y < screenH * 2);
+      });
+    };
+    check();
+    const id = setInterval(check, VISIBILITY_POLL_MS);
+    return () => clearInterval(id);
+  }, [ref, screenH]);
+
+  return near;
+}
+
 export const MermaidBlock: React.FC<MermaidBlockProps> = React.memo(({ code }) => {
+  const cardRef = useRef<View>(null);
+  const near = useNearViewport(cardRef);
   const cached = useMemo(() => getCachedDiagram(code), [code]);
 
   const [containerWidth, setContainerWidth] = useState<number>(0);
@@ -190,8 +220,7 @@ export const MermaidBlock: React.FC<MermaidBlockProps> = React.memo(({ code }) =
       }
     }
     window.addEventListener('load', reportSize);
-    setTimeout(reportSize, 30);
-    setTimeout(reportSize, 120);
+    setTimeout(reportSize, 150);
   </script>
 </body>
 </html>`;
@@ -213,7 +242,7 @@ export const MermaidBlock: React.FC<MermaidBlockProps> = React.memo(({ code }) =
   }
 
   return (
-    <View style={styles.card} onLayout={onLayout}>
+    <View ref={cardRef} style={styles.card} onLayout={onLayout}>
       {/* Diagram container - clean, headerless figure. Tapping opens fullscreen zoom */}
       <TouchableOpacity
         activeOpacity={0.9}
@@ -230,7 +259,7 @@ export const MermaidBlock: React.FC<MermaidBlockProps> = React.memo(({ code }) =
           </View>
         )}
 
-        {svg && (
+        {svg && near && (
           <WebView
             originWhitelist={['*']}
             source={{ html: inlineHtml }}

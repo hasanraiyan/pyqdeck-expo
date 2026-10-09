@@ -69,8 +69,11 @@ export const MermaidViewer: React.FC<MermaidViewerProps> = ({
       position: absolute; top: 0; left: 0;
       width: 100vw; padding: 16px;
       transform-origin: 0 0;
-      will-change: transform;
+      /* No will-change: it makes Chromium rasterize once at 1x and stretch the
+         bitmap when zoomed, which is what made diagrams blurry. Without it the
+         SVG is re-rasterized crisply at the zoomed scale. */
     }
+    svg { text-rendering: geometricPrecision; shape-rendering: geometricPrecision; }
     #stage svg {
       display: block;
       width: 100% !important;
