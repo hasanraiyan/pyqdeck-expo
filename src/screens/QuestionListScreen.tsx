@@ -31,6 +31,7 @@ import { rf, verticalScale, useResponsive } from '../utils/responsive';
 import { useVolumeScroll } from '../utils/volumeScroll';
 import {
   getOldUiEnabled,
+  peekOldUiEnabled,
   setOldUiEnabled,
   hasChosenQuestionLayout,
   markQuestionLayoutChosen,
@@ -76,12 +77,15 @@ export const QuestionListScreen = () => {
   const loading = !yearResolved || questionsQ.isPending || questionsQ.isPlaceholderData;
   const [refreshing, setRefreshing] = useState(false);
   const [filterModalVisible, setFilterModalVisible] = useState(false);
-  const [isOldUi, setIsOldUi] = useState(false);
+  // null only on the very first open of the session, before the saved layout has
+  // been read (App.tsx primes it at launch, so normally it is already known).
+  const [oldUiPref, setOldUiPref] = useState<boolean | null>(peekOldUiEnabled);
+  const isOldUi = oldUiPref === true;
   const [layoutPromptVisible, setLayoutPromptVisible] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
-      getOldUiEnabled().then(setIsOldUi);
+      getOldUiEnabled().then(setOldUiPref);
       hasChosenQuestionLayout().then((chosen) => {
         if (!chosen) {
           setLayoutPromptVisible(true);
@@ -91,7 +95,7 @@ export const QuestionListScreen = () => {
   );
 
   const handleSelectLayoutMode = async (isCards: boolean) => {
-    setIsOldUi(isCards);
+    setOldUiPref(isCards);
     setLayoutPromptVisible(false);
     await setOldUiEnabled(isCards);
     await markQuestionLayoutChosen();
@@ -288,7 +292,7 @@ export const QuestionListScreen = () => {
           scrollOffsetRef.current = e.nativeEvent.contentOffset.y;
         }}
         scrollEventThrottle={32}
-        data={questions}
+        data={oldUiPref === null ? [] : questions}
         keyExtractor={(item) => item.questionId}
         renderItem={renderItem}
         initialNumToRender={8}
@@ -329,7 +333,7 @@ export const QuestionListScreen = () => {
           ) : null
         }
         ListEmptyComponent={
-          loading ? (
+          loading || oldUiPref === null ? (
             <View style={styles.centerContainer}>
               <CircleLoader color={COLORS.primary} dotSize={6} size={40} />
             </View>

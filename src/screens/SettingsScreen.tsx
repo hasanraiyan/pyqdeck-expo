@@ -264,25 +264,27 @@ export const SettingsScreen = ({ navigation }: any) => {
         {isAiEnabled && (
           <>
             <Text style={styles.sectionHeading}>ASK AI</Text>
-            <View style={styles.card}>
-              {ASK_AI_ENGINES.map((engine, i) => (
-                <SettingsRow
-                  key={engine.id}
-                  icon="message-circle"
-                  label={engine.name}
-                  subtitle={engine.hint}
-                  onPress={() => chooseAiEngine(engine.id)}
-                  last={i === ASK_AI_ENGINES.length - 1}
-                  right={
-                    <View style={[styles.radioCircle, aiEngine === engine.id && styles.radioCircleActive]}>
-                      {aiEngine === engine.id && <View style={styles.radioDot} />}
-                    </View>
-                  }
-                />
-              ))}
+            <View style={styles.aiChips}>
+              {ASK_AI_ENGINES.map((engine) => {
+                const active = aiEngine === engine.id;
+                return (
+                  <TouchableOpacity
+                    key={engine.id}
+                    style={[styles.aiChip, active && styles.aiChipActive]}
+                    activeOpacity={0.7}
+                    onPress={() => chooseAiEngine(engine.id)}
+                    accessibilityRole="radio"
+                    accessibilityState={{ selected: active }}
+                  >
+                    <Text style={[styles.aiChipText, active && styles.aiChipTextActive]}>
+                      {engine.name}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
             </View>
             <Text style={styles.aiNote}>
-              Opens the question in the AI you pick. Apart from Coursify, the question is also copied, so you can paste it if the box opens empty.
+              Where Ask AI opens. Except Coursify, the question is also copied, so paste it if the box opens empty.
             </Text>
           </>
         )}
@@ -401,12 +403,24 @@ const styles = StyleSheet.create({
   scroll: {
     paddingTop: verticalScale(16),
   },
+  aiChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  aiChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.card,
+  },
+  aiChipActive: { borderColor: COLORS.primary, backgroundColor: COLORS.primaryLight },
+  aiChipText: { fontFamily: FONTS.bodyMedium, fontSize: rf(12.5), color: COLORS.textMuted },
+  aiChipTextActive: { fontFamily: FONTS.displayBold, color: COLORS.primary },
   aiNote: {
     fontFamily: FONTS.body,
     fontSize: rf(11.5),
     lineHeight: rf(16),
     color: COLORS.textMuted,
-    marginTop: 8,
+    marginTop: 6,
   },
   sectionHeading: {
     fontFamily: FONTS.displayBold,
