@@ -19,6 +19,7 @@ import { COLORS, FONTS } from '../theme/colors';
 import { CircleLoader } from '../components/CircleLoader';
 import { rf, scale, verticalScale, useResponsive } from '../utils/responsive';
 import { ScreenContainer } from '../components/ScreenContainer';
+import { HeroArt } from '../components/HeroArt';
 import { ResponsiveGrid } from '../components/ResponsiveGrid';
 import { yearNumberOf, YEAR_NUMBERS } from '../utils/year';
 import { getRecentStudies, RecentStudy, getRecentNotes, RecentNote } from '../utils/recentStudy';
@@ -41,7 +42,7 @@ export const HomeScreen = () => {
   // ResponsiveGrid measures its own box (see its doc comment for why).
   // Driven by the live hook, not the module-level rf() snapshot, so type
   // actually reflows when a browser window is resized.
-  const heroTitleSize = bp({ phone: rf(27), tablet: rf(30), laptop: rf(34), desktop: rf(37) });
+  const heroTitleSize = bp({ phone: rf(26), tablet: rf(30), laptop: rf(34), desktop: rf(37) });
   const heroSubtitleSize = bp({ phone: rf(13.5), laptop: rf(15) });
   const queryClient = useQueryClient();
   const semestersQ = useSemesters();
@@ -171,17 +172,22 @@ export const HomeScreen = () => {
           </View>
           <View style={styles.headerActions}>
             <TouchableOpacity
-              onPress={() => navigation.navigate('AllSubjects')}
-              style={styles.headerLink}
+              onPress={() => navigation.navigate('Search')}
+              style={styles.headerIconButton}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel="Search"
             >
-              <Text style={styles.headerLinkText} numberOfLines={1}>Subjects</Text>
+              <Feather name="search" size={17} color={COLORS.text} />
             </TouchableOpacity>
             <TouchableOpacity
               onPress={() => navigation.navigate('Settings')}
               style={styles.headerIconButton}
               hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel="Settings"
             >
-              <Feather name="settings" size={19} color={COLORS.textMuted} />
+              <Feather name="settings" size={17} color={COLORS.text} />
             </TouchableOpacity>
           </View>
         </View>
@@ -202,14 +208,10 @@ export const HomeScreen = () => {
       >
         <ScreenContainer variant="wide">
           {/* Hero Section */}
-          <View style={[styles.hero, heroTwoCol && styles.heroRow]}>
-            <View style={heroTwoCol ? styles.heroCopyCol : undefined}>
+          <View style={[styles.hero, styles.heroRow, !heroTwoCol && styles.heroRowPhone]}>
+            <View style={styles.heroCopyCol}>
               <Text style={[styles.heroTitle, { fontSize: heroTitleSize, lineHeight: heroTitleSize * 1.26 }]}>
-                {/* The forced break shapes the phone layout; on wider screens
-                    it would leave a short, ragged first line. */}
-                {heroTwoCol
-                  ? 'BEU Previous Year Question Papers'
-                  : 'BEU Previous Year\nQuestion Papers'}
+                {'Every BEU PYQ,\nsolved.'}
               </Text>
               <Text
                 style={[
@@ -217,23 +219,12 @@ export const HomeScreen = () => {
                   { fontSize: heroSubtitleSize, lineHeight: heroSubtitleSize * 1.5 },
                 ]}
               >
-                Previous-year exam question papers for Bihar Engineering University (BEU)
-                B.Tech students, sorted by semester, subject, and year.
+                Papers, solutions and notes for BEU B.Tech.
               </Text>
             </View>
 
-            <View style={heroTwoCol ? styles.heroAsideCol : undefined}>
-              {/* Quick Search Bar Shortcut */}
-              <TouchableOpacity
-                style={styles.heroSearchBox}
-                activeOpacity={0.75}
-                onPress={() => navigation.navigate('Search')}
-              >
-                <Feather name="search" size={16} color={COLORS.textMuted} />
-                <Text style={styles.heroSearchPlaceholder} numberOfLines={1}>
-                  Search subjects, questions, theorems...
-                </Text>
-              </TouchableOpacity>
+            <View style={heroTwoCol ? styles.heroAsideCol : styles.heroAsideColPhone}>
+              <HeroArt compact={!heroTwoCol} />
             </View>
           </View>
 
@@ -508,9 +499,8 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.background,
   },
   siteHeader: {
-    backgroundColor: COLORS.card,
-    borderBottomWidth: 1,
-    borderColor: COLORS.border,
+    // Same paper tone as the page: the header reads as part of it, not a bar.
+    backgroundColor: COLORS.background,
     alignItems: 'center',
   },
   headerInner: {
@@ -518,12 +508,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 14,
+    paddingTop: 10,
+    paddingBottom: 6,
   },
   brandRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 12,
     // Lets the brand yield space to the actions instead of pushing them off
     // (or squashing them) on narrow screens / large font settings.
     flexShrink: 1,
@@ -534,23 +525,25 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   headerLogo: {
-    width: 32,
-    height: 32,
-    borderRadius: 6,
+    width: 40,
+    height: 40,
+    borderRadius: 11,
+    borderWidth: 1,
+    borderColor: COLORS.border,
     flexShrink: 0,
   },
   brandTitle: {
     fontFamily: FONTS.display,
-    fontSize: rf(20),
+    fontSize: rf(22),
     color: COLORS.text,
-    letterSpacing: -0.5,
-    lineHeight: rf(22),
+    letterSpacing: -0.6,
+    lineHeight: rf(25),
   },
   brandSubtitle: {
     fontFamily: FONTS.bodyMedium,
-    fontSize: rf(8.5),
-    color: COLORS.textSubtle,
-    letterSpacing: 1,
+    fontSize: rf(9.5),
+    color: COLORS.primary,
+    letterSpacing: 1.4,
     textTransform: 'uppercase',
   },
   headerActions: {
@@ -559,19 +552,16 @@ const styles = StyleSheet.create({
     flexShrink: 0,
     marginLeft: 8,
   },
-  headerLink: {
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-  },
   headerIconButton: {
-    paddingVertical: 4,
-    paddingHorizontal: 6,
-    marginLeft: 4,
-  },
-  headerLinkText: {
-    fontFamily: FONTS.bodyMedium,
-    fontSize: rf(13.5),
-    color: COLORS.textMuted,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.card,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 8,
   },
   scrollContent: {
     paddingTop: verticalScale(20),
@@ -589,12 +579,20 @@ const styles = StyleSheet.create({
   },
   heroRow: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     gap: 40,
+  },
+  // Phone: copy on the left, a small illustration on the right.
+  heroRowPhone: {
+    gap: 8,
   },
   heroCopyCol: {
     // Slightly greedier than the aside so the headline keeps the emphasis.
     flex: 1.15,
+  },
+  heroAsideColPhone: {
+    width: '42%',
+    flexShrink: 0,
   },
   heroAsideCol: {
     flex: 1,
@@ -613,24 +611,6 @@ const styles = StyleSheet.create({
     color: COLORS.textMuted,
     marginTop: 8,
     lineHeight: rf(20),
-  },
-  heroSearchBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    backgroundColor: COLORS.card,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: 6,
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    marginTop: 14,
-  },
-  heroSearchPlaceholder: {
-    flex: 1,
-    fontFamily: FONTS.body,
-    fontSize: rf(13),
-    color: COLORS.textMuted,
   },
   section: {
     marginTop: 24,

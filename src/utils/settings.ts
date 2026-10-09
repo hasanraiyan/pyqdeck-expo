@@ -24,16 +24,28 @@ export async function setVolumeScrollEnabled(value: boolean): Promise<void> {
 const OLD_UI_ENABLED_KEY = 'old_ui_enabled';
 const QUESTION_LAYOUT_CHOSEN_KEY = 'question_layout_chosen';
 
+// The layout is read from disk, which is async. Kept in memory once known so a
+// screen can start in the right layout on its first frame instead of drawing
+// the default and then switching.
+let oldUiCache: boolean | null = null;
+
+/** The saved layout if it has already been read this session, else null. */
+export function peekOldUiEnabled(): boolean | null {
+  return oldUiCache;
+}
+
 export async function getOldUiEnabled(): Promise<boolean> {
   try {
     const raw = await AsyncStorage.getItem(OLD_UI_ENABLED_KEY);
-    return raw === '1';
+    oldUiCache = raw === '1';
   } catch {
-    return false;
+    oldUiCache = false;
   }
+  return oldUiCache;
 }
 
 export async function setOldUiEnabled(value: boolean): Promise<void> {
+  oldUiCache = value;
   try {
     await AsyncStorage.setItem(OLD_UI_ENABLED_KEY, value ? '1' : '0');
     await AsyncStorage.setItem(QUESTION_LAYOUT_CHOSEN_KEY, '1');

@@ -21,7 +21,6 @@ import { COLORS, FONTS } from '../theme/colors';
 import { useSyllabusSubject } from '../api/queries';
 import { SyllabusModule, SyllabusSubject, Topic } from '../types/syllabus';
 import { getDoneTopics, saveDoneTopics, pruneOrphanedDoneTopics } from '../db/syllabusProgress';
-import { DoneStamp } from '../components/Badge';
 import { ScreenError, ScreenEmpty } from '../components/ScreenState';
 import { CircleLoader } from '../components/CircleLoader';
 import { userMessage } from '../utils/netError';
@@ -226,28 +225,33 @@ export const SubjectSyllabusScreen = () => {
     const allDone = mDone === m.topics.length && m.topics.length > 0;
 
     return (
-      <View key={m.id}>
+      <View key={m.id} style={[styles.modCard, allDone && styles.modCardDone]}>
         <TouchableOpacity
-          style={[styles.modHead, expanded && styles.modHeadOpen]}
+          style={styles.modHead}
           activeOpacity={0.7}
           onPress={() => toggleModule(m.id)}
         >
-          <Feather
-            name={expanded ? 'chevron-down' : 'chevron-right'}
-            size={18}
-            color={COLORS.textMuted}
-          />
+          {subject.kind === 'theory' ? (
+            <View style={[styles.modBadge, allDone && styles.modBadgeDone]}>
+              {allDone ? (
+                <Feather name="check" size={15} color={COLORS.card} />
+              ) : (
+                <Text style={styles.modBadgeText}>{m.number}</Text>
+              )}
+            </View>
+          ) : null}
           <View style={styles.modTitleWrap}>
             {subject.kind === 'theory' && <Text style={styles.modNum}>Module {m.number}</Text>}
             <Text style={styles.modTitle}>{m.title}</Text>
-          </View>
-          {allDone ? (
-            <DoneStamp />
-          ) : (
             <Text style={styles.modCount}>
-              {mDone}/{m.topics.length}
+              {mDone} of {m.topics.length} topics
             </Text>
-          )}
+          </View>
+          <Feather
+            name={expanded ? 'chevron-up' : 'chevron-down'}
+            size={18}
+            color={COLORS.textMuted}
+          />
         </TouchableOpacity>
 
         {expanded &&
@@ -350,10 +354,11 @@ export const SubjectSyllabusScreen = () => {
                 />
                 <Text style={styles.progressKicker}>SYLLABUS PROGRESS</Text>
               </View>
-              <Text style={styles.progressPercentText}>
-                {completedTopics} / {totalTopics} Topics ({progressPercent}%)
-              </Text>
+              <Text style={styles.progressPercentText}>{progressPercent}%</Text>
             </View>
+            <Text style={styles.progressSummary}>
+              {completedTopics} of {totalTopics} topics done
+            </Text>
             <View style={styles.progressTrack}>
               <View
                 style={[
@@ -401,13 +406,12 @@ const styles = StyleSheet.create({
   },
   progressCard: {
     backgroundColor: COLORS.card,
-    borderRadius: 10,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: COLORS.border,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    marginHorizontal: 14,
-    marginBottom: 12,
+    padding: 16,
+    marginHorizontal: 16,
+    marginBottom: 14,
     gap: 8,
   },
   progressHeaderRow: {
@@ -427,8 +431,15 @@ const styles = StyleSheet.create({
     letterSpacing: 1.2,
   },
   progressPercentText: {
+    fontFamily: FONTS.display,
+    fontSize: 26,
+    letterSpacing: -0.8,
+    color: COLORS.secondary,
+  },
+  progressSummary: {
     fontFamily: FONTS.displayBold,
-    fontSize: 11,
+    fontSize: 16,
+    letterSpacing: -0.2,
     color: COLORS.text,
   },
   progressTrack: {
@@ -439,7 +450,7 @@ const styles = StyleSheet.create({
   },
   progressFill: {
     height: '100%',
-    backgroundColor: COLORS.primary,
+    backgroundColor: COLORS.secondary,
     borderRadius: 3,
   },
   progressFillDone: {
@@ -448,35 +459,51 @@ const styles = StyleSheet.create({
   modHead: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 12,
     paddingHorizontal: 14,
     paddingVertical: 14,
-    minHeight: 58,
-    backgroundColor: COLORS.card,
-    borderBottomWidth: 1,
-    borderColor: COLORS.border,
+    minHeight: 64,
   },
-  modHeadOpen: { backgroundColor: COLORS.cardSecondary },
+  modCard: {
+    marginHorizontal: 16,
+    marginBottom: 10,
+    backgroundColor: COLORS.card,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 14,
+    overflow: 'hidden',
+  },
+  modCardDone: { borderColor: COLORS.secondary },
+  modBadge: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: COLORS.cardSecondary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modBadgeDone: { backgroundColor: COLORS.secondary },
+  modBadgeText: { fontFamily: FONTS.displayBold, fontSize: 14, color: COLORS.text },
   modTitleWrap: { flex: 1 },
   modNum: {
     fontFamily: FONTS.displayBold,
-    fontSize: 10,
+    fontSize: 9.5,
     letterSpacing: 1.1,
     textTransform: 'uppercase',
     color: COLORS.textSubtle,
     marginBottom: 2,
   },
-  modTitle: { fontSize: 14.5, lineHeight: 19, color: COLORS.text },
-  modCount: { fontFamily: FONTS.bodyMedium, fontSize: 11.5, color: COLORS.textSubtle },
+  modTitle: { fontFamily: FONTS.displayBold, fontSize: 14.5, lineHeight: 19, color: COLORS.text },
+  modCount: { fontFamily: FONTS.bodyMedium, fontSize: 11.5, color: COLORS.textSubtle, marginTop: 3 },
 
   topicRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.background,
-    borderBottomWidth: 1,
-    borderColor: COLORS.borderLight,
-    paddingRight: 10,
-    minHeight: 52,
+    backgroundColor: COLORS.card,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderColor: COLORS.border,
+    paddingRight: 8,
+    minHeight: 50,
   },
   tickZone: {
     flex: 1,
@@ -508,7 +535,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   bubbleOn: { borderColor: COLORS.secondary, backgroundColor: COLORS.secondary },
-  topicText: { flex: 1, fontSize: 13.5, lineHeight: 19, color: COLORS.text },
+  topicText: { flex: 1, fontFamily: FONTS.body, fontSize: 13.5, lineHeight: 19, color: COLORS.text },
   topicTextDone: { color: COLORS.textSubtle },
   bar: { height: 4, borderRadius: 2, backgroundColor: COLORS.borderLight, overflow: 'hidden' },
   barFill: { height: '100%', backgroundColor: COLORS.secondary },

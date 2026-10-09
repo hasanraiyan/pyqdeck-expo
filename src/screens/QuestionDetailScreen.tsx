@@ -6,7 +6,6 @@ import {
   ScrollView,
   TouchableOpacity,
   StyleSheet,
-  Linking,
   TextInput,
   Modal,
   TouchableWithoutFeedback,
@@ -31,7 +30,7 @@ import {
 import { qk } from '../api/queryKeys';
 import { QuestionSummary, Solution } from '../types';
 import { COLORS, FONTS } from '../theme/colors';
-import { Badge, MarksBadge, AskAiBadge, YearBadge, ShowSolnBadge, QNumBadge } from '../components/Badge';
+import { Badge, MarksBadge, AskAiBadge, YearBadge, QNumBadge } from '../components/Badge';
 import { PrevNextNav } from '../components/PrevNextNav';
 import { QuestionListPane } from '../components/QuestionListPane';
 import { canShowTwoPanesIn, getListPaneWidth } from '../theme/layout';
@@ -46,6 +45,7 @@ import { useRequireAuth } from '../auth/useRequireAuth';
 import { WaveLoader } from '../components/WaveLoader';
 import { CircleLoader } from '../components/CircleLoader';
 import { isAiEnabled } from '../config/features';
+import { openAskAi } from '../utils/askAi';
 import { userMessage } from '../utils/netError';
 import { useDialogLayout } from '../utils/dialog';
 
@@ -274,19 +274,7 @@ export const QuestionDetailScreen = () => {
 
   const openAiSearch = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    if (!question?.text) return;
-    const coursifyUrl = `https://hasanraiyan.me/coursify?search_ai=${encodeURIComponent(question.text)}&send=true`;
-    try {
-      await WebBrowser.openBrowserAsync(coursifyUrl, {
-        toolbarColor: COLORS.card,
-        controlsColor: COLORS.primary,
-        secondaryToolbarColor: COLORS.background,
-        showTitle: true,
-        enableBarCollapsing: true,
-      });
-    } catch (err) {
-      Linking.openURL(coursifyUrl).catch((e) => console.error(e));
-    }
+    if (question?.text) await openAskAi(question.text);
   };
 
   const handleGoogleSearch = async () => {
@@ -623,19 +611,6 @@ export const QuestionDetailScreen = () => {
                   {isTablet && <Text style={styles.actionIconLabel}>Share</Text>}
                 </TouchableOpacity>
 
-                {(question?.hasSolution || Boolean(solution) || loadingSolution) && (
-                  <TouchableOpacity
-                    onPress={handleToggleSolution}
-                    activeOpacity={0.7}
-                    disabled={loadingSolution}
-                    style={{ marginLeft: 4 }}
-                  >
-                    <ShowSolnBadge
-                      isOpen={showSolution && Boolean(solution)}
-                      loading={loadingSolution}
-                    />
-                  </TouchableOpacity>
-                )}
               </View>
 
               {isAiEnabled && (
@@ -645,6 +620,24 @@ export const QuestionDetailScreen = () => {
               )}
             </View>
           </View>
+
+          {/* Show / hide solution: its own full-width button below the card, not
+              one more icon in the card's action row. */}
+          {(question?.hasSolution || Boolean(solution) || loadingSolution) && (
+            <TouchableOpacity
+              style={[styles.solutionToggleBtn, showSolution && styles.solutionToggleBtnOpen, loadingSolution && { opacity: 0.6 }]}
+              onPress={handleToggleSolution}
+              activeOpacity={0.7}
+              disabled={loadingSolution}
+              accessibilityRole="button"
+              accessibilityLabel={showSolution ? 'Hide solution' : 'Show solution'}
+            >
+              <Feather name={showSolution ? 'eye-off' : 'eye'} size={15} color={COLORS.secondary} />
+              <Text style={styles.solutionToggleText}>
+                {showSolution ? 'Hide solution' : 'Show solution'}
+              </Text>
+            </TouchableOpacity>
+          )}
 
           {/* Worked Solution */}
           {showSolution && (question?.hasSolution || Boolean(solution) || loadingSolution) && (
@@ -1271,6 +1264,24 @@ const styles = StyleSheet.create({
     fontSize: rf(11.5),
     color: COLORS.textMuted,
     lineHeight: rf(16),
+  },
+  solutionToggleBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    height: 44,
+    marginBottom: 16,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: COLORS.secondary,
+    backgroundColor: COLORS.card,
+  },
+  solutionToggleBtnOpen: { backgroundColor: COLORS.secondaryLight },
+  solutionToggleText: {
+    fontFamily: FONTS.displayBold,
+    fontSize: 13.5,
+    color: COLORS.secondary,
   },
   solutionSection: {
     backgroundColor: COLORS.card,

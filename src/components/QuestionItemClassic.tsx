@@ -20,6 +20,7 @@ import { shareQuestion } from '../utils/links';
 import { questionMarkdownStyles, markdownRules } from '../theme/markdownStyles';
 import { COLORS, FONTS, RADIUS } from '../theme/colors';
 import { isAiEnabled } from '../config/features';
+import { openAskAi } from '../utils/askAi';
 
 interface QuestionItemClassicProps {
   question: QuestionSummary;
@@ -81,20 +82,7 @@ export const QuestionItemClassic: React.FC<QuestionItemClassicProps> = React.mem
 
   const handleAskAi = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    if (question?.text) {
-      const coursifyUrl = `https://hasanraiyan.me/coursify?search_ai=${encodeURIComponent(question.text)}&send=true`;
-      try {
-        await WebBrowser.openBrowserAsync(coursifyUrl, {
-          toolbarColor: COLORS.card,
-          controlsColor: COLORS.primary,
-          secondaryToolbarColor: COLORS.background,
-          showTitle: true,
-          enableBarCollapsing: true,
-        });
-      } catch (err) {
-        console.error(err);
-      }
-    }
+    if (question?.text) await openAskAi(question.text);
   };
 
   const handleOpenDetail = (autoOpenSolution?: boolean) => {

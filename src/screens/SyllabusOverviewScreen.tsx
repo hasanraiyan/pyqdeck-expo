@@ -113,48 +113,86 @@ export const SyllabusOverviewScreen = () => {
     });
   };
 
-  const renderTable = (title: string, rows: SyllabusSubjectSummary[], unit: string) => {
+  // Subjects as cards rather than a table: the name gets the full row, and the
+  // progress bar spans the card so completion is readable at a glance.
+  const renderSection = (title: string, rows: SyllabusSubjectSummary[], unit: string) => {
     if (rows.length === 0) return null;
     return (
-      <View key={title}>
-        <View style={styles.thead}>
-          <Text style={[styles.th, { width: 52 }]}>Code</Text>
-          <Text style={[styles.th, { flex: 1 }]}>{title}</Text>
-          <Text style={[styles.th, { width: 62, textAlign: 'right' }]}>Done</Text>
+      <View key={title} style={styles.section}>
+        <View style={styles.sectionHead}>
+          <Text style={styles.sectionTitle}>{title}</Text>
+          <Text style={styles.sectionCount}>{rows.length}</Text>
         </View>
-        {rows.map((s) => {
-          const done = counts[s.id] ?? 0;
-          const w = s.topicCount > 0 ? Math.round((done / s.topicCount) * 100) : 0;
-          return (
-            <TouchableOpacity
-              key={s.id}
-              style={styles.trow}
-              activeOpacity={0.6}
-              onPress={() => openSubject(s)}
-            >
-              <Text style={styles.tcode}>{s.code}</Text>
-              <View style={styles.tname}>
-                <Text style={styles.tnm}>{s.name}</Text>
-                <Text style={styles.tmeta}>
+        <View style={styles.cardList}>
+          {rows.map((s) => {
+            const done = counts[s.id] ?? 0;
+            const w = s.topicCount > 0 ? Math.round((done / s.topicCount) * 100) : 0;
+            const finished = s.topicCount > 0 && done >= s.topicCount;
+            return (
+              <TouchableOpacity
+                key={s.id}
+                style={styles.card}
+                activeOpacity={0.7}
+                onPress={() => openSubject(s)}
+              >
+                <View style={styles.cardTop}>
+                  {s.code ? <Text style={styles.codePill}>{s.code}</Text> : <View />}
+                  {finished ? (
+                    <View style={styles.doneTag}>
+                      <Feather name="check" size={11} color={COLORS.secondary} />
+                      <Text style={styles.doneTagText}>Done</Text>
+                    </View>
+                  ) : (
+                    <Feather name="chevron-right" size={16} color={COLORS.textSubtle} />
+                  )}
+                </View>
+                <Text style={styles.cardName}>{s.name}</Text>
+                <Text style={styles.cardMeta}>
                   {s.kind === 'lab'
                     ? `${s.topicCount} ${unit}`
                     : `${s.moduleCount} modules · ${s.topicCount} ${unit}`}
                 </Text>
-              </View>
-              <View style={styles.tprog}>
-                <Text style={done > 0 ? styles.tfrac : styles.tfracZero}>
-                  {done} / {s.topicCount}
-                </Text>
-                <View style={styles.bar}>
-                  <View style={[styles.barFill, { width: `${w}%` }]} />
+                <View style={styles.progressRow}>
+                  <View style={styles.bar}>
+                    <View style={[styles.barFill, { width: `${w}%` }]} />
+                  </View>
+                  <Text style={done > 0 ? styles.frac : styles.fracZero}>
+                    {done}/{s.topicCount}
+                  </Text>
                 </View>
-              </View>
-            </TouchableOpacity>
-          );
-        })}
+              </TouchableOpacity>
+            );
+          })}
+        </View>
       </View>
     );
   };
+
+  // Whole-semester progress for the summary card.
+  const totalTopics = semester.subjects.reduce((n, s) => n + s.topicCount, 0);
+  const totalDone = semester.subjects.reduce((n, s) => n + Math.min(counts[s.id] ?? 0, s.topicCount), 0);
+  const overallPct = totalTopics > 0 ? Math.round((totalDone / totalTopics) * 100) : 0;
+
+  const renderSummary = () => (
+    <View style={styles.summary}>
+      <View style={styles.summaryTop}>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.summaryLabel}>SEMESTER {semesterNumber}</Text>
+          <Text style={styles.summaryTitle}>
+            {totalDone} of {totalTopics} topics done
+          </Text>
+        </View>
+        <Text style={styles.summaryPct}>{overallPct}%</Text>
+      </View>
+      <View style={styles.summaryBar}>
+        <View style={[styles.summaryBarFill, { width: `${overallPct}%` }]} />
+      </View>
+      <Text style={styles.summaryMeta}>
+        {semester.subjects.length} subjects
+        {semester.totalCredits ? ` · ${semester.totalCredits} credits` : ''}
+      </Text>
+    </View>
+  );
 
   // The university prints an L-T-P-credits table at the top of every semester's
   // syllabus; students read it to see how heavy the term is. Only rendered when
@@ -235,14 +273,15 @@ export const SyllabusOverviewScreen = () => {
           />
         }
       >
-        {renderCreditTable()}
+        {semester.subjects.length > 0 && renderSummary()}
 
         {semester.subjects.length === 0 ? (
           <ScreenEmpty message="No syllabus for this semester yet." />
         ) : (
           <>
-            {renderTable('Theory subject', theory, 'topics')}
-            {renderTable('Laboratory', labs, 'experiments')}
+            {renderSection('Theory', theory, 'topics')}
+            {renderSection('Laboratory', labs, 'experiments')}
+            {renderCreditTable()}
           </>
         )}
       </ScrollView>
@@ -258,14 +297,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  creditBlock: { paddingBottom: 18 },
+  creditBlock: {
+    marginHorizontal: 16,
+    marginTop: 4,
+    backgroundColor: COLORS.card,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 14,
+    overflow: 'hidden',
+  },
   rule: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    paddingHorizontal: 16,
-    paddingTop: 2,
-    paddingBottom: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
   },
   ruleText: {
     fontFamily: FONTS.displayBold,
@@ -319,10 +365,10 @@ const styles = StyleSheet.create({
   cCourse: { flex: 1, minWidth: 0 },
   cNum: { width: 26, textAlign: 'center' },
   cCred: { width: 30, textAlign: 'right' },
-  cName: { fontSize: 13, lineHeight: 17, color: COLORS.text },
+  cName: { fontFamily: FONTS.bodyMedium, fontSize: 13, lineHeight: 17, color: COLORS.text },
   cCode: { fontFamily: FONTS.bodyMedium, fontSize: 10, color: COLORS.textSubtle, marginTop: 2 },
   cVal: { fontFamily: FONTS.bodyMedium, fontSize: 12, color: COLORS.textMuted },
-  cValStrong: { fontFamily: FONTS.displayBold, fontSize: 12, fontWeight: '700', color: COLORS.text },
+  cValStrong: { fontFamily: FONTS.displayBold, fontSize: 12, color: COLORS.text },
   cTotalLabel: {
     fontFamily: FONTS.displayBold,
     fontSize: 10,
@@ -334,61 +380,107 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.bodyMedium,
     fontSize: 9.5,
     color: COLORS.textSubtle,
-    paddingHorizontal: 16,
+    paddingHorizontal: 14,
     paddingTop: 8,
+    paddingBottom: 10,
   },
-  thead: {
+  summary: {
+    marginHorizontal: 16,
+    marginBottom: 18,
+    padding: 16,
+    backgroundColor: COLORS.card,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 16,
+  },
+  summaryTop: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  summaryLabel: {
+    fontFamily: FONTS.displayBold,
+    fontSize: 10,
+    letterSpacing: 1.4,
+    color: COLORS.primary,
+  },
+  summaryTitle: {
+    fontFamily: FONTS.displayBold,
+    fontSize: 18,
+    color: COLORS.text,
+    marginTop: 2,
+    letterSpacing: -0.3,
+  },
+  summaryPct: { fontFamily: FONTS.display, fontSize: 28, color: COLORS.secondary, letterSpacing: -0.8 },
+  summaryBar: {
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: COLORS.borderLight,
+    overflow: 'hidden',
+    marginTop: 14,
+  },
+  summaryBarFill: { height: '100%', borderRadius: 3, backgroundColor: COLORS.secondary },
+  summaryMeta: { fontFamily: FONTS.bodyMedium, fontSize: 12, color: COLORS.textMuted, marginTop: 10 },
+  section: { marginBottom: 18 },
+  sectionHead: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 8,
     paddingHorizontal: 16,
-    paddingVertical: 7,
-    backgroundColor: COLORS.cardSecondary,
-    borderTopWidth: 1,
-    borderBottomWidth: 1,
-    borderColor: COLORS.border,
+    marginBottom: 8,
   },
-  th: {
+  sectionTitle: {
     fontFamily: FONTS.displayBold,
-    fontSize: 9.5,
-    letterSpacing: 1.2,
+    fontSize: 11,
+    letterSpacing: 1.3,
     textTransform: 'uppercase',
     color: COLORS.textSubtle,
   },
-  trow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    paddingHorizontal: 16,
-    paddingVertical: 13,
-    minHeight: 62,
-    backgroundColor: COLORS.card,
-    borderBottomWidth: 1,
-    borderColor: COLORS.border,
-  },
-  tcode: {
-    fontFamily: FONTS.displayBold,
+  sectionCount: {
+    fontFamily: FONTS.bodySemi,
     fontSize: 11,
     color: COLORS.textMuted,
-    width: 52,
+    backgroundColor: COLORS.cardSecondary,
+    borderRadius: 8,
+    paddingHorizontal: 7,
+    paddingVertical: 1,
+    overflow: 'hidden',
   },
-  tname: { flex: 1 },
-  tnm: { fontSize: 14, lineHeight: 18, color: COLORS.text },
-  tmeta: { fontFamily: FONTS.bodyMedium, fontSize: 10.5, color: COLORS.textSubtle, marginTop: 3 },
-  tprog: { width: 62, alignItems: 'flex-end' },
-  tfrac: {
+  cardList: { gap: 10, paddingHorizontal: 16 },
+  card: {
+    backgroundColor: COLORS.card,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 14,
+    padding: 14,
+  },
+  cardTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  codePill: {
     fontFamily: FONTS.displayBold,
-    fontSize: 11.5,
-    color: COLORS.secondary,
+    fontSize: 10.5,
+    color: COLORS.textMuted,
+    backgroundColor: COLORS.cardSecondary,
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    overflow: 'hidden',
+    letterSpacing: 0.4,
   },
-  tfracZero: { fontFamily: FONTS.bodyMedium, fontSize: 11.5, color: COLORS.textSubtle },
+  doneTag: { flexDirection: 'row', alignItems: 'center', gap: 3 },
+  doneTagText: { fontFamily: FONTS.displayBold, fontSize: 11, color: COLORS.secondary },
+  cardName: {
+    fontFamily: FONTS.displayBold,
+    fontSize: 15,
+    lineHeight: 20,
+    color: COLORS.text,
+    marginTop: 8,
+  },
+  cardMeta: { fontFamily: FONTS.bodyMedium, fontSize: 11.5, color: COLORS.textSubtle, marginTop: 3 },
+  progressRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 12 },
+  frac: { fontFamily: FONTS.displayBold, fontSize: 11.5, color: COLORS.secondary },
+  fracZero: { fontFamily: FONTS.bodyMedium, fontSize: 11.5, color: COLORS.textSubtle },
   bar: {
-    height: 4,
-    borderRadius: 2,
+    flex: 1,
+    height: 5,
+    borderRadius: 3,
     backgroundColor: COLORS.borderLight,
     overflow: 'hidden',
-    marginTop: 5,
-    alignSelf: 'stretch',
   },
-  barFill: { height: '100%', backgroundColor: COLORS.secondary },
+  barFill: { height: '100%', borderRadius: 3, backgroundColor: COLORS.secondary },
 });

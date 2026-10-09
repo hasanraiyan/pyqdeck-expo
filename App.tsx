@@ -33,7 +33,7 @@ import {
 import { COLORS, FONTS } from './src/theme/colors';
 import { getShellWidth } from './src/theme/layout';
 import { ShellTabBar } from './src/components/ShellTabBar';
-import { getSidebarCollapsed, setSidebarCollapsed } from './src/utils/settings';
+import { getSidebarCollapsed, setSidebarCollapsed, getOldUiEnabled } from './src/utils/settings';
 import { useResponsive } from './src/utils/responsive';
 import { installWebStyles } from './src/utils/webStyles';
 import { HomeScreen } from './src/screens/HomeScreen';
@@ -411,6 +411,8 @@ function AppContent() {
 
   useEffect(() => {
     void migrateToQueryCache();
+    // Warm the saved question layout so the list opens in it on the first frame.
+    void getOldUiEnabled();
   }, []);
 
   useEffect(() => {
