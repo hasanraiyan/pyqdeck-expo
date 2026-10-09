@@ -9,7 +9,6 @@ import {
 } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
-import * as WebBrowser from 'expo-web-browser';
 import { Feather } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { NativeContentRenderer } from './NativeContentRenderer';
@@ -19,6 +18,7 @@ import { MarksBadge, AskAiBadge, YearBadge } from './Badge';
 import { InlineMathText } from './InlineMathText';
 import { useResponsive } from '../utils/responsive';
 import { isAiEnabled } from '../config/features';
+import { openAskAi } from '../utils/askAi';
 import { shareQuestion } from '../utils/links';
 
 interface QuestionItemProps {
@@ -79,20 +79,7 @@ export const QuestionItem: React.FC<QuestionItemProps> = React.memo(({
 
   const handleAskAi = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    if (question?.text) {
-      const coursifyUrl = `https://hasanraiyan.me/coursify?search_ai=${encodeURIComponent(question.text)}&send=true`;
-      try {
-        await WebBrowser.openBrowserAsync(coursifyUrl, {
-          toolbarColor: COLORS.card,
-          controlsColor: COLORS.primary,
-          secondaryToolbarColor: COLORS.background,
-          showTitle: true,
-          enableBarCollapsing: true,
-        });
-      } catch (err) {
-        console.error(err);
-      }
-    }
+    if (question?.text) await openAskAi(question.text);
   };
 
   const handleOpenDetail = (autoOpenSolution?: boolean) => {

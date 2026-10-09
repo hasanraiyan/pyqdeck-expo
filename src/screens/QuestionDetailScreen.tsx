@@ -6,7 +6,6 @@ import {
   ScrollView,
   TouchableOpacity,
   StyleSheet,
-  Linking,
   TextInput,
   Modal,
   TouchableWithoutFeedback,
@@ -46,6 +45,7 @@ import { useRequireAuth } from '../auth/useRequireAuth';
 import { WaveLoader } from '../components/WaveLoader';
 import { CircleLoader } from '../components/CircleLoader';
 import { isAiEnabled } from '../config/features';
+import { openAskAi } from '../utils/askAi';
 import { userMessage } from '../utils/netError';
 import { useDialogLayout } from '../utils/dialog';
 
@@ -274,19 +274,7 @@ export const QuestionDetailScreen = () => {
 
   const openAiSearch = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    if (!question?.text) return;
-    const coursifyUrl = `https://hasanraiyan.me/coursify?search_ai=${encodeURIComponent(question.text)}&send=true`;
-    try {
-      await WebBrowser.openBrowserAsync(coursifyUrl, {
-        toolbarColor: COLORS.card,
-        controlsColor: COLORS.primary,
-        secondaryToolbarColor: COLORS.background,
-        showTitle: true,
-        enableBarCollapsing: true,
-      });
-    } catch (err) {
-      Linking.openURL(coursifyUrl).catch((e) => console.error(e));
-    }
+    if (question?.text) await openAskAi(question.text);
   };
 
   const handleGoogleSearch = async () => {

@@ -27,10 +27,11 @@ import {
   getOldUiEnabled,
   setOldUiEnabled,
 } from '../utils/settings';
+import { ASK_AI_ENGINES, AskAiEngineId, getAskAiEngine, setAskAiEngine } from '../utils/askAi';
 import { openStoreListing, checkForUpdateInteractive } from '../utils/appUpdate';
 import * as Cache from '../db/cacheService';
 import { clearQueryCache } from '../api/queryClient';
-import { isAuthEnabled } from '../config/features';
+import { isAuthEnabled, isAiEnabled } from '../config/features';
 import { resetOnboarding } from '../utils/onboarding';
 
 const WEBSITE_URL = 'https://pyqdeck.in';
@@ -50,12 +51,14 @@ export const SettingsScreen = ({ navigation }: any) => {
 
   const [volumeScrollOn, setVolumeScrollOn] = useState(true);
   const [oldUiOn, setOldUiOn] = useState(false);
+  const [aiEngine, setAiEngine] = useState<AskAiEngineId>('coursify');
   const [clearing, setClearing] = useState(false);
   const [cleared, setCleared] = useState(false);
   const [checkingUpdate, setCheckingUpdate] = useState(false);
 
   useEffect(() => {
     getOldUiEnabled().then(setOldUiOn);
+    getAskAiEngine().then(setAiEngine);
     if (Platform.OS === 'android') {
       getVolumeScrollEnabled().then(setVolumeScrollOn);
     }
@@ -68,6 +71,15 @@ export const SettingsScreen = ({ navigation }: any) => {
     } catch {}
     setOldUiOn(value);
     await setOldUiEnabled(value);
+  };
+
+  const chooseAiEngine = async (id: AskAiEngineId) => {
+    if (id === aiEngine) return;
+    try {
+      await Haptics.selectionAsync();
+    } catch {}
+    setAiEngine(id);
+    await setAskAiEngine(id);
   };
 
   const toggleVolumeScroll = async (value: boolean) => {
@@ -249,6 +261,32 @@ export const SettingsScreen = ({ navigation }: any) => {
           </TouchableOpacity>
         </View>
 
+        {isAiEnabled && (
+          <>
+            <Text style={styles.sectionHeading}>ASK AI</Text>
+            <View style={styles.card}>
+              {ASK_AI_ENGINES.map((engine, i) => (
+                <SettingsRow
+                  key={engine.id}
+                  icon="message-circle"
+                  label={engine.name}
+                  subtitle={engine.hint}
+                  onPress={() => chooseAiEngine(engine.id)}
+                  last={i === ASK_AI_ENGINES.length - 1}
+                  right={
+                    <View style={[styles.radioCircle, aiEngine === engine.id && styles.radioCircleActive]}>
+                      {aiEngine === engine.id && <View style={styles.radioDot} />}
+                    </View>
+                  }
+                />
+              ))}
+            </View>
+            <Text style={styles.aiNote}>
+              Opens the question in the AI you pick. Apart from Coursify, the question is also copied, so you can paste it if the box opens empty.
+            </Text>
+          </>
+        )}
+
         {Platform.OS === 'android' && (
           <>
             <Text style={styles.sectionHeading}>CONTROLS</Text>
@@ -362,6 +400,13 @@ const styles = StyleSheet.create({
   },
   scroll: {
     paddingTop: verticalScale(16),
+  },
+  aiNote: {
+    fontFamily: FONTS.body,
+    fontSize: rf(11.5),
+    lineHeight: rf(16),
+    color: COLORS.textMuted,
+    marginTop: 8,
   },
   sectionHeading: {
     fontFamily: FONTS.displayBold,
