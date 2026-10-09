@@ -19,8 +19,10 @@ interface StepperTimelineBlockProps {
   renderContent?: (content: string) => React.ReactNode;
 }
 
-const DOT_SIZE = 30;
-const DOT_GAP = 10;
+const DOT_SIZE = 28;
+const DOT_GAP = 8;
+// At most this many dots are visible at once; more steps scroll sideways.
+const MAX_VISIBLE_DOTS = 4;
 const DOT_STEP = DOT_SIZE + DOT_GAP;
 
 export const StepperTimelineBlock: React.FC<StepperTimelineBlockProps> = React.memo(({
@@ -223,12 +225,16 @@ const PagedStepper: React.FC<PagedStepperProps> = ({ steps, renderContent, onVie
         </Animated.View>
 
         <View style={styles.pagedFooter}>
+          <View style={styles.footerLeft}>
           <ScrollView
             ref={dotsScrollRef}
             horizontal
             showsHorizontalScrollIndicator={false}
             onLayout={onDotsLayout}
-            style={styles.dotsScroll}
+            style={[
+              styles.dotsScroll,
+              { width: Math.min(steps.length, MAX_VISIBLE_DOTS) * DOT_STEP - DOT_GAP },
+            ]}
             contentContainerStyle={styles.dotsScrollContent}
           >
             <View style={[styles.dotsRow, { width: steps.length * DOT_STEP - DOT_GAP }]}>
@@ -282,9 +288,9 @@ const PagedStepper: React.FC<PagedStepperProps> = ({ steps, renderContent, onVie
           >
             <Text style={styles.viewAllText}>View all</Text>
           </TouchableOpacity>
-        </View>
+          </View>
 
-        <View style={styles.navRow}>
+          <View style={styles.footerRight}>
           <TouchableOpacity
             onPress={() => goTo(safeIndex - 1)}
             disabled={isFirst}
@@ -296,14 +302,16 @@ const PagedStepper: React.FC<PagedStepperProps> = ({ steps, renderContent, onVie
             <Text style={styles.navBtnGhostText}>Back</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            onPress={() => (isLast ? onViewAll() : goTo(safeIndex + 1))}
+            onPress={() => goTo(safeIndex + 1)}
+            disabled={isLast}
             activeOpacity={0.8}
-            style={[styles.navBtn, styles.navBtnPrimary]}
+            style={[styles.navBtn, styles.navBtnPrimary, isLast && styles.navBtnDisabled]}
             accessibilityRole="button"
-            accessibilityLabel={isLast ? 'View all steps' : 'Next step'}
+            accessibilityLabel="Next step"
           >
-            <Text style={styles.navBtnPrimaryText}>{isLast ? 'View all' : 'Next'}</Text>
+            <Text style={styles.navBtnPrimaryText}>Next</Text>
           </TouchableOpacity>
+          </View>
         </View>
       </View>
     </View>
@@ -439,19 +447,33 @@ const styles = StyleSheet.create({
     letterSpacing: 0.2,
     marginBottom: 6,
   },
+  // Everything sits on one line: dots + View all on the left, Back/Next right.
   pagedFooter: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingLeft: 14,
-    paddingRight: 8,
-    paddingTop: 8,
+    justifyContent: 'space-between',
+    paddingHorizontal: 14,
+    paddingTop: 10,
+    paddingBottom: 14,
+  },
+  footerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexShrink: 1,
+    minWidth: 0,
+    marginRight: 8,
+  },
+  footerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
   dotsScroll: {
-    flex: 1,
+    flexGrow: 0,
+    flexShrink: 1,
   },
   dotsScrollContent: {
-    paddingVertical: 4,
-    paddingRight: 8,
+    paddingVertical: 2,
   },
   dotsRow: {
     height: DOT_SIZE,
@@ -484,7 +506,7 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   viewAllBtn: {
-    paddingHorizontal: 8,
+    marginLeft: 8,
     paddingVertical: 6,
   },
   viewAllText: {
@@ -493,19 +515,10 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: COLORS.primary,
   },
-  navRow: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    gap: 8,
-    paddingHorizontal: 14,
-    paddingTop: 10,
-    paddingBottom: 14,
-  },
   navBtn: {
-    minWidth: 72,
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 9,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
     borderRadius: RADIUS.md,
   },
   navBtnGhost: {
