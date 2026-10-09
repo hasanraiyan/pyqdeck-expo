@@ -1169,8 +1169,8 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
   },
   filterTabPillActive: {
-    backgroundColor: COLORS.text,
-    borderColor: COLORS.text,
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
   },
   filterTabPillText: {
     fontFamily: FONTS.mono,
