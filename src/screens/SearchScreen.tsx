@@ -46,6 +46,7 @@ export const SearchScreen = () => {
   const linkTo = useLinkTo();
   const { readMaxWidth, hPadding, compact } = useResponsive();
   const [query, setQuery] = useState('');
+  const [inputFocused, setInputFocused] = useState(false);
   const [activeTab, setActiveTab] = useState<SearchTab>('all');
   const queryClient = useQueryClient();
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
@@ -484,10 +485,16 @@ export const SearchScreen = () => {
             { maxWidth: readMaxWidth + hPadding * 2, paddingHorizontal: hPadding },
           ]}
         >
-          <Text style={styles.badgeText}>FIND ANY QUESTION OR TOPIC</Text>
           <Text style={styles.title}>Search</Text>
+          <Text style={styles.subtitle}>Questions, notes and subjects from BEU papers</Text>
 
-          <View style={[styles.searchBar, isInputDisabled && styles.searchBarDisabled]}>
+          <View
+            style={[
+              styles.searchBar,
+              inputFocused && styles.searchBarFocused,
+              isInputDisabled && styles.searchBarDisabled,
+            ]}
+          >
             <TouchableOpacity
               onPress={handleSearch}
               disabled={isInputDisabled}
@@ -496,8 +503,8 @@ export const SearchScreen = () => {
             >
               <Feather
                 name="search"
-                size={16}
-                color={query.trim().length > 0 ? COLORS.primary : COLORS.textMuted}
+                size={18}
+                color={query.trim().length > 0 || inputFocused ? COLORS.primary : COLORS.textMuted}
               />
             </TouchableOpacity>
             <TextInput
@@ -513,6 +520,8 @@ export const SearchScreen = () => {
                   setActiveTab('all');
                 }
               }}
+              onFocus={() => setInputFocused(true)}
+              onBlur={() => setInputFocused(false)}
               onSubmitEditing={handleSearch}
               returnKeyType="search"
               blurOnSubmit={true}
@@ -564,7 +573,7 @@ export const SearchScreen = () => {
           {!hasSearched && !loading && (
             <View style={styles.suggestedSection}>
               {recentSearches.length > 0 && (
-                <View style={{ marginBottom: 20 }}>
+                <View style={{ marginBottom: 14 }}>
                   <View style={styles.recentHeaderRow}>
                     <Text style={styles.suggestedHeading}>RECENT SEARCHES</Text>
                     <TouchableOpacity onPress={clearRecentSearches} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
@@ -581,7 +590,9 @@ export const SearchScreen = () => {
                         onPress={() => handleSuggestionPress(term)}
                       >
                         <View style={styles.suggestedRowLeft}>
-                          <Feather name="clock" size={13} color={COLORS.textMuted} style={{ marginRight: 10 }} />
+                          <View style={styles.rowIcon}>
+                            <Feather name="clock" size={13} color={COLORS.textMuted} />
+                          </View>
                           <Text style={styles.suggestedRowText}>{term}</Text>
                         </View>
                         <Feather name="arrow-up-left" size={14} color={COLORS.textMuted} />
@@ -604,7 +615,9 @@ export const SearchScreen = () => {
                     onPress={() => handleSuggestionPress(term)}
                   >
                     <View style={styles.suggestedRowLeft}>
-                      <Feather name="book-open" size={13} color={COLORS.primary} style={{ marginRight: 10 }} />
+                      <View style={styles.rowIcon}>
+                            <Feather name="book-open" size={13} color={COLORS.primary} />
+                          </View>
                       <Text style={styles.suggestedRowText}>{term}</Text>
                     </View>
                     <Feather name="arrow-up-left" size={14} color={COLORS.textMuted} />
@@ -775,7 +788,7 @@ export const SearchScreen = () => {
               <Text style={styles.sectionHeading}>
                 QUESTIONS ({questionResults.length})
               </Text>
-              <View style={{ gap: 10 }}>
+              <View style={{ gap: 8 }}>
                 {questionResults.map((q) => (
                   <TouchableOpacity
                     key={questionKey(q)}
@@ -878,39 +891,39 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.background,
   },
   header: {
-    backgroundColor: COLORS.card,
-    borderBottomWidth: 1,
-    borderColor: COLORS.borderDashed,
+    backgroundColor: COLORS.background,
     alignItems: 'center',
   },
   headerInner: {
     width: '100%',
-    paddingTop: 16,
-    paddingBottom: 16,
-  },
-  badgeText: {
-    fontFamily: FONTS.displayBold,
-    fontSize: rf(10.5),
-    color: COLORS.primary,
-    letterSpacing: 1.5,
-    marginBottom: 4,
+    paddingTop: 8,
+    paddingBottom: 6,
   },
   title: {
     fontFamily: FONTS.display,
-    fontSize: rf(27),
+    fontSize: rf(30),
     color: COLORS.text,
-    letterSpacing: -0.5,
+    letterSpacing: -0.8,
+  },
+  subtitle: {
+    fontFamily: FONTS.body,
+    fontSize: rf(13),
+    color: COLORS.textMuted,
+    marginTop: 0,
   },
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.background,
-    borderWidth: 1,
+    backgroundColor: COLORS.card,
+    borderWidth: 1.5,
     borderColor: COLORS.border,
-    borderRadius: 4,
+    borderRadius: 16,
     paddingHorizontal: 12,
-    marginTop: 12,
-    height: 42,
+    marginTop: 10,
+    height: 48,
+  },
+  searchBarFocused: {
+    borderColor: COLORS.primary,
   },
   searchBarDisabled: {
     opacity: 0.7,
@@ -930,17 +943,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   searchActionBtn: {
-    padding: 6,
-    marginLeft: 2,
-    backgroundColor: COLORS.cardSecondary,
-    borderRadius: 4,
+    width: 32,
+    height: 32,
+    marginLeft: 4,
+    backgroundColor: COLORS.primaryLight,
+    borderRadius: 10,
     justifyContent: 'center',
     alignItems: 'center',
   },
   searchInput: {
     flex: 1,
+    fontFamily: FONTS.body,
     color: COLORS.text,
-    fontSize: rf(13.5),
+    fontSize: rf(14.5),
   },
   clearBtn: {
     padding: 6,
@@ -972,18 +987,18 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scroll: {
-    paddingVertical: verticalScale(16),
+    paddingVertical: verticalScale(8),
   },
   suggestedSection: {
     width: '100%',
-    paddingTop: 8,
-    paddingBottom: 24,
+    paddingTop: 4,
+    paddingBottom: 8,
   },
   recentHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 12,
+    marginBottom: 8,
   },
   clearRecentText: {
     fontFamily: FONTS.displayBold,
@@ -995,25 +1010,34 @@ const styles = StyleSheet.create({
     fontSize: rf(11),
     color: COLORS.textSubtle,
     letterSpacing: 1.2,
-    marginBottom: 12,
+    marginBottom: 8,
   },
   suggestedList: {
     width: '100%',
     backgroundColor: COLORS.card,
     borderWidth: 1,
     borderColor: COLORS.border,
-    borderRadius: 4,
+    borderRadius: 16,
     overflow: 'hidden',
+  },
+  rowIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: COLORS.cardSecondary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
   },
   suggestedRow: {
     width: '100%',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 13,
-    paddingHorizontal: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.borderLight,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: COLORS.border,
   },
   suggestedRowLeft: {
     flexDirection: 'row',
@@ -1023,18 +1047,19 @@ const styles = StyleSheet.create({
   },
   suggestedRowText: {
     fontFamily: FONTS.bodyMedium,
-    fontSize: rf(12.5),
+    fontSize: rf(13.5),
     color: COLORS.text,
+    flexShrink: 1,
   },
   section: {
-    marginBottom: 24,
+    marginBottom: 16,
   },
   sectionHeading: {
     fontFamily: FONTS.displayBold,
     fontSize: rf(11),
     color: COLORS.textSubtle,
     letterSpacing: 1.2,
-    marginBottom: 10,
+    marginBottom: 8,
   },
   subjectsGrid: {
     gap: 8,
@@ -1046,16 +1071,16 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.card,
     borderWidth: 1,
     borderColor: COLORS.border,
-    borderRadius: 4,
-    padding: 14,
+    borderRadius: 14,
+    padding: 12,
   },
   subjectLeft: {
     flex: 1,
     paddingRight: 12,
   },
   subjectName: {
+    fontFamily: FONTS.displayBold,
     fontSize: rf(14.5),
-    fontWeight: '600',
     color: COLORS.text,
   },
   subjectSub: {
@@ -1075,13 +1100,13 @@ const styles = StyleSheet.create({
     color: COLORS.textMuted,
   },
   // Tighter padding on pointer-first windows (FR-C1).
-  cardCompact: { padding: 10 },
+  cardCompact: { padding: 8 },
   questionResultCard: {
     backgroundColor: COLORS.card,
     borderWidth: 1,
     borderColor: COLORS.border,
-    borderRadius: 4,
-    padding: 14,
+    borderRadius: 14,
+    padding: 12,
   },
   resultSubjectName: {
     fontFamily: FONTS.bodyMedium,
@@ -1131,17 +1156,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   emptyTitle: {
+    fontFamily: FONTS.displayBold,
     fontSize: rf(16),
-    fontWeight: '700',
     color: COLORS.text,
     marginBottom: 4,
   },
   emptySubtitle: {
+    fontFamily: FONTS.body,
     fontSize: rf(13),
     color: COLORS.textMuted,
   },
   filterTabsContainer: {
-    marginBottom: 16,
+    marginBottom: 10,
     marginHorizontal: -4,
   },
   filterTabsRow: {
@@ -1158,8 +1184,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.border,
     borderRadius: 20,
-    paddingHorizontal: 13,
-    paddingVertical: 7,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
   },
   filterTabPillActive: {
     backgroundColor: COLORS.primary,
@@ -1188,8 +1214,8 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.card,
     borderWidth: 1,
     borderColor: COLORS.border,
-    borderRadius: 4,
-    padding: 14,
+    borderRadius: 14,
+    padding: 12,
   },
   noteTitle: {
     fontFamily: FONTS.displayBold,
@@ -1199,6 +1225,7 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   noteSnippet: {
+    fontFamily: FONTS.body,
     fontSize: rf(12.5),
     color: COLORS.textMuted,
     lineHeight: rf(18),
@@ -1235,13 +1262,13 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.card,
     borderWidth: 1,
     borderColor: COLORS.border,
-    borderRadius: 4,
+    borderRadius: 14,
     paddingHorizontal: 16,
     marginBottom: 20,
   },
   tabEmptyTitle: {
+    fontFamily: FONTS.displayBold,
     fontSize: rf(14.5),
-    fontWeight: '600',
     color: COLORS.text,
     marginBottom: 4,
   },

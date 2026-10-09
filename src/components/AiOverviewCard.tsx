@@ -16,7 +16,7 @@ import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import * as Clipboard from 'expo-clipboard';
 import Svg, { Defs, LinearGradient as SvgGradient, Stop, Rect } from 'react-native-svg';
-import { COLORS, FONTS, RADIUS, SHADOWS } from '../theme/colors';
+import { COLORS, FONTS, RADIUS } from '../theme/colors';
 import { markdownRules } from '../theme/markdownStyles';
 import { AiOverview, AiOverviewReference } from '../types';
 import { NativeContentRenderer } from './NativeContentRenderer';
@@ -452,9 +452,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.border,
     borderRadius: RADIUS.md,
-    padding: 14,
-    marginBottom: 16,
-    ...SHADOWS.subtle,
+    padding: 12,
+    marginBottom: 10,
   },
   headerRow: {
     flexDirection: 'row',
@@ -530,7 +529,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.primaryBorder,
     backgroundColor: COLORS.card,
-    ...SHADOWS.subtle,
   },
   pillToggleText: {
     fontFamily: FONTS.bodySemi,
