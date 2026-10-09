@@ -6,13 +6,28 @@ import {
   registerMermaidWorker,
   handleWorkerMessage,
   getWorkerHtml,
+  isWorkerRequested,
+  subscribeWorkerRequested,
 } from '../services/mermaidRenderer';
 
 export const MermaidWorker: React.FC = () => {
   const [mermaidJs, setMermaidJs] = useState<string | null>(null);
+  const [needed, setNeeded] = useState<boolean>(isWorkerRequested());
   const webViewRef = useRef<WebView>(null);
 
+  // Stay idle until the first diagram asks for a render.
   useEffect(() => {
+    if (needed) return;
+    // A render may have been requested between first render and this effect.
+    if (isWorkerRequested()) {
+      setNeeded(true);
+      return;
+    }
+    return subscribeWorkerRequested(() => setNeeded(true));
+  }, [needed]);
+
+  useEffect(() => {
+    if (!needed) return;
     let mounted = true;
     getMermaidJs()
       .then((js) => {
@@ -27,7 +42,7 @@ export const MermaidWorker: React.FC = () => {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [needed]);
 
   useEffect(() => {
     // Register the callback to inject javascript into this worker WebView

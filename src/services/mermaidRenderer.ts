@@ -42,6 +42,28 @@ let jobTimeoutTimer: ReturnType<typeof setTimeout> | null = null;
 
 const JOB_TIMEOUT_MS = 6000;
 
+// The worker WebView (and its 2.5 MB mermaid bundle) is only started once a
+// diagram actually needs rendering, so screens without diagrams never pay for it.
+let workerRequested = false;
+const workerRequestListeners = new Set<() => void>();
+
+export function isWorkerRequested(): boolean {
+  return workerRequested;
+}
+
+export function subscribeWorkerRequested(listener: () => void): () => void {
+  workerRequestListeners.add(listener);
+  return () => {
+    workerRequestListeners.delete(listener);
+  };
+}
+
+function requestWorker() {
+  if (workerRequested) return;
+  workerRequested = true;
+  workerRequestListeners.forEach((l) => l());
+}
+
 export function getCachedDiagram(code: string): RenderResult | undefined {
   return svgCache.get(code.trim());
 }
@@ -159,7 +181,8 @@ export function renderMermaid(code: string): Promise<RenderResult> {
     });
   }
 
-  // 3. New Job
+  // 3. New Job (wakes the worker WebView if it has not started yet)
+  requestWorker();
   return new Promise<RenderResult>((resolve, reject) => {
     inFlightRequests.set(trimmed, []);
 
