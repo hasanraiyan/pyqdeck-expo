@@ -7,8 +7,9 @@ import {
   Linking,
   LayoutChangeEvent,
   Dimensions,
+  Platform,
 } from 'react-native';
-import YoutubePlayer from 'react-native-youtube-iframe';
+import { YouTubePlayer } from './YouTubePlayer';
 import * as WebBrowser from 'expo-web-browser';
 import * as Haptics from 'expo-haptics';
 import { Feather } from '@expo/vector-icons';
@@ -41,6 +42,10 @@ export const YouTubeCard: React.FC<YouTubeCardProps> = React.memo(({
   }, [startTime]);
 
   const handleOpenApp = async () => {
+    if (Platform.OS === 'web') {
+      await Linking.openURL(url).catch(() => {});
+      return;
+    }
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     const appUrl = `vnd.youtube://${videoId}`;
     const canOpen = await Linking.canOpenURL(appUrl).catch(() => false);
@@ -97,23 +102,16 @@ export const YouTubeCard: React.FC<YouTubeCardProps> = React.memo(({
               </TouchableOpacity>
             </View>
           ) : (
-            <YoutubePlayer
+            <YouTubePlayer
               height={playerHeight}
               width={containerWidth > 0 ? containerWidth : undefined}
-              play={autoPlay}
+              autoPlay={autoPlay}
               videoId={videoId}
-              initialPlayerParams={{
-                start: startTime,
-                rel: false,
-                preventFullScreen: false,
-              }}
+              startTime={startTime}
+              title={title}
               onError={(err: string) => {
                 console.warn('YouTube Player error:', err);
                 setPlayerError(true);
-              }}
-              webViewProps={{
-                androidLayerType: 'hardware',
-                allowsInlineMediaPlayback: true,
               }}
             />
           )}
