@@ -364,9 +364,8 @@ const styles = StyleSheet.create({
     paddingTop: verticalScale(16),
   },
   sectionHeading: {
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.displayBold,
     fontSize: rf(11),
-    fontWeight: '700',
     color: COLORS.textSubtle,
     letterSpacing: 1.5,
     marginBottom: 8,
@@ -379,13 +378,12 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   statusText: {
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.displayBold,
     fontSize: rf(11.5),
-    fontWeight: '600',
     color: COLORS.primary,
   },
   versionText: {
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.bodyMedium,
     fontSize: rf(11),
     color: COLORS.textSubtle,
     textAlign: 'center',
@@ -447,9 +445,8 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.primary,
   },
   modeTitle: {
-    fontFamily: FONTS.serif,
+    fontFamily: FONTS.displayBold,
     fontSize: rf(13.5),
-    fontWeight: '700',
     color: COLORS.text,
     marginBottom: 4,
   },

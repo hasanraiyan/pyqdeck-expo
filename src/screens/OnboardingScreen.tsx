@@ -308,7 +308,7 @@ const styles = StyleSheet.create({
     borderColor: COLORS.primary,
   },
   demoChipText: {
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.bodyMedium,
     fontSize: rf(10.5),
     color: COLORS.textMuted,
   },
@@ -333,7 +333,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   demoSubjectName: {
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.bodyMedium,
     fontSize: rf(9.5),
     color: COLORS.textSubtle,
     letterSpacing: 0.8,
@@ -348,14 +348,13 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   demoSolvedText: {
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.displayBold,
     fontSize: rf(8.5),
-    fontWeight: '700',
     color: COLORS.secondary,
     letterSpacing: 0.5,
   },
   demoQuestionText: {
-    fontFamily: FONTS.serif,
+    fontFamily: FONTS.body,
     fontSize: rf(13.5),
     color: COLORS.text,
     lineHeight: rf(20),
@@ -377,7 +376,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   demoModuleText: {
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.bodyMedium,
     fontSize: rf(9.5),
     color: COLORS.textSubtle,
     letterSpacing: 0.5,
@@ -392,9 +391,8 @@ const styles = StyleSheet.create({
     marginHorizontal: 16,
   },
   demoZapHeading: {
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.displayBold,
     fontSize: rf(10.5),
-    fontWeight: '700',
     color: COLORS.textSubtle,
     letterSpacing: 1.2,
   },
@@ -402,9 +400,8 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.card,
   },
   demoCodeText: {
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.displayBold,
     fontSize: rf(9.5),
-    fontWeight: '700',
     color: COLORS.textSubtle,
     letterSpacing: 0.5,
   },
@@ -415,20 +412,18 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   demoRecentPillText: {
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.displayBold,
     fontSize: rf(8.5),
     color: COLORS.primary,
-    fontWeight: '600',
   },
   demoJumpTitle: {
-    fontFamily: FONTS.serif,
+    fontFamily: FONTS.displayBold,
     fontSize: rf(15),
-    fontWeight: '700',
     color: COLORS.text,
     marginBottom: 2,
   },
   demoJumpSub: {
-    fontFamily: FONTS.sans,
+    fontFamily: FONTS.body,
     fontSize: rf(12),
     color: COLORS.textMuted,
     marginBottom: 12,
@@ -442,9 +437,8 @@ const styles = StyleSheet.create({
     borderTopColor: COLORS.border,
   },
   demoResumeText: {
-    fontFamily: FONTS.sans,
+    fontFamily: FONTS.bodySemi,
     fontSize: rf(12),
-    fontWeight: '600',
     color: COLORS.primary,
   },
   demoArrowCircle: {
@@ -472,7 +466,7 @@ const styles = StyleSheet.create({
   },
   demoSearchInputText: {
     flex: 1,
-    fontFamily: FONTS.sans,
+    fontFamily: FONTS.body,
     fontSize: rf(12.5),
     color: COLORS.text,
   },
@@ -485,7 +479,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   demoResultKicker: {
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.bodyMedium,
     fontSize: rf(9.5),
     color: COLORS.textSubtle,
     letterSpacing: 0.8,
@@ -498,7 +492,7 @@ const styles = StyleSheet.create({
     paddingBottom: 12,
   },
   kicker: {
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.bodyMedium,
     fontSize: rf(11),
     color: COLORS.primary,
     letterSpacing: 1.2,
@@ -506,7 +500,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   heading: {
-    fontFamily: FONTS.serif,
+    fontFamily: FONTS.display,
     fontSize: rf(26),
     color: COLORS.text,
     lineHeight: rf(34),
@@ -520,7 +514,7 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   body: {
-    fontFamily: FONTS.sans,
+    fontFamily: FONTS.body,
     fontSize: rf(14),
     color: COLORS.textMuted,
     lineHeight: rf(21),
@@ -541,7 +535,7 @@ const styles = StyleSheet.create({
     minWidth: 48,
   },
   skipText: {
-    fontFamily: FONTS.sans,
+    fontFamily: FONTS.body,
     fontSize: rf(14),
     color: COLORS.textMuted,
   },
@@ -574,9 +568,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   nextText: {
-    fontFamily: FONTS.sans,
+    fontFamily: FONTS.bodySemi,
     fontSize: rf(14),
-    fontWeight: '600',
     color: '#fff',
   },
 });

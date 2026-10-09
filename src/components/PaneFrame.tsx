@@ -127,7 +127,7 @@ const styles = StyleSheet.create({
     borderBottomColor: COLORS.border,
   },
   headerText: { flex: 1, minWidth: 0 },
-  title: { fontFamily: FONTS.serif, fontSize: rf(18), color: COLORS.text },
+  title: { fontFamily: FONTS.displayBold, fontSize: rf(18), color: COLORS.text },
   subtitle: { marginTop: 2, fontSize: rf(11), color: COLORS.textMuted },
   iconBtn: {
     width: 30,

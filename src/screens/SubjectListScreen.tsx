@@ -400,9 +400,8 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   tabLabelText: {
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.displayBold,
     fontSize: 12.5,
-    fontWeight: '600',
   },
   tabLabelTextActive: {
     fontWeight: '700',
@@ -420,9 +419,8 @@ const styles = StyleSheet.create({
     borderColor: COLORS.primaryBorder,
   },
   tabBadgeText: {
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.displayBold,
     fontSize: 10.5,
-    fontWeight: '600',
     color: COLORS.textSubtle,
   },
   tabBadgeTextActive: {
@@ -458,9 +456,8 @@ const styles = StyleSheet.create({
     paddingVertical: 1,
   },
   cardSoonTagText: {
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.displayBold,
     fontSize: 8.5,
-    fontWeight: '700',
     color: COLORS.textSubtle,
   },
   cardLeft: {
@@ -488,7 +485,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   questionCountText: {
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.bodyMedium,
     fontSize: 12,
     color: COLORS.textMuted,
   },
@@ -511,16 +508,14 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   comingSoonBadgeText: {
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.displayBold,
     fontSize: 11,
-    fontWeight: '700',
     color: COLORS.primary,
     letterSpacing: 1,
   },
   comingSoonTitle: {
-    fontFamily: FONTS.serif,
+    fontFamily: FONTS.displayBold,
     fontSize: 22,
-    fontStyle: 'italic',
     color: COLORS.text,
     textAlign: 'center',
     marginBottom: 8,
@@ -545,9 +540,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   browseAllBtnText: {
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.displayBold,
     fontSize: 12,
-    fontWeight: '600',
     color: COLORS.text,
   },
 });

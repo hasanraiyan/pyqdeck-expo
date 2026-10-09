@@ -51,13 +51,12 @@ export const DetailsSpoilerBlock: React.FC<DetailsSpoilerBlockProps> = React.mem
         accessibilityState={{ expanded: isOpen }}
       >
         <View style={styles.headerLeft}>
-          <View style={[styles.iconBadge, isOpen && styles.iconBadgeOpen]}>
-            <Feather
-              name={isOpen ? 'unlock' : 'help-circle'}
-              size={14}
-              color={isOpen ? COLORS.primary : COLORS.secondary}
-            />
-          </View>
+          {/* The icon is only a prompt to open; once open the header is just the title. */}
+          {!isOpen && (
+            <View style={styles.iconBadge}>
+              <Feather name="help-circle" size={14} color={COLORS.secondary} />
+            </View>
+          )}
           <Text style={styles.summaryText} numberOfLines={isOpen ? undefined : 1} ellipsizeMode="tail">
             {summary}
           </Text>
@@ -124,13 +123,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginRight: 10,
   },
-  iconBadgeOpen: {
-    backgroundColor: COLORS.primaryLight,
-  },
   summaryText: {
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.displayBold,
     fontSize: 13,
-    fontWeight: '700',
     color: COLORS.text,
     letterSpacing: 0.2,
     flex: 1,

@@ -23,6 +23,14 @@ export const COLORS = {
 export const FONTS = {
   serif: Platform.select({ ios: 'Georgia', android: 'serif', default: 'serif' }),
   mono: Platform.select({ ios: 'Menlo', android: 'monospace', default: 'monospace' }),
+  // Loaded in App.tsx via expo-google-fonts. One family name per weight: custom
+  // fonts on Android ignore fontWeight, so the weight is part of the name.
+  display: 'PlusJakartaSans_800ExtraBold',
+  displayBold: 'PlusJakartaSans_700Bold',
+  body: 'Inter_400Regular',
+  bodyMedium: 'Inter_500Medium',
+  bodySemi: 'Inter_600SemiBold',
+  bodyBold: 'Inter_700Bold',
   sans: Platform.select({ ios: 'System', android: 'Roboto', default: 'System' }),
 };
 

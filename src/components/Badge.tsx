@@ -201,8 +201,7 @@ const styles = StyleSheet.create({
   },
   text: {
     fontSize: 11.5,
-    fontWeight: '600',
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.displayBold,
   },
   default: {
     backgroundColor: COLORS.cardSecondary,
@@ -240,8 +239,7 @@ const styles = StyleSheet.create({
   },
   marksText: {
     fontSize: 12,
-    fontFamily: FONTS.mono,
-    fontWeight: '700',
+    fontFamily: FONTS.displayBold,
     color: COLORS.primary,
     lineHeight: 16,
   },
@@ -253,8 +251,7 @@ const styles = StyleSheet.create({
   },
   yearBadgeText: {
     fontSize: 11.5,
-    fontFamily: FONTS.mono,
-    fontWeight: '700',
+    fontFamily: FONTS.displayBold,
     lineHeight: 16,
     letterSpacing: 0.2,
   },
@@ -267,8 +264,7 @@ const styles = StyleSheet.create({
   },
   qNumText: {
     fontSize: 11.5,
-    fontFamily: FONTS.mono,
-    fontWeight: '700',
+    fontFamily: FONTS.displayBold,
     lineHeight: 16,
     letterSpacing: 0.2,
   },
@@ -291,8 +287,7 @@ const styles = StyleSheet.create({
   },
   askAiText: {
     fontSize: 10.5,
-    fontFamily: FONTS.mono,
-    fontWeight: '700',
+    fontFamily: FONTS.displayBold,
     color: COLORS.primary,
     letterSpacing: 0.3,
   },
@@ -309,8 +304,7 @@ const styles = StyleSheet.create({
   },
   showSolnText: {
     fontSize: 10.5,
-    fontFamily: FONTS.mono,
-    fontWeight: '700',
+    fontFamily: FONTS.displayBold,
     color: COLORS.secondary,
     letterSpacing: 0.3,
   },
@@ -323,8 +317,7 @@ const styles = StyleSheet.create({
   },
   stampText: {
     fontSize: 9.5,
-    fontFamily: FONTS.mono,
-    fontWeight: '700',
+    fontFamily: FONTS.displayBold,
     color: COLORS.secondary,
     letterSpacing: 1.4,
     textTransform: 'uppercase',

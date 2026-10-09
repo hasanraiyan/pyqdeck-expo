@@ -540,16 +540,14 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   brandTitle: {
-    fontFamily: FONTS.serif,
+    fontFamily: FONTS.display,
     fontSize: rf(20),
-    fontWeight: '600',
-    fontStyle: 'italic',
     color: COLORS.text,
     letterSpacing: -0.5,
     lineHeight: rf(22),
   },
   brandSubtitle: {
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.bodyMedium,
     fontSize: rf(8.5),
     color: COLORS.textSubtle,
     letterSpacing: 1,
@@ -571,9 +569,9 @@ const styles = StyleSheet.create({
     marginLeft: 4,
   },
   headerLinkText: {
+    fontFamily: FONTS.bodyMedium,
     fontSize: rf(13.5),
     color: COLORS.textMuted,
-    fontWeight: '500',
   },
   scrollContent: {
     paddingTop: verticalScale(20),
@@ -603,15 +601,14 @@ const styles = StyleSheet.create({
     maxWidth: 400,
   },
   heroTitle: {
-    fontFamily: FONTS.serif,
+    fontFamily: FONTS.display,
     fontSize: rf(27),
-    fontWeight: '400',
-    fontStyle: 'italic',
     color: COLORS.text,
     lineHeight: rf(34),
-    letterSpacing: -0.5,
+    letterSpacing: -0.8,
   },
   heroSubtitle: {
+    fontFamily: FONTS.body,
     fontSize: rf(13.5),
     color: COLORS.textMuted,
     marginTop: 8,
@@ -631,7 +628,7 @@ const styles = StyleSheet.create({
   },
   heroSearchPlaceholder: {
     flex: 1,
-    fontFamily: FONTS.sans,
+    fontFamily: FONTS.body,
     fontSize: rf(13),
     color: COLORS.textMuted,
   },
@@ -639,9 +636,8 @@ const styles = StyleSheet.create({
     marginTop: 24,
   },
   sectionHeading: {
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.displayBold,
     fontSize: rf(11),
-    fontWeight: '700',
     color: COLORS.textSubtle,
     letterSpacing: 1.5,
     marginBottom: 12,
@@ -682,10 +678,9 @@ const styles = StyleSheet.create({
     paddingVertical: 1,
   },
   comingSoonTagText: {
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.displayBold,
     fontSize: rf(8),
     color: COLORS.textSubtle,
-    fontWeight: '700',
   },
   recentSection: {
     marginTop: 20,
@@ -701,9 +696,8 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   recentHeading: {
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.displayBold,
     fontSize: rf(11),
-    fontWeight: '700',
     color: COLORS.textSubtle,
     letterSpacing: 1.5,
     includeFontPadding: false,
@@ -734,9 +728,8 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   recentCode: {
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.displayBold,
     fontSize: rf(9.5),
-    fontWeight: '700',
     color: COLORS.textSubtle,
     letterSpacing: 0.5,
     flex: 1,
@@ -749,22 +742,20 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   recentRecentPillText: {
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.displayBold,
     fontSize: rf(8.5),
-    fontWeight: '700',
     color: COLORS.primary,
   },
   recentSubjectName: {
-    fontFamily: FONTS.serif,
+    fontFamily: FONTS.displayBold,
     fontSize: rf(14.5),
-    fontWeight: '700',
     color: COLORS.text,
   },
   recentSubjectNameFull: {
     fontSize: rf(16.5),
   },
   recentSubText: {
-    fontFamily: FONTS.sans,
+    fontFamily: FONTS.body,
     fontSize: rf(12),
     color: COLORS.textMuted,
     marginBottom: 4,
@@ -779,9 +770,8 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   recentResumeText: {
-    fontFamily: FONTS.sans,
+    fontFamily: FONTS.bodyMedium,
     fontSize: rf(12),
-    fontWeight: '600',
     color: COLORS.primary,
   },
   recentArrowCircle: {
@@ -798,17 +788,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   cardLabel: {
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.bodyMedium,
     fontSize: rf(9.5),
     color: COLORS.textSubtle,
     letterSpacing: 1,
     textTransform: 'uppercase',
   },
   cardSemesterNumber: {
-    fontFamily: FONTS.serif,
+    fontFamily: FONTS.display,
     fontSize: rf(32),
-    fontStyle: 'italic',
-    fontWeight: '400',
     color: COLORS.text,
     marginVertical: 2,
   },
@@ -816,7 +804,7 @@ const styles = StyleSheet.create({
     color: COLORS.textMuted,
   },
   cardSublabel: {
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.body,
     fontSize: rf(10),
     color: COLORS.textMuted,
   },
@@ -849,14 +837,14 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   allSubjectsTag: {
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.displayBold,
     fontSize: rf(10),
     color: COLORS.textSubtle,
     letterSpacing: 1.2,
-    fontWeight: '700',
     marginBottom: 4,
   },
   allSubjectsText: {
+    fontFamily: FONTS.body,
     fontSize: rf(13),
     color: COLORS.textMuted,
     lineHeight: rf(18),
@@ -873,8 +861,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
   },
   allSubjectsButtonText: {
+    fontFamily: FONTS.bodyMedium,
     fontSize: rf(13),
-    fontWeight: '600',
     color: COLORS.text,
   },
 });

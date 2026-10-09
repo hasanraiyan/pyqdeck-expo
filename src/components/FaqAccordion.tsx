@@ -160,9 +160,8 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   headerTitle: {
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.displayBold,
     fontSize: 11.5,
-    fontWeight: '700',
     color: COLORS.text,
     letterSpacing: 0.6,
   },
@@ -173,9 +172,8 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.sm,
   },
   badgeText: {
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.displayBold,
     fontSize: 10,
-    fontWeight: '700',
     color: COLORS.primary,
   },
   toggleAllBtn: {
@@ -183,10 +181,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
   },
   toggleAllText: {
-    fontFamily: FONTS.sans,
+    fontFamily: FONTS.bodySemi,
     fontSize: 11,
     color: COLORS.primary,
-    fontWeight: '600',
   },
   card: {
     backgroundColor: COLORS.card,
@@ -218,16 +215,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   qIndicatorText: {
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.displayBold,
     fontSize: 10,
-    fontWeight: '800',
     color: COLORS.primary,
   },
   questionText: {
     flex: 1,
-    fontFamily: FONTS.sans,
+    fontFamily: FONTS.bodySemi,
     fontSize: 14,
-    fontWeight: '600',
     color: COLORS.text,
     lineHeight: 20,
   },

@@ -257,18 +257,15 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.card,
   },
   badgeText: {
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.displayBold,
     fontSize: 10.5,
     color: COLORS.primary,
-    fontWeight: '700',
     letterSpacing: 1.5,
     marginBottom: 4,
   },
   title: {
-    fontFamily: FONTS.serif,
+    fontFamily: FONTS.display,
     fontSize: 27,
-    fontStyle: 'italic',
-    fontWeight: '400',
     color: COLORS.text,
     letterSpacing: -0.5,
   },
@@ -328,9 +325,8 @@ const styles = StyleSheet.create({
     paddingVertical: 1,
   },
   cardSoonTagText: {
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.displayBold,
     fontSize: 8.5,
-    fontWeight: '700',
     color: COLORS.textSubtle,
   },
   cardLeft: {
@@ -358,7 +354,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   questionCount: {
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.bodyMedium,
     fontSize: 12,
     color: COLORS.textMuted,
   },
@@ -386,7 +382,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   loadingMoreText: {
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.bodyMedium,
     fontSize: 12,
     color: COLORS.textMuted,
   },

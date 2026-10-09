@@ -463,20 +463,19 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   headerLabel: {
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.displayBold,
     fontSize: rf(9.5),
-    fontWeight: '700',
     letterSpacing: 0.6,
     color: COLORS.primary,
   },
   headerNote: {
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.bodyMedium,
     fontSize: rf(9),
     color: COLORS.textSubtle,
     marginLeft: 'auto',
   },
   body: {
-    fontFamily: FONTS.sans,
+    fontFamily: FONTS.body,
     fontSize: rf(14),
     lineHeight: rf(22),
     color: COLORS.text,
@@ -486,9 +485,8 @@ const styles = StyleSheet.create({
   // paddingHorizontal, which is what keeps the glyph off the background's
   // edge; iOS ignores it and relies on the letter-spacing instead.
   citation: {
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.displayBold,
     fontSize: rf(10),
-    fontWeight: '700',
     color: COLORS.secondary,
     backgroundColor: COLORS.secondaryLight,
     paddingHorizontal: 4,
@@ -535,9 +533,8 @@ const styles = StyleSheet.create({
     ...SHADOWS.subtle,
   },
   pillToggleText: {
-    fontFamily: FONTS.sans,
+    fontFamily: FONTS.bodySemi,
     fontSize: rf(13),
-    fontWeight: '600',
     color: COLORS.primary,
   },
   expandedFooter: {
@@ -556,9 +553,8 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.card,
   },
   sourcesPillText: {
-    fontFamily: FONTS.sans,
+    fontFamily: FONTS.bodyMedium,
     fontSize: rf(12),
-    fontWeight: '500',
     color: COLORS.text,
   },
   actionRow: {
@@ -607,9 +603,8 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   sheetTitle: {
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.displayBold,
     fontSize: rf(11),
-    fontWeight: '700',
     letterSpacing: 0.5,
     color: COLORS.textMuted,
     marginBottom: 10,
@@ -638,13 +633,13 @@ const styles = StyleSheet.create({
     gap: 3,
   },
   sourceTitle: {
-    fontFamily: FONTS.sans,
+    fontFamily: FONTS.body,
     fontSize: rf(13),
     lineHeight: rf(18),
     color: COLORS.text,
   },
   sourceMeta: {
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.bodyMedium,
     fontSize: rf(9.5),
     color: COLORS.textSubtle,
   },
@@ -656,9 +651,8 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.cardSecondary,
   },
   sheetCloseText: {
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.displayBold,
     fontSize: rf(12),
-    fontWeight: '700',
     color: COLORS.textMuted,
   },
 });

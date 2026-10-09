@@ -10,6 +10,9 @@ import {
   SafeAreaInsetsContext,
 } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
+import { useFonts } from 'expo-font';
+import { PlusJakartaSans_700Bold, PlusJakartaSans_800ExtraBold } from '@expo-google-fonts/plus-jakarta-sans';
+import { Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold } from '@expo-google-fonts/inter';
 import { ClerkProvider } from '@clerk/expo';
 import { tokenCache } from '@clerk/expo/token-cache';
 import { clerkPublishableKey } from './src/auth/publishableKey';
@@ -27,7 +30,7 @@ import {
   subscribeToNotificationResponses,
   handleColdStartNotification,
 } from './src/utils/notifications';
-import { COLORS } from './src/theme/colors';
+import { COLORS, FONTS } from './src/theme/colors';
 import { getShellWidth } from './src/theme/layout';
 import { ShellTabBar } from './src/components/ShellTabBar';
 import { getSidebarCollapsed, setSidebarCollapsed } from './src/utils/settings';
@@ -140,7 +143,7 @@ const commonScreenOptions = {
   },
   headerTintColor: COLORS.text,
   headerTitleStyle: {
-    fontWeight: '600' as const,
+    fontFamily: FONTS.displayBold,
   },
   headerShadowVisible: false,
   headerBackTitleVisible: false,
@@ -396,6 +399,15 @@ function AppContent() {
   const insets = useSafeAreaInsets();
   // null = still reading AsyncStorage (prevents white flash or wrong screen)
   const [onboarded, setOnboarded] = useState<boolean | null>(null);
+  // A failed load still counts as done: the hero falls back to the system font.
+  const [fontsLoaded, fontError] = useFonts({
+    PlusJakartaSans_700Bold,
+    PlusJakartaSans_800ExtraBold,
+    Inter_400Regular,
+    Inter_500Medium,
+    Inter_600SemiBold,
+    Inter_700Bold,
+  });
 
   useEffect(() => {
     void migrateToQueryCache();
@@ -471,7 +483,8 @@ function AppContent() {
   }, []);
 
   // Still reading AsyncStorage — render nothing to avoid a flash of wrong screen
-  if (onboarded === null) return null;
+  // Fonts are held back with it so the hero never flashes in the system font.
+  if (onboarded === null || (!fontsLoaded && !fontError)) return null;
 
   const tree = (
     <NavigationContainer

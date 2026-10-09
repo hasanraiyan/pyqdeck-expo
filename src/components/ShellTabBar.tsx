@@ -147,7 +147,7 @@ const styles = StyleSheet.create({
   topRowRail: { flexDirection: 'column', justifyContent: 'center', gap: 10, paddingHorizontal: 8 },
   brand: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   logo: { width: 30, height: 30, borderRadius: 7 },
-  brandText: { fontFamily: FONTS.serif, fontSize: 20, fontStyle: 'italic', color: COLORS.text },
+  brandText: { fontFamily: FONTS.display, fontSize: 20, color: COLORS.text },
   // The tab bar takes the space between header and footer.
   bar: { flex: 1 },
   footer: {

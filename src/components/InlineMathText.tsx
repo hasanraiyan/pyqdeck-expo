@@ -20,7 +20,7 @@ const mathTextStyle: TextStyle = {
   fontFamily: FONTS.serif,
   fontStyle: 'italic',
   fontWeight: '600',
-  color: COLORS.primary,
+  color: COLORS.text,
 };
 
 const normalizeMath = (raw: string): string => {

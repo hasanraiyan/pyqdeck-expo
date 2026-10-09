@@ -383,9 +383,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
   },
   headerTitle: {
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.displayBold,
     fontSize: 12,
-    fontWeight: '700',
     color: COLORS.text,
     letterSpacing: 0.8,
   },
@@ -414,7 +413,7 @@ const styles = StyleSheet.create({
     marginTop: 10,
     fontSize: 12,
     color: COLORS.textMuted,
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.bodyMedium,
   },
   viewerErrorCard: {
     alignItems: 'center',
@@ -429,15 +428,14 @@ const styles = StyleSheet.create({
   viewerErrorTitle: {
     marginTop: 8,
     fontSize: 14,
-    fontWeight: '700',
     color: COLORS.text,
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.displayBold,
   },
   viewerErrorUrl: {
     marginTop: 6,
     fontSize: 10,
     color: COLORS.textMuted,
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.bodyMedium,
     textAlign: 'center',
   },
   viewerErrorHint: {
@@ -464,8 +462,7 @@ const styles = StyleSheet.create({
   retryBtnText: {
     color: '#fff',
     fontSize: 12,
-    fontWeight: '700',
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.displayBold,
   },
   copyBtn: {
     flexDirection: 'row',
@@ -481,8 +478,7 @@ const styles = StyleSheet.create({
   copyBtnText: {
     color: COLORS.primary,
     fontSize: 12,
-    fontWeight: '700',
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.displayBold,
   },
   bottomBar: {
     backgroundColor: COLORS.card,
@@ -523,9 +519,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   thumbTileIndexText: {
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.displayBold,
     fontSize: 9,
-    fontWeight: '700',
     color: '#ffffff',
   },
 });

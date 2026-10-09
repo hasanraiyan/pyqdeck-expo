@@ -455,7 +455,7 @@ const styles = StyleSheet.create({
     padding: 8,
   },
   errorText: {
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.bodyMedium,
     fontSize: 10,
     color: COLORS.textSubtle,
     marginTop: 4,
@@ -473,9 +473,8 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   retryText: {
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.displayBold,
     fontSize: 10,
-    fontWeight: '700',
     color: COLORS.primary,
   },
   zoomBadge: {
@@ -498,9 +497,8 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.full,
   },
   orientationPillText: {
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.displayBold,
     fontSize: 10,
-    fontWeight: '700',
     color: '#ffffff',
   },
   captionBar: {
@@ -515,7 +513,7 @@ const styles = StyleSheet.create({
   captionText: {
     fontSize: 12,
     color: COLORS.textMuted,
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.bodyMedium,
     flex: 1,
   },
 
@@ -546,10 +544,9 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.full,
   },
   counterPillText: {
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.displayBold,
     fontSize: 10,
     color: '#ffffff',
-    fontWeight: '700',
   },
   miniCaption: {
     position: 'absolute',
@@ -561,7 +558,7 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   miniCaptionText: {
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.bodyMedium,
     fontSize: 10,
     color: '#ffffff',
   },
@@ -637,9 +634,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   overflowText: {
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.displayBold,
     fontSize: 20,
-    fontWeight: '800',
     color: '#ffffff',
     letterSpacing: 0.5,
   },
@@ -652,7 +648,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   galleryFooterText: {
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.bodyMedium,
     fontSize: 11,
     color: COLORS.textMuted,
   },

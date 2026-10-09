@@ -88,9 +88,8 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   text: {
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.displayBold,
     fontSize: 11.5,
-    fontWeight: '600',
     color: COLORS.card,
     letterSpacing: 0.2,
   },

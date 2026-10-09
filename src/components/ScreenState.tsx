@@ -65,7 +65,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  retryText: { fontFamily: FONTS.mono, fontSize: 11.5, fontWeight: '700', color: COLORS.primary },
+  retryText: { fontFamily: FONTS.displayBold, fontSize: 11.5, fontWeight: '700', color: COLORS.primary },
   emptyBox: {
     marginHorizontal: 16,
     padding: 16,

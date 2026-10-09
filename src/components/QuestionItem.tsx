@@ -260,10 +260,9 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   qNumber: {
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.displayBold,
     fontSize: 13,
     color: COLORS.textMuted,
-    fontWeight: '600',
     marginTop: 1,
   },
   previewText: {
@@ -285,7 +284,7 @@ const styles = StyleSheet.create({
     borderColor: COLORS.borderLight,
   },
   chapter: {
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.bodyMedium,
     fontSize: 11,
     color: COLORS.textMuted,
     textTransform: 'uppercase',
@@ -308,9 +307,8 @@ const styles = StyleSheet.create({
   },
   ctaLinkText: {
     flexShrink: 1,
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.displayBold,
     fontSize: 12.5,
-    fontWeight: '600',
   },
   ctaLinkUnderline: {
     textDecorationLine: 'underline',
@@ -343,9 +341,8 @@ const styles = StyleSheet.create({
   },
   actionIconLabel: {
     fontSize: 12,
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.displayBold,
     color: COLORS.textMuted,
-    fontWeight: '600',
     letterSpacing: 0.2,
   },
 });

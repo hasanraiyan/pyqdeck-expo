@@ -889,18 +889,15 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
   },
   badgeText: {
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.displayBold,
     fontSize: rf(10.5),
     color: COLORS.primary,
-    fontWeight: '700',
     letterSpacing: 1.5,
     marginBottom: 4,
   },
   title: {
-    fontFamily: FONTS.serif,
+    fontFamily: FONTS.display,
     fontSize: rf(27),
-    fontWeight: '400',
-    fontStyle: 'italic',
     color: COLORS.text,
     letterSpacing: -0.5,
   },
@@ -963,13 +960,13 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   validationText: {
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.bodyMedium,
     fontSize: rf(11),
     color: '#DC2626',
     flex: 1,
   },
   cooldownText: {
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.bodyMedium,
     fontSize: rf(11),
     color: COLORS.textMuted,
     flex: 1,
@@ -989,15 +986,13 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   clearRecentText: {
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.displayBold,
     fontSize: rf(11),
     color: COLORS.primary,
-    fontWeight: '600',
   },
   suggestedHeading: {
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.displayBold,
     fontSize: rf(11),
-    fontWeight: '700',
     color: COLORS.textSubtle,
     letterSpacing: 1.2,
     marginBottom: 12,
@@ -1027,18 +1022,16 @@ const styles = StyleSheet.create({
     paddingRight: 10,
   },
   suggestedRowText: {
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.bodyMedium,
     fontSize: rf(12.5),
     color: COLORS.text,
-    fontWeight: '500',
   },
   section: {
     marginBottom: 24,
   },
   sectionHeading: {
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.displayBold,
     fontSize: rf(11),
-    fontWeight: '700',
     color: COLORS.textSubtle,
     letterSpacing: 1.2,
     marginBottom: 10,
@@ -1066,7 +1059,7 @@ const styles = StyleSheet.create({
     color: COLORS.text,
   },
   subjectSub: {
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.bodyMedium,
     fontSize: rf(10.5),
     color: COLORS.textMuted,
     marginTop: 4,
@@ -1077,7 +1070,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   questionCountText: {
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.bodyMedium,
     fontSize: rf(11.5),
     color: COLORS.textMuted,
   },
@@ -1091,7 +1084,7 @@ const styles = StyleSheet.create({
     padding: 14,
   },
   resultSubjectName: {
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.bodyMedium,
     fontSize: rf(10.5),
     color: COLORS.textSubtle,
     textTransform: 'uppercase',
@@ -1099,7 +1092,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   resultTextPreview: {
-    fontFamily: FONTS.serif,
+    fontFamily: FONTS.body,
     fontSize: rf(14),
     color: COLORS.text,
     lineHeight: rf(21),
@@ -1122,7 +1115,7 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
   },
   chapterPillText: {
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.bodyMedium,
     fontSize: rf(11),
     color: COLORS.textSubtle,
     textTransform: 'uppercase',
@@ -1173,9 +1166,8 @@ const styles = StyleSheet.create({
     borderColor: COLORS.primary,
   },
   filterTabPillText: {
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.displayBold,
     fontSize: rf(11.5),
-    fontWeight: '600',
     color: COLORS.textMuted,
   },
   filterTabPillTextActive: {
@@ -1188,10 +1180,9 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   seeAllLink: {
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.displayBold,
     fontSize: rf(11),
     color: COLORS.primary,
-    fontWeight: '600',
   },
   noteResultCard: {
     backgroundColor: COLORS.card,
@@ -1201,9 +1192,8 @@ const styles = StyleSheet.create({
     padding: 14,
   },
   noteTitle: {
-    fontFamily: FONTS.serif,
+    fontFamily: FONTS.displayBold,
     fontSize: rf(15),
-    fontWeight: '600',
     color: COLORS.text,
     lineHeight: rf(21),
     marginBottom: 6,
@@ -1224,7 +1214,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   noteModuleTitle: {
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.bodyMedium,
     fontSize: rf(10.5),
     color: COLORS.textSubtle,
     flex: 1,
@@ -1235,9 +1225,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   readNoteLinkText: {
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.displayBold,
     fontSize: rf(11),
-    fontWeight: '600',
     color: COLORS.primary,
   },
   tabEmptyContainer: {
@@ -1257,7 +1246,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   tabEmptySubtitle: {
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.bodyMedium,
     fontSize: rf(11),
     color: COLORS.textMuted,
     textAlign: 'center',

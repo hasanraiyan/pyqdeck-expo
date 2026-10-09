@@ -421,16 +421,14 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   progressKicker: {
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.displayBold,
     fontSize: 10.5,
-    fontWeight: '700',
     color: COLORS.textSubtle,
     letterSpacing: 1.2,
   },
   progressPercentText: {
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.displayBold,
     fontSize: 11,
-    fontWeight: '700',
     color: COLORS.text,
   },
   progressTrack: {
@@ -461,16 +459,15 @@ const styles = StyleSheet.create({
   modHeadOpen: { backgroundColor: COLORS.cardSecondary },
   modTitleWrap: { flex: 1 },
   modNum: {
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.displayBold,
     fontSize: 10,
-    fontWeight: '700',
     letterSpacing: 1.1,
     textTransform: 'uppercase',
     color: COLORS.textSubtle,
     marginBottom: 2,
   },
   modTitle: { fontSize: 14.5, lineHeight: 19, color: COLORS.text },
-  modCount: { fontFamily: FONTS.mono, fontSize: 11.5, color: COLORS.textSubtle },
+  modCount: { fontFamily: FONTS.bodyMedium, fontSize: 11.5, color: COLORS.textSubtle },
 
   topicRow: {
     flexDirection: 'row',
@@ -531,9 +528,8 @@ const styles = StyleSheet.create({
     marginLeft: 6,
   },
   inlineCopiedText: {
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.displayBold,
     fontSize: 10,
-    fontWeight: '700',
     color: COLORS.primary,
   },
   toastContainer: {
@@ -568,10 +564,9 @@ const styles = StyleSheet.create({
     }),
   },
   toastText: {
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.displayBold,
     fontSize: 12,
     color: '#ffffff',
-    fontWeight: '600',
     flexShrink: 1,
   },
 });

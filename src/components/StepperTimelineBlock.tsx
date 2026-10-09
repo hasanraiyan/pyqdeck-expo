@@ -22,7 +22,7 @@ interface StepperTimelineBlockProps {
 const DOT_SIZE = 28;
 const DOT_GAP = 8;
 // At most this many dots are visible at once; more steps scroll sideways.
-const MAX_VISIBLE_DOTS = 4;
+const MAX_VISIBLE_DOTS = 6;
 const DOT_STEP = DOT_SIZE + DOT_GAP;
 
 export const StepperTimelineBlock: React.FC<StepperTimelineBlockProps> = React.memo(({
@@ -341,16 +341,14 @@ const styles = StyleSheet.create({
     borderBottomColor: COLORS.border,
   },
   headerTitle: {
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.displayBold,
     fontSize: 11,
-    fontWeight: '700',
     color: COLORS.primary,
     letterSpacing: 0.6,
   },
   stepsCountBadge: {
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.displayBold,
     fontSize: 10,
-    fontWeight: '700',
     color: COLORS.textMuted,
     backgroundColor: COLORS.card,
     paddingHorizontal: 6,
@@ -385,9 +383,8 @@ const styles = StyleSheet.create({
     zIndex: 2,
   },
   circleNodeText: {
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.displayBold,
     fontSize: 11,
-    fontWeight: '700',
     color: COLORS.primary,
   },
   connectingLine: {
@@ -407,9 +404,8 @@ const styles = StyleSheet.create({
     paddingBottom: 10,
   },
   stepTitle: {
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.displayBold,
     fontSize: 13,
-    fontWeight: '700',
     color: COLORS.text,
     letterSpacing: 0.2,
     marginBottom: 4,
@@ -429,9 +425,8 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border,
   },
   viewToggleText: {
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.displayBold,
     fontSize: 11,
-    fontWeight: '700',
     color: COLORS.text,
   },
   pagedBody: {
@@ -440,18 +435,17 @@ const styles = StyleSheet.create({
     paddingBottom: 6,
   },
   pagedTitle: {
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.displayBold,
     fontSize: 14,
-    fontWeight: '700',
     color: COLORS.text,
     letterSpacing: 0.2,
     marginBottom: 6,
   },
-  // Everything sits on one line: dots + View all on the left, Back/Next right.
+  // Two rows: dots + View all on top, Back/Next full-width below. One row got
+  // cramped once the headings moved to a wider font.
   pagedFooter: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: 'column',
+    gap: 12,
     paddingHorizontal: 14,
     paddingTop: 10,
     paddingBottom: 14,
@@ -459,14 +453,13 @@ const styles = StyleSheet.create({
   footerLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    flexShrink: 1,
+    justifyContent: 'space-between',
     minWidth: 0,
-    marginRight: 8,
   },
   footerRight: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 8,
   },
   dotsScroll: {
     flexGrow: 0,
@@ -489,9 +482,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   dotText: {
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.displayBold,
     fontSize: 12,
-    fontWeight: '700',
   },
   activeHighlight: {
     position: 'absolute',
@@ -506,16 +498,21 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   viewAllBtn: {
-    marginLeft: 8,
+    marginLeft: 12,
     paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.primaryBorder,
+    backgroundColor: COLORS.primaryLight,
   },
   viewAllText: {
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.displayBold,
     fontSize: 11,
-    fontWeight: '700',
     color: COLORS.primary,
   },
   navBtn: {
+    flex: 1,
     alignItems: 'center',
     paddingHorizontal: 12,
     paddingVertical: 8,
@@ -530,18 +527,16 @@ const styles = StyleSheet.create({
     opacity: 0.4,
   },
   navBtnGhostText: {
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.displayBold,
     fontSize: 12,
-    fontWeight: '700',
     color: COLORS.text,
   },
   navBtnPrimary: {
     backgroundColor: COLORS.primary,
   },
   navBtnPrimaryText: {
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.displayBold,
     fontSize: 12,
-    fontWeight: '700',
     color: '#ffffff',
   },
 });

@@ -295,10 +295,9 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
   },
   moduleText: {
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.bodyMedium,
     fontSize: 11.5,
     color: COLORS.textMuted,
-    fontWeight: '500',
     flex: 1,
   },
   bodyPressable: {
@@ -336,9 +335,8 @@ const styles = StyleSheet.create({
   },
   ctaLinkText: {
     flexShrink: 1,
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.displayBold,
     fontSize: 12.5,
-    fontWeight: '600',
   },
   ctaLinkUnderline: {
     textDecorationLine: 'underline',

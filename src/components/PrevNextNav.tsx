@@ -92,7 +92,7 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   sublabel: {
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.bodyMedium,
     fontSize: 9.5,
     color: COLORS.textSubtle,
     textTransform: 'uppercase',

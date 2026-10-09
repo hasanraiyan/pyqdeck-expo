@@ -254,17 +254,15 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   semLabel: {
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.bodyMedium,
     fontSize: 11,
     color: COLORS.textSubtle,
     letterSpacing: 1,
     textTransform: 'uppercase',
   },
   title: {
-    fontFamily: FONTS.serif,
+    fontFamily: FONTS.display,
     fontSize: 25,
-    fontStyle: 'italic',
-    fontWeight: '400',
     color: COLORS.text,
     lineHeight: 31,
     letterSpacing: -0.5,
@@ -279,9 +277,8 @@ const styles = StyleSheet.create({
     marginTop: 22,
   },
   sectionHeading: {
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.displayBold,
     fontSize: 11,
-    fontWeight: '700',
     color: COLORS.textSubtle,
     letterSpacing: 1.5,
     marginBottom: 12,
@@ -320,9 +317,8 @@ const styles = StyleSheet.create({
     paddingVertical: 1,
   },
   soonTagText: {
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.displayBold,
     fontSize: 8.5,
-    fontWeight: '700',
     color: COLORS.textSubtle,
   },
   sectionEmptyBox: {
@@ -337,7 +333,7 @@ const styles = StyleSheet.create({
     padding: 14,
   },
   sectionEmptyText: {
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.bodyMedium,
     fontSize: 12,
     color: COLORS.textMuted,
   },
@@ -347,14 +343,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   yearNumber: {
-    fontFamily: FONTS.serif,
+    fontFamily: FONTS.display,
     fontSize: 24,
-    fontStyle: 'italic',
-    fontWeight: '500',
     color: COLORS.text,
   },
   yearSubtext: {
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.bodyMedium,
     fontSize: 10.5,
     color: COLORS.textMuted,
   },
@@ -386,7 +380,7 @@ const styles = StyleSheet.create({
     color: COLORS.text,
   },
   moduleCount: {
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.bodyMedium,
     fontSize: 11,
     color: COLORS.textMuted,
     marginTop: 2,

@@ -973,7 +973,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   subjectText: {
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.bodyMedium,
     fontSize: 11,
     color: COLORS.textSubtle,
     textTransform: 'uppercase',
@@ -1028,10 +1028,9 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   detailModuleText: {
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.bodyMedium,
     fontSize: 11.5,
     color: COLORS.textMuted,
-    fontWeight: '500',
     flex: 1,
   },
   actionsRowClassic: {
@@ -1053,15 +1052,13 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   qNumber: {
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.displayBold,
     fontSize: 13,
-    fontWeight: '700',
     color: COLORS.primary,
   },
   qYearText: {
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.displayBold,
     fontSize: 11,
-    fontWeight: '600',
     color: COLORS.textMuted,
     backgroundColor: COLORS.cardSecondary,
     borderWidth: 1,
@@ -1112,8 +1109,7 @@ const styles = StyleSheet.create({
   },
   repeatYearLinkText: {
     fontSize: 12.5,
-    fontFamily: FONTS.mono,
-    fontWeight: '700',
+    fontFamily: FONTS.displayBold,
     color: COLORS.primary,
     textDecorationLine: 'underline',
   },
@@ -1149,9 +1145,8 @@ const styles = StyleSheet.create({
   },
   actionIconLabel: {
     fontSize: 12,
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.displayBold,
     color: COLORS.textMuted,
-    fontWeight: '600',
     letterSpacing: 0.2,
   },
   modalBackdrop: {
@@ -1200,17 +1195,14 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   aiTagText: {
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.displayBold,
     fontSize: rf(9.5),
-    fontWeight: '700',
     color: COLORS.primary,
     letterSpacing: 1,
   },
   modalTitle: {
-    fontFamily: FONTS.serif,
+    fontFamily: FONTS.displayBold,
     fontSize: rf(20),
-    fontStyle: 'italic',
-    fontWeight: '600',
     color: COLORS.text,
     letterSpacing: -0.3,
   },
@@ -1234,9 +1226,8 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   aiSnippetLabel: {
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.displayBold,
     fontSize: rf(9),
-    fontWeight: '700',
     color: COLORS.textSubtle,
     letterSpacing: 1,
     marginBottom: 4,
@@ -1314,7 +1305,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   loadingText: {
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.bodyMedium,
     fontSize: 12,
     color: COLORS.textMuted,
   },
@@ -1331,9 +1322,8 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border,
   },
   solutionErrorText: {
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.displayBold,
     fontSize: 12,
-    fontWeight: '600',
     color: COLORS.primary,
   },
   voteRow: {
@@ -1353,10 +1343,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
   },
   voteCount: {
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.displayBold,
     fontSize: 12,
     color: COLORS.textMuted,
-    fontWeight: '600',
   },
   voteCountActive: {
     color: COLORS.primary,
@@ -1378,10 +1367,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   reportText: {
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.displayBold,
     fontSize: 12,
     color: COLORS.textMuted,
-    fontWeight: '600',
   },
   reportHint: {
     fontSize: 11,
@@ -1490,9 +1478,8 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.border,
   },
   reportSubmitText: {
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.displayBold,
     fontSize: 13,
-    fontWeight: '700',
     color: '#fff',
   },
   reportErrorText: {
@@ -1522,9 +1509,8 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   relatedHeading: {
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.displayBold,
     fontSize: 11,
-    fontWeight: '700',
     color: COLORS.textSubtle,
     letterSpacing: 1.2,
   },
@@ -1557,14 +1543,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   onDemandSimilarTitle: {
-    fontFamily: FONTS.serif,
+    fontFamily: FONTS.displayBold,
     fontSize: rf(13.5),
-    fontWeight: '700',
     color: COLORS.text,
     marginBottom: 2,
   },
   onDemandSimilarSub: {
-    fontFamily: FONTS.sans,
+    fontFamily: FONTS.body,
     fontSize: rf(11.5),
     color: COLORS.textMuted,
     lineHeight: rf(15),
@@ -1585,9 +1570,8 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   onDemandFindBtnText: {
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.displayBold,
     fontSize: rf(11.5),
-    fontWeight: '700',
     color: COLORS.primary,
   },
   similarEmptyBox: {
@@ -1600,7 +1584,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   similarEmptyText: {
-    fontFamily: FONTS.sans,
+    fontFamily: FONTS.body,
     fontSize: rf(12.5),
     color: COLORS.textMuted,
     textAlign: 'center',
@@ -1644,9 +1628,8 @@ const styles = StyleSheet.create({
   },
   similarSubject: {
     flex: 1,
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.displayBold,
     fontSize: rf(10),
-    fontWeight: '700',
     textTransform: 'uppercase',
     letterSpacing: 0.8,
     color: COLORS.textSubtle,

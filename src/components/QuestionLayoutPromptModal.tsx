@@ -359,9 +359,8 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(178, 58, 46, 0.08)',
   },
   recommendedBadgeText: {
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.displayBold,
     fontSize: 10,
-    fontWeight: '700',
     color: COLORS.primary,
   },
   optionSubtitle: {
@@ -392,9 +391,8 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   sampleKicker: {
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.displayBold,
     fontSize: 9,
-    fontWeight: '700',
     color: COLORS.textSubtle,
     letterSpacing: 0.6,
     marginBottom: 5,
@@ -426,9 +424,8 @@ const styles = StyleSheet.create({
     color: COLORS.text,
   },
   mockQNum: {
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.displayBold,
     fontSize: 12,
-    fontWeight: '600',
     color: COLORS.textMuted,
   },
   mockExpandedBody: {
@@ -462,7 +459,7 @@ const styles = StyleSheet.create({
   },
   mockModuleText: {
     flex: 1,
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.bodyMedium,
     fontSize: 11,
     color: COLORS.textMuted,
   },
@@ -480,9 +477,8 @@ const styles = StyleSheet.create({
   },
   mockCtaText: {
     flexShrink: 1,
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.displayBold,
     fontSize: 12,
-    fontWeight: '600',
     color: COLORS.secondary,
   },
   mockCtaUnderline: {
@@ -507,9 +503,8 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   confirmBtnText: {
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.displayBold,
     fontSize: 13.5,
-    fontWeight: '700',
     color: '#FFFFFF',
     letterSpacing: 0.3,
   },

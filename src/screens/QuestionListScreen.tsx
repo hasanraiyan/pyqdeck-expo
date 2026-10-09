@@ -523,9 +523,8 @@ const styles = StyleSheet.create({
     borderColor: COLORS.primary,
   },
   yearChipText: {
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.displayBold,
     fontSize: rf(11),
-    fontWeight: '600',
     color: COLORS.textMuted,
   },
   yearChipTextActive: {
@@ -577,9 +576,8 @@ const styles = StyleSheet.create({
     borderColor: COLORS.cardSecondary,
   },
   headerFilterText: {
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.displayBold,
     fontSize: rf(11.5),
-    fontWeight: '700',
     color: COLORS.text,
   },
   headerFilterTextActive: {
@@ -622,16 +620,14 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border,
   },
   modalTag: {
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.displayBold,
     fontSize: 10,
     color: COLORS.primary,
-    fontWeight: '700',
     letterSpacing: 1.2,
   },
   modalTitle: {
-    fontFamily: FONTS.serif,
+    fontFamily: FONTS.displayBold,
     fontSize: 20,
-    fontStyle: 'italic',
     color: COLORS.text,
   },
   modalCloseBtn: {
@@ -644,9 +640,8 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   filterSectionTitle: {
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.displayBold,
     fontSize: 10.5,
-    fontWeight: '700',
     color: COLORS.textSubtle,
     letterSpacing: 1,
     marginBottom: 8,
@@ -669,10 +664,9 @@ const styles = StyleSheet.create({
     borderColor: COLORS.primary,
   },
   modalChipText: {
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.displayBold,
     fontSize: 11.5,
     color: COLORS.textMuted,
-    fontWeight: '600',
   },
   modalChipTextActive: {
     color: '#ffffff',
@@ -686,9 +680,8 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   applyFilterBtnText: {
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.displayBold,
     fontSize: 13,
-    fontWeight: '700',
     color: '#ffffff',
     letterSpacing: 0.5,
   },

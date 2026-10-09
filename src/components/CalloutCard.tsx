@@ -40,7 +40,7 @@ export const CalloutCard: React.FC<CalloutCardProps> = React.memo(
         code_inline: {
           backgroundColor: 'rgba(0, 0, 0, 0.05)',
           color: config.textColor,
-          fontFamily: FONTS.mono,
+          fontFamily: FONTS.bodyMedium,
           fontSize: 12.5,
           paddingHorizontal: 5,
           paddingVertical: 1.5,
@@ -116,9 +116,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   title: {
-    fontFamily: FONTS.sans,
+    fontFamily: FONTS.bodyBold,
     fontSize: 13.5,
-    fontWeight: '700',
     letterSpacing: 0.3,
   },
   body: {

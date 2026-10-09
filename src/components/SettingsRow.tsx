@@ -72,7 +72,7 @@ const styles = StyleSheet.create({
     color: COLORS.textMuted,
   },
   subtitle: {
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.bodyMedium,
     fontSize: rf(11),
     color: COLORS.textSubtle,
     marginTop: 2,

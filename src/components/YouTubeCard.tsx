@@ -211,9 +211,8 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
   videoTitle: {
-    fontFamily: FONTS.mono,
+    fontFamily: FONTS.displayBold,
     fontSize: 12,
-    fontWeight: '700',
     color: COLORS.text,
     letterSpacing: 0.2,
   },
