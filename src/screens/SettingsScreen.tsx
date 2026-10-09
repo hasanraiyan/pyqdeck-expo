@@ -4,6 +4,7 @@ import {
   Text,
   ScrollView,
   Switch,
+  Modal,
   Alert,
   Platform,
   StyleSheet,
@@ -52,6 +53,7 @@ export const SettingsScreen = ({ navigation }: any) => {
   const [volumeScrollOn, setVolumeScrollOn] = useState(true);
   const [oldUiOn, setOldUiOn] = useState(false);
   const [aiEngine, setAiEngine] = useState<AskAiEngineId>('coursify');
+  const [aiMenuOpen, setAiMenuOpen] = useState(false);
   const [clearing, setClearing] = useState(false);
   const [cleared, setCleared] = useState(false);
   const [checkingUpdate, setCheckingUpdate] = useState(false);
@@ -264,25 +266,68 @@ export const SettingsScreen = ({ navigation }: any) => {
         {isAiEnabled && (
           <>
             <Text style={styles.sectionHeading}>ASK AI</Text>
-            <View style={styles.aiChips}>
-              {ASK_AI_ENGINES.map((engine) => {
-                const active = aiEngine === engine.id;
-                return (
-                  <TouchableOpacity
-                    key={engine.id}
-                    style={[styles.aiChip, active && styles.aiChipActive]}
-                    activeOpacity={0.7}
-                    onPress={() => chooseAiEngine(engine.id)}
-                    accessibilityRole="radio"
-                    accessibilityState={{ selected: active }}
-                  >
-                    <Text style={[styles.aiChipText, active && styles.aiChipTextActive]}>
-                      {engine.name}
+            <View style={styles.card}>
+              <SettingsRow
+                icon="message-circle"
+                label="Ask AI opens in"
+                last
+                onPress={() => {
+                  Haptics.selectionAsync().catch(() => {});
+                  setAiMenuOpen(true);
+                }}
+                right={
+                  <View style={styles.aiValue}>
+                    <Text style={styles.aiValueText}>
+                      {ASK_AI_ENGINES.find((e) => e.id === aiEngine)?.name ?? ''}
                     </Text>
-                  </TouchableOpacity>
-                );
-              })}
+                    <Feather name="chevron-right" size={16} color={COLORS.textSubtle} />
+                  </View>
+                }
+              />
             </View>
+
+            <Modal
+              visible={aiMenuOpen}
+              transparent
+              animationType="slide"
+              onRequestClose={() => setAiMenuOpen(false)}
+            >
+              <TouchableOpacity
+                style={styles.sheetBackdrop}
+                activeOpacity={1}
+                onPress={() => setAiMenuOpen(false)}
+              />
+              <View style={[styles.sheet, { paddingBottom: insets.bottom + 12 }]}>
+                <View style={styles.sheetHandle} />
+                <Text style={styles.sheetTitle}>Open Ask AI in</Text>
+                {ASK_AI_ENGINES.map((engine) => {
+                  const active = aiEngine === engine.id;
+                  return (
+                    <TouchableOpacity
+                      key={engine.id}
+                      style={styles.sheetRow}
+                      activeOpacity={0.6}
+                      onPress={() => {
+                        chooseAiEngine(engine.id);
+                        setAiMenuOpen(false);
+                      }}
+                      accessibilityRole="radio"
+                      accessibilityState={{ selected: active }}
+                    >
+                      <View style={styles.sheetRowText}>
+                        <Text style={[styles.sheetRowName, active && styles.sheetRowNameActive]}>
+                          {engine.name}
+                        </Text>
+                        <Text style={styles.sheetRowHint}>{engine.hint}</Text>
+                      </View>
+                      <View style={[styles.radioCircle, active && styles.radioCircleActive]}>
+                        {active && <View style={styles.radioDot} />}
+                      </View>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </Modal>
             <Text style={styles.aiNote}>
               Where Ask AI opens. Except Coursify, the question is also copied, so paste it if the box opens empty.
             </Text>
@@ -403,18 +448,42 @@ const styles = StyleSheet.create({
   scroll: {
     paddingTop: verticalScale(16),
   },
-  aiChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  aiChip: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: COLORS.border,
+  aiValue: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  aiValueText: { fontFamily: FONTS.displayBold, fontSize: rf(12.5), color: COLORS.primary },
+  sheetBackdrop: { flex: 1, backgroundColor: 'rgba(0, 0, 0, 0.4)' },
+  sheet: {
     backgroundColor: COLORS.card,
+    borderTopLeftRadius: 18,
+    borderTopRightRadius: 18,
+    paddingHorizontal: 18,
+    paddingTop: 10,
   },
-  aiChipActive: { borderColor: COLORS.primary, backgroundColor: COLORS.primaryLight },
-  aiChipText: { fontFamily: FONTS.bodyMedium, fontSize: rf(12.5), color: COLORS.textMuted },
-  aiChipTextActive: { fontFamily: FONTS.displayBold, color: COLORS.primary },
+  sheetHandle: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: COLORS.border,
+    alignSelf: 'center',
+    marginBottom: 12,
+  },
+  sheetTitle: {
+    fontFamily: FONTS.displayBold,
+    fontSize: rf(16),
+    color: COLORS.text,
+    marginBottom: 6,
+  },
+  sheetRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: COLORS.border,
+  },
+  sheetRowText: { flex: 1, paddingRight: 12 },
+  sheetRowName: { fontFamily: FONTS.bodyMedium, fontSize: rf(14.5), color: COLORS.text },
+  sheetRowNameActive: { fontFamily: FONTS.displayBold, color: COLORS.primary },
+  sheetRowHint: { fontFamily: FONTS.body, fontSize: rf(11.5), color: COLORS.textMuted, marginTop: 1 },
   aiNote: {
     fontFamily: FONTS.body,
     fontSize: rf(11.5),
