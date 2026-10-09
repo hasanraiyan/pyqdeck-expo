@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState, useMemo } from 'react';
 import { View, StyleSheet, Platform } from 'react-native';
-import { WebView, WebViewMessageEvent } from 'react-native-webview';
+import { WebView, WebViewMessageEvent } from './WebViewCompat';
 import { getMermaidJs } from '../utils/mermaidAsset';
 import {
   registerMermaidWorker,

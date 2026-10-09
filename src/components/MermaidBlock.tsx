@@ -6,7 +6,7 @@ import {
   TouchableOpacity,
   LayoutChangeEvent,
 } from 'react-native';
-import { WebView, WebViewMessageEvent } from 'react-native-webview';
+import { WebView, WebViewMessageEvent } from './WebViewCompat';
 import * as Haptics from 'expo-haptics';
 import { Feather } from '@expo/vector-icons';
 import { COLORS, FONTS, RADIUS } from '../theme/colors';
