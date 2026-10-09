@@ -143,7 +143,17 @@ const PagedStepper: React.FC<PagedStepperProps> = ({ steps, renderContent, onVie
 
   // Native-driver value for the sliding highlight, JS-driven twin for the
   // per-dot number colour (colour can't run on the native driver).
-  const slideNative = useRef(new Animated.Value(0)).current;
+  // The highlight's two edges, in dot units. The edge facing the direction of
+  // travel runs ahead and the other trails behind, so the pill stretches and
+  // then catches up - an elastic, liquid feel without any overshoot.
+  const leadEdge = useRef(new Animated.Value(0)).current;
+  const trailEdge = useRef(new Animated.Value(0)).current;
+  const forward = useRef(true);
+  const renderedIndex = useRef(0);
+  if (renderedIndex.current !== safeIndex) {
+    forward.current = safeIndex > renderedIndex.current;
+    renderedIndex.current = safeIndex;
+  }
   const slideJs = useRef(new Animated.Value(0)).current;
   const contentOpacity = useRef(new Animated.Value(1)).current;
   const contentShift = useRef(new Animated.Value(0)).current;
@@ -154,18 +164,24 @@ const PagedStepper: React.FC<PagedStepperProps> = ({ steps, renderContent, onVie
   useEffect(() => {
     // Highlight glides across every dot between the old and new step.
     const distance = Math.abs(safeIndex - prevIndex.current);
-    const duration = Math.min(420, 220 + distance * 50);
+    const duration = Math.min(700, 380 + distance * 70);
     Animated.parallel([
-      Animated.timing(slideNative, {
+      Animated.timing(leadEdge, {
+        toValue: safeIndex,
+        duration: duration * 0.6,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: false,
+      }),
+      Animated.timing(trailEdge, {
         toValue: safeIndex,
         duration,
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: true,
+        easing: Easing.inOut(Easing.cubic),
+        useNativeDriver: false,
       }),
       Animated.timing(slideJs, {
         toValue: safeIndex,
         duration,
-        easing: Easing.out(Easing.cubic),
+        easing: Easing.inOut(Easing.cubic),
         useNativeDriver: false,
       }),
     ]).start();
@@ -195,7 +211,7 @@ const PagedStepper: React.FC<PagedStepperProps> = ({ steps, renderContent, onVie
     dotsScrollRef.current?.scrollTo({ x: Math.max(0, target), animated: true });
 
     prevIndex.current = safeIndex;
-  }, [safeIndex, slideNative, slideJs, contentOpacity, contentShift]);
+  }, [safeIndex, leadEdge, trailEdge, slideJs, contentOpacity, contentShift]);
 
   const onDotsLayout = useCallback((e: LayoutChangeEvent) => {
     dotsViewWidth.current = e.nativeEvent.layout.width;
@@ -243,14 +259,17 @@ const PagedStepper: React.FC<PagedStepperProps> = ({ steps, renderContent, onVie
                 style={[
                   styles.activeHighlight,
                   {
-                    transform: [
-                      {
-                        translateX: slideNative.interpolate({
-                          inputRange: [0, 1],
-                          outputRange: [0, DOT_STEP],
-                        }),
-                      },
-                    ],
+                    left: (forward.current ? trailEdge : leadEdge).interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [0, DOT_STEP],
+                    }),
+                    width: Animated.add(
+                      DOT_SIZE,
+                      Animated.multiply(
+                        Animated.subtract(forward.current ? leadEdge : trailEdge, forward.current ? trailEdge : leadEdge),
+                        DOT_STEP,
+                      ),
+                    ),
                   },
                 ]}
               />
