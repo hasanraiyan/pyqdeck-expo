@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -29,11 +29,28 @@ export const StepperTimelineBlock: React.FC<StepperTimelineBlockProps> = React.m
 }) => {
   const [mode, setMode] = useState<'paged' | 'list'>('paged');
 
+  // Identity of the step sequence. This block can stay mounted while the
+  // document behind it is replaced (stable key at the same block index), so
+  // the selected page and view mode must restart when the steps change.
+  const signature = useMemo(
+    () =>
+      (steps || [])
+        .map((st) => `${st.stepNumber}\u0001${st.title || ''}\u0001${st.content}`)
+        .join('\u0002'),
+    [steps]
+  );
+  const [seenSignature, setSeenSignature] = useState(signature);
+  if (seenSignature !== signature) {
+    setSeenSignature(signature);
+    setMode('paged');
+  }
+
   if (!steps || steps.length === 0) return null;
 
   if (mode === 'paged') {
     return (
       <PagedStepper
+        key={signature}
         steps={steps}
         renderContent={renderContent}
         onViewAll={() => setMode('list')}
