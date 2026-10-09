@@ -11,6 +11,7 @@ import * as Haptics from 'expo-haptics';
 import { COLORS, RADIUS } from '../theme/colors';
 import { extractSvgDimensions, extractSvgTitle, sanitizeSvgForNative } from '../utils/svgParser';
 import { MermaidViewer } from './MermaidViewer';
+import { DevDiagramTag } from './DevDiagramTag';
 import { ContentErrorBoundary } from './ContentErrorBoundary';
 
 export interface SvgDiagramBlockProps {
@@ -42,6 +43,7 @@ export const SvgDiagramBlock: React.FC<SvgDiagramBlockProps> = React.memo(
 
     return (
       <View style={[styles.card, style]}>
+        <DevDiagramTag kind="svg" />
         {/* Clean headerless diagram figure. Tapping opens fullscreen zoom viewer */}
         <TouchableOpacity
           activeOpacity={0.92}
