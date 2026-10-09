@@ -16,6 +16,18 @@ interface RenderJob {
 
 // In-memory cache for rendered diagrams so revisited screens render instantly (0ms)
 const svgCache = new Map<string, RenderResult>();
+const SVG_CACHE_MAX = 40;
+
+function cacheSet(key: string, value: RenderResult) {
+  svgCache.delete(key);
+  svgCache.set(key, value);
+  // Map iterates in insertion order, so the first key is the least recently set.
+  while (svgCache.size > SVG_CACHE_MAX) {
+    const oldest = svgCache.keys().next().value;
+    if (oldest === undefined) break;
+    svgCache.delete(oldest);
+  }
+}
 
 // In-flight pending jobs mapped by diagram code to deduplicate identical diagrams
 const inFlightRequests = new Map<string, Array<{ resolve: (res: RenderResult) => void; reject: (err: Error) => void }>>();
@@ -82,7 +94,7 @@ export function handleWorkerMessage(data: any) {
       };
 
       // Save to cache
-      svgCache.set(activeJob.code.trim(), result);
+      cacheSet(activeJob.code.trim(), result);
 
       // Resolve the primary job
       activeJob.resolve(result);
