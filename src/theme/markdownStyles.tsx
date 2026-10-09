@@ -9,6 +9,8 @@ import { rf } from '../utils/responsive';
 import { HighlightedCode } from '../utils/syntaxHighlighter';
 import { MarkdownTable, TableRow, TableCell } from '../components/MarkdownTable';
 import { MermaidBlock } from '../components/MermaidBlock';
+import { SvgDiagramBlock } from '../components/SvgDiagramBlock';
+import { parseSvgContent } from '../utils/svgParser';
 
 export const baseMarkdownStyles = {
   body: {
@@ -362,6 +364,20 @@ export const markdownRules = {
 
     if (lang.toLowerCase() === 'mermaid') {
       return <MermaidBlock key={node.key} code={content} />;
+    }
+
+    if (lang.toLowerCase() === 'svg') {
+      const svgData = parseSvgContent(content);
+      if (svgData) {
+        return (
+          <SvgDiagramBlock
+            key={node.key}
+            xml={svgData.xml}
+            title={svgData.title}
+            aspectRatio={svgData.aspectRatio}
+          />
+        );
+      }
     }
 
     return <CodeBlockComponent key={node.key} content={content} language={lang} />;
