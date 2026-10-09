@@ -23,6 +23,10 @@ interface MermaidBlockProps {
   code: string;
 }
 
+// Safety ceiling only. The inline view can't scroll and clips overflow, so a low
+// cap cuts off tall diagrams; tap-to-zoom still opens the full viewer.
+const MAX_INLINE_HEIGHT = 4000;
+
 /**
  * Calculate the exact pixel height needed to render the diagram tightly,
  * avoiding any artificial whitespace or "fake space" above/below the diagram.
@@ -41,12 +45,12 @@ function calculateFittedHeight(
     if (intrinsicWidth > availW) {
       const scale = availW / intrinsicWidth;
       const scaledHeight = Math.ceil(intrinsicHeight * scale);
-      return Math.min(520, Math.max(48, scaledHeight + 14));
+      return Math.min(MAX_INLINE_HEIGHT, Math.max(48, scaledHeight + 14));
     }
-    return Math.min(520, Math.max(48, Math.ceil(intrinsicHeight) + 14));
+    return Math.min(MAX_INLINE_HEIGHT, Math.max(48, Math.ceil(intrinsicHeight) + 14));
   }
 
-  return Math.min(520, Math.max(48, Math.ceil(intrinsicHeight) + 14));
+  return Math.min(MAX_INLINE_HEIGHT, Math.max(48, Math.ceil(intrinsicHeight) + 14));
 }
 
 export const MermaidBlock: React.FC<MermaidBlockProps> = React.memo(({ code }) => {
@@ -126,7 +130,7 @@ export const MermaidBlock: React.FC<MermaidBlockProps> = React.memo(({ code }) =
       const data = JSON.parse(event.nativeEvent.data);
       if (data.type === 'size' && typeof data.height === 'number' && data.height > 0) {
         // Precise rendered height from the browser engine + tight padding
-        const fitted = Math.min(520, Math.max(48, Math.ceil(data.height) + 14));
+        const fitted = Math.min(MAX_INLINE_HEIGHT, Math.max(48, Math.ceil(data.height) + 14));
         setDiagramHeight(fitted);
       }
     } catch {
