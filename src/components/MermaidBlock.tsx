@@ -14,6 +14,7 @@ import { COLORS, FONTS, RADIUS } from '../theme/colors';
 import { CircleLoader } from './CircleLoader';
 import { NativeCodeBlock } from './NativeCodeBlock';
 import { MermaidViewer } from './MermaidViewer';
+import { DevDiagramTag } from './DevDiagramTag';
 import {
   renderMermaid,
   getCachedDiagram,
@@ -243,6 +244,7 @@ export const MermaidBlock: React.FC<MermaidBlockProps> = React.memo(({ code }) =
 
   return (
     <View ref={cardRef} style={styles.card} onLayout={onLayout}>
+      <DevDiagramTag kind="mermaid" />
       {/* Diagram container - clean, headerless figure. Tapping opens fullscreen zoom */}
       <TouchableOpacity
         activeOpacity={0.9}
