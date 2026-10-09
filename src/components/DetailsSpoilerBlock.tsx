@@ -58,7 +58,7 @@ export const DetailsSpoilerBlock: React.FC<DetailsSpoilerBlockProps> = React.mem
               color={isOpen ? COLORS.primary : COLORS.secondary}
             />
           </View>
-          <Text style={styles.summaryText} numberOfLines={1} ellipsizeMode="tail">
+          <Text style={styles.summaryText} numberOfLines={isOpen ? undefined : 1} ellipsizeMode="tail">
             {summary}
           </Text>
         </View>
