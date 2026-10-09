@@ -12,7 +12,7 @@ import * as Haptics from 'expo-haptics';
 import { Feather } from '@expo/vector-icons';
 import Markdown from 'react-native-markdown-display';
 import { COLORS, FONTS, RADIUS } from '../theme/colors';
-import { solutionMarkdownStyles, markdownRules } from '../theme/markdownStyles';
+import { solutionMarkdownStyles, markdownRules, markdownParser } from '../theme/markdownStyles';
 
 // Enable LayoutAnimation on Android
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -76,7 +76,7 @@ export const DetailsSpoilerBlock: React.FC<DetailsSpoilerBlockProps> = React.mem
           {renderContent ? (
             renderContent(content)
           ) : (
-            <Markdown style={solutionMarkdownStyles} rules={markdownRules}>
+            <Markdown markdownit={markdownParser} style={solutionMarkdownStyles} rules={markdownRules}>
               {content}
             </Markdown>
           )}

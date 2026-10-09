@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { View, StyleSheet, StyleProp, ViewStyle } from 'react-native';
 import Markdown from 'react-native-markdown-display';
 import { COLORS } from '../theme/colors';
-import { questionMarkdownStyles, solutionMarkdownStyles, markdownRules } from '../theme/markdownStyles';
+import { questionMarkdownStyles, solutionMarkdownStyles, markdownRules, markdownParser } from '../theme/markdownStyles';
 import { parseContentBlocks, ContentBlock } from '../utils/nativeContentParser';
 import { NativeMathView } from './NativeMathView';
 import { NativeCodeBlock } from './NativeCodeBlock';
@@ -187,7 +187,7 @@ export const NativeContentRenderer: React.FC<NativeContentRendererProps> = React
             return (
               <View key={`md-${index}`} style={styles.markdownBlock}>
                 <ContentErrorBoundary fallbackText={block.content}>
-                  <Markdown style={mdStyles} rules={rules}>
+                  <Markdown markdownit={markdownParser} style={mdStyles} rules={rules}>
                     {cleanMarkdown(block.content)}
                   </Markdown>
                 </ContentErrorBoundary>

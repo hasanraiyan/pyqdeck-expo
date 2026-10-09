@@ -4,7 +4,7 @@ import { Feather } from '@expo/vector-icons';
 import Markdown from 'react-native-markdown-display';
 import { CalloutType, CALLOUT_TYPE_CONFIG } from '../utils/calloutParser';
 import { COLORS, FONTS } from '../theme/colors';
-import { markdownRules } from '../theme/markdownStyles';
+import { markdownRules, markdownParser } from '../theme/markdownStyles';
 import { cleanMarkdown } from '../utils/responsive';
 
 export interface CalloutCardProps {
@@ -81,7 +81,7 @@ export const CalloutCard: React.FC<CalloutCardProps> = React.memo(
 
         {Boolean(content) && (
           <View style={styles.body}>
-            <Markdown style={calloutMdStyles} rules={rules}>
+            <Markdown markdownit={markdownParser} style={calloutMdStyles} rules={rules}>
               {cleanMarkdown(content)}
             </Markdown>
           </View>

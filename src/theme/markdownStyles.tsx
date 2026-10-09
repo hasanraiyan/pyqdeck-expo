@@ -4,6 +4,7 @@ import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
 import { Feather } from '@expo/vector-icons';
 import FitImage from 'react-native-fit-image';
+import { MarkdownIt } from 'react-native-markdown-display';
 import { COLORS, FONTS } from './colors';
 import { rf } from '../utils/responsive';
 import { HighlightedCode } from '../utils/syntaxHighlighter';
@@ -11,6 +12,11 @@ import { MarkdownTable, TableRow, TableCell } from '../components/MarkdownTable'
 import { MermaidBlock } from '../components/MermaidBlock';
 import { SvgDiagramBlock } from '../components/SvgDiagramBlock';
 import { parseSvgContent } from '../utils/svgParser';
+
+// The library's default parser has `typographer` on, which rewrites "(c)" to a
+// circled c and also "(r)", "(tm)", "--" and straight quotes. Notes list MCQ
+// options as (a) (b) (c), so every other typographic replacement goes too.
+export const markdownParser = MarkdownIt({ typographer: false });
 
 export const baseMarkdownStyles = {
   body: {

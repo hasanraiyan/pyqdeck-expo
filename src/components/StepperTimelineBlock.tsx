@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import Markdown from 'react-native-markdown-display';
 import { COLORS, FONTS, RADIUS } from '../theme/colors';
-import { solutionMarkdownStyles, markdownRules } from '../theme/markdownStyles';
+import { solutionMarkdownStyles, markdownRules, markdownParser } from '../theme/markdownStyles';
 import { StepperItem } from '../utils/stepperParser';
 
 interface StepperTimelineBlockProps {
@@ -105,7 +105,7 @@ export const StepperTimelineBlock: React.FC<StepperTimelineBlockProps> = React.m
                     {renderContent ? (
                       renderContent(step.content)
                     ) : (
-                      <Markdown style={solutionMarkdownStyles} rules={markdownRules}>
+                      <Markdown markdownit={markdownParser} style={solutionMarkdownStyles} rules={markdownRules}>
                         {step.content}
                       </Markdown>
                     )}
@@ -233,7 +233,7 @@ const PagedStepper: React.FC<PagedStepperProps> = ({ steps, renderContent, onVie
             {renderContent ? (
               renderContent(step.content)
             ) : (
-              <Markdown style={solutionMarkdownStyles} rules={markdownRules}>
+              <Markdown markdownit={markdownParser} style={solutionMarkdownStyles} rules={markdownRules}>
                 {step.content}
               </Markdown>
             )}
