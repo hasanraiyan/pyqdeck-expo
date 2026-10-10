@@ -18,7 +18,7 @@
     },
     "android": {
       "package": "app.hasanraiyan.pyqdeck",
-      "versionCode": 69,
+      "versionCode": 70,
       "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "backgroundColor": "#faf7f4",
