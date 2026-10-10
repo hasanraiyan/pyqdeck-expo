@@ -593,7 +593,7 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   headerIconButtonActive: {
-    borderColor: COLORS.primary,
+    borderWidth: 0,
     overflow: 'hidden',
     padding: 0,
   },
