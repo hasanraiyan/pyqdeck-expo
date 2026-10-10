@@ -48,41 +48,103 @@ const COLLAPSED_H = rf(22) * COLLAPSED_LINES;
 const TYPE_CHARS_PER_TICK = 4;
 const TYPE_TICK_MS = 16;
 
-/** Three bars that pulse while the answer is being generated. */
-const GeneratingState = () => {
-  const anim = React.useRef(new Animated.Value(0.4)).current;
+// What the "generating" header says, in order. The real work (retrieval, then
+// the model writing) is not reported by the server, so these are a believable
+// progression rather than live telemetry: each shows for PHASE_MS and the last
+// one holds until the answer lands.
+const PHASES = ['SEARCHING PAPERS', 'READING SOURCES', 'WRITING YOUR ANSWER'];
+const PHASE_MS = 1800;
+const SHIMMER_MS = 1300;
+// Three lines is enough to read as "an answer is coming" without a tall empty card.
+const BONE_WIDTHS = ['100%', '94%', '62%'] as const;
 
-  React.useEffect(() => {
+/**
+ * Placeholder while the answer is being generated: a header whose status line
+ * advances through phases, and skeleton lines with a light sweep passing over
+ * them. Two native-driven values (the sweep and the label fade) and nothing
+ * per-line, so it stays smooth while the request is in flight.
+ */
+const GeneratingState = () => {
+  const sweep = React.useRef(new Animated.Value(0)).current;
+  const fade = React.useRef(new Animated.Value(1)).current;
+  const [phase, setPhase] = useState(0);
+  const [width, setWidth] = useState(0);
+  const native = Platform.OS !== 'web';
+
+  useEffect(() => {
     const loop = Animated.loop(
-      Animated.sequence([
-        Animated.timing(anim, {
-          toValue: 1,
-          duration: 700,
-          useNativeDriver: Platform.OS !== 'web',
-        }),
-        Animated.timing(anim, {
-          toValue: 0.4,
-          duration: 700,
-          useNativeDriver: Platform.OS !== 'web',
-        }),
-      ])
+      Animated.timing(sweep, {
+        toValue: 1,
+        duration: SHIMMER_MS,
+        easing: Easing.inOut(Easing.quad),
+        useNativeDriver: native,
+      })
     );
     loop.start();
     return () => loop.stop();
-  }, [anim]);
+  }, [sweep, native]);
+
+  // Cross-fades the label out, swaps the text, fades back in.
+  useEffect(() => {
+    if (phase >= PHASES.length - 1) return;
+    let cancelled = false;
+    const t = setTimeout(() => {
+      Animated.timing(fade, { toValue: 0, duration: 180, useNativeDriver: native }).start(() => {
+        if (cancelled) return;
+        setPhase((p) => p + 1);
+        Animated.timing(fade, { toValue: 1, duration: 220, useNativeDriver: native }).start();
+      });
+    }, PHASE_MS);
+    return () => {
+      cancelled = true;
+      clearTimeout(t);
+      fade.stopAnimation();
+    };
+  }, [phase, fade, native]);
+
+  const band = Math.max(width * 0.45, 80);
+  const translateX = sweep.interpolate({
+    inputRange: [0, 1],
+    outputRange: [-band, width],
+  });
 
   return (
-    <View style={styles.card}>
+    <View
+      style={styles.card}
+      accessible
+      accessibilityLabel="Generating AI overview"
+      accessibilityLiveRegion="polite"
+    >
       <View style={styles.headerRow}>
         <Feather name="zap" size={13} color={COLORS.primary} />
-        <Text style={styles.headerLabel}>GENERATING…</Text>
+        <Animated.Text style={[styles.headerLabel, { opacity: fade }]}>
+          {PHASES[phase]}…
+        </Animated.Text>
       </View>
-      {/* One shared value drives every bar - a timer per bar is how jank starts. */}
-      <Animated.View style={{ opacity: anim }}>
-        <View style={[styles.bone, { width: '100%' }]} />
-        <View style={[styles.bone, { width: '96%' }]} />
-        <View style={[styles.bone, { width: '72%' }]} />
-      </Animated.View>
+
+      <View style={styles.genBody} onLayout={(e) => setWidth(e.nativeEvent.layout.width)}>
+        {BONE_WIDTHS.map((w, i) => (
+          <View key={i} style={[styles.bone, { width: w }]} />
+        ))}
+        {/* One highlight band sweeps over every line at once, clipped by the body. */}
+        {width > 0 && (
+          <Animated.View
+            pointerEvents="none"
+            style={[styles.shimmer, { width: band, transform: [{ translateX }] }]}
+          >
+            <Svg width="100%" height="100%">
+              <Defs>
+                <SvgGradient id="aiShimmer" x1="0" y1="0" x2="1" y2="0">
+                  <Stop offset="0" stopColor={COLORS.card} stopOpacity="0" />
+                  <Stop offset="0.5" stopColor={COLORS.card} stopOpacity="0.85" />
+                  <Stop offset="1" stopColor={COLORS.card} stopOpacity="0" />
+                </SvgGradient>
+              </Defs>
+              <Rect x="0" y="0" width="100%" height="100%" fill="url(#aiShimmer)" />
+            </Svg>
+          </Animated.View>
+        )}
+      </View>
     </View>
   );
 };
@@ -306,39 +368,42 @@ export const AiOverviewCard: React.FC<Props> = ({ overview, loading, onPressRefe
 
       {expanded && (
         <View style={styles.expandedFooter}>
-          {overview.references.length > 0 && (
-            <TouchableOpacity
-              style={styles.sourcesPill}
-              activeOpacity={0.7}
-              onPress={openAllSources}
-            >
-              <Feather name="link" size={13} color={COLORS.textMuted} />
-              <Text style={styles.sourcesPillText}>Sources</Text>
-            </TouchableOpacity>
-          )}
+          {/* Sources on the left, copy + menu on the right, all on one line. */}
+          <View style={styles.footerLine}>
+            {overview.references.length > 0 && (
+              <TouchableOpacity
+                style={styles.sourcesPill}
+                activeOpacity={0.7}
+                onPress={openAllSources}
+              >
+                <Feather name="link" size={13} color={COLORS.textMuted} />
+                <Text style={styles.sourcesPillText}>Sources</Text>
+              </TouchableOpacity>
+            )}
 
-          <View style={styles.actionRow}>
-            <TouchableOpacity
-              style={styles.actionIconBtn}
-              activeOpacity={0.6}
-              onPress={handleCopy}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            >
-              <Feather
-                name={copied ? 'check' : 'copy'}
-                size={16}
-                color={copied ? COLORS.success : COLORS.textMuted}
-              />
-            </TouchableOpacity>
+            <View style={styles.actionRow}>
+              <TouchableOpacity
+                style={styles.actionIconBtn}
+                activeOpacity={0.6}
+                onPress={handleCopy}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Feather
+                  name={copied ? 'check' : 'copy'}
+                  size={16}
+                  color={copied ? COLORS.success : COLORS.textMuted}
+                />
+              </TouchableOpacity>
 
-            <TouchableOpacity
-              style={styles.actionIconBtn}
-              activeOpacity={0.6}
-              onPress={handleShare}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            >
-              <Feather name="more-vertical" size={16} color={COLORS.textMuted} />
-            </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.actionIconBtn}
+                activeOpacity={0.6}
+                onPress={handleShare}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Feather name="share-2" size={16} color={COLORS.textMuted} />
+              </TouchableOpacity>
+            </View>
           </View>
 
           <View style={styles.showLessContainer}>
@@ -555,12 +620,18 @@ const styles = StyleSheet.create({
     fontSize: rf(12),
     color: COLORS.text,
   },
+  footerLine: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 12,
+    marginBottom: 8,
+  },
   actionRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 18,
-    marginTop: 12,
-    marginBottom: 8,
+    marginLeft: 'auto',
     paddingHorizontal: 4,
   },
   actionIconBtn: {
@@ -571,11 +642,20 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginTop: 6,
   },
+  genBody: {
+    overflow: 'hidden',
+  },
   bone: {
     height: 12,
     borderRadius: 4,
     backgroundColor: COLORS.cardSecondary,
     marginBottom: 8,
+  },
+  shimmer: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    left: 0,
   },
   sheetBackdrop: {
     flex: 1,
