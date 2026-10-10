@@ -557,6 +557,86 @@ export const SearchScreen = () => {
               <Text style={styles.cooldownText}>Slow down — try again in {cooldownSec}s</Text>
             </View>
           )}
+          {/* Filter chips - pinned under the search bar so they stay put while results scroll */}
+          {!loading && hasSearched && !noResults && (
+            <View style={[styles.filterTabsContainer, { marginHorizontal: -hPadding }]}>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={[styles.filterTabsRow, { paddingHorizontal: hPadding }]}
+              >
+                <TouchableOpacity
+                  style={[styles.filterTabPill, activeTab === 'all' && styles.filterTabPillActive]}
+                  activeOpacity={0.7}
+                  onPress={() => {
+                    Haptics.selectionAsync().catch(() => {});
+                    setActiveTab('all');
+                  }}
+                >
+                  <Text style={[styles.filterTabPillText, activeTab === 'all' && styles.filterTabPillTextActive]}>
+                    All ({totalResultsCount})
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.filterTabPill, activeTab === 'questions' && styles.filterTabPillActive]}
+                  activeOpacity={0.7}
+                  onPress={() => {
+                    Haptics.selectionAsync().catch(() => {});
+                    setActiveTab('questions');
+                  }}
+                >
+                  <Feather
+                    name="help-circle"
+                    size={12}
+                    color={activeTab === 'questions' ? '#ffffff' : COLORS.textMuted}
+                    style={{ marginRight: 5 }}
+                  />
+                  <Text style={[styles.filterTabPillText, activeTab === 'questions' && styles.filterTabPillTextActive]}>
+                    Questions ({questionResults.length})
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.filterTabPill, activeTab === 'notes' && styles.filterTabPillActive]}
+                  activeOpacity={0.7}
+                  onPress={() => {
+                    Haptics.selectionAsync().catch(() => {});
+                    setActiveTab('notes');
+                  }}
+                >
+                  <Feather
+                    name="book-open"
+                    size={12}
+                    color={activeTab === 'notes' ? '#ffffff' : COLORS.textMuted}
+                    style={{ marginRight: 5 }}
+                  />
+                  <Text style={[styles.filterTabPillText, activeTab === 'notes' && styles.filterTabPillTextActive]}>
+                    Notes ({noteResults.length})
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.filterTabPill, activeTab === 'subjects' && styles.filterTabPillActive]}
+                  activeOpacity={0.7}
+                  onPress={() => {
+                    Haptics.selectionAsync().catch(() => {});
+                    setActiveTab('subjects');
+                  }}
+                >
+                  <Feather
+                    name="folder"
+                    size={12}
+                    color={activeTab === 'subjects' ? '#ffffff' : COLORS.textMuted}
+                    style={{ marginRight: 5 }}
+                  />
+                  <Text style={[styles.filterTabPillText, activeTab === 'subjects' && styles.filterTabPillTextActive]}>
+                    Subjects ({subjectResults.length})
+                  </Text>
+                </TouchableOpacity>
+              </ScrollView>
+            </View>
+          )}
         </View>
       </View>
 
@@ -640,87 +720,6 @@ export const SearchScreen = () => {
               <Text style={styles.emptySubtitle}>
                 Try a shorter or differently-spelled search term.
               </Text>
-            </View>
-          )}
-
-          {/* Filter Tabs Row */}
-          {!loading && hasSearched && !noResults && (
-            <View style={styles.filterTabsContainer}>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.filterTabsRow}
-              >
-                <TouchableOpacity
-                  style={[styles.filterTabPill, activeTab === 'all' && styles.filterTabPillActive]}
-                  activeOpacity={0.7}
-                  onPress={() => {
-                    Haptics.selectionAsync().catch(() => {});
-                    setActiveTab('all');
-                  }}
-                >
-                  <Text style={[styles.filterTabPillText, activeTab === 'all' && styles.filterTabPillTextActive]}>
-                    All ({totalResultsCount})
-                  </Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[styles.filterTabPill, activeTab === 'questions' && styles.filterTabPillActive]}
-                  activeOpacity={0.7}
-                  onPress={() => {
-                    Haptics.selectionAsync().catch(() => {});
-                    setActiveTab('questions');
-                  }}
-                >
-                  <Feather
-                    name="help-circle"
-                    size={12}
-                    color={activeTab === 'questions' ? '#ffffff' : COLORS.textMuted}
-                    style={{ marginRight: 5 }}
-                  />
-                  <Text style={[styles.filterTabPillText, activeTab === 'questions' && styles.filterTabPillTextActive]}>
-                    Questions ({questionResults.length})
-                  </Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[styles.filterTabPill, activeTab === 'notes' && styles.filterTabPillActive]}
-                  activeOpacity={0.7}
-                  onPress={() => {
-                    Haptics.selectionAsync().catch(() => {});
-                    setActiveTab('notes');
-                  }}
-                >
-                  <Feather
-                    name="book-open"
-                    size={12}
-                    color={activeTab === 'notes' ? '#ffffff' : COLORS.textMuted}
-                    style={{ marginRight: 5 }}
-                  />
-                  <Text style={[styles.filterTabPillText, activeTab === 'notes' && styles.filterTabPillTextActive]}>
-                    Notes ({noteResults.length})
-                  </Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[styles.filterTabPill, activeTab === 'subjects' && styles.filterTabPillActive]}
-                  activeOpacity={0.7}
-                  onPress={() => {
-                    Haptics.selectionAsync().catch(() => {});
-                    setActiveTab('subjects');
-                  }}
-                >
-                  <Feather
-                    name="folder"
-                    size={12}
-                    color={activeTab === 'subjects' ? '#ffffff' : COLORS.textMuted}
-                    style={{ marginRight: 5 }}
-                  />
-                  <Text style={[styles.filterTabPillText, activeTab === 'subjects' && styles.filterTabPillTextActive]}>
-                    Subjects ({subjectResults.length})
-                  </Text>
-                </TouchableOpacity>
-              </ScrollView>
             </View>
           )}
 
@@ -1174,15 +1173,12 @@ const styles = StyleSheet.create({
     color: COLORS.textMuted,
   },
   filterTabsContainer: {
-    marginBottom: 10,
-    marginHorizontal: -4,
+    marginTop: 10,
   },
   filterTabsRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    paddingHorizontal: 4,
-    paddingBottom: 2,
   },
   filterTabPill: {
     flexDirection: 'row',
