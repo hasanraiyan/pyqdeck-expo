@@ -29,6 +29,7 @@ import { setSettingChangeHandler } from './settingsPending';
 import { registerWipeHook, wipeUserData } from '../auth/wipeUserData';
 import { isAuthEnabled } from '../config/features';
 import { getSignedInUserId } from '../auth/token';
+import { getAppConfigNow, loadCachedAppConfig, refreshAppConfig } from '../config/appConfig';
 import { getKnownPushToken } from '../utils/notifications';
 
 /**
@@ -114,6 +115,7 @@ const clearTimer = () => {
  * still goes out regularly. `immediate` flushes now.
  */
 export function requestSync(opts: { immediate?: boolean; delayMs?: number } = {}): void {
+  if (!getAppConfigNow().flags.syncEnabled) return; // admin kill switch
   if (!canSync({ signedIn: session.signedIn, authEnabled: isAuthEnabled, syncEnabled, online: true })) {
     return;
   }
@@ -214,7 +216,11 @@ async function runRound(): Promise<void> {
   let aux: AuxSent | null = null;
   const firstSyncOnDevice = (await AsyncStorage.getItem(CURSOR_KEY)) === null;
   const pendingNow = (await readPendingSettings()).size > 0;
-  if (firstSyncOnDevice || pendingNow || Date.now() - lastAuxSyncAt > AUX_SYNC_MIN_GAP_MS) {
+  const auxAllowed = getAppConfigNow().flags.settingsSyncEnabled;
+  if (
+    auxAllowed &&
+    (firstSyncOnDevice || pendingNow || Date.now() - lastAuxSyncAt > AUX_SYNC_MIN_GAP_MS)
+  ) {
     aux = await buildAuxRequest({ accountWins: firstSyncOnDevice });
     lastAuxSyncAt = Date.now();
   }
@@ -328,6 +334,7 @@ export function syncNow(): Promise<void> {
         return;
       }
       if (pausedForAuth) return;
+      if (!getAppConfigNow().flags.syncEnabled) return; // admin kill switch
       if (!(await isOnline())) {
         setStatus({ state: 'offline' });
         await refreshPending();
@@ -339,6 +346,15 @@ export function syncNow(): Promise<void> {
       setStatus({ state: 'idle' });
     } catch (err) {
       const e = err as ApiError;
+      if (e?.code === 'sync_disabled') {
+        // An admin paused sync server-side. Pick up the config (so the app itself
+        // stops asking) and look again much later; local data is untouched.
+        void refreshAppConfig({ force: true });
+        setStatus({ state: 'idle' });
+        clearTimer();
+        timer = setTimeout(() => void syncNow(), 15 * 60 * 1000);
+        return;
+      }
       if (e?.status === 401) {
         // Session not usable right now. Keep the outbox; never wipe on a 401.
         pausedForAuth = true;
@@ -380,6 +396,9 @@ export async function syncFromBackground(): Promise<string> {
   const userId = await getSignedInUserId();
   if (!userId) return 'skipped: Clerk reports signed out (headless session not available)';
   if (userId !== owner) return 'skipped: a different account is signed in';
+  await loadCachedAppConfig(); // headless: nothing has loaded the config yet
+  if (!getAppConfigNow().flags.syncEnabled) return 'skipped: sync is paused by an admin';
+  if (!getAppConfigNow().flags.nudgesEnabled) return 'skipped: nudges are paused by an admin';
   await loadSyncEnabled();
   session = { signedIn: true, userId };
   await syncNow();
