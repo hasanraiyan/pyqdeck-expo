@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { BannerAd, BannerAdSize, adsAvailable } from '../utils/mobileAds';
 import { AD_UNIT_IDS } from '../config/ads';
 import { useResponsive } from '../utils/responsive';
@@ -79,20 +80,22 @@ export const AdBanner: React.FC = () => {
   if (!BannerAd) return null;
 
   return (
-    <View style={styles.container}>
-      {status === 'loading' && AD_DEBUG_UI && (
-        <DebugBadge text={`requesting ${bannerSizeFor(isTablet)} ad (${AD_UNIT_IDS.banner})`} />
-      )}
-      <BannerAd
-        unitId={AD_UNIT_IDS.banner}
-        size={bannerSizeFor(isTablet)}
-        onAdFailedToLoad={handleFailedToLoad}
-        onAdLoaded={() => {
-          attemptRef.current = 0;
-          setStatus('loaded');
-        }}
-      />
-    </View>
+    <SafeAreaView edges={['bottom']} style={styles.safeArea}>
+      <View style={styles.container}>
+        {status === 'loading' && AD_DEBUG_UI && (
+          <DebugBadge text={`requesting ${bannerSizeFor(isTablet)} ad (${AD_UNIT_IDS.banner})`} />
+        )}
+        <BannerAd
+          unitId={AD_UNIT_IDS.banner}
+          size={bannerSizeFor(isTablet)}
+          onAdFailedToLoad={handleFailedToLoad}
+          onAdLoaded={() => {
+            attemptRef.current = 0;
+            setStatus('loaded');
+          }}
+        />
+      </View>
+    </SafeAreaView>
   );
 };
 
@@ -103,6 +106,11 @@ const DebugBadge: React.FC<{ text: string }> = ({ text }) => (
 );
 
 const styles = StyleSheet.create({
+  safeArea: {
+    width: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   container: {
     width: '100%',
     alignItems: 'center',

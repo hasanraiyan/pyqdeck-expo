@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Linking, type LayoutChangeEvent } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
@@ -75,7 +75,6 @@ export const TopicNotesScreen = () => {
     []
   );
   const twoPane = canShowTwoPanesIn(rootWidth);
-  const insets = useSafeAreaInsets();
   const route = useRoute<any>();
   const navigation = useNavigation<any>();
   const queryClient = useQueryClient();
@@ -398,7 +397,6 @@ export const TopicNotesScreen = () => {
         contentContainerStyle={[
           styles.scroll,
           frame,
-          { paddingBottom: insets.bottom + 32 },
           // Centre the loader in the empty content area, as QuestionDetail does.
           loading && styles.scrollLoading,
         ]}
@@ -449,12 +447,12 @@ export const TopicNotesScreen = () => {
       <VolumeScrollHint
         visible={showVolumeHint}
         onHide={() => setShowVolumeHint(false)}
-        bottomOffset={insets.bottom + 16}
+        bottomOffset={16}
       />
 
-      <View style={{ paddingBottom: insets.bottom }}>
+      <SafeAreaView edges={['bottom']}>
         <AdBanner />
-      </View>
+      </SafeAreaView>
       </View>
     </View>
   );
