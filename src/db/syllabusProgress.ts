@@ -244,6 +244,47 @@ export function setTopicDone(
   }).catch(() => {});
 }
 
+/**
+ * A subject's slug can be renamed by an admin, and progress is stored under the
+ * slug the app knew. When the syllabus now on screen (`validKeys`, ids that
+ * survive a rename) matches records stored under a different subject key while
+ * this subject has none, those records belong to the renamed subject: move
+ * them (and their queued outbox ops) to the new key. Returns true if it moved.
+ */
+export function adoptRenamedSubject(subjectId: string, validKeys: Set<string>): Promise<boolean> {
+  if (validKeys.size === 0) return Promise.resolve(false);
+  return exclusive(async () => {
+    await migrateInsideQueue();
+    if (Object.keys(await readRecords(subjectId)).length > 0) return false;
+    const keys = (await AsyncStorage.getAllKeys()).filter(
+      (k) => k.startsWith(V2_PREFIX) && k !== v2Key(subjectId)
+    );
+    for (const storageKey of keys) {
+      const raw = await AsyncStorage.getItem(storageKey);
+      let records: SubjectProgress = {};
+      try {
+        records = raw ? JSON.parse(raw) : {};
+      } catch {}
+      if (!Object.keys(records).some((k) => validKeys.has(k))) continue;
+      const oldSubject = storageKey.slice(V2_PREFIX.length);
+      await writeRecords(subjectId, records);
+      await AsyncStorage.removeItem(storageKey);
+      const outbox = await loadOutbox();
+      let touched = false;
+      for (const [k, op] of Object.entries(outbox)) {
+        if (op.subject !== oldSubject) continue;
+        delete outbox[k];
+        outbox[`${subjectId}|${op.moduleId}:${op.topicId}`] = { ...op, subject: subjectId };
+        touched = true;
+      }
+      if (touched) await AsyncStorage.setItem(OUTBOX_KEY, JSON.stringify(outbox));
+      notify();
+      return true;
+    }
+    return false;
+  }).catch(() => false);
+}
+
 /** Queues ops for records that exist locally but not on the server yet. */
 export function queueOps(ops: Parameters<typeof enqueue>[1][]): Promise<void> {
   return updateOutbox((box) => ops.reduce((acc, op) => enqueue(acc, op), box)).then(() => {});

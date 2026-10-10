@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { registerWipeHook } from '../auth/wipeUserData';
 
 // Deliberately NOT `pyq_`-prefixed: a cache clear shouldn't make an
 // already-cast vote appear unhighlighted while the server still remembers it.
@@ -56,4 +57,43 @@ export async function setMyVote(subjectId: string, questionId: string, value: 1 
       await AsyncStorage.setItem(voteKey(subjectId, questionId), String(value));
     }
   } catch {}
+}
+
+// Subjects whose highlights were already restored from the account this
+// session, so opening many questions does not refetch. Cleared by the sign-out
+// wipe so the next account starts fresh.
+const restoredSubjects = new Set<string>();
+registerWipeHook(() => restoredSubjects.clear());
+
+export const votesRestored = (subjectId: string) => restoredSubjects.has(subjectId);
+
+/**
+ * Makes this device's vote highlights for one subject match the account's.
+ * The local keys are only a mirror: the account (server) is the truth, so a
+ * new phone shows the right highlights and a vote withdrawn elsewhere
+ * disappears here. Returns true when it changed anything.
+ */
+export async function restoreVotesForSubject(
+  subjectId: string,
+  accountVotes: { questionId: string | null; value: 1 | -1 }[]
+): Promise<boolean> {
+  if (restoredSubjects.has(subjectId)) return false;
+  try {
+    await migrateLegacyVotes();
+    const prefix = `${VOTE_PREFIX}${subjectId}:`;
+    const wanted = new Map<string, string>();
+    for (const v of accountVotes) {
+      if (v.questionId) wanted.set(voteKey(subjectId, v.questionId), String(v.value));
+    }
+    const existingKeys = (await AsyncStorage.getAllKeys()).filter((k) => k.startsWith(prefix));
+    const current = new Map(await AsyncStorage.multiGet(existingKeys));
+    const stale = existingKeys.filter((k) => !wanted.has(k));
+    const changed = [...wanted].filter(([k, v]) => current.get(k) !== v);
+    if (stale.length) await AsyncStorage.multiRemove(stale);
+    if (changed.length) await AsyncStorage.multiSet(changed);
+    restoredSubjects.add(subjectId);
+    return stale.length > 0 || changed.length > 0;
+  } catch {
+    return false;
+  }
 }

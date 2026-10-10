@@ -22,7 +22,7 @@ import * as WebBrowser from 'expo-web-browser';
 import { Feather, FontAwesome } from '@expo/vector-icons';
 import { NativeContentRenderer } from '../components/NativeContentRenderer';
 import { useQueryClient } from '@tanstack/react-query';
-import { voteSolution, reportSolution } from '../api';
+import { voteSolution, reportSolution, getMyVotes } from '../api';
 import {
   useSolution,
   questionQuery,
@@ -43,7 +43,7 @@ import { shareQuestion } from '../utils/links';
 import { questionMarkdownStyles, solutionMarkdownStyles, markdownRules } from '../theme/markdownStyles';
 import { recordQuestionOpenedAndMaybeShowInterstitial } from '../utils/ads';
 import { AdBanner } from '../components/AdBanner';
-import { getMyVote, setMyVote } from '../utils/votes';
+import { getMyVote, setMyVote, restoreVotesForSubject, votesRestored } from '../utils/votes';
 import { useRequireAuth } from '../auth/useRequireAuth';
 import { WaveLoader } from '../components/WaveLoader';
 import { CircleLoader } from '../components/CircleLoader';
@@ -101,7 +101,7 @@ export const QuestionDetailScreen = () => {
   const [myVote, setMyVoteState] = useState<1 | -1 | null>(null);
   const [voteCounts, setVoteCounts] = useState({ upvotes: 0, downvotes: 0 });
   const [isVoting, setIsVoting] = useState(false);
-  const { guard } = useRequireAuth();
+  const { guard, isSignedIn } = useRequireAuth();
   // Refs to avoid stale closures during rapid taps (see optimistic UI race fix)
   const myVoteRef = useRef<1 | -1 | null>(null);
   const voteCountsRef = useRef({ upvotes: 0, downvotes: 0 });
@@ -154,6 +154,23 @@ export const QuestionDetailScreen = () => {
     if (!questionId) return;
     getMyVote(subjectId, questionId).then(setMyVoteState);
   }, [subjectId, questionId]);
+
+  // Signed in: make the highlights match the account (once per subject per
+  // session), so a new phone shows the votes already cast. Best effort - the
+  // local mirror keeps working if this fails.
+  useEffect(() => {
+    if (!isSignedIn || !subjectId || !questionId || votesRestored(subjectId)) return;
+    let cancelled = false;
+    getMyVotes(subjectId)
+      .then((res) => restoreVotesForSubject(subjectId, res.solutionVotes))
+      .then((changed) => {
+        if (changed && !cancelled) getMyVote(subjectId, questionId).then(setMyVoteState);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [isSignedIn, subjectId, questionId]);
 
   // Keep refs in sync for stale-closure-free optimistic math
   useEffect(() => {
