@@ -401,14 +401,8 @@ export const SearchScreen = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [route.params?.q]);
 
-  const activeSuggestions = dynamicSuggestions.length > 0 ? dynamicSuggestions : [
-    'Operating System',
-    'Data Structures & Algorithms',
-    'Computer Organization',
-    'Analog Electronics',
-    'Digital Electronics',
-    'Engineering Mathematics',
-  ];
+  // Only subjects from the server; with none loaded the section is simply hidden.
+  const activeSuggestions = dynamicSuggestions;
 
   const totalResultsCount = subjectResults.length + questionResults.length + noteResults.length;
 
@@ -602,6 +596,8 @@ export const SearchScreen = () => {
                 </View>
               )}
 
+              {activeSuggestions.length > 0 && (
+                <>
               <Text style={styles.suggestedHeading}>
                 {recentSearches.length > 0 ? 'EXPLORE LIVE SUBJECTS' : 'POPULAR SUBJECT TOPICS'}
               </Text>
@@ -624,6 +620,8 @@ export const SearchScreen = () => {
                   </TouchableOpacity>
                 ))}
               </View>
+                </>
+              )}
             </View>
           )}
           {loading ? (
