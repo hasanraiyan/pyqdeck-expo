@@ -68,7 +68,8 @@ import { bootWipeCheck, wipeUserData } from './src/auth/wipeUserData';
 import { configureSyncSession, pendingCount } from './src/db/progressSync';
 import { OWNER_KEY } from './src/db/storageRegistry';
 import { isAuthEnabled } from './src/config/features';
-import { linkPushTokenToAccount } from './src/utils/notifications';
+import { linkPushTokenToAccount, subscribeToSyncNudges } from './src/utils/notifications';
+import { requestSync } from './src/db/progressSync';
 
 // Crash/error monitoring only - deliberately not sendDefaultPii (would send
 // IP address etc, undisclosed in the Play Store Data Safety form) and no
@@ -492,6 +493,8 @@ function AppContent() {
       .catch(() => {});
     // A tap on a notification must never be missed, even mid-onboarding.
     const unsubscribe = subscribeToNotificationResponses();
+    // Another device changed something: sync now (no-op when signed out).
+    const unsubscribeNudges = subscribeToSyncNudges(() => requestSync({ immediate: true }));
 
     // Start backend selection alongside the rest of boot. It runs in the
     // background; requests do not wait for it (see src/api/backend.ts).
@@ -506,6 +509,7 @@ function AppContent() {
 
     return () => {
       unsubscribe();
+      unsubscribeNudges();
       appStateSub.remove();
     };
   }, []);

@@ -42,6 +42,17 @@ Tester: ____________  Device/Android: ____________  Build (versionCode): ______ 
 - [ ] Untick X on device 2, then sync device 1: X is unticked on both.
 - [ ] Conflict: take device 1 offline, tick Y; on device 2 untick Y later; bring device 1 online. The **newer** change wins on both.
 
+### 3b. "Sync now" nudge to other devices (background push)
+
+Needs two devices signed in as A, notifications allowed on both, and the build that includes `expo-task-manager`.
+
+- [ ] Device 2 open in the foreground (Study tab). Tick a topic on device 1. Within a few seconds the tick appears on device 2 **without** touching it, and no notification banner or sound shows.
+- [ ] Device 2 in the background (app minimised, screen on): tick on device 1; open device 2: the tick is already there (not just after the foreground sync).
+- [ ] Device 2 with the app **swiped away** (closed): tick on device 1, wait about a minute, then open device 2. Note whether the tick was already synced before you opened it: ______ (the OS may delay or skip this on battery saver or Doze; opening the app must still sync it either way).
+- [ ] Tick five topics quickly on device 1: device 2 gets one or two nudges, not five. (Server: `GET /api/admin/sync-metrics` shows the sync requests.)
+- [ ] Device 1 (the one that ticked) does **not** get a nudge for its own change.
+- [ ] A broadcast and a "report fixed" push still show normally with a banner.
+
 ## 4. Offline queue
 
 - [ ] Airplane mode on. Tick 2 topics. Study bar shows "Offline - 2 waiting to sync".

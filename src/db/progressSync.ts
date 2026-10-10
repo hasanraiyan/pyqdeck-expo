@@ -28,6 +28,8 @@ import { readPendingSettings } from './settingsPending';
 import { setSettingChangeHandler } from './settingsPending';
 import { registerWipeHook, wipeUserData } from '../auth/wipeUserData';
 import { isAuthEnabled } from '../config/features';
+import { getSignedInUserId } from '../auth/token';
+import { getKnownPushToken } from '../utils/notifications';
 
 /**
  * Account-backed progress sync engine (see docs/SRS-account-progress-sync-*).
@@ -226,6 +228,7 @@ async function runRound(): Promise<void> {
     const res = await syncAll({
       progress: { cursor, ops, limit: 1000 },
       ...(sentAux ? sentAux.request : {}),
+      ...(getKnownPushToken() ? { device: { pushToken: getKnownPushToken() as string } } : {}),
     });
     if (sentAux) {
       try {
@@ -360,6 +363,24 @@ export function syncNow(): Promise<void> {
     }
   })();
   return inFlight;
+}
+
+/**
+ * Runs one sync from the headless background task (a nudge arrived while the app
+ * was closed). There is no React tree, so the session is rebuilt from Clerk
+ * itself. It only proceeds when Clerk confirms the SAME account whose data is on
+ * this device; anything uncertain (not loaded, offline, other account) does
+ * nothing, and the next normal app start syncs as usual.
+ */
+export async function syncFromBackground(): Promise<void> {
+  if (!isAuthEnabled) return;
+  const owner = await AsyncStorage.getItem(OWNER_KEY);
+  if (!owner) return;
+  const userId = await getSignedInUserId();
+  if (!userId || userId !== owner) return;
+  await loadSyncEnabled();
+  session = { signedIn: true, userId };
+  await syncNow();
 }
 
 /** The sign-in sheet or token refresh resolved: allow syncing again. */
