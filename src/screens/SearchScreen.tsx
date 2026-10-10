@@ -479,8 +479,12 @@ export const SearchScreen = () => {
             { maxWidth: readMaxWidth + hPadding * 2, paddingHorizontal: hPadding },
           ]}
         >
-          <Text style={styles.title}>Search</Text>
-          <Text style={styles.subtitle}>Questions, notes and subjects from BEU papers</Text>
+          {!hasSearched && (
+            <View style={styles.titleBlock}>
+              <Text style={styles.title}>Search</Text>
+              <Text style={styles.subtitle}>Questions, notes and subjects from BEU papers</Text>
+            </View>
+          )}
 
           <View
             style={[
@@ -535,7 +539,7 @@ export const SearchScreen = () => {
                 style={styles.searchActionBtn}
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               >
-                <Feather name="arrow-right" size={15} color={COLORS.primary} />
+                <Feather name="arrow-right" size={17} color="#FFFFFF" />
               </TouchableOpacity>
             )}
 
@@ -895,7 +899,11 @@ const styles = StyleSheet.create({
   headerInner: {
     width: '100%',
     paddingTop: 8,
-    paddingBottom: 6,
+    paddingBottom: 10,
+  },
+  titleBlock: {
+    marginBottom: 2,
+    paddingHorizontal: 2,
   },
   title: {
     fontFamily: FONTS.display,
@@ -919,7 +927,7 @@ const styles = StyleSheet.create({
     paddingLeft: 14,
     paddingRight: 7,
     marginTop: 10,
-    height: 48,
+    height: 52,
   },
   searchBarFocused: {
     borderColor: COLORS.primary,
@@ -942,11 +950,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   searchActionBtn: {
-    width: 32,
-    height: 32,
+    width: 38,
+    height: 38,
     marginLeft: 4,
-    backgroundColor: COLORS.primaryLight,
-    borderRadius: 10,
+    backgroundColor: COLORS.primary,
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
   },
