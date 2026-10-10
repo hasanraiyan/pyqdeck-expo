@@ -44,11 +44,11 @@ export const HeroArt = ({
       <Path d="M184.5 30.5 L188.5 34.5 L196 26" stroke={COLORS.primary} strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" fill="none" />
     </G>
 
-    {/* Teal exam stamp */}
-    <G rotation="-14" origin="246, 112">
-      <Circle cx="246" cy="112" r="24" fill="none" stroke={COLORS.secondary} strokeWidth="2.5" />
-      <Circle cx="246" cy="112" r="18" fill="none" stroke={COLORS.secondary} strokeWidth="1.2" strokeDasharray="3 3" />
-      <Path d="M236 112 L243 119 L257 105" stroke={COLORS.secondary} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+    {/* Teal exam stamp - nudged left so it overlaps the front paper's right edge */}
+    <G rotation="-14" origin="200, 112">
+      <Circle cx="200" cy="112" r="24" fill="none" stroke={COLORS.secondary} strokeWidth="2.5" />
+      <Circle cx="200" cy="112" r="18" fill="none" stroke={COLORS.secondary} strokeWidth="1.2" strokeDasharray="3 3" />
+      <Path d="M190 112 L197 119 L211 105" stroke={COLORS.secondary} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" fill="none" />
     </G>
 
     {/* Pencil */}
