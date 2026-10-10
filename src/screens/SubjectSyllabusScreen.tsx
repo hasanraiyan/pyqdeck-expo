@@ -20,7 +20,7 @@ import * as WebBrowser from 'expo-web-browser';
 import { COLORS, FONTS } from '../theme/colors';
 import { useSyllabusSubject } from '../api/queries';
 import { SyllabusModule, SyllabusSubject, Topic } from '../types/syllabus';
-import { getDoneTopics, saveDoneTopics, pruneOrphanedDoneTopics } from '../db/syllabusProgress';
+import { getDoneTopicsIn, setTopicDone, subscribeProgress } from '../db/syllabusProgress';
 import { ScreenError, ScreenEmpty } from '../components/ScreenState';
 import { CircleLoader } from '../components/CircleLoader';
 import { userMessage } from '../utils/netError';
@@ -94,11 +94,12 @@ export const SubjectSyllabusScreen = () => {
     setOpen(new Set());
   }, [subjectId]);
 
-  // Progress is device-local. Re-read done topics (pruning any orphaned keys
-  // from deleted/re-created topics) when the subject loads and whenever this
-  // screen regains focus - marking a topic complete from TopicNotesScreen
-  // writes straight to the same AsyncStorage key, and this is what picks that
-  // up on the way back without a pull-to-refresh.
+  // Progress is local-first (and synced to the account when signed in). Re-read
+  // done topics when the subject loads, whenever this screen regains focus
+  // (marking a topic complete from TopicNotesScreen writes to the same store),
+  // and when a sync pulls changes made on another device. Records for topics
+  // missing from this syllabus are left in storage, just not shown - the
+  // syllabus on screen can be a stale offline copy.
   useFocusEffect(
     useCallback(() => {
       if (!subject) return;
@@ -108,7 +109,9 @@ export const SubjectSyllabusScreen = () => {
           validKeys.add(topicKey(m.id, t.id));
         }
       }
-      void pruneOrphanedDoneTopics(subject.id, validKeys).then(setDone);
+      const load = () => void getDoneTopicsIn(subject.id, validKeys).then(setDone);
+      load();
+      return subscribeProgress(load);
     }, [subject])
   );
 
@@ -136,11 +139,13 @@ export const SubjectSyllabusScreen = () => {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       setDone((prev) => {
         const next = new Set(prev);
-        if (next.has(key)) next.delete(key);
-        else next.add(key);
+        const nowDone = !next.has(key);
+        if (nowDone) next.add(key);
+        else next.delete(key);
         // Written straight through rather than on unmount - a student who
-        // backgrounds the app mid-revision should not lose their ticks.
-        void saveDoneTopics(subject.id, next);
+        // backgrounds the app mid-revision should not lose their ticks. Only
+        // this one topic is written, so two screens cannot overwrite each other.
+        void setTopicDone(subject.id, key, nowDone);
         return next;
       });
     },

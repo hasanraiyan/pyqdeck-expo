@@ -34,6 +34,18 @@ import * as Cache from '../db/cacheService';
 import { clearQueryCache } from '../api/queryClient';
 import { isAuthEnabled, isAiEnabled } from '../config/features';
 import { resetOnboarding } from '../utils/onboarding';
+import {
+  flushOutbox,
+  getSyncStatus,
+  isSyncEnabled,
+  loadSyncEnabled,
+  pendingCount,
+  setSyncEnabled,
+  subscribeSyncStatus,
+  syncNow,
+  type SyncStatus,
+} from '../db/progressSync';
+import { unlinkPushTokenFromAccount } from '../utils/notifications';
 
 const WEBSITE_URL = 'https://pyqdeck.in';
 
@@ -57,6 +69,15 @@ export const SettingsScreen = ({ navigation }: any) => {
   const [clearing, setClearing] = useState(false);
   const [cleared, setCleared] = useState(false);
   const [checkingUpdate, setCheckingUpdate] = useState(false);
+  const [syncOn, setSyncOn] = useState(isSyncEnabled());
+  const [syncStatus, setSyncStatusState] = useState<SyncStatus>(getSyncStatus());
+  const [signingOut, setSigningOut] = useState(false);
+
+  useEffect(() => {
+    void loadSyncEnabled().then(setSyncOn);
+    void pendingCount();
+    return subscribeSyncStatus(setSyncStatusState);
+  }, []);
 
   useEffect(() => {
     getOldUiEnabled().then(setOldUiOn);
@@ -134,11 +155,72 @@ export const SettingsScreen = ({ navigation }: any) => {
     }
   };
 
+  const toggleSync = async (value: boolean) => {
+    setSyncOn(value);
+    await setSyncEnabled(value);
+  };
+
+  const syncSubtitle = () => {
+    if (!syncOn) return 'Progress stays on this device only';
+    const { state, pending, lastSyncAt } = syncStatus;
+    if (state === 'syncing') return 'Syncing...';
+    if (state === 'paused') return 'Sync paused - sign in again to continue';
+    if (pending > 0) {
+      return state === 'offline'
+        ? `Offline - ${pending} change${pending === 1 ? '' : 's'} waiting`
+        : `${pending} change${pending === 1 ? '' : 's'} waiting to sync`;
+    }
+    if (state === 'offline') return 'Offline';
+    if (state === 'error') return 'Could not sync - will retry';
+    return lastSyncAt
+      ? `Synced ${new Date(lastSyncAt).toLocaleString()}`
+      : 'Back up your syllabus progress to your account';
+  };
+
+  // Sign-out ends with the wipe, which App.tsx runs when Clerk reports the
+  // session ended - this button is only one of several ways to get there.
+  const performSignOut = async () => {
+    setSigningOut(true);
+    try {
+      await unlinkPushTokenFromAccount(3000);
+      await signOut();
+    } finally {
+      setSigningOut(false);
+    }
+  };
+
   const handleSignOut = () => {
-    Alert.alert('Sign out?', 'You can keep using everything except Ask AI while signed out.', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Sign out', style: 'destructive', onPress: () => void signOut() },
-    ]);
+    Alert.alert(
+      'Sign out?',
+      `Progress, history and downloaded content on this device will be removed. ${
+        syncOn
+          ? 'Your progress stays saved to your account.'
+          : 'Sync is off, so your progress on this device will not be kept anywhere.'
+      } You can keep using everything except Ask AI while signed out.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Sign out',
+          style: 'destructive',
+          onPress: async () => {
+            setSigningOut(true);
+            // Try to send unsynced ticks first so signing out does not lose them.
+            const drained = await flushOutbox(5000);
+            setSigningOut(false);
+            if (drained) return void performSignOut();
+            const left = await pendingCount();
+            Alert.alert(
+              'Some progress is not synced',
+              `${left} change${left === 1 ? '' : 's'} could not be saved to your account yet. Signing out now will lose ${left === 1 ? 'it' : 'them'}.`,
+              [
+                { text: 'Cancel', style: 'cancel' },
+                { text: 'Sign out anyway', style: 'destructive', onPress: () => void performSignOut() },
+              ]
+            );
+          },
+        },
+      ]
+    );
   };
 
   const handleRate = async () => {
@@ -194,7 +276,33 @@ export const SettingsScreen = ({ navigation }: any) => {
                     }
                     onPress={() => navigation.navigate('ManageAccount')}
                   />
-                  <SettingsRow icon="log-out" label="Sign out" onPress={handleSignOut} last />
+                  <SettingsRow
+                    icon="refresh-cw"
+                    label="Sync progress"
+                    subtitle={syncSubtitle()}
+                    right={
+                      <Switch
+                        value={syncOn}
+                        onValueChange={toggleSync}
+                        trackColor={{ true: COLORS.primary, false: COLORS.border }}
+                        thumbColor={COLORS.card}
+                      />
+                    }
+                  />
+                  {syncOn && (
+                    <SettingsRow
+                      icon="upload-cloud"
+                      label="Sync now"
+                      onPress={() => void syncNow()}
+                      disabled={syncStatus.state === 'syncing'}
+                    />
+                  )}
+                  <SettingsRow
+                    icon="log-out"
+                    label={signingOut ? 'Signing out...' : 'Sign out'}
+                    onPress={signingOut ? undefined : handleSignOut}
+                    last
+                  />
                 </>
               ) : (
                 <SettingsRow

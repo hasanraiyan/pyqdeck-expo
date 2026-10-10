@@ -17,7 +17,7 @@ import { Feather } from '@expo/vector-icons';
 import { useFonts } from 'expo-font';
 import { PlusJakartaSans_700Bold, PlusJakartaSans_800ExtraBold } from '@expo-google-fonts/plus-jakarta-sans';
 import { Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold } from '@expo-google-fonts/inter';
-import { ClerkProvider } from '@clerk/expo';
+import { ClerkProvider, useAuth } from '@clerk/expo';
 import { tokenCache } from '@clerk/expo/token-cache';
 import { clerkPublishableKey } from './src/auth/publishableKey';
 import { mobileAds } from './src/utils/mobileAds';
@@ -62,6 +62,13 @@ import * as Sentry from '@sentry/react-native';
 import { OnboardingScreen } from './src/screens/OnboardingScreen';
 import { hasSeenOnboarding } from './src/utils/onboarding';
 import { MermaidWorker } from './src/components/MermaidWorker';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Network from 'expo-network';
+import { bootWipeCheck, wipeUserData } from './src/auth/wipeUserData';
+import { configureSyncSession, pendingCount } from './src/db/progressSync';
+import { OWNER_KEY } from './src/db/storageRegistry';
+import { isAuthEnabled } from './src/config/features';
+import { linkPushTokenToAccount } from './src/utils/notifications';
 
 // Crash/error monitoring only - deliberately not sendDefaultPii (would send
 // IP address etc, undisclosed in the Play Store Data Safety form) and no
@@ -435,9 +442,48 @@ function AppContent() {
     void getOldUiEnabled();
   }, []);
 
+  // An interrupted sign-out wipe is finished before anything reads user data:
+  // onboarded stays null (nothing renders) until it is done.
   useEffect(() => {
-    hasSeenOnboarding().then((seen) => setOnboarded(seen));
+    bootWipeCheck()
+      .catch(() => {})
+      .then(() => hasSeenOnboarding())
+      .then((seen) => setOnboarded(seen));
   }, []);
+
+  // Account state drives both halves of the feature. Signed in: hand the user
+  // to the sync engine and link the push token. Signed out: wipe this device's
+  // user data - whatever ended the session (Settings, Clerk's profile view,
+  // account deletion, a revoked session), because this reacts to the state, not
+  // to a button.
+  const { isLoaded: authLoaded, isSignedIn, userId } = useAuth();
+  const wasSignedInRef = useRef(false);
+  useEffect(() => {
+    if (!isAuthEnabled || !authLoaded) return;
+    if (isSignedIn && userId) {
+      wasSignedInRef.current = true;
+      configureSyncSession({ signedIn: true, userId });
+      void linkPushTokenToAccount();
+      return;
+    }
+    configureSyncSession({ signedIn: false, userId: null });
+    const justSignedOut = wasSignedInRef.current;
+    wasSignedInRef.current = false;
+    void (async () => {
+      try {
+        if (justSignedOut) return void (await wipeUserData('signed-out'));
+        // Launch: the session ended while the app was closed. Only wipe if this
+        // device still holds an account's data - but never when we are offline
+        // with unsynced changes, since an offline cold start is the one case
+        // where "signed out" may just mean Clerk could not reach its server.
+        if (!(await AsyncStorage.getItem(OWNER_KEY))) return;
+        const net = await Network.getNetworkStateAsync().catch(() => null);
+        const offline = net ? net.isConnected === false || net.isInternetReachable === false : false;
+        if (offline && (await pendingCount()) > 0) return;
+        await wipeUserData('signed-out-at-launch');
+      } catch {}
+    })();
+  }, [authLoaded, isSignedIn, userId]);
 
   // Silent boot work: shows nothing to the student, so it starts immediately.
   useEffect(() => {

@@ -14,7 +14,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { topicNotesQuery } from '../api/queries';
 import { syllabusSubjectQuery } from '../api/queries';
 import { qk } from '../api/queryKeys';
-import { getDoneTopics, saveDoneTopics } from '../db/syllabusProgress';
+import { getDoneTopics, setTopicDone } from '../db/syllabusProgress';
 import { cleanMarkdown } from '../utils/responsive';
 import { solutionMarkdownStyles, markdownRules } from '../theme/markdownStyles';
 import { ScreenEmpty } from '../components/ScreenState';
@@ -303,11 +303,7 @@ export const TopicNotesScreen = () => {
     try {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch {}
-    const doneSet = await getDoneTopics(subjectId);
-    if (!doneSet.has(key)) {
-      doneSet.add(key);
-      await saveDoneTopics(subjectId, doneSet);
-    }
+    await setTopicDone(subjectId, key, true);
   }, [done, subjectId, moduleId, topic?.id]);
 
   const handleScroll = (e: any) => {
