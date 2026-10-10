@@ -369,6 +369,16 @@ export interface ProgressSyncResponse {
 export const syncProgress = (cursor: string | null, ops: ProgressSyncOp[], limit = 1000) =>
   requestMe<ProgressSyncResponse>('/progress/sync', 'POST', { cursor, ops, limit });
 
+export interface AccountSettings {
+  /** Chosen "Ask AI" engine id, or null when the account has not chosen one. */
+  askAiEngine: string | null;
+}
+
+export const getAccountSettings = () => requestMe<AccountSettings>('/settings', 'GET');
+
+export const putAccountSettings = (settings: Partial<AccountSettings>) =>
+  requestMe<AccountSettings>('/settings', 'PUT', settings);
+
 export interface MyVotes {
   solutionVotes: { solutionId: string; questionId: string | null; value: 1 | -1 }[];
   noteVotes: { topicId: string; value: 1 | -1 }[];

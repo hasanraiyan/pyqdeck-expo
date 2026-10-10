@@ -27,7 +27,6 @@ export const STORAGE_REGISTRY: Entry[] = [
   { key: 'question_layout_chosen', category: 'device' },
   { key: 'sidebar_collapsed', category: 'device' },
   { key: 'list_pane_collapsed', category: 'device' },
-  { key: 'ask_ai_engine', category: 'device' },
   { key: 'volume_scroll_hint_seen', category: 'device' },
   { key: 'pyqdeck:onboarded', category: 'device' },
   { key: 'interstitial_opens_since_last_shown', category: 'device' },
@@ -50,6 +49,10 @@ export const STORAGE_REGISTRY: Entry[] = [
   { key: 'pyqdeck:recent_notes', category: 'user' },
   { key: 'my_solution_votes_v2', category: 'user' },
   { key: 'pyq_recent_searches', category: 'user' },
+  // The Ask AI engine follows the account (see settingsSync.ts), so it is user
+  // data: the next person on the phone starts from the default, not this choice.
+  { key: 'ask_ai_engine', category: 'user' },
+  { key: 'pyqdeck:ask_ai_pending', category: 'user' },
   { key: 'selected_syllabus_branch', category: 'user' },
   { prefix: 'pyqdeck:progress:', category: 'user' },
   { prefix: 'syllabus_done_', category: 'user' },
