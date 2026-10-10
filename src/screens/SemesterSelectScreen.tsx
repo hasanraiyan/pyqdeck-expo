@@ -18,6 +18,7 @@ import { useSyllabusBranches, useSyllabusSemesters, syllabusSemesterQuery } from
 import { Branch, BranchSemesters } from '../types/syllabus';
 import { getDoneCounts, subscribeProgress } from '../db/syllabusProgress';
 import { requestSyncOnStudyOpen } from '../db/progressSync';
+import { subscribeSettingsApplied } from '../db/settingsPending';
 import { SyncStatusBar } from '../components/SyncStatusBar';
 import { getSelectedBranch, setSelectedBranch } from '../utils/settings';
 import { ScreenError, ScreenEmpty } from '../components/ScreenState';
@@ -69,6 +70,17 @@ export const SemesterSelectScreen = () => {
     return () => {
       alive = false;
     };
+  }, [paramBranch]);
+
+  // A sync can bring in the branch chosen on another device (only when this
+  // screen was not opened for a specific branch).
+  useEffect(() => {
+    if (paramBranch) return;
+    return subscribeSettingsApplied(() => {
+      void getSelectedBranch().then((saved) => {
+        if (saved) setSelectedBranchId(saved);
+      });
+    });
   }, [paramBranch]);
 
   // Prefetch the semester sheets for instant navigation

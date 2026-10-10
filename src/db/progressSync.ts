@@ -2,7 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Crypto from 'expo-crypto';
 import * as Network from 'expo-network';
 import { AppState } from 'react-native';
-import { ApiError, syncProgress } from '../api';
+import { ApiError, syncAll, type ProgressSyncResponse } from '../api';
 import {
   applyPulledItems,
   getAllProgress,
@@ -16,13 +16,14 @@ import {
   backoffMs,
   batches,
   canSync,
+  nextSendDelay,
   planFirstPush,
   settle,
   type OutboxOp,
   type RemoteItem,
 } from './progressLogic';
 import { OWNER_KEY } from './storageRegistry';
-import { syncAccountSettings, syncRecents } from './settingsSync';
+import { applyAuxResponse, buildAuxRequest, type AuxSent } from './settingsSync';
 import { readPendingSettings } from './settingsPending';
 import { setSettingChangeHandler } from './settingsPending';
 import { registerWipeHook, wipeUserData } from '../auth/wipeUserData';
@@ -42,6 +43,8 @@ const LAST_SYNC_KEY = 'pyqdeck:last_sync_at';
 const SYNC_ENABLED_KEY = 'pyqdeck:sync_enabled';
 const BATCH_SIZE = 200;
 const DEBOUNCE_MS = 2_000;
+const MAX_WAIT_MS = 30_000;
+let firstQueuedAt = 0;
 const TAB_OPEN_MIN_GAP_MS = 60_000;
 const AUX_SYNC_MIN_GAP_MS = 60_000;
 let lastAuxSyncAt = 0;
@@ -102,16 +105,24 @@ const clearTimer = () => {
   timer = null;
 };
 
-/** Schedules a sync. `immediate` skips the 2 s debounce. */
+/**
+ * Schedules a sync. Events (a tick, a setting change, a recent, coming back
+ * online) are coalesced: each one pushes the send back by the debounce, but
+ * never past MAX_WAIT_MS after the first one, so a steady stream of changes
+ * still goes out regularly. `immediate` flushes now.
+ */
 export function requestSync(opts: { immediate?: boolean; delayMs?: number } = {}): void {
   if (!canSync({ signedIn: session.signedIn, authEnabled: isAuthEnabled, syncEnabled, online: true })) {
     return;
   }
+  const now = Date.now();
+  if (timer === null) firstQueuedAt = now;
   clearTimer();
+  const debounce = opts.immediate ? 0 : (opts.delayMs ?? DEBOUNCE_MS);
   timer = setTimeout(() => {
     timer = null;
     void syncNow();
-  }, opts.immediate ? 0 : (opts.delayMs ?? DEBOUNCE_MS));
+  }, nextSendDelay(now, firstQueuedAt, debounce, MAX_WAIT_MS));
 }
 
 /** Study tab opened: sync at most once a minute. */
@@ -185,17 +196,6 @@ export function pendingCount(): Promise<number> {
 
 const newOpId = () => Crypto.randomUUID();
 
-async function pullAll(startCursor: string | null): Promise<{ items: RemoteItem[]; cursor: string }> {
-  const items: RemoteItem[] = [];
-  let cursor = startCursor;
-  for (;;) {
-    const res = await syncProgress(cursor, []);
-    items.push(...res.items);
-    cursor = res.cursor;
-    if (!res.hasMore) return { items, cursor: cursor as string };
-  }
-}
-
 async function runRound(): Promise<void> {
   const userId = session.userId;
   if (!userId) return;
@@ -206,28 +206,72 @@ async function runRound(): Promise<void> {
   if (owner && owner !== userId) await wipeUserData('owner-mismatch');
   await migrateProgressV1();
 
+  // Settings and Jump Back In ride on the FIRST request of the round, so a round
+  // is one request. They are included when something changed locally or at most
+  // once a minute otherwise (a quiet round pulls nothing extra).
+  let aux: AuxSent | null = null;
+  const pendingNow = (await readPendingSettings()).size > 0;
+  if (pendingNow || Date.now() - lastAuxSyncAt > AUX_SYNC_MIN_GAP_MS) {
+    aux = await buildAuxRequest();
+    lastAuxSyncAt = Date.now();
+  }
+  let needsAnotherRound = false;
+
+  const call = async (
+    cursor: string | null,
+    ops: OutboxOp[]
+  ): Promise<ProgressSyncResponse> => {
+    const sentAux = aux;
+    aux = null; // only the first request of the round carries it
+    const res = await syncAll({
+      progress: { cursor, ops, limit: 1000 },
+      ...(sentAux ? sentAux.request : {}),
+    });
+    if (sentAux) {
+      try {
+        const applied = await applyAuxResponse(sentAux, res);
+        needsAnotherRound ||= applied.needsAnotherRound;
+      } catch {
+        // Settings/recents are secondary: never fail the progress round.
+      }
+    }
+    return res.progress;
+  };
+
   let cursor = await AsyncStorage.getItem(CURSOR_KEY);
+  let didFirstSync = false;
 
   if (cursor === null) {
+    didFirstSync = true;
     // First sync for this account on this device: pull everything first, then
     // merge, then push what the server lacks (AND-FR-17/18).
     const local = await getAllProgress();
-    const pulled = await pullAll(null);
-    const toPush = planFirstPush(local, pulled.items, newOpId);
-    await applyPulledItems(pulled.items);
+    const items: RemoteItem[] = [];
+    let page = await call(null, []);
+    items.push(...page.items);
+    while (page.hasMore) {
+      page = await call(page.cursor, []);
+      items.push(...page.items);
+    }
+    const toPush = planFirstPush(local, items, newOpId);
+    await applyPulledItems(items);
     await queueOps(toPush);
     await AsyncStorage.setItem(OWNER_KEY, userId);
-    await AsyncStorage.setItem(CURSOR_KEY, pulled.cursor);
-    cursor = pulled.cursor;
+    await AsyncStorage.setItem(CURSOR_KEY, page.cursor);
+    cursor = page.cursor;
   }
 
   // Push the outbox in batches, pulling whatever changed after each. With an
-  // empty outbox this is exactly one (pull-only) request.
+  // empty outbox this is exactly one request (and it was the first one above on
+  // a first sync, otherwise this one).
   for (let round = 0; round < 50; round++) {
     const all = Object.values(await loadOutbox());
     const [batch] = batches(all, BATCH_SIZE);
     const sendable = quotaBlocked ? [] : (batch ?? []);
-    const res = await syncProgress(cursor, sendable);
+    // A first sync already used its request for the aux sections; when there is
+    // nothing to push either, the pull-only call below would be a wasted request.
+    if (sendable.length === 0 && didFirstSync && round === 0) break;
+    const res = await call(cursor, sendable);
 
     if (sendable.length > 0) {
       // Settled against the live outbox: a tick may have landed mid-request.
@@ -246,11 +290,11 @@ async function runRound(): Promise<void> {
     // Drain any further pull pages before looking at the outbox again.
     let more = res.hasMore;
     while (more) {
-      const page = await syncProgress(cursor, []);
-      await applyPulledItems(page.items);
-      cursor = page.cursor;
+      const next = await call(cursor, []);
+      await applyPulledItems(next.items);
+      cursor = next.cursor;
       await AsyncStorage.setItem(CURSOR_KEY, cursor);
-      more = page.hasMore;
+      more = next.hasMore;
     }
 
     if (sendable.length === 0) break;
@@ -259,25 +303,13 @@ async function runRound(): Promise<void> {
     if (left.length === 0 || !progressed) break;
   }
 
-  // Account settings (Ask AI engine) ride along with the progress round. A
-  // failure here must not mark the progress sync as failed, except a 401, which
-  // pauses the engine like any other call.
-  // Throttled to once a minute unless something changed locally, so a quiet
-  // round stays a single request.
-  try {
-    const dueNow = Date.now() - lastAuxSyncAt > AUX_SYNC_MIN_GAP_MS;
-    if (dueNow || (await readPendingSettings()).size > 0) {
-      lastAuxSyncAt = Date.now();
-      await syncAccountSettings();
-      await syncRecents();
-    }
-  } catch (err) {
-    if ((err as ApiError)?.status === 401) throw err;
-  }
-
   const now = Date.now();
   await AsyncStorage.setItem(LAST_SYNC_KEY, String(now));
   setStatus({ lastSyncAt: now });
+
+  // A setting or recent changed while the request was in flight, or an account
+  // value needs adopting: one more (coalesced) round settles it.
+  if (needsAnotherRound) requestSync();
 }
 
 /** Runs one sync round (push then pull). Safe to call at any time. */
@@ -362,6 +394,10 @@ AppState.addEventListener('change', (state) => {
   if (state === 'active') {
     if (pausedForAuth) pausedForAuth = false;
     requestSync({ immediate: true });
+  } else if (state === 'background') {
+    // Going to the background: send what is queued now rather than wait for the
+    // debounce, which the OS may never let run.
+    if (timer) requestSync({ immediate: true });
   }
 });
 

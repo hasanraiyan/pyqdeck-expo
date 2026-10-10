@@ -189,3 +189,16 @@ export function countDone(
   }
   return n;
 }
+
+/**
+ * How long to wait before sending, given events keep arriving: the debounce,
+ * but never past `maxWait` after the first queued event.
+ */
+export function nextSendDelay(
+  now: number,
+  firstQueuedAt: number,
+  debounce: number,
+  maxWait: number
+): number {
+  return Math.min(debounce, Math.max(0, firstQueuedAt + maxWait - now));
+}

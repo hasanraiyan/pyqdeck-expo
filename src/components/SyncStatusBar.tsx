@@ -6,22 +6,18 @@ import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '@clerk/expo';
 import { COLORS, FONTS } from '../theme/colors';
 import { isAuthEnabled } from '../config/features';
-import { getSyncStatus, isSyncEnabled, subscribeSyncStatus, type SyncStatus } from '../db/progressSync';
 
 const HINT_DISMISSED_KEY = 'pyqdeck:sync_hint_dismissed';
 
 /**
- * One quiet line under the Study header. Signed in: whether progress is saved
- * to the account. Signed out: a dismissible nudge to sign in and back it up.
- * Fixed height, so it never shifts the layout when its text changes.
+ * Signed out: a dismissible nudge under the Study header to sign in and back up
+ * progress. Signed in: renders nothing - syncing happens silently in the background.
  */
 export const SyncStatusBar = () => {
   const navigation = useNavigation<any>();
   const { isLoaded, isSignedIn } = useAuth();
-  const [status, setStatus] = useState<SyncStatus>(getSyncStatus());
   const [hintDismissed, setHintDismissed] = useState(true); // hidden until read
 
-  useEffect(() => subscribeSyncStatus(setStatus), []);
   useEffect(() => {
     AsyncStorage.getItem(HINT_DISMISSED_KEY)
       .then((v) => setHintDismissed(v === '1'))
@@ -34,66 +30,70 @@ export const SyncStatusBar = () => {
     if (hintDismissed) return null;
     return (
       <View style={styles.row}>
-        <TouchableOpacity
-          style={styles.hint}
-          activeOpacity={0.7}
-          onPress={() => navigation.navigate('SignIn', { reason: 'vote' })}
-        >
-          <Feather name="cloud" size={13} color={COLORS.primary} />
-          <Text style={styles.hintText}>Sign in to back up your progress</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          accessibilityLabel="Dismiss"
-          onPress={() => {
-            setHintDismissed(true);
-            AsyncStorage.setItem(HINT_DISMISSED_KEY, '1').catch(() => {});
-          }}
-        >
-          <Feather name="x" size={14} color={COLORS.textSubtle} />
-        </TouchableOpacity>
+        <View style={styles.chip}>
+          <TouchableOpacity
+            style={styles.chipMain}
+            activeOpacity={0.7}
+            onPress={() => navigation.navigate('SignIn', { reason: 'vote' })}
+          >
+            <Feather name="cloud" size={13} color={COLORS.primary} />
+            <Text style={styles.hintText}>Sign in to back up your progress</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.dismiss}
+            hitSlop={{ top: 8, bottom: 8, left: 4, right: 8 }}
+            accessibilityLabel="Dismiss"
+            onPress={() => {
+              setHintDismissed(true);
+              AsyncStorage.setItem(HINT_DISMISSED_KEY, '1').catch(() => {});
+            }}
+          >
+            <Feather name="x" size={14} color={COLORS.textSubtle} />
+          </TouchableOpacity>
+        </View>
       </View>
     );
   }
 
-  if (!isSyncEnabled()) return null;
-
-  const { state, pending } = status;
-  let icon: React.ComponentProps<typeof Feather>['name'] = 'check-circle';
-  let text = 'Progress saved to your account';
-  if (state === 'syncing') {
-    icon = 'refresh-cw';
-    text = 'Syncing...';
-  } else if (state === 'offline' || (state === 'error' && pending > 0)) {
-    icon = 'cloud-off';
-    text = pending > 0 ? `Offline - ${pending} waiting to sync` : 'Offline';
-  } else if (state === 'paused') {
-    icon = 'alert-circle';
-    text = 'Sync paused - sign in again';
-  } else if (pending > 0) {
-    icon = 'upload-cloud';
-    text = `${pending} waiting to sync`;
-  }
-
-  return (
-    <View style={styles.row}>
-      <View style={styles.hint}>
-        <Feather name={icon} size={13} color={COLORS.textMuted} />
-        <Text style={styles.statusText}>{text}</Text>
-      </View>
-    </View>
-  );
+  // Signed in: syncing is silent. Nothing is shown while it saves in the
+  // background; the Settings screen has the status for anyone who looks.
+  return null;
 };
 
 const styles = StyleSheet.create({
   row: {
-    minHeight: 28,
+    minHeight: 36,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     marginBottom: 8,
   },
-  hint: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  // The text and its dismiss button share one pill, so the x sits right beside
+  // the label with even padding instead of drifting to the far screen edge.
+  chip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.card,
+    overflow: 'hidden',
+  },
+  chipMain: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 8,
+    paddingLeft: 12,
+    paddingRight: 8,
+  },
+  dismiss: {
+    paddingVertical: 8,
+    paddingLeft: 6,
+    paddingRight: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderLeftWidth: StyleSheet.hairlineWidth,
+    borderLeftColor: COLORS.border,
+  },
   hintText: { fontFamily: FONTS.bodyMedium, fontSize: 12.5, color: COLORS.primary },
-  statusText: { fontFamily: FONTS.bodyMedium, fontSize: 12.5, color: COLORS.textMuted },
 });
