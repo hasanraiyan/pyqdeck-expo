@@ -177,12 +177,12 @@ export const HomeScreen = () => {
           <View style={styles.headerActions}>
             <TouchableOpacity
               onPress={() => navigation.navigate('Search')}
-              style={styles.headerIconButton}
+              style={styles.headerSearchButton}
               hitSlop={8}
               accessibilityRole="button"
               accessibilityLabel="Search"
             >
-              <Feather name="search" size={17} color={COLORS.text} />
+              <Feather name="search" size={19} color={COLORS.text} />
             </TouchableOpacity>
             <TouchableOpacity
               onPress={() => navigation.navigate('Settings')}
@@ -574,6 +574,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flexShrink: 0,
     marginLeft: 8,
+  },
+  headerSearchButton: {
+    width: 38,
+    height: 38,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   headerIconButton: {
     width: 38,
