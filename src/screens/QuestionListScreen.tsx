@@ -298,7 +298,7 @@ export const QuestionListScreen = () => {
         initialNumToRender={8}
         maxToRenderPerBatch={10}
         windowSize={5}
-        removeClippedSubviews={false}
+        removeClippedSubviews={Platform.OS === 'android'}
         contentContainerStyle={[
           {
             // Classic cards carry only marginBottom, so give the first one

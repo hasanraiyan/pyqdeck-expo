@@ -33,7 +33,25 @@ function withOptimizedResourceShrinking(config) {
   });
 }
 
+// Strips non-English locale strings bundled by transitive SDKs
+// (Google Play Services, Firebase, Clerk, AndroidX) to reduce release APK/AAB size.
+function withEnglishOnlyResources(config) {
+  return withAppBuildGradle(config, (cfg) => {
+    let contents = cfg.modResults.contents;
+    if (contents.includes("resourceConfigurations += ['en']")) return cfg;
+    if (contents.includes('defaultConfig {')) {
+      contents = contents.replace(
+        'defaultConfig {',
+        "defaultConfig {\n        resourceConfigurations += ['en']"
+      );
+    }
+    cfg.modResults.contents = contents;
+    return cfg;
+  });
+}
+
 module.exports = function withR8Optimization(config) {
   config = withOptimizedProguardFile(config);
-  return withOptimizedResourceShrinking(config);
+  config = withOptimizedResourceShrinking(config);
+  return withEnglishOnlyResources(config);
 };

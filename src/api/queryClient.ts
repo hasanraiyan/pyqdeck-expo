@@ -22,11 +22,15 @@ export const PERSIST_MAX_AGE = 30 * DAY;
 export const CACHE_BUSTER = 'v1';
 export const PERSIST_KEY = 'pyq_rq_cache';
 
+// Inactive queries are garbage-collected from JS RAM after 30 minutes to free memory,
+// while PERSIST_MAX_AGE keeps them on disk in AsyncStorage for offline availability.
+export const IN_MEMORY_GC_TIME = 30 * 60 * 1000;
+
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: STALE.catalog,
-      gcTime: PERSIST_MAX_AGE,
+      gcTime: IN_MEMORY_GC_TIME,
       retry: 1,
       // The API layer already handles origin failover and classifies offline
       // errors; React Query's own online detection is not wired up on RN, so

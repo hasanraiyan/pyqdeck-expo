@@ -43,11 +43,10 @@ export const QuestionItem: React.FC<QuestionItemProps> = React.memo(({
   compact: compactProp,
   style,
 }) => {
-  const { compact: windowCompact } = useResponsive();
+  const { compact: windowCompact, width: windowW } = useResponsive();
   const compact = compactProp ?? windowCompact;
   const navigation = useNavigation<any>();
-  const [cardW, setCardW] = useState(0);
-  const showActionLabels = cardW >= 520;
+  const showActionLabels = windowW >= 560;
   const [expanded, setExpanded] = useState(false);
   const [copied, setCopied] = useState(false);
 
@@ -96,7 +95,7 @@ export const QuestionItem: React.FC<QuestionItemProps> = React.memo(({
   };
 
   return (
-    <View style={[styles.container, style]} onLayout={(e) => setCardW(e.nativeEvent.layout.width)}>
+    <View style={[styles.container, style]}>
       <TouchableOpacity
         activeOpacity={0.7}
         onPress={toggleExpand}
