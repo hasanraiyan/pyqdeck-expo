@@ -264,7 +264,7 @@ export const SyllabusOverviewScreen = () => {
   return (
     <View style={styles.container}>
       <ScrollView
-        contentContainerStyle={[frame, { paddingBottom: insets.bottom + 32, paddingTop: 12 }]}
+        contentContainerStyle={[frame, { paddingBottom: Math.max(insets.bottom, 16), paddingTop: 8 }]}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}

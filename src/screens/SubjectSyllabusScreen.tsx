@@ -327,7 +327,7 @@ export const SubjectSyllabusScreen = () => {
   return (
     <View style={styles.container}>
       <ScrollView
-        contentContainerStyle={[frame, { paddingBottom: insets.bottom + 32, paddingTop: 10 }]}
+        contentContainerStyle={[frame, { paddingBottom: Math.max(insets.bottom, 16), paddingTop: 6 }]}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -403,9 +403,9 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     borderColor: COLORS.border,
-    paddingBottom: 16,
-    paddingHorizontal:16,
-    paddingTop:8,
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    paddingBottom: 12,
     marginHorizontal: 16,
     marginBottom: 14,
     gap: 8,
@@ -470,16 +470,6 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   modCardDone: { borderColor: COLORS.secondary },
-  modBadge: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: COLORS.cardSecondary,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  modBadgeDone: { backgroundColor: COLORS.secondary },
-  modBadgeText: { fontFamily: FONTS.displayBold, fontSize: 14, color: COLORS.text },
   modTitleWrap: { flex: 1 },
   modNum: {
     fontFamily: FONTS.displayBold,
