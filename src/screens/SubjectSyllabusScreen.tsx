@@ -231,15 +231,6 @@ export const SubjectSyllabusScreen = () => {
           activeOpacity={0.7}
           onPress={() => toggleModule(m.id)}
         >
-          {subject.kind === 'theory' ? (
-            <View style={[styles.modBadge, allDone && styles.modBadgeDone]}>
-              {allDone ? (
-                <Feather name="check" size={15} color={COLORS.card} />
-              ) : (
-                <Text style={styles.modBadgeText}>{m.number}</Text>
-              )}
-            </View>
-          ) : null}
           <View style={styles.modTitleWrap}>
             {subject.kind === 'theory' && <Text style={styles.modNum}>Module {m.number}</Text>}
             <Text style={styles.modTitle}>{m.title}</Text>
@@ -247,6 +238,9 @@ export const SubjectSyllabusScreen = () => {
               {mDone} of {m.topics.length} topics
             </Text>
           </View>
+          {allDone && (
+            <Feather name="check-circle" size={18} color={COLORS.secondary} style={{ marginRight: 4 }} />
+          )}
           <Feather
             name={expanded ? 'chevron-up' : 'chevron-down'}
             size={18}
@@ -409,7 +403,9 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     borderColor: COLORS.border,
-    padding: 16,
+    paddingBottom: 16,
+    paddingHorizontal:16,
+    paddingTop:8,
     marginHorizontal: 16,
     marginBottom: 14,
     gap: 8,
