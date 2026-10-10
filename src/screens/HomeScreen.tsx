@@ -332,7 +332,7 @@ export const HomeScreen = () => {
                     </Text>
                     <View style={styles.recentFooterRow}>
                       <Text style={styles.recentResumeText}>Continue reading</Text>
-                      <View style={[styles.recentArrowCircle, { backgroundColor: '#0f766e' }]}>
+                      <View style={styles.recentArrowCircle}>
                         <Feather name="arrow-right" size={12} color="#fff" />
                       </View>
                     </View>
@@ -422,7 +422,7 @@ export const HomeScreen = () => {
                         </Text>
                         <View style={styles.recentFooterRow}>
                           <Text style={styles.recentResumeText}>Continue reading</Text>
-                          <View style={[styles.recentArrowCircle, { backgroundColor: '#0f766e' }]}>
+                          <View style={styles.recentArrowCircle}>
                             <Feather name="arrow-right" size={12} color="#fff" />
                           </View>
                         </View>
