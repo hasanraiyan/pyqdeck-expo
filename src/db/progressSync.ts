@@ -22,7 +22,8 @@ import {
   type RemoteItem,
 } from './progressLogic';
 import { OWNER_KEY } from './storageRegistry';
-import { syncAccountSettings } from './settingsSync';
+import { syncAccountSettings, syncRecents } from './settingsSync';
+import { readPendingSettings } from './settingsPending';
 import { setSettingChangeHandler } from './settingsPending';
 import { registerWipeHook, wipeUserData } from '../auth/wipeUserData';
 import { isAuthEnabled } from '../config/features';
@@ -42,6 +43,8 @@ const SYNC_ENABLED_KEY = 'pyqdeck:sync_enabled';
 const BATCH_SIZE = 200;
 const DEBOUNCE_MS = 2_000;
 const TAB_OPEN_MIN_GAP_MS = 60_000;
+const AUX_SYNC_MIN_GAP_MS = 60_000;
+let lastAuxSyncAt = 0;
 
 export type SyncState = 'idle' | 'syncing' | 'offline' | 'paused' | 'error' | 'off';
 
@@ -259,8 +262,15 @@ async function runRound(): Promise<void> {
   // Account settings (Ask AI engine) ride along with the progress round. A
   // failure here must not mark the progress sync as failed, except a 401, which
   // pauses the engine like any other call.
+  // Throttled to once a minute unless something changed locally, so a quiet
+  // round stays a single request.
   try {
-    await syncAccountSettings();
+    const dueNow = Date.now() - lastAuxSyncAt > AUX_SYNC_MIN_GAP_MS;
+    if (dueNow || (await readPendingSettings()).size > 0) {
+      lastAuxSyncAt = Date.now();
+      await syncAccountSettings();
+      await syncRecents();
+    }
   } catch (err) {
     if ((err as ApiError)?.status === 401) throw err;
   }
@@ -344,6 +354,7 @@ registerWipeHook(() => {
   pausedForAuth = false;
   quotaBlocked = false;
   lastTabTrigger = 0;
+  lastAuxSyncAt = 0;
   setStatus({ state: syncEnabled ? 'idle' : 'off', pending: 0, lastSyncAt: null });
 });
 

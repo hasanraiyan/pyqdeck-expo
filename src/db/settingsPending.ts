@@ -6,7 +6,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
  * importing the sync code (which imports them).
  */
 
-export type SettingName = 'askAiEngine' | 'readingLayout' | 'volumeScroll';
+export type SettingName = 'askAiEngine' | 'readingLayout' | 'volumeScroll' | 'recents';
 
 const PENDING_KEY = 'pyqdeck:settings_pending';
 

@@ -1,7 +1,19 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { getAccountSettings, putAccountSettings, type AccountSettings } from '../api';
+import {
+  getAccountSettings,
+  putAccountSettings,
+  syncRecents as syncRecentsApi,
+  type AccountSettings,
+} from '../api';
 import { ASK_AI_ENGINES, ASK_AI_KEY } from '../utils/askAi';
 import { applyOldUiFromAccount } from '../utils/settings';
+import {
+  getRecentNotes,
+  getRecentStudies,
+  replaceRecents,
+  type RecentNote,
+  type RecentStudy,
+} from '../utils/recentStudy';
 import {
   clearPendingSettings,
   readPendingSettings,
@@ -60,7 +72,7 @@ const volumeScroll: Handler<boolean> = {
   isValid: (v): v is boolean => typeof v === 'boolean',
 };
 
-const HANDLERS: { name: SettingName; handler: Handler<any> }[] = [
+const HANDLERS: { name: Exclude<SettingName, 'recents'>; handler: Handler<any> }[] = [
   { name: 'askAiEngine', handler: askAi },
   { name: 'readingLayout', handler: readingLayout },
   { name: 'volumeScroll', handler: volumeScroll },
@@ -86,4 +98,19 @@ export async function syncAccountSettings(): Promise<void> {
 
   if (Object.keys(toPush).length > 0) await putAccountSettings(toPush);
   await clearPendingSettings(HANDLERS.map((h) => h.name));
+}
+
+/**
+ * Jump Back In across devices: send this device's lists, adopt the merged lists
+ * the account returns. Runs every time (it is one small request) because the
+ * merge is what brings in what was opened on another device.
+ */
+export async function syncRecents(): Promise<void> {
+  const [study, notes] = await Promise.all([getRecentStudies(), getRecentNotes()]);
+  const merged = await syncRecentsApi({ recentStudy: study, recentNotes: notes });
+  await replaceRecents(
+    (merged.recentStudy ?? []) as RecentStudy[],
+    (merged.recentNotes ?? []) as RecentNote[]
+  );
+  await clearPendingSettings(['recents']);
 }

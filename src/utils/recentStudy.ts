@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { markSettingPending } from '../db/settingsPending';
 
 export interface RecentStudy {
   subjectId: string;
@@ -23,6 +24,27 @@ export interface RecentNote {
 
 const RECENT_STUDY_KEY = 'pyqdeck:recent_study';
 const RECENT_NOTES_KEY = 'pyqdeck:recent_notes';
+
+const listeners = new Set<() => void>();
+/** Fires when the lists are replaced by a sync, so Home can re-read them. */
+export function subscribeRecents(fn: () => void): () => void {
+  listeners.add(fn);
+  return () => {
+    listeners.delete(fn);
+  };
+}
+
+/**
+ * Adopts the lists the account returned from a sync. Not a local change, so it
+ * is not marked pending. The server already merged and capped them.
+ */
+export async function replaceRecents(study: RecentStudy[], notes: RecentNote[]): Promise<void> {
+  try {
+    await AsyncStorage.setItem(RECENT_STUDY_KEY, JSON.stringify(study));
+    await AsyncStorage.setItem(RECENT_NOTES_KEY, JSON.stringify(notes));
+    listeners.forEach((fn) => fn());
+  } catch {}
+}
 
 const MAX_RECENT_ITEMS = 4;
 const MAX_RECENT_NOTES = 2;
@@ -63,6 +85,7 @@ export async function recordRecentStudy(item: {
     ].slice(0, MAX_RECENT_ITEMS);
 
     await AsyncStorage.setItem(RECENT_STUDY_KEY, JSON.stringify(updated));
+    void markSettingPending('recents');
   } catch (e) {
     console.warn('Failed to record recent study:', e);
   }
@@ -126,6 +149,7 @@ export async function recordRecentNote(item: {
     ].slice(0, MAX_RECENT_NOTES);
 
     await AsyncStorage.setItem(RECENT_NOTES_KEY, JSON.stringify(updated));
+    void markSettingPending('recents');
   } catch (e) {
     console.warn('Failed to record recent note:', e);
   }
