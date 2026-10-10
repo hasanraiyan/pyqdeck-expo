@@ -22,6 +22,7 @@ import {
   type RemoteItem,
 } from './progressLogic';
 import { OWNER_KEY } from './storageRegistry';
+import { syncAccountSettings } from './settingsSync';
 import { registerWipeHook, wipeUserData } from '../auth/wipeUserData';
 import { isAuthEnabled } from '../config/features';
 
@@ -252,6 +253,15 @@ async function runRound(): Promise<void> {
     const left = Object.values(await loadOutbox());
     const progressed = sendable.some((s) => !left.some((o: OutboxOp) => o.opId === s.opId));
     if (left.length === 0 || !progressed) break;
+  }
+
+  // Account settings (Ask AI engine) ride along with the progress round. A
+  // failure here must not mark the progress sync as failed, except a 401, which
+  // pauses the engine like any other call.
+  try {
+    await syncAccountSettings();
+  } catch (err) {
+    if ((err as ApiError)?.status === 401) throw err;
   }
 
   const now = Date.now();

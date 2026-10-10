@@ -61,7 +61,8 @@ export const ASK_AI_ENGINES: AskAiEngine[] = [
   },
 ];
 
-const KEY = 'ask_ai_engine';
+export const ASK_AI_KEY = 'ask_ai_engine';
+const KEY = ASK_AI_KEY;
 const DEFAULT_ENGINE: AskAiEngineId = 'coursify';
 /** Keeps the URL well under what browsers and WAFs accept. */
 const MAX_QUESTION_CHARS = 1500;
