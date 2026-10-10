@@ -25,6 +25,7 @@ import { useVolumeScroll } from '../utils/volumeScroll';
 import { CircleLoader } from '../components/CircleLoader';
 import { useContainerStyle } from '../components/ScreenContainer';
 import { TopicListPane } from '../components/TopicListPane';
+import { NoteFeedbackBar } from '../components/NoteFeedbackBar';
 import { canShowTwoPanesIn, getListPaneWidth } from '../theme/layout';
 import { useResponsive } from '../utils/responsive';
 
@@ -415,6 +416,14 @@ export const TopicNotesScreen = () => {
           <View style={styles.notesBody}>
             <NativeContentRenderer content={notesBody} fontSize={16} />
             {faqs.length > 0 && <FaqAccordion items={faqs} />}
+            {subjectId && (
+              <NoteFeedbackBar
+                subjectId={subjectId}
+                topicId={topic.id}
+                topicTitle={topic.title}
+                subjectName={subjectName}
+              />
+            )}
           </View>
         ) : (
           <View style={styles.empty}>
@@ -450,9 +459,7 @@ export const TopicNotesScreen = () => {
         bottomOffset={16}
       />
 
-      <SafeAreaView edges={['bottom']}>
         <AdBanner />
-      </SafeAreaView>
       </View>
     </View>
   );

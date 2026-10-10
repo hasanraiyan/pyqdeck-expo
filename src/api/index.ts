@@ -349,6 +349,41 @@ export const getTopicNotes = (subject: string, topicId: string, signal?: AbortSi
     signal
   );
 
+export type NoteVotes = { topicId: string; upvotes: number; downvotes: number; myVote: 1 | -1 | 0 };
+
+// Totals are public, but `myVote` is only filled in when the request carries
+// the Clerk token, so this one read goes out authed (and anonymous when signed
+// out - authHeader() then sends nothing).
+export const getNoteVotes = async (
+  subject: string,
+  topicId: string,
+  signal?: AbortSignal
+): Promise<NoteVotes> =>
+  request<NoteVotes>(
+    `/syllabus/subjects/${encodeURIComponent(subject)}/topics/${encodeURIComponent(topicId)}/notes/votes`,
+    { headers: await authHeader(), ...(signal ? { signal } : {}) }
+  );
+
+// Both need a signed-in account; identity comes from the Clerk session.
+export const voteNote = (subject: string, topicId: string, value: 1 | -1 | 0) =>
+  postApiAuthed<NoteVotes>(
+    `/syllabus/subjects/${encodeURIComponent(subject)}/topics/${encodeURIComponent(topicId)}/notes/vote`,
+    { value }
+  );
+
+export type NoteReportReason = 'incorrect' | 'incomplete' | 'outdated' | 'offensive' | 'other';
+
+export const reportNote = (
+  subject: string,
+  topicId: string,
+  reason: NoteReportReason,
+  message?: string
+) =>
+  postApiAuthed<{ id: string; status: string }>(
+    `/syllabus/subjects/${encodeURIComponent(subject)}/topics/${encodeURIComponent(topicId)}/notes/report`,
+    { reason, message }
+  );
+
 export const searchTopicNotes = (query: string, limit = 20, signal?: AbortSignal) =>
   fetchApi<TopicNotesSearchResult>(
     `/syllabus/search/topics?q=${encodeURIComponent(query)}&limit=${limit}`,

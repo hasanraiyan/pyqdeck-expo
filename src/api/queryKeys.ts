@@ -50,4 +50,7 @@ export const qk = {
   allSubjects: (q: string) => ['allSubjects', q.trim().toLowerCase()] as const,
   topicNotes: (subjectId: string, topicId: string) =>
     ['topicNotes', subjectId, topicId] as const,
+  // `signedIn` is part of the key so the caller's own vote is refetched on sign-in/out.
+  noteVotes: (subjectId: string, topicId: string, signedIn: boolean) =>
+    ['noteVotes', subjectId, topicId, signedIn] as const,
 };

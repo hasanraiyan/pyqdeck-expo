@@ -85,3 +85,49 @@ export async function shareQuestion(params: {
   }
 }
 
+
+// Same rule as pyqdeck-frontend's lib/topic-slug.ts. The slug is cosmetic (the
+// site 308s a wrong one to the canonical form and the app ignores it), but
+// keeping it identical means a shared link is already canonical.
+export function topicSlug(title: string): string {
+  const slug = (title || '')
+    .normalize('NFKD')
+    .replace(/\p{M}/gu, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .replace(/-{2,}/g, '-')
+    .slice(0, 60)
+    .replace(/-+$/g, '');
+  return slug || 'topic';
+}
+
+// Matches the website route and the app's TopicNotes deep link
+// (syllabus/subject/:subjectId/topic/:topicId/:topicSlug?), both already
+// covered by app.json's /syllabus/.* intent filters.
+export function buildTopicUrl(subjectId: string, topicId: string, title: string): string {
+  return `https://pyqdeck.in/syllabus/subject/${encodeURIComponent(subjectId)}/topic/${encodeURIComponent(topicId)}/${topicSlug(title)}`;
+}
+
+export async function shareTopic(params: {
+  subjectId: string;
+  topicId: string;
+  title: string;
+  subjectName?: string;
+}): Promise<void> {
+  try {
+    const url = buildTopicUrl(params.subjectId, params.topicId, params.title);
+    const header = [params.title, params.subjectName].filter(Boolean).join(' · ');
+    const message = `📚 ${header}
+Study notes on PYQdeck:
+${url}`;
+    await Share.share(
+      Platform.select({
+        ios: { message, url },
+        default: { message },
+      })
+    );
+  } catch (err) {
+    console.error('Failed to share notes:', err);
+  }
+}
