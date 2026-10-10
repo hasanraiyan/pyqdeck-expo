@@ -24,7 +24,13 @@ import { ScreenContainer } from '../components/ScreenContainer';
 import { HeroArt } from '../components/HeroArt';
 import { ResponsiveGrid } from '../components/ResponsiveGrid';
 import { yearNumberOf, YEAR_NUMBERS } from '../utils/year';
-import { getRecentStudies, RecentStudy, getRecentNotes, RecentNote } from '../utils/recentStudy';
+import {
+  getRecentStudies,
+  RecentStudy,
+  getRecentNotes,
+  RecentNote,
+  subscribeRecents,
+} from '../utils/recentStudy';
 import { prefetchSubject } from '../api/prefetch';
 
 export const HomeScreen = () => {
@@ -98,16 +104,19 @@ export const HomeScreen = () => {
   useFocusEffect(
     useCallback(() => {
       let isCurrent = true;
-      Promise.all([getRecentStudies(), getRecentNotes()]).then(
-        ([studies, notes]) => {
+      const load = () =>
+        Promise.all([getRecentStudies(), getRecentNotes()]).then(([studies, notes]) => {
           if (isCurrent) {
             setRecentStudies(studies);
             setRecentNotes(notes);
           }
-        }
-      );
+        });
+      void load();
+      // A sync can bring in what was opened on another device.
+      const unsubscribe = subscribeRecents(() => void load());
       return () => {
         isCurrent = false;
+        unsubscribe();
       };
     }, [])
   );

@@ -382,6 +382,16 @@ export const getAccountSettings = () => requestMe<AccountSettings>('/settings', 
 export const putAccountSettings = (settings: Partial<AccountSettings>) =>
   requestMe<AccountSettings>('/settings', 'PUT', settings);
 
+export interface RecentsPayload {
+  recentStudy: unknown[];
+  recentNotes: unknown[];
+}
+
+// Sends this device's Jump Back In lists; the account merges them with its own
+// and returns the merged result for the device to adopt.
+export const syncRecents = (payload: RecentsPayload) =>
+  requestMe<RecentsPayload>('/recents/sync', 'POST', payload);
+
 export interface MyVotes {
   solutionVotes: { solutionId: string; questionId: string | null; value: 1 | -1 }[];
   noteVotes: { topicId: string; value: 1 | -1 }[];
