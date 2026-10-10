@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { markSettingPending } from '../db/settingsPending';
 
 const VOLUME_SCROLL_ENABLED_KEY = 'volume_scroll_enabled';
 
@@ -19,6 +20,7 @@ export async function setVolumeScrollEnabled(value: boolean): Promise<void> {
   try {
     await AsyncStorage.setItem(VOLUME_SCROLL_ENABLED_KEY, value ? '1' : '0');
   } catch {}
+  await markSettingPending('volumeScroll');
 }
 
 const OLD_UI_ENABLED_KEY = 'old_ui_enabled';
@@ -45,6 +47,20 @@ export async function getOldUiEnabled(): Promise<boolean> {
 }
 
 export async function setOldUiEnabled(value: boolean): Promise<void> {
+  oldUiCache = value;
+  try {
+    await AsyncStorage.setItem(OLD_UI_ENABLED_KEY, value ? '1' : '0');
+    await AsyncStorage.setItem(QUESTION_LAYOUT_CHOSEN_KEY, '1');
+  } catch {}
+  await markSettingPending('readingLayout');
+}
+
+/**
+ * Applies the layout stored on the account without marking it as a local
+ * change (it is already in sync). Also counts as "chosen", so the first-time
+ * layout prompt does not ask a student who already picked on another phone.
+ */
+export async function applyOldUiFromAccount(value: boolean): Promise<void> {
   oldUiCache = value;
   try {
     await AsyncStorage.setItem(OLD_UI_ENABLED_KEY, value ? '1' : '0');

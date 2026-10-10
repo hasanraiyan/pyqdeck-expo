@@ -3,6 +3,7 @@ import * as WebBrowser from 'expo-web-browser';
 import * as Clipboard from 'expo-clipboard';
 import { Linking } from 'react-native';
 import { COLORS } from '../theme/colors';
+import { markSettingPending } from '../db/settingsPending';
 
 /**
  * The AI the "Ask AI" buttons open. Each one is a web link that takes the
@@ -80,6 +81,7 @@ export async function setAskAiEngine(id: AskAiEngineId): Promise<void> {
   try {
     await AsyncStorage.setItem(KEY, id);
   } catch {}
+  await markSettingPending('askAiEngine');
 }
 
 /** Opens the student's chosen AI with the question already filled in. */

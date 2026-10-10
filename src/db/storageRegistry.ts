@@ -52,7 +52,7 @@ export const STORAGE_REGISTRY: Entry[] = [
   // The Ask AI engine follows the account (see settingsSync.ts), so it is user
   // data: the next person on the phone starts from the default, not this choice.
   { key: 'ask_ai_engine', category: 'user' },
-  { key: 'pyqdeck:ask_ai_pending', category: 'user' },
+  { key: 'pyqdeck:settings_pending', category: 'user' },
   { key: 'selected_syllabus_branch', category: 'user' },
   { prefix: 'pyqdeck:progress:', category: 'user' },
   { prefix: 'syllabus_done_', category: 'user' },

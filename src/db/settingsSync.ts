@@ -1,51 +1,89 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { getAccountSettings, putAccountSettings } from '../api';
+import { getAccountSettings, putAccountSettings, type AccountSettings } from '../api';
 import { ASK_AI_ENGINES, ASK_AI_KEY } from '../utils/askAi';
+import { applyOldUiFromAccount } from '../utils/settings';
+import {
+  clearPendingSettings,
+  readPendingSettings,
+  type SettingName,
+} from './settingsPending';
 
 /**
- * Account-backed app settings. The only one today is the "Ask AI" engine.
+ * Account-backed app settings: the "Ask AI" engine, the question reading
+ * layout and volume-key scrolling.
  *
- * The local copy (`ask_ai_engine`) stays: it is what the app reads, so it works
- * signed out and offline. Once signed in the account is the source of truth:
+ * The local copy stays what the app reads, so it works signed out and offline.
+ * Once signed in the account is the source of truth:
  *
- *  - a change made on this device is marked pending and pushed on the next sync;
+ *  - a setting changed on this device is pending and is pushed on the next sync;
  *  - otherwise the account's value, if it has one, replaces the local one;
- *  - an account with no choice yet adopts whatever this device already had.
+ *  - a setting the account has never chosen adopts what this device already has.
  *
  * Runs at the end of every sync round (see progressSync.ts), so it inherits the
  * engine's gating, backoff and 401 handling.
  */
 
-const PENDING_KEY = 'pyqdeck:ask_ai_pending';
+const OLD_UI_KEY = 'old_ui_enabled';
+const VOLUME_KEY = 'volume_scroll_enabled';
 
-const isEngine = (v: unknown): v is string => ASK_AI_ENGINES.some((e) => e.id === v);
-
-/** Records a local change so the next sync pushes it to the account. */
-export async function markAskAiEnginePending(): Promise<void> {
-  try {
-    await AsyncStorage.setItem(PENDING_KEY, '1');
-  } catch {}
+interface Handler<T> {
+  /** The local value, or null when this device has never chosen. */
+  readLocal: () => Promise<T | null>;
+  writeLocal: (value: T) => Promise<void>;
+  isValid: (value: unknown) => value is T;
 }
 
+const askAi: Handler<string> = {
+  readLocal: async () => {
+    const raw = await AsyncStorage.getItem(ASK_AI_KEY);
+    return ASK_AI_ENGINES.some((e) => e.id === raw) ? raw : null;
+  },
+  writeLocal: (v) => AsyncStorage.setItem(ASK_AI_KEY, v),
+  isValid: (v): v is string => ASK_AI_ENGINES.some((e) => e.id === v),
+};
+
+const readingLayout: Handler<string> = {
+  readLocal: async () => {
+    const raw = await AsyncStorage.getItem(OLD_UI_KEY);
+    return raw === '1' ? 'cards' : raw === '0' ? 'accordion' : null;
+  },
+  writeLocal: (v) => applyOldUiFromAccount(v === 'cards'),
+  isValid: (v): v is string => v === 'accordion' || v === 'cards',
+};
+
+const volumeScroll: Handler<boolean> = {
+  readLocal: async () => {
+    const raw = await AsyncStorage.getItem(VOLUME_KEY);
+    return raw === '1' ? true : raw === '0' ? false : null;
+  },
+  writeLocal: (v) => AsyncStorage.setItem(VOLUME_KEY, v ? '1' : '0'),
+  isValid: (v): v is boolean => typeof v === 'boolean',
+};
+
+const HANDLERS: { name: SettingName; handler: Handler<any> }[] = [
+  { name: 'askAiEngine', handler: askAi },
+  { name: 'readingLayout', handler: readingLayout },
+  { name: 'volumeScroll', handler: volumeScroll },
+];
+
 export async function syncAccountSettings(): Promise<void> {
-  const [rawLocal, pending] = await Promise.all([
-    AsyncStorage.getItem(ASK_AI_KEY).catch(() => null),
-    AsyncStorage.getItem(PENDING_KEY).catch(() => null),
-  ]);
-  const local = isEngine(rawLocal) ? rawLocal : null;
-
-  if (pending && local) {
-    await putAccountSettings({ askAiEngine: local });
-    await AsyncStorage.removeItem(PENDING_KEY).catch(() => {});
-    return;
-  }
-
+  const pending = await readPendingSettings();
   const remote = await getAccountSettings();
-  if (isEngine(remote.askAiEngine)) {
-    if (remote.askAiEngine !== local) await AsyncStorage.setItem(ASK_AI_KEY, remote.askAiEngine);
-  } else if (local) {
-    // First sign-in on an account that never chose: keep this device's choice.
-    await putAccountSettings({ askAiEngine: local });
+
+  const toPush: Partial<AccountSettings> = {};
+  for (const { name, handler } of HANDLERS) {
+    const local = await handler.readLocal().catch(() => null);
+    const remoteValue = remote[name];
+    const remoteSet = handler.isValid(remoteValue);
+
+    if (local !== null && (pending.has(name) || !remoteSet)) {
+      // A local change (or a first sign-in on an account that never chose).
+      if (local !== remoteValue) (toPush as Record<string, unknown>)[name] = local;
+    } else if (remoteSet && remoteValue !== local) {
+      await handler.writeLocal(remoteValue).catch(() => {});
+    }
   }
-  await AsyncStorage.removeItem(PENDING_KEY).catch(() => {});
+
+  if (Object.keys(toPush).length > 0) await putAccountSettings(toPush);
+  await clearPendingSettings(HANDLERS.map((h) => h.name));
 }

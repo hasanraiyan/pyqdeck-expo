@@ -372,6 +372,9 @@ export const syncProgress = (cursor: string | null, ops: ProgressSyncOp[], limit
 export interface AccountSettings {
   /** Chosen "Ask AI" engine id, or null when the account has not chosen one. */
   askAiEngine: string | null;
+  /** 'accordion' | 'cards' */
+  readingLayout: string | null;
+  volumeScroll: boolean | null;
 }
 
 export const getAccountSettings = () => requestMe<AccountSettings>('/settings', 'GET');

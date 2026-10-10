@@ -23,6 +23,7 @@ import {
 } from './progressLogic';
 import { OWNER_KEY } from './storageRegistry';
 import { syncAccountSettings } from './settingsSync';
+import { setSettingChangeHandler } from './settingsPending';
 import { registerWipeHook, wipeUserData } from '../auth/wipeUserData';
 import { isAuthEnabled } from '../config/features';
 
@@ -332,6 +333,9 @@ setLocalChangeHandler(() => {
   void refreshPending();
   requestSync();
 });
+
+// A changed account setting schedules a sync (a no-op when signed out).
+setSettingChangeHandler(() => requestSync({ immediate: true }));
 
 // Everything in memory that mirrors the removed data is reset with the wipe.
 registerWipeHook(() => {
