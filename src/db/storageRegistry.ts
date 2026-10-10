@@ -45,6 +45,7 @@ export const STORAGE_REGISTRY: Entry[] = [
   { key: 'pyqdeck:progress_outbox', category: 'user' },
   { key: 'pyqdeck:progress_cursor', category: 'user' },
   { key: 'pyqdeck:last_sync_at', category: 'user' },
+  { key: 'pyqdeck:bg_last_run', category: 'user' },
   { key: 'pyqdeck:recent_study', category: 'user' },
   { key: 'pyqdeck:recent_notes', category: 'user' },
   { key: 'my_solution_votes_v2', category: 'user' },

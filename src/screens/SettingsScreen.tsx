@@ -45,6 +45,8 @@ import {
   syncNow,
   type SyncStatus,
 } from '../db/progressSync';
+import { readNudgeRun, subscribeNudgeRun, type NudgeRun } from '../background/diagnostics';
+import { ApiError, sendTestNudge } from '../api';
 import { unlinkPushTokenFromAccount } from '../utils/notifications';
 
 const WEBSITE_URL = 'https://pyqdeck.in';
@@ -72,6 +74,38 @@ export const SettingsScreen = ({ navigation }: any) => {
   const [syncOn, setSyncOn] = useState(isSyncEnabled());
   const [syncStatus, setSyncStatusState] = useState<SyncStatus>(getSyncStatus());
   const [signingOut, setSigningOut] = useState(false);
+  const [nudgeRun, setNudgeRun] = useState<NudgeRun | null>(null);
+  const [testingNudge, setTestingNudge] = useState(false);
+
+  useEffect(() => {
+    const load = () => void readNudgeRun().then(setNudgeRun);
+    load();
+    return subscribeNudgeRun(load);
+  }, []);
+
+  // Checks that background sync reaches this phone: the server sends a nudge to
+  // every device on the account, and the result lands in the "last nudge" line.
+  const testBackgroundSync = async () => {
+    setTestingNudge(true);
+    try {
+      const res = await sendTestNudge();
+      Alert.alert(
+        'Test sent',
+        res.total === 0
+          ? 'The server has no push-enabled device for your account. Allow notifications and reopen the app once.'
+          : `Sent to ${res.sent} of ${res.total} device(s). Close the app and wait about a minute, then open Settings again: the line under "Test background sync" shows what happened.`
+      );
+    } catch (e) {
+      Alert.alert('Could not send the test', (e as ApiError)?.message ?? 'Try again in a moment.');
+    } finally {
+      setTestingNudge(false);
+    }
+  };
+
+  const nudgeSubtitle = () =>
+    nudgeRun
+      ? `Last nudge ${new Date(nudgeRun.at).toLocaleTimeString()} (${nudgeRun.via}): ${nudgeRun.outcome}`
+      : 'No nudge received on this phone yet';
 
   useEffect(() => {
     void loadSyncEnabled().then(setSyncOn);
@@ -305,6 +339,12 @@ export const SettingsScreen = ({ navigation }: any) => {
                       disabled={syncStatus.state === 'syncing'}
                     />
                   )}
+                  <SettingsRow
+                    icon="radio"
+                    label={testingNudge ? 'Sending test...' : 'Test background sync'}
+                    subtitle={nudgeSubtitle()}
+                    onPress={testingNudge ? undefined : () => void testBackgroundSync()}
+                  />
                   <SettingsRow
                     icon="log-out"
                     label={signingOut ? 'Signing out...' : 'Sign out'}

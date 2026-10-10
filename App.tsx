@@ -70,6 +70,7 @@ import { OWNER_KEY } from './src/db/storageRegistry';
 import { isAuthEnabled } from './src/config/features';
 import { linkPushTokenToAccount, subscribeToSyncNudges } from './src/utils/notifications';
 import { requestSync } from './src/db/progressSync';
+import { recordNudgeRun } from './src/background/diagnostics';
 
 // Crash/error monitoring only - deliberately not sendDefaultPii (would send
 // IP address etc, undisclosed in the Play Store Data Safety form) and no
@@ -494,7 +495,10 @@ function AppContent() {
     // A tap on a notification must never be missed, even mid-onboarding.
     const unsubscribe = subscribeToNotificationResponses();
     // Another device changed something: sync now (no-op when signed out).
-    const unsubscribeNudges = subscribeToSyncNudges(() => requestSync({ immediate: true }));
+    const unsubscribeNudges = subscribeToSyncNudges(() => {
+      void recordNudgeRun('foreground', 'received while the app was open, sync requested');
+      requestSync({ immediate: true });
+    });
 
     // Start backend selection alongside the rest of boot. It runs in the
     // background; requests do not wait for it (see src/api/backend.ts).

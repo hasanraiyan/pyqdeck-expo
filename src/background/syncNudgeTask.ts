@@ -1,6 +1,7 @@
 import * as TaskManager from 'expo-task-manager';
 import { SYNC_NUDGE_TASK } from './taskNames';
 import { syncFromBackground } from '../db/progressSync';
+import { recordNudgeRun } from './diagnostics';
 
 /**
  * Headless handler for the server's "sync now" nudge: a data-only push sent to
@@ -25,6 +26,14 @@ const isSyncNudge = (payload: unknown): boolean => {
 };
 
 TaskManager.defineTask(SYNC_NUDGE_TASK, async ({ data, error }: any) => {
-  if (error || !isSyncNudge(data)) return;
-  await syncFromBackground();
+  if (error) return;
+  if (!isSyncNudge(data)) {
+    // The task also fires for ordinary pushes; only nudges are interesting.
+    return;
+  }
+  try {
+    await recordNudgeRun('headless', `received, ${await syncFromBackground()}`);
+  } catch (e) {
+    await recordNudgeRun('headless', `error: ${(e as Error)?.message ?? 'unknown'}`);
+  }
 });

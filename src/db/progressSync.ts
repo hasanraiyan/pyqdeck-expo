@@ -212,9 +212,10 @@ async function runRound(): Promise<void> {
   // is one request. They are included when something changed locally or at most
   // once a minute otherwise (a quiet round pulls nothing extra).
   let aux: AuxSent | null = null;
+  const firstSyncOnDevice = (await AsyncStorage.getItem(CURSOR_KEY)) === null;
   const pendingNow = (await readPendingSettings()).size > 0;
-  if (pendingNow || Date.now() - lastAuxSyncAt > AUX_SYNC_MIN_GAP_MS) {
-    aux = await buildAuxRequest();
+  if (firstSyncOnDevice || pendingNow || Date.now() - lastAuxSyncAt > AUX_SYNC_MIN_GAP_MS) {
+    aux = await buildAuxRequest({ accountWins: firstSyncOnDevice });
     lastAuxSyncAt = Date.now();
   }
   let needsAnotherRound = false;
@@ -372,15 +373,17 @@ export function syncNow(): Promise<void> {
  * this device; anything uncertain (not loaded, offline, other account) does
  * nothing, and the next normal app start syncs as usual.
  */
-export async function syncFromBackground(): Promise<void> {
-  if (!isAuthEnabled) return;
+export async function syncFromBackground(): Promise<string> {
+  if (!isAuthEnabled) return 'skipped: accounts are off';
   const owner = await AsyncStorage.getItem(OWNER_KEY);
-  if (!owner) return;
+  if (!owner) return 'skipped: no account data on this phone';
   const userId = await getSignedInUserId();
-  if (!userId || userId !== owner) return;
+  if (!userId) return 'skipped: Clerk reports signed out (headless session not available)';
+  if (userId !== owner) return 'skipped: a different account is signed in';
   await loadSyncEnabled();
   session = { signedIn: true, userId };
   await syncNow();
+  return status.state === 'idle' ? 'synced' : `ended in state "${status.state}"`;
 }
 
 /** The sign-in sheet or token refresh resolved: allow syncing again. */
