@@ -8,7 +8,7 @@ export const isSyllabusEnabled = true;
  * Auth (Clerk) - disabled on master for Google Play Store review compliance.
  * Enabled on clerk-auth branch.
  */
-export const isAuthEnabled = false;
+export const isAuthEnabled = true;
 
 /**
  * Ask AI - enable/disable Ask AI buttons across the app.
