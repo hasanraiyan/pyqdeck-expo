@@ -7,7 +7,7 @@ Structured after IEEE Std 830-1998. Related: `SRS-account-progress-sync-android.
 | Product | PyQdeck admin MCP (`/admin-mcp`) and the supporting server and app changes |
 | Document version | 1.0 (draft for review) |
 | Date | 2026-10-11 |
-| Status | Plan only. No code written. Section 8 lists the decisions needed before Phase 1. |
+| Status | Approved. Phase 1 implemented on server branch `feat/admin-phase1`; Phases 2 and 3 not started. |
 | Evidence | Verified against server `main` at `47182bd`: `mcp/adminMcpServer.js`, `mcp/adminAccess.js`, `config/adminAccess.js`, `models/User.js`, `services/notificationService.js`, `services/progressService.js`, `events/handlers.js`. |
 
 ---
@@ -96,7 +96,7 @@ Actions: `find`, `get`, `set_beta`, `unlink_devices`, `reset_progress`. (`delete
 | ADM-FR-8 | `get` (by email or Clerk id) returns a support summary: name, email, role, `isBeta`, sign-up time (from `_id`), `lastActiveAt`, the synced settings (Ask AI engine, reading layout, volume scroll, syllabus branch), counts of progress records and done topics, subject count, number of registered devices and how many are linked to the account, last progress change time, counts of solution votes, note votes and reports. It MUST NOT return which topics were ticked, tokens, or recents. | M |
 | ADM-FR-9 | `set_beta` sets `isBeta` true or false. Used to build the `beta` notification audience. | S |
 | ADM-FR-10 | `unlink_devices` removes the account link from all of the user's push tokens (the tokens stay registered for broadcasts). Requires `confirm: true`. For a user who reports getting someone else's pushes on a shared phone. | S |
-| ADM-FR-11 | `reset_progress` deletes all of the user's synced progress records, using the same operation as `DELETE /api/me/progress`. Requires `confirm: true`. The user's phones still hold their local copy and would push it back on their next sync, so the tool's result MUST say so. | S |
+| ADM-FR-11 | `reset_progress` deletes all of the user's synced progress records, using the same operation as `DELETE /api/me/progress`. Requires `confirm: true`. The student's phones keep their own local copy (nothing is removed there) and only re-send a topic if the student changes it, so the result MUST say that; a phone that signs in fresh starts from the empty account. | S |
 | ADM-FR-12 | Role changes MUST NOT be possible through this tool. Roles stay a database or ACL matter. | M |
 | ADM-FR-13 | Every write action here MUST be audited (ADM-FR-1). `find` and `get` are not audited because they are reads, but see ADM-NFR-4. | M |
 | ADM-FR-14 | Grants: `manage_users` honours `actions`, so a support person can be given `find` and `get` only. | M |
@@ -180,7 +180,7 @@ Read-only, computed from the database (not from per-process counters).
 | X2 | `get` on that user | Summary per ADM-FR-8; no topic list, no tokens, no recents. |
 | X3 | Scoped admin granted only `find` and `get` calls `reset_progress` | Access denied. |
 | X4 | `reset_progress` without `confirm` | Refused with an explanation; nothing deleted. |
-| X5 | `reset_progress` with `confirm: true` | Progress rows deleted; result states the phones will push their local copy back; an audit entry exists. |
+| X5 | `reset_progress` with `confirm: true` | Progress rows deleted; result states the phones keep their local copy; an audit entry exists. |
 | X6 | `unlink_devices` | Tokens stay, `voterId` removed; an account push no longer reaches the phone, a broadcast still does. |
 | X7 | `set_beta` true, then `send_notification` with `audience: beta` and `dryRun` | The user is counted. |
 | X8 | Any write tool is called | One audit entry with admin, tool, action, target, outcome. A read-only call adds none. |
@@ -207,7 +207,7 @@ Read-only, computed from the database (not from per-process counters).
 | # | Question | Recommendation |
 |---|---|---|
 | D1 | May admins see an account's email and synced settings? | **Yes, with the audit log and the privacy text (section 6).** |
-| D2 | May an admin reset a user's progress? | **Yes, with `confirm`, audited; warn that phones push it back.** |
+| D2 | May an admin reset a user's progress? | **Yes, with `confirm`, audited; warn that phones keep their local copy.** |
 | D3 | Role changes through the MCP? | **No. Keep roles in the database and ACL.** |
 | D4 | Admin-initiated account deletion (Phase 3)? | **Not now.** Students delete their own accounts; Clerk and the webhook already purge. |
 | D5 | Audit retention | **365 days.** |
