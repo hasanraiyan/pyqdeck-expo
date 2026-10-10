@@ -7,6 +7,7 @@ import {
   canSync,
   countDone,
   enqueue,
+  nextSendDelay,
   planFirstPush,
   remoteWins,
   settle,
@@ -179,4 +180,10 @@ test('registry categories', () => {
   assert.equal(categoryOf('pyqdeck:vote:a:b'), 'user');
   assert.equal(categoryOf('unknown'), null);
   assert.ok(STORAGE_REGISTRY.length > 20);
+});
+
+test('nextSendDelay debounces but never waits past the max wait', () => {
+  assert.equal(nextSendDelay(1000, 1000, 2000, 30000), 2000);
+  assert.equal(nextSendDelay(29000, 0, 2000, 30000), 1000);
+  assert.equal(nextSendDelay(31000, 0, 2000, 30000), 0);
 });

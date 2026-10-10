@@ -366,8 +366,6 @@ export interface ProgressSyncResponse {
   serverTime: number;
 }
 
-export const syncProgress = (cursor: string | null, ops: ProgressSyncOp[], limit = 1000) =>
-  requestMe<ProgressSyncResponse>('/progress/sync', 'POST', { cursor, ops, limit });
 
 export interface AccountSettings {
   /** Chosen "Ask AI" engine id, or null when the account has not chosen one. */
@@ -377,20 +375,31 @@ export interface AccountSettings {
   volumeScroll: boolean | null;
 }
 
-export const getAccountSettings = () => requestMe<AccountSettings>('/settings', 'GET');
-
-export const putAccountSettings = (settings: Partial<AccountSettings>) =>
-  requestMe<AccountSettings>('/settings', 'PUT', settings);
-
 export interface RecentsPayload {
   recentStudy: unknown[];
   recentNotes: unknown[];
 }
 
-// Sends this device's Jump Back In lists; the account merges them with its own
-// and returns the merged result for the device to adopt.
-export const syncRecents = (payload: RecentsPayload) =>
-  requestMe<RecentsPayload>('/recents/sync', 'POST', payload);
+type SectionError = { error: { code: string; message: string } };
+
+export interface SyncAllRequest {
+  progress: { cursor: string | null; ops: ProgressSyncOp[]; limit?: number };
+  settings?: { changes?: Partial<AccountSettings> };
+  recents?: RecentsPayload;
+}
+
+export interface SyncAllResponse {
+  progress: ProgressSyncResponse;
+  settings?: AccountSettings | SectionError;
+  recents?: RecentsPayload | SectionError;
+}
+
+// One request for everything the app keeps in step with the account: progress
+// changes and the pull, setting changes, and Jump Back In. A problem in the
+// settings or recents section comes back inside that section and never costs
+// the progress result.
+export const syncAll = (body: SyncAllRequest) =>
+  requestMe<SyncAllResponse>('/sync', 'POST', body);
 
 export interface MyVotes {
   solutionVotes: { solutionId: string; questionId: string | null; value: 1 | -1 }[];

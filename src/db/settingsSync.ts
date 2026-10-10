@@ -1,10 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import {
-  getAccountSettings,
-  putAccountSettings,
-  syncRecents as syncRecentsApi,
-  type AccountSettings,
-} from '../api';
+import type { AccountSettings, RecentsPayload, SyncAllResponse } from '../api';
 import { ASK_AI_ENGINES, ASK_AI_KEY } from '../utils/askAi';
 import { applyOldUiFromAccount } from '../utils/settings';
 import {
@@ -16,27 +11,34 @@ import {
 } from '../utils/recentStudy';
 import {
   clearPendingSettings,
+  markSettingPending,
   readPendingSettings,
   type SettingName,
 } from './settingsPending';
 
 /**
- * Account-backed app settings: the "Ask AI" engine, the question reading
- * layout and volume-key scrolling.
+ * The non-progress half of the combined sync request: account settings (Ask AI
+ * engine, reading layout, volume scroll) and Jump Back In.
  *
- * The local copy stays what the app reads, so it works signed out and offline.
- * Once signed in the account is the source of truth:
+ * This module only builds the request sections and applies the response; the
+ * sync engine (progressSync.ts) sends them inside the one POST /api/me/sync, so
+ * a round is a single request.
  *
- *  - a setting changed on this device is pending and is pushed on the next sync;
- *  - otherwise the account's value, if it has one, replaces the local one;
- *  - a setting the account has never chosen adopts what this device already has.
+ * Settings: the local copy is what the app reads (it works signed out and
+ * offline). A setting changed on this device is pending and travels as a
+ * change; otherwise the account's value, if it has one, replaces the local one;
+ * a setting the account has never chosen adopts what this device already has.
  *
- * Runs at the end of every sync round (see progressSync.ts), so it inherits the
- * engine's gating, backoff and 401 handling.
+ * Recents: this device's lists are sent every time; the server merges them with
+ * the account's and returns the result, which replaces the local lists - unless
+ * something was opened while the request was in flight, in which case the next
+ * round settles it.
  */
 
 const OLD_UI_KEY = 'old_ui_enabled';
 const VOLUME_KEY = 'volume_scroll_enabled';
+
+type AccountSettingName = Exclude<SettingName, 'recents'>;
 
 interface Handler<T> {
   /** The local value, or null when this device has never chosen. */
@@ -72,45 +74,85 @@ const volumeScroll: Handler<boolean> = {
   isValid: (v): v is boolean => typeof v === 'boolean',
 };
 
-const HANDLERS: { name: Exclude<SettingName, 'recents'>; handler: Handler<any> }[] = [
+const HANDLERS: { name: AccountSettingName; handler: Handler<any> }[] = [
   { name: 'askAiEngine', handler: askAi },
   { name: 'readingLayout', handler: readingLayout },
   { name: 'volumeScroll', handler: volumeScroll },
 ];
 
-export async function syncAccountSettings(): Promise<void> {
+export interface AuxSent {
+  /** The `settings` and `recents` sections to put in the request. */
+  request: { settings: { changes?: Partial<AccountSettings> }; recents: RecentsPayload };
+  /** What was sent, to tell on the way back whether it is still current. */
+  sentChanges: Partial<Record<AccountSettingName, unknown>>;
+  sentRecentsJson: string;
+}
+
+export async function buildAuxRequest(): Promise<AuxSent> {
   const pending = await readPendingSettings();
-  const remote = await getAccountSettings();
-
-  const toPush: Partial<AccountSettings> = {};
+  const sentChanges: Partial<Record<AccountSettingName, unknown>> = {};
   for (const { name, handler } of HANDLERS) {
+    if (!pending.has(name)) continue;
     const local = await handler.readLocal().catch(() => null);
-    const remoteValue = remote[name];
-    const remoteSet = handler.isValid(remoteValue);
+    if (local !== null) sentChanges[name] = local;
+  }
+  const [recentStudy, recentNotes] = await Promise.all([getRecentStudies(), getRecentNotes()]);
+  return {
+    request: {
+      settings: Object.keys(sentChanges).length > 0 ? { changes: sentChanges as Partial<AccountSettings> } : {},
+      recents: { recentStudy, recentNotes },
+    },
+    sentChanges,
+    sentRecentsJson: JSON.stringify({ recentStudy, recentNotes }),
+  };
+}
 
-    if (local !== null && (pending.has(name) || !remoteSet)) {
-      // A local change (or a first sign-in on an account that never chose).
-      if (local !== remoteValue) (toPush as Record<string, unknown>)[name] = local;
-    } else if (remoteSet && remoteValue !== local) {
-      await handler.writeLocal(remoteValue).catch(() => {});
+/** Applies the settings and recents sections of a sync response. */
+export async function applyAuxResponse(
+  sent: AuxSent,
+  res: Pick<SyncAllResponse, 'settings' | 'recents'>
+): Promise<{ needsAnotherRound: boolean }> {
+  let needsAnotherRound = false;
+
+  const remote = res.settings;
+  if (remote && !('error' in remote)) {
+    const stillPending = await readPendingSettings();
+    for (const { name, handler } of HANDLERS) {
+      const local = await handler.readLocal().catch(() => null);
+      const remoteValue = remote[name];
+      const remoteSet = handler.isValid(remoteValue);
+
+      if (name in sent.sentChanges) {
+        // Pushed. Settled only if the student did not change it again meanwhile.
+        if (local === sent.sentChanges[name]) await clearPendingSettings([name]);
+        else needsAnotherRound = true;
+      } else if (stillPending.has(name)) {
+        needsAnotherRound = true; // changed mid-flight: next round pushes it
+      } else if (remoteSet && remoteValue !== local) {
+        await handler.writeLocal(remoteValue).catch(() => {});
+      } else if (!remoteSet && local !== null) {
+        // The account never chose, this device did: adopt it on the next round.
+        await markSettingPending(name);
+        needsAnotherRound = true;
+      }
     }
   }
 
-  if (Object.keys(toPush).length > 0) await putAccountSettings(toPush);
-  await clearPendingSettings(HANDLERS.map((h) => h.name));
-}
+  const merged = res.recents;
+  if (merged && !('error' in merged)) {
+    const [study, notes] = await Promise.all([getRecentStudies(), getRecentNotes()]);
+    const unchanged =
+      JSON.stringify({ recentStudy: study, recentNotes: notes }) === sent.sentRecentsJson;
+    if (unchanged) {
+      await replaceRecents(
+        (merged.recentStudy ?? []) as RecentStudy[],
+        (merged.recentNotes ?? []) as RecentNote[]
+      );
+      await clearPendingSettings(['recents']);
+    } else {
+      needsAnotherRound = true;
+    }
+  }
 
-/**
- * Jump Back In across devices: send this device's lists, adopt the merged lists
- * the account returns. Runs every time (it is one small request) because the
- * merge is what brings in what was opened on another device.
- */
-export async function syncRecents(): Promise<void> {
-  const [study, notes] = await Promise.all([getRecentStudies(), getRecentNotes()]);
-  const merged = await syncRecentsApi({ recentStudy: study, recentNotes: notes });
-  await replaceRecents(
-    (merged.recentStudy ?? []) as RecentStudy[],
-    (merged.recentNotes ?? []) as RecentNote[]
-  );
-  await clearPendingSettings(['recents']);
+  return { needsAnotherRound };
 }
