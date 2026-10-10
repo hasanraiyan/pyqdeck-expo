@@ -194,17 +194,22 @@ export const HomeScreen = () => {
               accessibilityRole="button"
               accessibilityLabel={isAuthEnabled && isSignedIn ? 'Profile & Settings' : 'Settings'}
             >
-              {isAuthEnabled && isSignedIn && user?.imageUrl ? (
-                <Image
-                  source={{ uri: user.imageUrl }}
-                  style={styles.headerAvatar}
-                />
+              {isAuthEnabled && isSignedIn ? (
+                user?.imageUrl ? (
+                  <Image
+                    source={{ uri: user.imageUrl }}
+                    style={styles.headerAvatar}
+                    resizeMode="cover"
+                  />
+                ) : (
+                  <View style={styles.headerAvatarFallback}>
+                    <Text style={styles.headerAvatarText}>
+                      {(user?.firstName?.[0] || user?.primaryEmailAddress?.emailAddress?.[0] || 'U').toUpperCase()}
+                    </Text>
+                  </View>
+                )
               ) : (
-                <Feather
-                  name={isAuthEnabled && isSignedIn ? 'user' : 'settings'}
-                  size={17}
-                  color={isAuthEnabled && isSignedIn ? COLORS.primary : COLORS.text}
-                />
+                <Feather name="settings" size={17} color={COLORS.text} />
               )}
             </TouchableOpacity>
           </View>
@@ -584,11 +589,25 @@ const styles = StyleSheet.create({
   headerIconButtonActive: {
     borderColor: COLORS.primary,
     overflow: 'hidden',
+    padding: 0,
   },
   headerAvatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: '100%',
+    height: '100%',
+    borderRadius: 19,
+  },
+  headerAvatarFallback: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 19,
+    backgroundColor: COLORS.primaryLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerAvatarText: {
+    fontFamily: FONTS.displayBold,
+    fontSize: 14,
+    color: COLORS.primary,
   },
   scrollContent: {
     paddingTop: verticalScale(20),
