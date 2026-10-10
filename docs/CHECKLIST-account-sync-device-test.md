@@ -44,6 +44,14 @@ Tester: ____________  Device/Android: ____________  Build (versionCode): ______ 
 
 ### 3b. "Sync now" nudge to other devices (background push)
 
+**Quick way to know if background sync works on a phone:** Settings → **Test background sync**.
+It sends a nudge to every device on the account. Swipe the app away, wait about a minute, reopen Settings: the line under that row says what happened, e.g. `Last nudge 14:32 (headless): received, synced`.
+
+- `(headless)` + `synced` = the closed-app task works.
+- `(headless)` + `skipped: Clerk reports signed out...` = the task ran but Clerk could not restore the session without the app UI. Foreground and background nudges still work; closed-app speed-up does not.
+- `(foreground)` = it arrived while the app was open (works).
+- Still `No nudge received on this phone yet` after a few minutes with the app closed = Android did not deliver or run it (battery saver / Doze), or the build lacks `expo-task-manager`.
+
 Needs two devices signed in as A, notifications allowed on both, and the build that includes `expo-task-manager`.
 
 - [ ] Device 2 open in the foreground (Study tab). Tick a topic on device 1. Within a few seconds the tick appears on device 2 **without** touching it, and no notification banner or sound shows.
@@ -144,6 +152,7 @@ Needs two devices (or one device plus an emulator) signed in as the same account
 - [ ] Device 2: sign in as A (or bring the app to the foreground if already signed in). After a sync, Settings shows the same engine, layout and volume switch. Opening a question uses the Cards layout.
 - [ ] Device 2 does **not** show the "choose your reading layout" first-time prompt (the account already has a choice).
 - [ ] Device 1: pick a different **branch** in the Syllabus tab. Device 2 shows the same branch selected after a sync.
+- [ ] New phone / fresh install: change the reading layout or answer the first-time layout prompt **while signed out**, then sign in to an account that already chose a layout. The **account's** layout wins and the screens switch to it (the phone's pre-login choice does not overwrite the account).
 - [ ] Change one setting on device 2: it shows up on device 1 after its next sync.
 - [ ] Offline: change the engine, kill the app, go online. The change reaches the account (check on the other device).
 - [ ] Signed out, change a setting: it works and stays on the device. Sign in to an account that has never chosen: that device's choice is saved to the account.

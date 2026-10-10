@@ -94,10 +94,22 @@ export interface AuxSent {
   /** What was sent, to tell on the way back whether it is still current. */
   sentChanges: Partial<Record<AccountSettingName, unknown>>;
   sentRecentsJson: string;
+  /** First sync for this account on this device: the account's values win. */
+  accountWins: boolean;
 }
 
-export async function buildAuxRequest(): Promise<AuxSent> {
-  const pending = await readPendingSettings();
+/**
+ * `accountWins` is for the first sync after signing in on this device. Whatever
+ * this device had chosen while signed out (even just answering the first-time
+ * layout prompt) is not an edit to the account, so it must not overwrite what the
+ * account already has: nothing is pushed, the account's values are applied, and
+ * this device's value is only used for a setting the account has never chosen.
+ */
+export async function buildAuxRequest(
+  opts: { accountWins?: boolean } = {}
+): Promise<AuxSent> {
+  const accountWins = !!opts.accountWins;
+  const pending = accountWins ? new Set<SettingName>() : await readPendingSettings();
   const sentChanges: Partial<Record<AccountSettingName, unknown>> = {};
   for (const { name, handler } of HANDLERS) {
     if (!pending.has(name)) continue;
@@ -112,6 +124,7 @@ export async function buildAuxRequest(): Promise<AuxSent> {
     },
     sentChanges,
     sentRecentsJson: JSON.stringify({ recentStudy, recentNotes }),
+    accountWins,
   };
 }
 
@@ -124,7 +137,7 @@ export async function applyAuxResponse(
 
   const remote = res.settings;
   if (remote && !('error' in remote)) {
-    const stillPending = await readPendingSettings();
+    const stillPending = sent.accountWins ? new Set<SettingName>() : await readPendingSettings();
     for (const { name, handler } of HANDLERS) {
       const local = await handler.readLocal().catch(() => null);
       const remoteValue = remote[name];
@@ -138,7 +151,10 @@ export async function applyAuxResponse(
         needsAnotherRound = true; // changed mid-flight: next round pushes it
       } else if (remoteSet && remoteValue !== local) {
         await handler.writeLocal(remoteValue).catch(() => {});
+        if (sent.accountWins) await clearPendingSettings([name]);
         notifySettingsApplied();
+      } else if (remoteSet && sent.accountWins) {
+        await clearPendingSettings([name]); // same value both sides: nothing pending
       } else if (!remoteSet && local !== null) {
         // The account never chose, this device did: adopt it on the next round.
         await markSettingPending(name);

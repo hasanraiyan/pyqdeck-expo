@@ -405,6 +405,11 @@ export interface SyncAllResponse {
 export const syncAll = (body: SyncAllRequest) =>
   requestMe<SyncAllResponse>('/sync', 'POST', body);
 
+// Asks the server to send a "sync now" nudge to every device on the account,
+// this one included - used to check that background sync reaches the phone.
+export const sendTestNudge = () =>
+  requestMe<{ sent: number; total: number }>('/sync/nudge', 'POST', {});
+
 export interface MyVotes {
   solutionVotes: { solutionId: string; questionId: string | null; value: 1 | -1 }[];
   noteVotes: { topicId: string; value: 1 | -1 }[];
