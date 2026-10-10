@@ -43,10 +43,8 @@ import {
   setSyncEnabled,
   subscribeSyncStatus,
   syncNow,
-  requestSync,
   type SyncStatus,
 } from '../db/progressSync';
-import { markAskAiEnginePending } from '../db/settingsSync';
 import { unlinkPushTokenFromAccount } from '../utils/notifications';
 
 const WEBSITE_URL = 'https://pyqdeck.in';
@@ -81,7 +79,11 @@ export const SettingsScreen = ({ navigation }: any) => {
     return subscribeSyncStatus((s) => {
       setSyncStatusState(s);
       // A finished sync may have brought in the account's Ask AI engine.
-      if (s.state === 'idle') void getAskAiEngine().then(setAiEngine);
+      if (s.state === 'idle') {
+        void getAskAiEngine().then(setAiEngine);
+        void getOldUiEnabled().then(setOldUiOn);
+        if (Platform.OS === 'android') void getVolumeScrollEnabled().then(setVolumeScrollOn);
+      }
     });
   }, []);
 
@@ -109,9 +111,6 @@ export const SettingsScreen = ({ navigation }: any) => {
     } catch {}
     setAiEngine(id);
     await setAskAiEngine(id);
-    // Signed in: push the choice to the account on the next sync (a no-op otherwise).
-    await markAskAiEnginePending();
-    requestSync({ immediate: true });
   };
 
   const toggleVolumeScroll = async (value: boolean) => {
