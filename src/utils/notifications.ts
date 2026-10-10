@@ -1,7 +1,7 @@
 import { isRunningInExpoGo } from 'expo';
 import Constants from 'expo-constants';
 import { Platform } from 'react-native';
-import { registerPushToken } from '../api';
+import { registerPushToken, unlinkPushToken } from '../api';
 import { navigationRef } from './navigationRef';
 
 // Merely importing expo-notifications throws on Android in Expo Go (SDK 53+
@@ -69,10 +69,56 @@ export const registerForPushNotificationsAsync = async () => {
 
   try {
     const { data: token } = await Notifications.getExpoPushTokenAsync({ projectId });
+    lastPushToken = token;
     await registerPushToken(token, Platform.OS === 'ios' ? 'ios' : 'android');
   } catch (e) {
     console.error('Failed to register push token', e);
   }
+};
+
+// The token this device last registered, kept so sign-in/sign-out can re-link
+// or unlink it without going through the permission flow again.
+let lastPushToken: string | null = null;
+
+const currentPushToken = async (): Promise<string | null> => {
+  if (lastPushToken) return lastPushToken;
+  if (!Notifications) return null;
+  try {
+    // Never prompts: if permission was not granted there is no token to link.
+    const { status } = await Notifications.getPermissionsAsync();
+    if (status !== 'granted') return null;
+    const projectId = Constants.expoConfig?.extra?.eas?.projectId;
+    if (!projectId) return null;
+    lastPushToken = (await Notifications.getExpoPushTokenAsync({ projectId })).data;
+    return lastPushToken;
+  } catch {
+    return null;
+  }
+};
+
+// Registration at launch can run before Clerk has loaded the session, which
+// links the token to nobody. Called once the student is signed in so account
+// notifications ("your report was fixed") reach this device. Silent: no prompt.
+export const linkPushTokenToAccount = async (): Promise<void> => {
+  const token = await currentPushToken();
+  if (!token) return;
+  try {
+    await registerPushToken(token, Platform.OS === 'ios' ? 'ios' : 'android');
+  } catch {}
+};
+
+// Before sign-out: detach this device from the account so the next person to
+// use the phone does not receive the previous student's account pushes. The
+// token stays registered, so broadcasts still arrive. Best effort, bounded.
+export const unlinkPushTokenFromAccount = async (timeoutMs = 3000): Promise<void> => {
+  try {
+    const token = await currentPushToken();
+    if (!token) return;
+    await Promise.race([
+      unlinkPushToken(token),
+      new Promise<void>((resolve) => setTimeout(resolve, timeoutMs)),
+    ]);
+  } catch {}
 };
 
 // Deep-links into a question when a notification carrying

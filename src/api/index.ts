@@ -32,6 +32,8 @@ import {
 export class ApiError extends Error {
   status?: number;
   retryAfterSec?: number;
+  /** Machine-readable code from the server body (e.g. `sync_unavailable`), when present. */
+  code?: string;
   /** Why this failed, for callers that branch rather than just render. */
   kind: FailureKind;
   /**
@@ -74,11 +76,22 @@ function trimName<T extends { name: string }>(item: T): T {
 // Every request resolves its origin at call time instead of closing over a
 // constant, which is what lets a failover move the whole app between
 // deployments without an APK update.
-async function request<T>(path: string, init?: RequestInit, isRetry = false): Promise<T> {
+//
+// `mount` picks the server prefix. Almost everything lives under the cached,
+// anonymous /api/public; per-account endpoints (progress sync) live under
+// /api/me, which the server marks private + no-store so no shared cache can
+// serve one student's data to another.
+type Mount = '/api/public' | '/api/me';
+async function request<T>(
+  path: string,
+  init?: RequestInit,
+  isRetry = false,
+  mount: Mount = '/api/public'
+): Promise<T> {
   // The origin this attempt is sent to, kept so failover() can tell whether
   // selection has since moved elsewhere (see Backend.failover).
   const origin = await Backend.ready();
-  const url = `${origin.root}/api/public${path}`;
+  const url = `${origin.root}${mount}${path}`;
 
   try {
     const res = await fetchWithTimeout(url, init);
@@ -90,7 +103,7 @@ async function request<T>(path: string, init?: RequestInit, isRetry = false): Pr
       // origin's health, and retrying a 429 elsewhere would dodge a limit the
       // app is supposed to respect (and lose the Retry-After below).
       if (res.status >= 500 && !isRetry && (await Backend.failover(origin.id))) {
-        return request<T>(path, init, true);
+        return request<T>(path, init, true, mount);
       }
 
       const errData = await res.json().catch(() => ({}));
@@ -99,12 +112,14 @@ async function request<T>(path: string, init?: RequestInit, isRetry = false): Pr
       const kind = kindForStatus(res.status);
       // Our own backend writes messages meant for students, so prefer it.
       // res.statusText ("Bad Gateway") is not that, hence the MESSAGES map.
-      throw new ApiError(
+      const apiError = new ApiError(
         errData.message || MESSAGES[kind],
         res.status,
         retryAfterSec,
         kind
       );
+      if (typeof errData.code === 'string') apiError.code = errData.code;
+      throw apiError;
     }
 
     return await res.json();
@@ -121,7 +136,7 @@ async function request<T>(path: string, init?: RequestInit, isRetry = false): Pr
     // attempt, so a genuinely offline device fails fast into the React Query cache
     // the callers below fall back on, instead of ping-ponging between origins.
     if (!isRetry && (await Backend.failover(origin.id))) {
-      return request<T>(path, init, true);
+      return request<T>(path, init, true, mount);
     }
 
     // Both origins are unreachable. Ask the OS why before blaming the server:
@@ -178,6 +193,20 @@ const postApiAuthed = async <T,>(path: string, body: unknown): Promise<T> =>
     headers: { 'Content-Type': 'application/json', ...(await authHeader()) },
     body: JSON.stringify(body),
   });
+
+// Authed request to the per-account /api/me mount. The 401 a signed-out or
+// expired session earns comes straight from the server.
+const requestMe = async <T,>(path: string, method: string, body?: unknown): Promise<T> =>
+  request<T>(
+    path,
+    {
+      method,
+      headers: { 'Content-Type': 'application/json', ...(await authHeader()) },
+      ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+    },
+    false,
+    '/api/me'
+  );
 
 // -------------------------------------------------------------
 // CATALOG ENDPOINTS
@@ -304,6 +333,49 @@ export const reportSolution = (
 // header, no identity) and keeps receiving broadcasts.
 export const registerPushToken = (token: string, platform: 'ios' | 'android') =>
   postApiAuthed<{ success: boolean }>('/push-token', { token, platform });
+
+// Detaches this device's push token from the signed-in account (the token stays
+// registered, so broadcasts still arrive). Called just before sign-out.
+export const unlinkPushToken = (token: string) =>
+  requestMe<{ success: boolean }>('/push-token', 'DELETE', { token });
+
+// -------------------------------------------------------------
+// ACCOUNT PROGRESS SYNC (/api/me, signed-in only)
+// -------------------------------------------------------------
+
+export interface ProgressSyncOp {
+  opId: string;
+  subject: string;
+  moduleId: string;
+  topicId: string;
+  done: boolean;
+  updatedAt: number;
+}
+
+export interface ProgressSyncResponse {
+  results: { opId: string | null; status: 'applied' | 'superseded' | 'rejected'; code?: string }[];
+  items: {
+    subject: string;
+    moduleId: string;
+    topicId: string;
+    done: boolean;
+    updatedAt: number;
+  }[];
+  cursor: string;
+  hasMore: boolean;
+  serverTime: number;
+}
+
+export const syncProgress = (cursor: string | null, ops: ProgressSyncOp[], limit = 1000) =>
+  requestMe<ProgressSyncResponse>('/progress/sync', 'POST', { cursor, ops, limit });
+
+export interface MyVotes {
+  solutionVotes: { solutionId: string; questionId: string | null; value: 1 | -1 }[];
+  noteVotes: { topicId: string; value: 1 | -1 }[];
+}
+
+export const getMyVotes = (subjectId: string) =>
+  requestMe<MyVotes>(`/votes?subject=${encodeURIComponent(subjectId)}`, 'GET');
 
 
 

@@ -17,7 +17,7 @@ import * as Haptics from 'expo-haptics';
 import { COLORS, FONTS } from '../theme/colors';
 import { useSyllabusSemester } from '../api/queries';
 import { BranchSemester, SyllabusSubjectSummary } from '../types/syllabus';
-import { getDoneCounts } from '../db/syllabusProgress';
+import { getDoneCounts, subscribeProgress } from '../db/syllabusProgress';
 import { recordContentOpenedAndMaybeShowInterstitial } from '../utils/ads';
 import { ScreenError, ScreenEmpty } from '../components/ScreenState';
 import { CircleLoader } from '../components/CircleLoader';
@@ -72,11 +72,15 @@ export const SyllabusOverviewScreen = () => {
     useCallback(() => {
       let alive = true;
       if (!data) return;
-      getDoneCounts(data.subjects.map((s) => s.id)).then((c) => {
-        if (alive) setCounts(c);
-      });
+      const load = () =>
+        getDoneCounts(data.subjects.map((s) => s.id)).then((c) => {
+          if (alive) setCounts(c);
+        });
+      void load();
+      const unsubscribe = subscribeProgress(() => void load());
       return () => {
         alive = false;
+        unsubscribe();
       };
     }, [data])
   );

@@ -16,7 +16,8 @@ import { COLORS, FONTS } from '../theme/colors';
 import { useQueryClient } from '@tanstack/react-query';
 import { useSyllabusBranches, useSyllabusSemesters, syllabusSemesterQuery } from '../api/queries';
 import { Branch, BranchSemesters } from '../types/syllabus';
-import { getDoneCounts } from '../db/syllabusProgress';
+import { getDoneCounts, subscribeProgress } from '../db/syllabusProgress';
+import { requestSyncOnStudyOpen } from '../db/progressSync';
 import { getSelectedBranch, setSelectedBranch } from '../utils/settings';
 import { ScreenError, ScreenEmpty } from '../components/ScreenState';
 import { CircleLoader } from '../components/CircleLoader';
@@ -85,19 +86,25 @@ export const SemesterSelectScreen = () => {
     useCallback(() => {
       let alive = true;
       if (!data) return;
-      getDoneCounts(data.semesters.flatMap((s) => s.subjectIds)).then((counts) => {
-        if (!alive) return;
-        const next: Record<number, { done: number; total: number }> = {};
-        for (const s of data.semesters) {
-          next[s.semester] = {
-            done: s.subjectIds.reduce((n, id) => n + (counts[id] ?? 0), 0),
-            total: s.topicCount,
-          };
-        }
-        setProgress(next);
-      });
+      const load = () =>
+        getDoneCounts(data.semesters.flatMap((s) => s.subjectIds)).then((counts) => {
+          if (!alive) return;
+          const next: Record<number, { done: number; total: number }> = {};
+          for (const s of data.semesters) {
+            next[s.semester] = {
+              done: s.subjectIds.reduce((n, id) => n + (counts[id] ?? 0), 0),
+              total: s.topicCount,
+            };
+          }
+          setProgress(next);
+        });
+      void load();
+      // Opening the Study tab is one of the sync triggers (at most once a minute).
+      requestSyncOnStudyOpen();
+      const unsubscribe = subscribeProgress(() => void load());
       return () => {
         alive = false;
+        unsubscribe();
       };
     }, [data])
   );
