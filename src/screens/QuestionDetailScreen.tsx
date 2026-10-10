@@ -9,6 +9,9 @@ import {
   TextInput,
   Modal,
   TouchableWithoutFeedback,
+  KeyboardAvoidingView,
+  Keyboard,
+  Platform,
   type LayoutChangeEvent,
 } from 'react-native';
 import { useRoute, useNavigation, useFocusEffect } from '@react-navigation/native';
@@ -114,6 +117,7 @@ export const QuestionDetailScreen = () => {
 
   const currentYear = question?.year || year;
   const scrollRef = useRef<ScrollView>(null);
+  const reportScrollRef = useRef<ScrollView>(null);
 
   // Two panes (the paper's question list beside the question) when this
   // screen's own box can hold both (FR-L3). Measured, not window-derived, so
@@ -877,57 +881,124 @@ export const QuestionDetailScreen = () => {
         </View>
       </ScrollView>
 
-      <Modal visible={showReport} transparent animationType={dlg.animationType} onRequestClose={() => { setShowReport(false); setReportError(null); }}>
-        <TouchableWithoutFeedback onPress={() => { setShowReport(false); setReportError(null); }}>
-          <View style={[styles.reportOverlay, dlg.overlay]}>
-            <TouchableWithoutFeedback>
-              <View style={[styles.reportSheet, { paddingBottom: 24 + 16 }, dlg.sheet]}>
-                <View style={styles.reportHandle} />
-                <ScrollView
-                  keyboardShouldPersistTaps="handled"
-                  showsVerticalScrollIndicator={false}
-                  bounces={false}
-                >
-                <Text style={styles.reportTitle}>Report solution</Text>
-                <Text style={styles.reportSubtitle}>What’s wrong? Anyone anonymous can report — DB only.</Text>
-                {(['incorrect','incomplete','formatting','other'] as const).map((r) => (
-                  <TouchableOpacity key={r} style={[styles.reportOption, reportReason===r && styles.reportOptionActive]} onPress={() => setReportReason(r)} activeOpacity={0.7}>
-                    <View style={[styles.radio, reportReason===r && styles.radioActive]}>
-                      {reportReason===r && <View style={styles.radioDot} />}
-                    </View>
-                    <Text style={[styles.reportOptionText, reportReason===r && styles.reportOptionTextActive]}>
-                      {r==='incorrect' ? 'Incorrect answer' : r==='incomplete' ? 'Incomplete explanation' : r==='formatting' ? 'Formatting / math issue' : 'Other'}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-                {reportReason && (
-                  <TextInput
-                    placeholder={reportReason==='other' ? 'Describe what is wrong (required)' : 'Optional details (max 500)'}
-                    placeholderTextColor={COLORS.textSubtle}
-                    value={reportMsg}
-                    onChangeText={setReportMsg}
-                    multiline
-                    maxLength={500}
-                    style={styles.reportInput}
-                  />
-                )}
-                {reportError && <Text style={styles.reportErrorText}>{reportError}</Text>}
-                <TouchableOpacity
-                  style={[styles.reportSubmitBtn, (!reportReason || (reportReason==='other' && reportMsg.trim().length<4) || reportSubmitting) && styles.reportSubmitBtnDisabled]}
-                  onPress={handleReportSubmit}
-                  disabled={!reportReason || (reportReason==='other' && reportMsg.trim().length<4) || reportSubmitting}
-                  activeOpacity={0.7}
-                >
-                  <Text style={styles.reportSubmitText}>{reportSubmitting ? 'Submitting…' : 'Submit report'}</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.reportCancelBtn} onPress={() => { setShowReport(false); setReportError(null); }} activeOpacity={0.7}>
-                  <Text style={styles.reportCancelText}>Cancel</Text>
-                </TouchableOpacity>
-                </ScrollView>
-              </View>
-            </TouchableWithoutFeedback>
-          </View>
-        </TouchableWithoutFeedback>
+      <Modal
+        visible={showReport}
+        transparent
+        animationType={dlg.animationType}
+        statusBarTranslucent
+        onRequestClose={() => {
+          Keyboard.dismiss();
+          setShowReport(false);
+          setReportError(null);
+        }}
+      >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.reportKav}
+        >
+          <TouchableWithoutFeedback
+            onPress={() => {
+              Keyboard.dismiss();
+              setShowReport(false);
+              setReportError(null);
+            }}
+          >
+            <View style={[styles.reportOverlay, dlg.overlay]}>
+              <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+                <View style={[styles.reportSheet, { paddingBottom: Math.max(insets.bottom, 16) + 16 }, dlg.sheet]}>
+                  <View style={styles.reportHandle} />
+                  <ScrollView
+                    ref={reportScrollRef}
+                    keyboardShouldPersistTaps="handled"
+                    showsVerticalScrollIndicator={false}
+                    bounces={false}
+                  >
+                    <Text style={styles.reportTitle}>Report solution</Text>
+                    <Text style={styles.reportSubtitle}>What’s wrong with this solution? Help us improve it.</Text>
+                    {(['incorrect', 'incomplete', 'formatting', 'other'] as const).map((r) => (
+                      <TouchableOpacity
+                        key={r}
+                        style={[styles.reportOption, reportReason === r && styles.reportOptionActive]}
+                        onPress={() => {
+                          setReportReason(r);
+                          setTimeout(() => {
+                            reportScrollRef.current?.scrollToEnd({ animated: true });
+                          }, 100);
+                        }}
+                        activeOpacity={0.7}
+                      >
+                        <View style={[styles.radio, reportReason === r && styles.radioActive]}>
+                          {reportReason === r && <View style={styles.radioDot} />}
+                        </View>
+                        <Text style={[styles.reportOptionText, reportReason === r && styles.reportOptionTextActive]}>
+                          {r === 'incorrect'
+                            ? 'Incorrect answer'
+                            : r === 'incomplete'
+                              ? 'Incomplete explanation'
+                              : r === 'formatting'
+                                ? 'Formatting / math issue'
+                                : 'Other'}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                    {reportReason && (
+                      <TextInput
+                        placeholder={
+                          reportReason === 'other'
+                            ? 'Describe what is wrong (required)'
+                            : 'Optional details (max 500)'
+                        }
+                        placeholderTextColor={COLORS.textSubtle}
+                        value={reportMsg}
+                        onChangeText={setReportMsg}
+                        onFocus={() => {
+                          setTimeout(() => {
+                            reportScrollRef.current?.scrollToEnd({ animated: true });
+                          }, 120);
+                        }}
+                        multiline
+                        maxLength={500}
+                        style={styles.reportInput}
+                      />
+                    )}
+                    {reportError && <Text style={styles.reportErrorText}>{reportError}</Text>}
+                    <TouchableOpacity
+                      style={[
+                        styles.reportSubmitBtn,
+                        (!reportReason ||
+                          (reportReason === 'other' && reportMsg.trim().length < 4) ||
+                          reportSubmitting) &&
+                          styles.reportSubmitBtnDisabled,
+                      ]}
+                      onPress={handleReportSubmit}
+                      disabled={
+                        !reportReason ||
+                        (reportReason === 'other' && reportMsg.trim().length < 4) ||
+                        reportSubmitting
+                      }
+                      activeOpacity={0.7}
+                    >
+                      <Text style={styles.reportSubmitText}>
+                        {reportSubmitting ? 'Submitting…' : 'Submit report'}
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.reportCancelBtn}
+                      onPress={() => {
+                        Keyboard.dismiss();
+                        setShowReport(false);
+                        setReportError(null);
+                      }}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={styles.reportCancelText}>Cancel</Text>
+                    </TouchableOpacity>
+                  </ScrollView>
+                </View>
+              </TouchableWithoutFeedback>
+            </View>
+          </TouchableWithoutFeedback>
+        </KeyboardAvoidingView>
       </Modal>
 
       <AdBanner />
@@ -1386,6 +1457,9 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: COLORS.textSubtle,
   },
+  reportKav: {
+    flex: 1,
+  },
   reportOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.45)',
@@ -1396,7 +1470,7 @@ const styles = StyleSheet.create({
     // Caps the sheet so the ScrollView inside has something to scroll within:
     // with the keyboard up, the options + input + buttons are taller than the
     // space left over on a normal phone.
-    maxHeight: '90%',
+    maxHeight: '85%',
     borderTopLeftRadius: 12,
     borderTopRightRadius: 12,
     paddingHorizontal: 18,
