@@ -373,6 +373,8 @@ export interface AccountSettings {
   /** 'accordion' | 'cards' */
   readingLayout: string | null;
   volumeScroll: boolean | null;
+  /** Branch slug chosen in the Syllabus tab, e.g. "cse". */
+  syllabusBranch: string | null;
 }
 
 export interface RecentsPayload {

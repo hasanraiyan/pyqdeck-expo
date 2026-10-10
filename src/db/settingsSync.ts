@@ -12,6 +12,7 @@ import {
 import {
   clearPendingSettings,
   markSettingPending,
+  notifySettingsApplied,
   readPendingSettings,
   type SettingName,
 } from './settingsPending';
@@ -74,10 +75,17 @@ const volumeScroll: Handler<boolean> = {
   isValid: (v): v is boolean => typeof v === 'boolean',
 };
 
+const syllabusBranch: Handler<string> = {
+  readLocal: async () => (await AsyncStorage.getItem('selected_syllabus_branch')) || null,
+  writeLocal: (v) => AsyncStorage.setItem('selected_syllabus_branch', v),
+  isValid: (v): v is string => typeof v === 'string' && /^[A-Za-z0-9_-]{1,64}$/.test(v),
+};
+
 const HANDLERS: { name: AccountSettingName; handler: Handler<any> }[] = [
   { name: 'askAiEngine', handler: askAi },
   { name: 'readingLayout', handler: readingLayout },
   { name: 'volumeScroll', handler: volumeScroll },
+  { name: 'syllabusBranch', handler: syllabusBranch },
 ];
 
 export interface AuxSent {
@@ -130,6 +138,7 @@ export async function applyAuxResponse(
         needsAnotherRound = true; // changed mid-flight: next round pushes it
       } else if (remoteSet && remoteValue !== local) {
         await handler.writeLocal(remoteValue).catch(() => {});
+        notifySettingsApplied();
       } else if (!remoteSet && local !== null) {
         // The account never chose, this device did: adopt it on the next round.
         await markSettingPending(name);

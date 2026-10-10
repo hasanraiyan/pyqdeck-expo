@@ -25,7 +25,7 @@ Tester: ____________  Device/Android: ____________  Build (versionCode): ______ 
 - [x] Browse papers, open a solution, use Search: all work with no account.
 - [x] Study tab: tick 3 topics in a subject. Ticks show instantly.
 - [ ] Force-stop the app and reopen: the 3 ticks are still there.
-- [ ] A dismissible line "Sign in to back up your progress" shows on the Study tab. Tap **x**: it disappears and stays gone after restarting the app.
+- [ ] A small pill "Sign in to back up your progress  |  x" shows on the Study tab, with the x right next to the text (even padding). Tap **x**: it disappears and stays gone after restarting the app.
 - [ ] Turn on airplane mode: everything above still works. No error popups.
 
 ## 2. First sign-in merge (account A)
@@ -132,6 +132,7 @@ Needs two devices (or one device plus an emulator) signed in as the same account
 - [ ] Device 1: in Settings change the **Ask AI engine** (e.g. to Claude), the **question reading layout** (Accordion to Cards) and the **volume-button scroll** switch. Wait a few seconds (or tap **Sync now**).
 - [ ] Device 2: sign in as A (or bring the app to the foreground if already signed in). After a sync, Settings shows the same engine, layout and volume switch. Opening a question uses the Cards layout.
 - [ ] Device 2 does **not** show the "choose your reading layout" first-time prompt (the account already has a choice).
+- [ ] Device 1: pick a different **branch** in the Syllabus tab. Device 2 shows the same branch selected after a sync.
 - [ ] Change one setting on device 2: it shows up on device 1 after its next sync.
 - [ ] Offline: change the engine, kill the app, go online. The change reaches the account (check on the other device).
 - [ ] Signed out, change a setting: it works and stays on the device. Sign in to an account that has never chosen: that device's choice is saved to the account.

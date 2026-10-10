@@ -109,6 +109,7 @@ export async function setSelectedBranch(branchId: string): Promise<void> {
   try {
     await AsyncStorage.setItem(SELECTED_BRANCH_KEY, branchId);
   } catch {}
+  await markSettingPending('syllabusBranch');
 }
 
 const SIDEBAR_COLLAPSED_KEY = 'sidebar_collapsed';

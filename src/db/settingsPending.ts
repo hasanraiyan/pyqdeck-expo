@@ -6,9 +6,19 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
  * importing the sync code (which imports them).
  */
 
-export type SettingName = 'askAiEngine' | 'readingLayout' | 'volumeScroll' | 'recents';
+export type SettingName = 'askAiEngine' | 'readingLayout' | 'volumeScroll' | 'recents' | 'syllabusBranch';
 
 const PENDING_KEY = 'pyqdeck:settings_pending';
+
+const appliedListeners = new Set<() => void>();
+/** Fires after a sync wrote an account setting to local storage (screens re-read). */
+export function subscribeSettingsApplied(fn: () => void): () => void {
+  appliedListeners.add(fn);
+  return () => {
+    appliedListeners.delete(fn);
+  };
+}
+export const notifySettingsApplied = () => appliedListeners.forEach((fn) => fn());
 
 let onChange: (() => void) | null = null;
 /** The sync engine registers here so a change schedules a sync. */

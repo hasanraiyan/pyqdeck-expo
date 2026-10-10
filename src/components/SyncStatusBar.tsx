@@ -30,24 +30,27 @@ export const SyncStatusBar = () => {
     if (hintDismissed) return null;
     return (
       <View style={styles.row}>
-        <TouchableOpacity
-          style={styles.hint}
-          activeOpacity={0.7}
-          onPress={() => navigation.navigate('SignIn', { reason: 'vote' })}
-        >
-          <Feather name="cloud" size={13} color={COLORS.primary} />
-          <Text style={styles.hintText}>Sign in to back up your progress</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          accessibilityLabel="Dismiss"
-          onPress={() => {
-            setHintDismissed(true);
-            AsyncStorage.setItem(HINT_DISMISSED_KEY, '1').catch(() => {});
-          }}
-        >
-          <Feather name="x" size={14} color={COLORS.textSubtle} />
-        </TouchableOpacity>
+        <View style={styles.chip}>
+          <TouchableOpacity
+            style={styles.chipMain}
+            activeOpacity={0.7}
+            onPress={() => navigation.navigate('SignIn', { reason: 'vote' })}
+          >
+            <Feather name="cloud" size={13} color={COLORS.primary} />
+            <Text style={styles.hintText}>Sign in to back up your progress</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.dismiss}
+            hitSlop={{ top: 8, bottom: 8, left: 4, right: 8 }}
+            accessibilityLabel="Dismiss"
+            onPress={() => {
+              setHintDismissed(true);
+              AsyncStorage.setItem(HINT_DISMISSED_KEY, '1').catch(() => {});
+            }}
+          >
+            <Feather name="x" size={14} color={COLORS.textSubtle} />
+          </TouchableOpacity>
+        </View>
       </View>
     );
   }
@@ -59,12 +62,38 @@ export const SyncStatusBar = () => {
 
 const styles = StyleSheet.create({
   row: {
-    minHeight: 28,
+    minHeight: 36,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     marginBottom: 8,
   },
-  hint: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  // The text and its dismiss button share one pill, so the x sits right beside
+  // the label with even padding instead of drifting to the far screen edge.
+  chip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.card,
+    overflow: 'hidden',
+  },
+  chipMain: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 8,
+    paddingLeft: 12,
+    paddingRight: 8,
+  },
+  dismiss: {
+    paddingVertical: 8,
+    paddingLeft: 6,
+    paddingRight: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderLeftWidth: StyleSheet.hairlineWidth,
+    borderLeftColor: COLORS.border,
+  },
   hintText: { fontFamily: FONTS.bodyMedium, fontSize: 12.5, color: COLORS.primary },
 });
