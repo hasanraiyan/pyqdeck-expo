@@ -15,6 +15,8 @@ import * as Haptics from 'expo-haptics';
 import { useQueries, useQueryClient } from '@tanstack/react-query';
 import { useSemesters, subjectsQuery } from '../api/queries';
 import { Semester } from '../types';
+import { useAuth, useUser } from '@clerk/expo';
+import { isAuthEnabled } from '../config/features';
 import { COLORS, FONTS } from '../theme/colors';
 import { CircleLoader } from '../components/CircleLoader';
 import { rf, scale, verticalScale, useResponsive } from '../utils/responsive';
@@ -28,6 +30,8 @@ import { prefetchSubject } from '../api/prefetch';
 export const HomeScreen = () => {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<any>();
+  const { isSignedIn } = useAuth();
+  const { user } = useUser();
   const { width, bp, wideMaxWidth, hPadding } = useResponsive();
 
   // Laptop and up gets a real two-column hero: the pitch on the left, the
@@ -182,12 +186,26 @@ export const HomeScreen = () => {
             </TouchableOpacity>
             <TouchableOpacity
               onPress={() => navigation.navigate('Settings')}
-              style={styles.headerIconButton}
+              style={[
+                styles.headerIconButton,
+                isAuthEnabled && isSignedIn && styles.headerIconButtonActive,
+              ]}
               hitSlop={8}
               accessibilityRole="button"
-              accessibilityLabel="Settings"
+              accessibilityLabel={isAuthEnabled && isSignedIn ? 'Profile & Settings' : 'Settings'}
             >
-              <Feather name="settings" size={17} color={COLORS.text} />
+              {isAuthEnabled && isSignedIn && user?.imageUrl ? (
+                <Image
+                  source={{ uri: user.imageUrl }}
+                  style={styles.headerAvatar}
+                />
+              ) : (
+                <Feather
+                  name={isAuthEnabled && isSignedIn ? 'user' : 'settings'}
+                  size={17}
+                  color={isAuthEnabled && isSignedIn ? COLORS.primary : COLORS.text}
+                />
+              )}
             </TouchableOpacity>
           </View>
         </View>
@@ -562,6 +580,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginLeft: 8,
+  },
+  headerIconButtonActive: {
+    borderColor: COLORS.primary,
+    overflow: 'hidden',
+  },
+  headerAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
   },
   scrollContent: {
     paddingTop: verticalScale(20),

@@ -1,7 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { AppState, Platform, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { NavigationContainer, getStateFromPath as defaultGetStateFromPath } from '@react-navigation/native';
+import {
+  NavigationContainer,
+  getStateFromPath as defaultGetStateFromPath,
+  getFocusedRouteNameFromRoute,
+} from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import {
@@ -277,6 +281,19 @@ function TabsNavigator() {
   // A collapsed sidebar looks exactly like the tablet rail.
   const isSidebar = isLaptopUp && !collapsed;
   const shellWidth = getShellWidth(shellMode, collapsed);
+
+  const ROOT_TAB_SCREENS = new Set(['Home', 'SyllabusRoot', 'SearchRoot']);
+
+  const getTabStyleForRoute = (route: any) => {
+    const routeName = getFocusedRouteNameFromRoute(route);
+    // When routeName is undefined or one of the root screens, show the tab bar.
+    // On all deeper pushed screens (which have a back button), hide the bottom tab bar.
+    if (!routeName || ROOT_TAB_SCREENS.has(routeName)) {
+      return undefined;
+    }
+    return { display: 'none' as const };
+  };
+
   return (
     <Tab.Navigator
         tabBar={
@@ -332,34 +349,37 @@ function TabsNavigator() {
         <Tab.Screen
           name="Browse"
           component={HomeStack}
-          options={{
+          options={({ route }: any) => ({
             tabBarLabel: 'PYQ',
             tabBarIcon: ({ color, size }) => (
               <Feather name="file-text" size={size} color={color} />
             ),
-          }}
+            tabBarStyle: getTabStyleForRoute(route),
+          })}
         />
         {isSyllabusEnabled && (
           <Tab.Screen
             name="Syllabus"
             component={SyllabusStack}
-            options={{
+            options={({ route }: any) => ({
               tabBarLabel: 'Study',
               tabBarIcon: ({ color, size }) => (
                 <Feather name="book-open" size={size} color={color} />
               ),
-            }}
+              tabBarStyle: getTabStyleForRoute(route),
+            })}
           />
         )}
         <Tab.Screen
           name="Search"
           component={SearchStack}
-          options={{
+          options={({ route }: any) => ({
             tabBarLabel: 'Search',
             tabBarIcon: ({ color, size }) => (
               <Feather name="search" size={size} color={color} />
             ),
-          }}
+            tabBarStyle: getTabStyleForRoute(route),
+          })}
         />
     </Tab.Navigator>
   );

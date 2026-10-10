@@ -100,6 +100,19 @@ export const TopicNotesScreen = () => {
   const [topicNotFound, setTopicNotFound] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
 
+  // Hide the bottom tab bar while viewing detailed notes for distraction-free reading
+  useEffect(() => {
+    const parent = navigation.getParent();
+    parent?.setOptions({
+      tabBarStyle: { display: 'none' },
+    });
+    return () => {
+      parent?.setOptions({
+        tabBarStyle: undefined,
+      });
+    };
+  }, [navigation]);
+
   // Resolves a bare deep-link topic id into the full params every other entry
   // point provides, via setParams so the whole screen below keeps reading
   // route.params untouched. Prefers the cached subject payload (already there
@@ -439,7 +452,9 @@ export const TopicNotesScreen = () => {
         bottomOffset={insets.bottom + 16}
       />
 
-      <AdBanner />
+      <View style={{ paddingBottom: insets.bottom }}>
+        <AdBanner />
+      </View>
       </View>
     </View>
   );
