@@ -18,6 +18,7 @@ import { useSyllabusBranches, useSyllabusSemesters, syllabusSemesterQuery } from
 import { Branch, BranchSemesters } from '../types/syllabus';
 import { getDoneCounts, subscribeProgress } from '../db/syllabusProgress';
 import { requestSyncOnStudyOpen } from '../db/progressSync';
+import { SyncStatusBar } from '../components/SyncStatusBar';
 import { getSelectedBranch, setSelectedBranch } from '../utils/settings';
 import { ScreenError, ScreenEmpty } from '../components/ScreenState';
 import { CircleLoader } from '../components/CircleLoader';
@@ -193,6 +194,8 @@ export const SemesterSelectScreen = () => {
             Select your branch and track completed topics, syllabus notes & exam structure.
           </Text>
         </View>
+
+        <SyncStatusBar />
 
         {/* Horizontal Branch Selector Chips */}
         {branches && branches.length > 0 && (

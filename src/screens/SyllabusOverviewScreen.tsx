@@ -18,6 +18,7 @@ import { COLORS, FONTS } from '../theme/colors';
 import { useSyllabusSemester } from '../api/queries';
 import { BranchSemester, SyllabusSubjectSummary } from '../types/syllabus';
 import { getDoneCounts, subscribeProgress } from '../db/syllabusProgress';
+import { SyncStatusBar } from '../components/SyncStatusBar';
 import { recordContentOpenedAndMaybeShowInterstitial } from '../utils/ads';
 import { ScreenError, ScreenEmpty } from '../components/ScreenState';
 import { CircleLoader } from '../components/CircleLoader';
@@ -277,6 +278,7 @@ export const SyllabusOverviewScreen = () => {
           />
         }
       >
+        <SyncStatusBar />
         {semester.subjects.length > 0 && renderSummary()}
 
         {semester.subjects.length === 0 ? (
