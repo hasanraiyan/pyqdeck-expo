@@ -74,7 +74,6 @@ export const FaqAccordion: React.FC<FaqAccordionProps> = ({
       {/* Accordion Section Header */}
       <View style={styles.sectionHeader}>
         <View style={styles.headerLeft}>
-          <Feather name="help-circle" size={14} color={COLORS.primary} />
           <Text style={styles.headerTitle}>{title}</Text>
           <View style={styles.badge}>
             <Text style={styles.badgeText}>{items.length}</Text>
@@ -110,10 +109,6 @@ export const FaqAccordion: React.FC<FaqAccordionProps> = ({
                 accessibilityState={{ expanded: isExpanded }}
                 accessibilityLabel={`Question: ${item.question}`}
               >
-                <View style={styles.qIndicator}>
-                  <Text style={styles.qIndicatorText}>Q</Text>
-                </View>
-
                 <Text style={[styles.questionText, isExpanded && styles.questionTextExpanded]}>
                   {item.question}
                 </Text>
@@ -205,19 +200,6 @@ const styles = StyleSheet.create({
     paddingVertical: 13,
     paddingHorizontal: 12,
     gap: 10,
-  },
-  qIndicator: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: COLORS.primaryLight,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  qIndicatorText: {
-    fontFamily: FONTS.displayBold,
-    fontSize: 10,
-    color: COLORS.primary,
   },
   questionText: {
     flex: 1,
