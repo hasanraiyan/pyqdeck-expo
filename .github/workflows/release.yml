@@ -12,6 +12,25 @@ on:
           - aab
           - apk
           - both
+      play_track:
+        description: 'Publish the AAB to Google Play (needs the PLAY_SERVICE_ACCOUNT_JSON secret)'
+        required: true
+        default: 'none'
+        type: choice
+        options:
+          - none
+          - internal
+          - alpha
+          - beta
+          - production
+      play_status:
+        description: 'Release status on Play (draft = review and roll out by hand in Play Console)'
+        required: true
+        default: 'draft'
+        type: choice
+        options:
+          - draft
+          - completed
 
 permissions:
   contents: write
@@ -180,3 +199,17 @@ jobs:
             git commit -m "chore: bump android versionCode to $(node -pe "require('./app.json').expo.android.versionCode")"
             git push origin HEAD:${{ github.ref_name }}
           fi
+
+      - name: 🚀 Read package name for Google Play
+        if: github.event.inputs.play_track != 'none' && github.event.inputs.build_type != 'apk'
+        run: echo "PACKAGE_NAME=$(node -pe "require('./app.json').expo.android.package")" >> "$GITHUB_ENV"
+
+      - name: 🚀 Upload to Google Play
+        if: github.event.inputs.play_track != 'none' && github.event.inputs.build_type != 'apk'
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: ${{ env.PACKAGE_NAME }}
+          releaseFiles: android/app/build/outputs/bundle/release/*.aab
+          track: ${{ github.event.inputs.play_track }}
+          status: ${{ github.event.inputs.play_status }}
