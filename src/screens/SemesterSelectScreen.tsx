@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   RefreshControl,
+  useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
@@ -101,6 +102,45 @@ export const SemesterSelectScreen = () => {
     }, [data])
   );
 
+  const { width: windowWidth } = useWindowDimensions();
+  const branchScrollRef = useRef<ScrollView>(null);
+  const chipLayoutsRef = useRef<Record<string, { x: number; width: number }>>({});
+  const scrollWidthRef = useRef<number>(0);
+
+  const scrollToBranch = useCallback(
+    (branchId: string, animated = true) => {
+      const layout = chipLayoutsRef.current[branchId];
+      const containerWidth = scrollWidthRef.current || windowWidth;
+      if (!layout || !containerWidth) return;
+
+      const targetX = layout.x + layout.width / 2 - containerWidth / 2;
+      branchScrollRef.current?.scrollTo({
+        x: Math.max(0, targetX),
+        animated,
+      });
+    },
+    [windowWidth]
+  );
+
+  // Auto-center the selected branch when branch selection changes
+  useEffect(() => {
+    if (selectedBranchId && chipLayoutsRef.current[selectedBranchId]) {
+      scrollToBranch(selectedBranchId, true);
+    }
+  }, [selectedBranchId, scrollToBranch]);
+
+  // Center selected branch when returning back to the screen
+  useFocusEffect(
+    useCallback(() => {
+      if (selectedBranchId) {
+        const timer = setTimeout(() => {
+          scrollToBranch(selectedBranchId, true);
+        }, 100);
+        return () => clearTimeout(timer);
+      }
+    }, [selectedBranchId, scrollToBranch])
+  );
+
   const onRefresh = async () => {
     setRefreshing(true);
     await Promise.all([branchesQ.refetch(), semestersQ.refetch()]);
@@ -111,6 +151,7 @@ export const SemesterSelectScreen = () => {
     if (branchId === selectedBranchId) return;
     Haptics.selectionAsync();
     setSelectedBranchId(branchId);
+    scrollToBranch(branchId, true);
     await setSelectedBranch(branchId);
   };
 
@@ -150,15 +191,29 @@ export const SemesterSelectScreen = () => {
         {branches && branches.length > 0 && (
           <View style={styles.branchSection}>
             <ScrollView
+              ref={branchScrollRef}
               horizontal
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.branchChipsScroll}
+              onLayout={(e) => {
+                scrollWidthRef.current = e.nativeEvent.layout.width;
+                if (selectedBranchId) {
+                  scrollToBranch(selectedBranchId, false);
+                }
+              }}
             >
               {branches.map((b) => {
                 const active = b.id === selectedBranchId;
                 return (
                   <TouchableOpacity
                     key={b.id}
+                    onLayout={(e) => {
+                      const { x, width } = e.nativeEvent.layout;
+                      chipLayoutsRef.current[b.id] = { x, width };
+                      if (b.id === selectedBranchId) {
+                        scrollToBranch(b.id, false);
+                      }
+                    }}
                     style={[styles.branchChip, active && styles.branchChipActive]}
                     onPress={() => handleSelectBranch(b.id)}
                     activeOpacity={0.7}
