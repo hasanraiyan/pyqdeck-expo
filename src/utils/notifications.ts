@@ -3,6 +3,7 @@ import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 import { registerPushToken, unlinkPushToken } from '../api';
 import { navigationRef } from './navigationRef';
+import { SYNC_NUDGE_TASK } from '../background/taskNames';
 
 // Merely importing expo-notifications throws on Android in Expo Go (SDK 53+
 // removed remote push support there - see warnOfExpoGoPushUsage, which runs
@@ -23,14 +24,50 @@ const Notifications = isUnsupportedPlatform
 
 // Foreground display behavior - without this, a notification that arrives
 // while the app is already open shows nothing at all.
+// A "sync now" nudge (data { type: 'sync' }) is data-only: it must wake the app
+// to sync and never show a banner or play a sound.
+const isSyncNudgeData = (data: unknown): boolean =>
+  !!data && typeof data === 'object' && (data as { type?: unknown }).type === 'sync';
+
 Notifications?.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowBanner: true,
-    shouldShowList: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-  }),
+  handleNotification: async (notification) => {
+    const quiet = isSyncNudgeData(notification.request.content.data);
+    return {
+      shouldShowBanner: !quiet,
+      shouldShowList: !quiet,
+      shouldPlaySound: !quiet,
+      shouldSetBadge: false,
+    };
+  },
 });
+
+/**
+ * While the app is open, a nudge from the server means another device changed
+ * something: run `onNudge` (the sync engine) right away. Returns an unsubscribe.
+ */
+export const subscribeToSyncNudges = (onNudge: () => void): (() => void) => {
+  if (!Notifications) return () => {};
+  const sub = Notifications.addNotificationReceivedListener((n) => {
+    if (isSyncNudgeData(n.request.content.data)) onNudge();
+  });
+  return () => sub.remove();
+};
+
+/** The Expo push token this device registered, if any - sent with sync requests. */
+export const getKnownPushToken = (): string | null => lastPushToken;
+
+/**
+ * Registers the headless task that handles a nudge while the app is closed or
+ * in the background (the task itself is defined in src/background/syncNudgeTask.ts).
+ */
+export const registerSyncNudgeTask = async (taskName: string): Promise<void> => {
+  if (!Notifications) return;
+  try {
+    await Notifications.registerTaskAsync(taskName);
+  } catch (e) {
+    console.warn('Could not register the background sync task', e);
+  }
+};
 
 // Requests permission (no-ops if already granted/denied) and registers this
 // device's Expo push token with the backend. No user accounts exist, so
@@ -70,6 +107,7 @@ export const registerForPushNotificationsAsync = async () => {
   try {
     const { data: token } = await Notifications.getExpoPushTokenAsync({ projectId });
     lastPushToken = token;
+    void registerSyncNudgeTask(SYNC_NUDGE_TASK);
     await registerPushToken(token, Platform.OS === 'ios' ? 'ios' : 'android');
   } catch (e) {
     console.error('Failed to register push token', e);

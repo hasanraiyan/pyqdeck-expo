@@ -388,6 +388,8 @@ export interface SyncAllRequest {
   progress: { cursor: string | null; ops: ProgressSyncOp[]; limit?: number };
   settings?: { changes?: Partial<AccountSettings> };
   recents?: RecentsPayload;
+  /** This phone's Expo push token, so the server's nudge skips the sender. */
+  device?: { pushToken: string };
 }
 
 export interface SyncAllResponse {

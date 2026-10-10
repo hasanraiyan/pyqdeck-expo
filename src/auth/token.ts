@@ -28,3 +28,20 @@ export const authHeader = async (): Promise<Record<string, string>> => {
   const token = await getAuthToken();
   return token ? { Authorization: `Bearer ${token}` } : {};
 };
+
+/**
+ * The signed-in Clerk user id, readable without React - for the background
+ * sync task, which runs headless with no ClerkProvider mounted. Returns null
+ * whenever it cannot be told for sure (Clerk not loaded, offline, signed out),
+ * and the caller then does nothing; the next time the app is opened it syncs
+ * normally.
+ */
+export const getSignedInUserId = async (): Promise<string | null> => {
+  try {
+    const clerk: any = getClerkInstance({ publishableKey: clerkPublishableKey });
+    if (!clerk.loaded && typeof clerk.load === 'function') await clerk.load();
+    return clerk.session ? (clerk.user?.id ?? null) : null;
+  } catch {
+    return null;
+  }
+};
