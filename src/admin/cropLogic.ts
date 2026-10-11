@@ -26,7 +26,8 @@ export const clampRect = (r: Rect, box: Size, min = MIN_CROP): Rect => {
   return { x: clamp(r.x, 0, box.w - w), y: clamp(r.y, 0, box.h - h), w, h };
 };
 
-export type Handle = 'tl' | 'tr' | 'bl' | 'br' | 'move';
+// Corners resize two sides at once; 'l' | 'r' | 't' | 'b' pull a single side.
+export type Handle = 'tl' | 'tr' | 'bl' | 'br' | 'l' | 'r' | 't' | 'b' | 'move';
 
 /** Apply a drag of (dx, dy) from the rect captured at gesture start. */
 export const dragRect = (start: Rect, handle: Handle, dx: number, dy: number, box: Size): Rect => {
@@ -37,11 +38,39 @@ export const dragRect = (start: Rect, handle: Handle, dx: number, dy: number, bo
   let top = start.y;
   let right = start.x + start.w;
   let bottom = start.y + start.h;
-  if (handle === 'tl' || handle === 'bl') left = clamp(left + dx, 0, right - MIN_CROP);
-  if (handle === 'tr' || handle === 'br') right = clamp(right + dx, left + MIN_CROP, box.w);
-  if (handle === 'tl' || handle === 'tr') top = clamp(top + dy, 0, bottom - MIN_CROP);
-  if (handle === 'bl' || handle === 'br') bottom = clamp(bottom + dy, top + MIN_CROP, box.h);
+  if (handle === 'tl' || handle === 'bl' || handle === 'l') left = clamp(left + dx, 0, right - MIN_CROP);
+  if (handle === 'tr' || handle === 'br' || handle === 'r') right = clamp(right + dx, left + MIN_CROP, box.w);
+  if (handle === 'tl' || handle === 'tr' || handle === 't') top = clamp(top + dy, 0, bottom - MIN_CROP);
+  if (handle === 'bl' || handle === 'br' || handle === 'b') bottom = clamp(bottom + dy, top + MIN_CROP, box.h);
   return { x: left, y: top, w: right - left, h: bottom - top };
+};
+
+/** The point a handle sits on: a corner, or the middle of a side. */
+export const handlePoint = (r: Rect, handle: Exclude<Handle, 'move'>): { x: number; y: number } => {
+  const left = r.x;
+  const right = r.x + r.w;
+  const top = r.y;
+  const bottom = r.y + r.h;
+  const midX = r.x + r.w / 2;
+  const midY = r.y + r.h / 2;
+  switch (handle) {
+    case 'tl':
+      return { x: left, y: top };
+    case 'tr':
+      return { x: right, y: top };
+    case 'bl':
+      return { x: left, y: bottom };
+    case 'br':
+      return { x: right, y: bottom };
+    case 'l':
+      return { x: left, y: midY };
+    case 'r':
+      return { x: right, y: midY };
+    case 't':
+      return { x: midX, y: top };
+    default:
+      return { x: midX, y: bottom };
+  }
 };
 
 /** Size of the canvas after rotating a w x h image by `deg` degrees. */
