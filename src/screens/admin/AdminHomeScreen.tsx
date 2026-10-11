@@ -55,6 +55,13 @@ export const AdminHomeScreen = ({ navigation }: any) => {
       subtitle: 'Banner, versions and sync switches',
       to: 'AdminConfig',
     },
+    {
+      show: can(tools, 'manage_ai_overview', 'status') || can(tools, 'manage_ai_overview', 'toggle'),
+      icon: 'cpu' as Icon,
+      label: 'AI features',
+      subtitle: 'AI overview, follow-ups and chat switches, usage',
+      to: 'AdminAi',
+    },
   ].filter((t) => t.show);
 
   return (

@@ -56,6 +56,7 @@ import { AdminDashboardScreen } from './src/screens/admin/AdminDashboardScreen';
 import { AdminNotifyScreen } from './src/screens/admin/AdminNotifyScreen';
 import { AdminUsersScreen } from './src/screens/admin/AdminUsersScreen';
 import { AdminConfigScreen } from './src/screens/admin/AdminConfigScreen';
+import { AdminAiScreen } from './src/screens/admin/AdminAiScreen';
 import { SemesterSelectScreen } from './src/screens/SemesterSelectScreen';
 import { SyllabusOverviewScreen } from './src/screens/SyllabusOverviewScreen';
 import { SubjectSyllabusScreen } from './src/screens/SubjectSyllabusScreen';
@@ -225,6 +226,7 @@ function renderSharedScreens(StackNav: typeof Stack, syllabusTitle = 'Syllabus')
       <StackNav.Screen name="AdminNotify" component={AdminNotifyScreen} options={{ title: 'Send notification' }} />
       <StackNav.Screen name="AdminUsers" component={AdminUsersScreen} options={{ title: 'User support' }} />
       <StackNav.Screen name="AdminConfig" component={AdminConfigScreen} options={{ title: 'App config' }} />
+      <StackNav.Screen name="AdminAi" component={AdminAiScreen} options={{ title: 'AI features' }} />
     </>
   );
 }

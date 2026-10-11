@@ -391,7 +391,12 @@ export const adminUsers = (body: Record<string, unknown>) =>
 export const adminGetConfig = () => requestAdmin<Record<string, any>>('/config', 'GET');
 export const adminPutConfig = (data: Record<string, unknown>) =>
   requestAdmin<Record<string, any>>('/config', 'PUT', data);
-export const adminNotify = (body: Record<string, unknown>) =>
+export const adminAiStatus = () => requestAdmin<Record<string, any>>('/ai-overview', 'GET');
+export const adminAiToggle = (feature: 'overview' | 'followups' | 'chat', enabled: boolean) =>
+  requestAdmin<Record<string, any>>('/ai-overview/toggle', 'POST', { feature, enabled });
+export const adminAiUsage = (feature: 'overview' | 'chat', days = 7) =>
+  requestAdmin<Record<string, any>>(`/ai-overview/usage?feature=${feature}&days=${days}`, 'GET');
+export const adminNotify =(body: Record<string, unknown>) =>
   requestAdmin<Record<string, any>>('/notify', 'POST', body);
 
 // -------------------------------------------------------------
