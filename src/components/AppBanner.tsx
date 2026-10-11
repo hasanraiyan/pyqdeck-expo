@@ -9,21 +9,30 @@ import { dismissBanner, isBannerDismissed } from '../config/appConfig';
  * The admin's notice strip (maintenance, news). Dismissing it hides it until the
  * admin changes the banner's id, so a corrected typo does not bring it back but a
  * new announcement does.
+ *
+ * `fallback` takes the banner's place whenever there is nothing to show (no
+ * banner set, or the student dismissed it) - Home uses it for the signed-out
+ * "Sign in to back up your progress" nudge, so that slot is never empty space.
  */
-export const AppBanner = () => {
+export const AppBanner = ({ fallback = null }: { fallback?: React.ReactNode }) => {
   const { banner } = useAppConfig();
-  const [dismissed, setDismissed] = useState(true); // hidden until the stored id is read
+  // null until the stored dismissal is read, so the fallback does not flash in
+  // for a moment before a real banner appears.
+  const [dismissed, setDismissed] = useState<boolean | null>(null);
 
   useEffect(() => {
     let alive = true;
-    setDismissed(true);
+    setDismissed(null);
+    if (!banner.message) return;
     void isBannerDismissed(banner.id).then((d) => alive && setDismissed(d));
     return () => {
       alive = false;
     };
-  }, [banner.id]);
+  }, [banner.id, banner.message]);
 
-  if (!banner.message || dismissed) return null;
+  if (!banner.message) return <>{fallback}</>;
+  if (dismissed === null) return null;
+  if (dismissed) return <>{fallback}</>;
   const warning = banner.level === 'warning';
 
   return (
