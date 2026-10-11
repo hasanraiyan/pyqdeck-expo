@@ -13,6 +13,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLinkTo, useNavigation, useRoute } from '@react-navigation/native';
 import * as Haptics from 'expo-haptics';
+import { Image } from 'expo-image';
 import { Feather } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -34,13 +35,17 @@ import { COLORS, FONTS } from '../theme/colors';
 import { Badge, MarksBadge, YearBadge } from '../components/Badge';
 import { CircleLoader } from '../components/CircleLoader';
 import { rf, verticalScale, useResponsive } from '../utils/responsive';
-import { normalizeQuery, consumeSearchToken, shouldDebounceTap, applyServerRetryAfter } from '../utils/searchGuard';
+import { normalizeQuery, consumeSearchToken, shouldDebounceTap, applyServerRetryAfter, isLowText } from '../utils/searchGuard';
 import { ScreenContainer } from '../components/ScreenContainer';
 import { scanTextFromImage, ScanSource } from '../utils/scanText';
+import { HighlightedText } from '../components/HighlightedText';
 
 const RECENT_SEARCHES_KEY = 'pyq_recent_searches';
 
 type SearchTab = 'all' | 'notes' | 'questions' | 'subjects';
+
+// `scanned` marks searches that came from a photo, so the list can show a camera icon.
+type RecentSearch = { term: string; scanned?: boolean };
 
 export const SearchScreen = () => {
   const insets = useSafeAreaInsets();
@@ -52,7 +57,7 @@ export const SearchScreen = () => {
   const [inputFocused, setInputFocused] = useState(false);
   const [activeTab, setActiveTab] = useState<SearchTab>('all');
   const queryClient = useQueryClient();
-  const [recentSearches, setRecentSearches] = useState<string[]>([]);
+  const [recentSearches, setRecentSearches] = useState<RecentSearch[]>([]);
   const [cooldownSec, setCooldownSec] = useState(0);
   const [validationError, setValidationError] = useState<string | null>(null);
   // The validated query the results below belong to. null = nothing submitted.
@@ -115,12 +120,42 @@ export const SearchScreen = () => {
     };
   }, [onlineEmpty, submitted]);
 
+  // The subject and note searches match the typed text literally, so a long
+  // scanned question finds none even when its questions match. Fill those gaps
+  // from what did match: the subjects of the top questions, and the notes the
+  // AI overview cites.
+  const derivedSubjects: any[] = useMemo(() => {
+    const questions: any[] = Array.isArray(qsQ.data?.questions) ? qsQ.data.questions : [];
+    const counts = new Map<string, { subject: any; n: number }>();
+    for (const qu of questions) {
+      const sub = qu?.subject;
+      if (!sub?.id) continue;
+      const hit = counts.get(sub.id);
+      if (hit) hit.n += 1;
+      else counts.set(sub.id, { subject: sub, n: 1 });
+    }
+    return [...counts.values()]
+      .sort((a, b) => b.n - a.n)
+      .slice(0, 3)
+      .map(({ subject }) => ({
+        id: subject.id,
+        name: subject.name,
+        code: subject.code,
+        semester: {
+          id: subject.semesterId ?? '',
+          number: Number(String(subject.semesterId ?? '').match(/\d+/)?.[0]) || undefined,
+        },
+      }));
+  }, [qsQ.data]);
+
   const subjectResults: any[] = useMemo(
     () =>
       onlineEmpty
         ? (localResults?.subjects ?? []).map((s: any) => ({ ...s, semester: { id: '', number: 0 } }))
-        : onlineSubjects,
-    [onlineEmpty, localResults, onlineSubjects]
+        : onlineSubjects.length > 0
+          ? onlineSubjects
+          : derivedSubjects,
+    [onlineEmpty, localResults, onlineSubjects, derivedSubjects]
   );
   const questionResults: any[] = useMemo(
     () =>
@@ -161,7 +196,21 @@ export const SearchScreen = () => {
     AsyncStorage.getItem(RECENT_SEARCHES_KEY)
       .then((raw) => {
         if (raw) {
-          setRecentSearches(JSON.parse(raw));
+          // Older versions stored a plain string[]; accept both shapes.
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed)) {
+            setRecentSearches(
+              parsed
+                .map((e: any): RecentSearch | null =>
+                  typeof e === 'string'
+                    ? { term: e }
+                    : e && typeof e.term === 'string'
+                      ? { term: e.term, scanned: e.scanned === true }
+                      : null
+                )
+                .filter((e): e is RecentSearch => e !== null)
+            );
+          }
         }
       })
       .catch(() => {});
@@ -198,12 +247,12 @@ export const SearchScreen = () => {
     setCooldownSec(Math.max(1, Math.round(sec)));
   };
 
-  const saveRecentSearch = (term: string) => {
+  const saveRecentSearch = (term: string, scanned = false) => {
     const trimmed = term.trim();
     if (!trimmed) return;
     setRecentSearches((prev) => {
-      const filtered = prev.filter((t) => t.toLowerCase() !== trimmed.toLowerCase());
-      const updated = [trimmed, ...filtered].slice(0, 6);
+      const filtered = prev.filter((t) => t.term.toLowerCase() !== trimmed.toLowerCase());
+      const updated = [{ term: trimmed, ...(scanned ? { scanned: true } : {}) }, ...filtered].slice(0, 6);
       AsyncStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(updated)).catch(() => {});
       return updated;
     });
@@ -294,8 +343,9 @@ export const SearchScreen = () => {
   // Shared by typed searches, suggestion taps and deep links. A new value here
   // unmounts the previous query's observers, which cancels its in-flight
   // requests (each fetcher forwards React Query's signal).
-  const submitQuery = (normalized: string) => {
+  const submitQuery = (normalized: string, scanned = false) => {
     setValidationError(null);
+    setScanHint(null);
     setActiveTab('all');
     // Re-submitting the same text: React Query sees no key change, and the
     // search options disable retries, so a failed search would just sit in its
@@ -306,7 +356,7 @@ export const SearchScreen = () => {
       });
     }
     setSubmitted(normalized);
-    saveRecentSearch(normalized);
+    saveRecentSearch(normalized, scanned);
   };
 
   // Spends a rate-limit token only when a request will really be sent: a repeat
@@ -353,7 +403,9 @@ export const SearchScreen = () => {
   };
 
   const handleClear = () => {
+    setScanHint(null);
     setQuery('');
+    setScanImageUri(null);
     setSubmitted(null);
     setActiveTab('all');
     setValidationError(null);
@@ -370,6 +422,7 @@ export const SearchScreen = () => {
     }
     if (!allowSearch(norm.query)) return;
 
+    setScanImageUri(null);
     setQuery(norm.query);
     submitQuery(norm.query);
   };
@@ -377,21 +430,33 @@ export const SearchScreen = () => {
   // Scan a question from a photo: pick/capture, crop, read the text on-device,
   // then search it through the same validation + rate-limit path as typing.
   const [scanning, setScanning] = useState(false);
+  // While set, the bar shows this photo instead of the OCR text. Tapping it
+  // reveals the text for fixing misreads; clearing drops both.
+  const [scanImageUri, setScanImageUri] = useState<string | null>(null);
+  const [scanHint, setScanHint] = useState<string | null>(null);
+  const searchInputRef = useRef<TextInput>(null);
   const runScan = async (source: ScanSource) => {
     setScanning(true);
     setValidationError(null);
+    setScanHint(null);
     const res = await scanTextFromImage(source);
     setScanning(false);
+    // Outcome only (ok | cancelled | denied | empty | error): never the image or
+    // the recognised text, which can be personal.
+    logEvent('scan_search', { source, result: res.status });
     if (res.status === 'ok') {
       const norm = normalizeQuery(res.text);
       setQuery(res.text);
+      setScanImageUri(res.uri);
       if (!norm.ok) {
         setValidationError(norm.error);
         return;
       }
       if (!allowSearch(norm.query)) return;
       setQuery(norm.query);
-      submitQuery(norm.query);
+      submitQuery(norm.query, true);
+      // Searched anyway; just nudge toward a better crop when little was read.
+      if (isLowText(res.text)) setScanHint('Only a little text was read. Crop closer to the question for better results.');
     } else if (res.status === 'denied') {
       setValidationError('Camera permission is needed to scan a question.');
     } else if (res.status === 'empty') {
@@ -433,6 +498,7 @@ export const SearchScreen = () => {
     }
     if (!allowSearch(norm.query)) return;
     deepLinkQueryRef.current = initQ;
+    setScanImageUri(null);
     setQuery(norm.query);
     submitQuery(norm.query);
     // allowSearch/submitQuery are read from this render's closure on purpose:
@@ -443,18 +509,62 @@ export const SearchScreen = () => {
   // Only subjects from the server; with none loaded the section is simply hidden.
   const activeSuggestions = dynamicSuggestions;
 
-  const totalResultsCount = subjectResults.length + questionResults.length + noteResults.length;
+  const aiNoteItems: AiOverviewReference[] = useMemo(() => {
+    const seen = new Set(noteResults.map((n) => `${n.subjectSlug}/${n.topicId}`));
+    const out: AiOverviewReference[] = [];
+    for (const r of aiOverview?.references ?? []) {
+      const nav = r.navigate;
+      if (nav?.target !== 'topic' || !nav.subjectSlug || !nav.topicId) continue;
+      const key = `${nav.subjectSlug}/${nav.topicId}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push(r);
+    }
+    return out;
+    // noteResults is derived from notesQ.data
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [aiOverview, notesQ.data]);
+  const noteCount = noteResults.length + aiNoteItems.length;
+
+  const totalResultsCount = subjectResults.length + questionResults.length + noteCount;
 
   const noResults =
     hasSearched &&
     !loading &&
     !validationError &&
     cooldownSec === 0 &&
+    !aiLoading &&
     totalResultsCount === 0;
 
   // Only a cooldown locks the input. A search in flight never does: typing a
   // new query and submitting simply cancels the old one.
   const isInputDisabled = cooldownSec > 0;
+
+  // Not `q`: the question list below shadows that name with each result.
+  const hlQuery = submitted ?? '';
+
+  // A note the AI overview cited: no module/subject name on hand, so it opens
+  // by bare ids like any AI source (TopicNotes fills in the rest).
+  const renderAiNoteCard = (ref: AiOverviewReference) => (
+    <TouchableOpacity
+      key={`ai-${ref.index}`}
+      style={[styles.noteResultCard, compact && styles.cardCompact]}
+      activeOpacity={0.7}
+      onPress={() => openAiReference(ref)}
+    >
+      <Text style={styles.resultSubjectName} numberOfLines={1}>
+        Suggested by AI overview
+      </Text>
+      <HighlightedText style={styles.noteTitle} text={ref.title} query={hlQuery} />
+      <View style={styles.noteFooter}>
+        <View style={{ flex: 1 }} />
+        <View style={styles.readNoteLink}>
+          <Text style={styles.readNoteLinkText}>Read Note</Text>
+          <Feather name="arrow-right" size={12} color={COLORS.primary} style={{ marginLeft: 4 }} />
+        </View>
+      </View>
+    </TouchableOpacity>
+  );
 
   const renderNoteCard = (note: TopicNoteSearchResultItem) => (
     <TouchableOpacity
@@ -488,12 +598,15 @@ export const SearchScreen = () => {
         {note.moduleNumber ? ` · Module ${note.moduleNumber}` : ''}
       </Text>
 
-      <Text style={styles.noteTitle}>{note.topicTitle}</Text>
+      <HighlightedText style={styles.noteTitle} text={note.topicTitle} query={hlQuery} />
 
       {note.snippet ? (
-        <Text style={styles.noteSnippet} numberOfLines={2}>
-          {note.snippet}
-        </Text>
+        <HighlightedText
+          style={styles.noteSnippet}
+          numberOfLines={2}
+          text={note.snippet}
+          query={hlQuery}
+        />
       ) : null}
 
       <View style={styles.noteFooter}>
@@ -544,7 +657,29 @@ export const SearchScreen = () => {
                 color={query.trim().length > 0 || inputFocused ? COLORS.primary : COLORS.textMuted}
               />
             </TouchableOpacity>
+            {scanImageUri ? (
+              <TouchableOpacity
+                style={styles.scanChip}
+                activeOpacity={0.7}
+                accessibilityLabel="Scanned question. Tap to edit the text"
+                onPress={() => {
+                  setScanImageUri(null);
+                  setTimeout(() => searchInputRef.current?.focus(), 50);
+                }}
+              >
+                <Image source={{ uri: scanImageUri }} style={styles.scanThumb} contentFit="cover" />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.scanChipTitle} numberOfLines={1}>
+                    Scanned question
+                  </Text>
+                  <Text style={styles.scanChipHint} numberOfLines={1}>
+                    Tap to edit text
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            ) : null}
             <TextInput
+              ref={searchInputRef}
               placeholder={cooldownSec > 0 ? `Cooldown ${cooldownSec}s...` : 'Search subjects, questions, or topics...'}
               placeholderTextColor={COLORS.textSubtle}
               value={query}
@@ -564,7 +699,11 @@ export const SearchScreen = () => {
               blurOnSubmit={true}
               enablesReturnKeyAutomatically={true}
               autoCorrect={false}
-              style={[styles.searchInput, isInputDisabled && { opacity: 0.6 }]}
+              style={[
+                styles.searchInput,
+                isInputDisabled && { opacity: 0.6 },
+                scanImageUri ? { display: 'none' } : null,
+              ]}
             />
             {query.length === 0 && cooldownSec === 0 && (
               <TouchableOpacity
@@ -603,6 +742,12 @@ export const SearchScreen = () => {
             <View style={styles.validationRow}>
               <Feather name="alert-circle" size={12} color="#DC2626" style={{ marginRight: 6 }} />
               <Text style={styles.validationText}>{validationError}</Text>
+            </View>
+          )}
+          {scanHint && !validationError && (
+            <View style={styles.validationRow}>
+              <Feather name="info" size={12} color={COLORS.textMuted} style={{ marginRight: 6 }} />
+              <Text style={styles.cooldownText}>{scanHint}</Text>
             </View>
           )}
           {cooldownSec > 0 && !validationError && (
@@ -666,7 +811,7 @@ export const SearchScreen = () => {
                     style={{ marginRight: 5 }}
                   />
                   <Text style={[styles.filterTabPillText, activeTab === 'notes' && styles.filterTabPillTextActive]}>
-                    Notes ({noteResults.length})
+                    Notes ({noteCount})
                   </Text>
                 </TouchableOpacity>
 
@@ -713,19 +858,21 @@ export const SearchScreen = () => {
                     </TouchableOpacity>
                   </View>
                   <View style={styles.suggestedList}>
-                    {recentSearches.map((term, idx) => (
+                    {recentSearches.map((item, idx) => (
                       <TouchableOpacity
                         key={idx}
                         style={[styles.suggestedRow, isInputDisabled && { opacity: 0.5 }]}
                         activeOpacity={0.7}
                         disabled={isInputDisabled}
-                        onPress={() => handleSuggestionPress(term)}
+                        onPress={() => handleSuggestionPress(item.term)}
                       >
                         <View style={styles.suggestedRowLeft}>
                           <View style={styles.rowIcon}>
-                            <Feather name="clock" size={13} color={COLORS.textMuted} />
+                            <Feather name={item.scanned ? 'camera' : 'clock'} size={13} color={COLORS.textMuted} />
                           </View>
-                          <Text style={styles.suggestedRowText}>{term}</Text>
+                          <Text style={styles.suggestedRowText} numberOfLines={2} ellipsizeMode="tail">
+                            {item.term}
+                          </Text>
                         </View>
                         <Feather name="arrow-up-left" size={14} color={COLORS.textMuted} />
                       </TouchableOpacity>
@@ -810,16 +957,16 @@ export const SearchScreen = () => {
                     }}
                   >
                     <View style={styles.subjectLeft}>
-                      <Text style={styles.subjectName}>{item.name}</Text>
+                      <HighlightedText style={styles.subjectName} text={item.name ?? ''} query={hlQuery} />
                       <Text style={styles.subjectSub}>
-                        Semester {item.semester?.number}
+                        {item.semester?.number ? `Semester ${item.semester.number}` : 'Subject'}
                         {item.code ? ` · ${item.code}` : ''}
                       </Text>
                     </View>
                     <View style={styles.subjectRight}>
-                      <Text style={styles.questionCountText}>
-                        {item.questionCount}q
-                      </Text>
+                      {typeof item.questionCount === 'number' ? (
+                        <Text style={styles.questionCountText}>{item.questionCount}q</Text>
+                      ) : null}
                       <Feather name="chevron-right" size={16} color={COLORS.textMuted} />
                     </View>
                   </TouchableOpacity>
@@ -860,9 +1007,12 @@ export const SearchScreen = () => {
                         ? ` · ${q.score.toFixed(3)} match`
                         : ''}
                     </Text>
-                    <Text style={styles.resultTextPreview} numberOfLines={2}>
-                      {q.textPreview || q.text}
-                    </Text>
+                    <HighlightedText
+                      style={styles.resultTextPreview}
+                      numberOfLines={2}
+                      text={q.textPreview || q.text || ''}
+                      query={hlQuery}
+                    />
                     <ScrollView
                       horizontal
                       showsHorizontalScrollIndicator={false}
@@ -897,13 +1047,13 @@ export const SearchScreen = () => {
           )}
 
           {/* Study Notes Result Section */}
-          {!loading && (activeTab === 'all' || activeTab === 'notes') && noteResults.length > 0 && (
+          {!loading && (activeTab === 'all' || activeTab === 'notes') && noteCount > 0 && (
             <View style={styles.section}>
               <View style={styles.sectionHeaderRow}>
                 <Text style={styles.sectionHeading}>
-                  STUDY NOTES ({noteResults.length})
+                  STUDY NOTES ({noteCount})
                 </Text>
-                {activeTab === 'all' && noteResults.length > 3 && (
+                {activeTab === 'all' && noteCount > 3 && (
                   <TouchableOpacity
                     onPress={() => {
                       Haptics.selectionAsync().catch(() => {});
@@ -911,20 +1061,24 @@ export const SearchScreen = () => {
                     }}
                     hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                   >
-                    <Text style={styles.seeAllLink}>View all {noteResults.length} →</Text>
+                    <Text style={styles.seeAllLink}>View all {noteCount} →</Text>
                   </TouchableOpacity>
                 )}
               </View>
               <View style={{ gap: 10 }}>
-                {(activeTab === 'all' ? noteResults.slice(0, 3) : noteResults).map((note) =>
-                  renderNoteCard(note)
-                )}
+                {(() => {
+                  const cards = [
+                    ...noteResults.map((note) => renderNoteCard(note)),
+                    ...aiNoteItems.map((ref) => renderAiNoteCard(ref)),
+                  ];
+                  return activeTab === 'all' ? cards.slice(0, 3) : cards;
+                })()}
               </View>
             </View>
           )}
 
           {/* Empty Notes Tab */}
-          {!loading && activeTab === 'notes' && noteResults.length === 0 && (
+          {!loading && activeTab === 'notes' && noteCount === 0 && (
             <View style={styles.tabEmptyContainer}>
               <Feather name="book-open" size={24} color={COLORS.textSubtle} style={{ marginBottom: 8 }} />
               <Text style={styles.tabEmptyTitle}>No matching study notes</Text>
@@ -1016,6 +1170,28 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.body,
     color: COLORS.text,
     fontSize: rf(14.5),
+  },
+  scanChip: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  scanThumb: {
+    width: 36,
+    height: 36,
+    borderRadius: 8,
+    backgroundColor: COLORS.cardSecondary,
+  },
+  scanChipTitle: {
+    fontFamily: FONTS.bodyMedium,
+    fontSize: rf(13.5),
+    color: COLORS.text,
+  },
+  scanChipHint: {
+    fontFamily: FONTS.body,
+    fontSize: rf(10.5),
+    color: COLORS.textMuted,
   },
   clearBtn: {
     padding: 6,
