@@ -16,18 +16,16 @@ export interface PlaceholderPage {
   url: string;
 }
 
-// Sample original-paper scan supplied for the UI-first build. Every placeholder
-// page uses it until real per-year originals are uploaded (then delete this
+// Sample original-paper scan pages supplied for the UI-first build. Just the
+// 2 pages below until real per-year originals are uploaded (then delete this
 // file and point the viewer at GET /api/me/papers/:subject/:year instead).
-const SAMPLE_PAGE_URL =
-  'https://res.cloudinary.com/djkpavwmp/image/upload/v1791710874/5596de5b-275d-46a5-b80e-be4d2e0c1dbd_bgdyi2.jpg';
-const PAGE_COUNT = 6;
+const SAMPLE_PAGE_URLS = [
+  'https://res.cloudinary.com/djkpavwmp/image/upload/v1791713413/WhatsApp_Image_2026-10-11_at_3.39.25_PM_b5umiz.jpg',
+  'https://res.cloudinary.com/djkpavwmp/image/upload/v1791713413/WhatsApp_Image_2026-10-11_at_3.39.25_PM_1_p8hrww.jpg',
+];
 
 export const hasPlaceholderPaper = (): boolean => __DEV__;
 
 export function getPlaceholderPaper(_subjectId: string, _year: number): PlaceholderPage[] {
-  return Array.from({ length: PAGE_COUNT }, (_, i) => ({
-    index: i,
-    url: SAMPLE_PAGE_URL,
-  }));
+  return SAMPLE_PAGE_URLS.map((url, i) => ({ index: i, url }));
 }
