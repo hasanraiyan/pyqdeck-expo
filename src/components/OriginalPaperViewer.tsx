@@ -16,6 +16,7 @@ import { WebView } from './WebViewCompat';
 import { AdBanner } from './AdBanner';
 import { COLORS, FONTS } from '../theme/colors';
 import { usePreventScreenCapture } from '../utils/screenCapture';
+import { zoomHtml } from '../utils/imageZoom';
 import type { PaperViewerPage } from '../api';
 
 /**
@@ -27,31 +28,10 @@ import type { PaperViewerPage } from '../api';
  * never fetches. The protections: capture blocking while mounted, no
  * save/share affordance, long-press menu disabled, memory-only image caching.
  *
- * Deliberately ad-free and chrome-light: no banner, no extra buttons.
+ * Chrome-light: no extra buttons. A bottom banner sits under the page list and
+ * under the zoom panel (hidden when ads are gated off); zoom is pinch, drag and
+ * double-tap, handled in utils/imageZoom.ts.
  */
-
-const zoomHtml = (src: string) => `<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes" />
-  <style>
-    * { box-sizing: border-box; -webkit-touch-callout: none !important; user-select: none !important; }
-    html, body { margin: 0; padding: 0; width: 100%; height: 100%; background: #f5f6f2; }
-    body { display: flex; align-items: center; justify-content: center; }
-    .sheet { position: relative; display: inline-block; max-width: 100%; max-height: 100%; }
-    .sheet img { display: block; max-width: 100%; max-height: 100%; object-fit: contain; }
-  </style>
-</head>
-<body>
-  <div class="sheet">
-    <img src="${src.replace(/"/g, '&quot;')}" />
-  </div>
-  <script>
-    document.addEventListener('contextmenu', function (e) { e.preventDefault(); }, true);
-  </script>
-</body>
-</html>`;
 
 export const OriginalPaperViewer = ({
   year,
