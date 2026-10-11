@@ -278,7 +278,12 @@ export const SyllabusOverviewScreen = () => {
           />
         }
       >
-        <SyncStatusBar dismissible={false} />
+        {/* The scroll frame has no side padding of its own (each block adds its
+            own 16pt), so the sign-in card needs the same inset or it touches the
+            screen edges. Same wrapper as the other Study screens. */}
+        <View style={{ paddingHorizontal: 16 }}>
+          <SyncStatusBar dismissible={false} />
+        </View>
         {semester.subjects.length > 0 && renderSummary()}
 
         {semester.subjects.length === 0 ? (
