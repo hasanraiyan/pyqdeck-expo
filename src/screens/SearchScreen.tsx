@@ -13,6 +13,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLinkTo, useNavigation, useRoute } from '@react-navigation/native';
 import * as Haptics from 'expo-haptics';
+import { Image } from 'expo-image';
 import { Feather } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -354,6 +355,7 @@ export const SearchScreen = () => {
 
   const handleClear = () => {
     setQuery('');
+    setScanImageUri(null);
     setSubmitted(null);
     setActiveTab('all');
     setValidationError(null);
@@ -370,6 +372,7 @@ export const SearchScreen = () => {
     }
     if (!allowSearch(norm.query)) return;
 
+    setScanImageUri(null);
     setQuery(norm.query);
     submitQuery(norm.query);
   };
@@ -377,6 +380,10 @@ export const SearchScreen = () => {
   // Scan a question from a photo: pick/capture, crop, read the text on-device,
   // then search it through the same validation + rate-limit path as typing.
   const [scanning, setScanning] = useState(false);
+  // While set, the bar shows this photo instead of the OCR text. Tapping it
+  // reveals the text for fixing misreads; clearing drops both.
+  const [scanImageUri, setScanImageUri] = useState<string | null>(null);
+  const searchInputRef = useRef<TextInput>(null);
   const runScan = async (source: ScanSource) => {
     setScanning(true);
     setValidationError(null);
@@ -385,6 +392,7 @@ export const SearchScreen = () => {
     if (res.status === 'ok') {
       const norm = normalizeQuery(res.text);
       setQuery(res.text);
+      setScanImageUri(res.uri);
       if (!norm.ok) {
         setValidationError(norm.error);
         return;
@@ -433,6 +441,7 @@ export const SearchScreen = () => {
     }
     if (!allowSearch(norm.query)) return;
     deepLinkQueryRef.current = initQ;
+    setScanImageUri(null);
     setQuery(norm.query);
     submitQuery(norm.query);
     // allowSearch/submitQuery are read from this render's closure on purpose:
@@ -544,7 +553,29 @@ export const SearchScreen = () => {
                 color={query.trim().length > 0 || inputFocused ? COLORS.primary : COLORS.textMuted}
               />
             </TouchableOpacity>
+            {scanImageUri ? (
+              <TouchableOpacity
+                style={styles.scanChip}
+                activeOpacity={0.7}
+                accessibilityLabel="Scanned question. Tap to edit the text"
+                onPress={() => {
+                  setScanImageUri(null);
+                  setTimeout(() => searchInputRef.current?.focus(), 50);
+                }}
+              >
+                <Image source={{ uri: scanImageUri }} style={styles.scanThumb} contentFit="cover" />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.scanChipTitle} numberOfLines={1}>
+                    Scanned question
+                  </Text>
+                  <Text style={styles.scanChipHint} numberOfLines={1}>
+                    Tap to edit text
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            ) : null}
             <TextInput
+              ref={searchInputRef}
               placeholder={cooldownSec > 0 ? `Cooldown ${cooldownSec}s...` : 'Search subjects, questions, or topics...'}
               placeholderTextColor={COLORS.textSubtle}
               value={query}
@@ -564,7 +595,11 @@ export const SearchScreen = () => {
               blurOnSubmit={true}
               enablesReturnKeyAutomatically={true}
               autoCorrect={false}
-              style={[styles.searchInput, isInputDisabled && { opacity: 0.6 }]}
+              style={[
+                styles.searchInput,
+                isInputDisabled && { opacity: 0.6 },
+                scanImageUri ? { display: 'none' } : null,
+              ]}
             />
             {query.length === 0 && cooldownSec === 0 && (
               <TouchableOpacity
@@ -725,7 +760,9 @@ export const SearchScreen = () => {
                           <View style={styles.rowIcon}>
                             <Feather name="clock" size={13} color={COLORS.textMuted} />
                           </View>
-                          <Text style={styles.suggestedRowText}>{term}</Text>
+                          <Text style={styles.suggestedRowText} numberOfLines={2} ellipsizeMode="tail">
+                            {term}
+                          </Text>
                         </View>
                         <Feather name="arrow-up-left" size={14} color={COLORS.textMuted} />
                       </TouchableOpacity>
@@ -1016,6 +1053,28 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.body,
     color: COLORS.text,
     fontSize: rf(14.5),
+  },
+  scanChip: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  scanThumb: {
+    width: 36,
+    height: 36,
+    borderRadius: 8,
+    backgroundColor: COLORS.cardSecondary,
+  },
+  scanChipTitle: {
+    fontFamily: FONTS.bodyMedium,
+    fontSize: rf(13.5),
+    color: COLORS.text,
+  },
+  scanChipHint: {
+    fontFamily: FONTS.body,
+    fontSize: rf(10.5),
+    color: COLORS.textMuted,
   },
   clearBtn: {
     padding: 6,

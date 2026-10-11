@@ -5,7 +5,7 @@ import { MAX_LEN } from './searchGuard';
 export type ScanSource = 'camera' | 'gallery';
 
 export type ScanResult =
-  | { status: 'ok'; text: string }
+  | { status: 'ok'; text: string; uri: string }
   | { status: 'cancelled' }
   | { status: 'denied' }
   | { status: 'empty' }
@@ -45,9 +45,10 @@ export async function scanTextFromImage(source: ScanSource): Promise<ScanResult>
     }
     if (res.canceled || !res.assets?.[0]?.uri) return { status: 'cancelled' };
 
-    const result = await TextRecognition.recognize(res.assets[0].uri);
+    const uri = res.assets[0].uri;
+    const result = await TextRecognition.recognize(uri);
     const text = toSearchQuery(result?.text ?? '');
-    return text.length > 0 ? { status: 'ok', text } : { status: 'empty' };
+    return text.length > 0 ? { status: 'ok', text, uri } : { status: 'empty' };
   } catch {
     return { status: 'error' };
   }
