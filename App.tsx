@@ -321,14 +321,26 @@ function TabsNavigator() {
 
   const ROOT_TAB_SCREENS = new Set(['Home', 'SyllabusRoot', 'SearchRoot']);
 
+  // A per-screen tabBarStyle replaces the one in screenOptions, so it has to carry
+  // the base style itself; returning undefined at the roots dropped the styling.
+  const baseTabBarStyle = isBottom
+    ? {
+        backgroundColor: COLORS.card,
+        borderTopColor: COLORS.border,
+        borderTopWidth: 1,
+        height: 56 + insets.bottom,
+        paddingBottom: insets.bottom > 0 ? insets.bottom : 6,
+        paddingTop: 6,
+      }
+    : undefined;
+
   const getTabStyleForRoute = (route: any) => {
     const routeName = getFocusedRouteNameFromRoute(route);
-    // When routeName is undefined or one of the root screens, show the tab bar.
-    // On all deeper pushed screens (which have a back button), hide the bottom tab bar.
-    if (!routeName || ROOT_TAB_SCREENS.has(routeName)) {
-      return undefined;
-    }
-    return { display: 'none' as const };
+    // Show the bar on the root screens; hide it on every deeper pushed screen
+    // (the ones with a back button). Screens must not call setOptions on the tab
+    // navigator for this: their cleanup would override this rule for good.
+    if (!routeName || ROOT_TAB_SCREENS.has(routeName)) return baseTabBarStyle;
+    return { ...baseTabBarStyle, display: 'none' as const };
   };
 
   return (
@@ -391,7 +403,7 @@ function TabsNavigator() {
             tabBarIcon: ({ color, size }) => (
               <Feather name="file-text" size={size} color={color} />
             ),
-            tabBarStyle: getTabStyleForRoute(route),
+            ...(isBottom ? { tabBarStyle: getTabStyleForRoute(route) } : null),
           })}
         />
         {isSyllabusEnabled && (
@@ -403,7 +415,7 @@ function TabsNavigator() {
               tabBarIcon: ({ color, size }) => (
                 <Feather name="book-open" size={size} color={color} />
               ),
-              tabBarStyle: getTabStyleForRoute(route),
+              ...(isBottom ? { tabBarStyle: getTabStyleForRoute(route) } : null),
             })}
           />
         )}
@@ -415,7 +427,7 @@ function TabsNavigator() {
             tabBarIcon: ({ color, size }) => (
               <Feather name="search" size={size} color={color} />
             ),
-            tabBarStyle: getTabStyleForRoute(route),
+            ...(isBottom ? { tabBarStyle: getTabStyleForRoute(route) } : null),
           })}
         />
     </Tab.Navigator>
