@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { markSettingPending } from '../db/settingsPending';
+import { emit, on } from '../events/bus';
 
 export interface RecentStudy {
   subjectId: string;
@@ -25,13 +26,9 @@ export interface RecentNote {
 const RECENT_STUDY_KEY = 'pyqdeck:recent_study';
 const RECENT_NOTES_KEY = 'pyqdeck:recent_notes';
 
-const listeners = new Set<() => void>();
 /** Fires when the lists are replaced by a sync, so Home can re-read them. */
 export function subscribeRecents(fn: () => void): () => void {
-  listeners.add(fn);
-  return () => {
-    listeners.delete(fn);
-  };
+  return on('recents.replaced', () => fn());
 }
 
 /**
@@ -42,7 +39,7 @@ export async function replaceRecents(study: RecentStudy[], notes: RecentNote[]):
   try {
     await AsyncStorage.setItem(RECENT_STUDY_KEY, JSON.stringify(study));
     await AsyncStorage.setItem(RECENT_NOTES_KEY, JSON.stringify(notes));
-    listeners.forEach((fn) => fn());
+    emit('recents.replaced');
   } catch {}
 }
 

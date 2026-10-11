@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { emit, on } from '../events/bus';
 
 /**
  * Which account settings changed on this device and still need pushing. Kept
@@ -10,21 +11,11 @@ export type SettingName = 'askAiEngine' | 'readingLayout' | 'volumeScroll' | 're
 
 const PENDING_KEY = 'pyqdeck:settings_pending';
 
-const appliedListeners = new Set<() => void>();
 /** Fires after a sync wrote an account setting to local storage (screens re-read). */
 export function subscribeSettingsApplied(fn: () => void): () => void {
-  appliedListeners.add(fn);
-  return () => {
-    appliedListeners.delete(fn);
-  };
+  return on('settings.applied', () => fn());
 }
-export const notifySettingsApplied = () => appliedListeners.forEach((fn) => fn());
-
-let onChange: (() => void) | null = null;
-/** The sync engine registers here so a change schedules a sync. */
-export function setSettingChangeHandler(fn: (() => void) | null): void {
-  onChange = fn;
-}
+export const notifySettingsApplied = () => emit('settings.applied');
 
 export async function readPendingSettings(): Promise<Set<SettingName>> {
   try {
@@ -37,9 +28,12 @@ export async function readPendingSettings(): Promise<Set<SettingName>> {
 }
 
 /**
- * `silent` marks it without asking for a sync of its own: the sync engine uses
- * that when it re-marks a setting INSIDE a round (it schedules its own, limited,
- * follow-up), so marking can never restart sync by itself in a loop.
+ * Marking a change announces it on the bus ('setting.changed', or
+ * 'recents.changed' for Jump Back In, which waits longer because it changes on
+ * every screen opened); the sync coordinator decides when to send.
+ * `silent` marks it without announcing: the sync engine uses that when it
+ * re-marks a setting INSIDE a round (it schedules its own, limited, follow-up),
+ * so marking can never restart sync by itself in a loop.
  */
 export async function markSettingPending(
   name: SettingName,
@@ -50,7 +44,10 @@ export async function markSettingPending(
     pending.add(name);
     await AsyncStorage.setItem(PENDING_KEY, JSON.stringify([...pending]));
   } catch {}
-  if (!opts.silent) onChange?.();
+  if (!opts.silent) {
+    if (name === 'recents') emit('recents.changed');
+    else emit('setting.changed', { name });
+  }
 }
 
 export async function clearPendingSettings(names: SettingName[]): Promise<void> {

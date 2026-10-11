@@ -1,7 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Crypto from 'expo-crypto';
 import * as Network from 'expo-network';
-import { AppState } from 'react-native';
 import { ApiError, syncAll, type ProgressSyncResponse } from '../api';
 import {
   applyPulledItems,
@@ -9,14 +8,12 @@ import {
   loadOutbox,
   migrateProgressV1,
   queueOps,
-  setLocalChangeHandler,
   updateOutbox,
 } from './syllabusProgress';
 import {
   backoffMs,
   batches,
   canSync,
-  nextSendDelay,
   planFirstPush,
   settle,
   type OutboxOp,
@@ -31,8 +28,11 @@ import {
 } from './settingsSync';
 import { nextFollowUps } from './settingsLogic';
 import { readPendingSettings } from './settingsPending';
-import { setSettingChangeHandler } from './settingsPending';
-import { registerWipeHook, wipeUserData } from '../auth/wipeUserData';
+import { isWipeRunning, registerWipeHook, wipeUserData } from '../auth/wipeUserData';
+import { emit, on } from '../events/bus';
+import '../events/lifecycle'; // starts the single AppState / Network listener
+import type { SyncReason } from '../events/syncPlan';
+import { SyncScheduler } from '../events/syncScheduler';
 import { isAuthEnabled } from '../config/features';
 import { getSignedInUserId } from '../auth/token';
 import { getAppConfigNow, loadCachedAppConfig, refreshAppConfig } from '../config/appConfig';
@@ -42,17 +42,19 @@ import { getKnownPushToken } from '../utils/notifications';
  * Account-backed progress sync engine (see docs/SRS-account-progress-sync-*).
  *
  * Local-first: ticks are written by syllabusProgress.ts and queued in an
- * outbox; this engine sends the outbox to /api/me/progress/sync and pulls what
- * other devices changed. It never blocks a tap - everything here runs after
- * the local write - and a failure only ever leaves the outbox in place.
+ * outbox; this engine sends the outbox to /api/me/sync and pulls what other
+ * devices changed. It never blocks a tap - everything here runs after the local
+ * write - and a failure only ever leaves the outbox in place.
+ *
+ * It is also the sync COORDINATOR (docs/SRS-event-driven-architecture.md, SYN):
+ * it listens to facts on the bus (a tick, a setting change, the app waking, the
+ * network returning, a nudge from another device), collects them as a reason
+ * set, and sends ONE round for the lot - see syncPlan.ts for the timing.
  */
 
 const CURSOR_KEY = 'pyqdeck:progress_cursor';
 const LAST_SYNC_KEY = 'pyqdeck:last_sync_at';
 const BATCH_SIZE = 200;
-const DEBOUNCE_MS = 2_000;
-const MAX_WAIT_MS = 30_000;
-let firstQueuedAt = 0;
 // Follow-up rounds in a row since the last real trigger (see requestSync).
 let followUps = 0;
 const TAB_OPEN_MIN_GAP_MS = 60_000;
@@ -70,17 +72,22 @@ export interface SyncStatus {
 let session: { signedIn: boolean; userId: string | null } = { signedIn: false, userId: null };
 let status: SyncStatus = { state: 'idle', pending: 0, lastSyncAt: null };
 let inFlight: Promise<void> | null = null;
-let rerun = false;
 let failures = 0;
-let timer: ReturnType<typeof setTimeout> | null = null;
+// Owns the one pending timer and the reasons waiting for the next round.
+const scheduler = new SyncScheduler({
+  now: () => Date.now(),
+  setTimeout: (fn, ms) => setTimeout(fn, ms),
+  clearTimeout: (h) => clearTimeout(h as ReturnType<typeof setTimeout>),
+  hints: () => getAppConfigNow().syncHints,
+  fire: () => void syncNow(),
+});
 let pausedForAuth = false;
 let quotaBlocked = false;
 let lastTabTrigger = 0;
-const listeners = new Set<(s: SyncStatus) => void>();
 
 function setStatus(patch: Partial<SyncStatus>) {
   status = { ...status, ...patch };
-  listeners.forEach((fn) => fn(status));
+  emit('sync.status', status);
 }
 
 export function getSyncStatus(): SyncStatus {
@@ -88,10 +95,7 @@ export function getSyncStatus(): SyncStatus {
 }
 
 export function subscribeSyncStatus(fn: (s: SyncStatus) => void): () => void {
-  listeners.add(fn);
-  return () => {
-    listeners.delete(fn);
-  };
+  return on('sync.status', fn);
 }
 
 async function refreshPending() {
@@ -109,20 +113,15 @@ async function isOnline(): Promise<boolean> {
   }
 }
 
-const clearTimer = () => {
-  if (timer) clearTimeout(timer);
-  timer = null;
-};
-
 /**
- * Schedules a sync. Events (a tick, a setting change, a recent, coming back
- * online) are coalesced: each one pushes the send back by the debounce, but
- * never past MAX_WAIT_MS after the first one, so a steady stream of changes
- * still goes out regularly. `immediate` flushes now.
+ * Notes that something wants a sync. Reasons arriving close together share one
+ * round (SyncScheduler / syncPlan.ts): the timer is recomputed from the whole
+ * set, never past 30 s after the first, and never sooner than a pause the server
+ * asked for. While a round is running the reason just waits; the finishing round
+ * arms the next one.
  */
-export function requestSync(
-  opts: { immediate?: boolean; delayMs?: number; followUp?: boolean } = {}
-): void {
+function schedule(reason: SyncReason, opts: { delayMs?: number } = {}): void {
+  if (isWipeRunning()) return; // the sign-out wipe is removing what a sync would send
   if (!getAppConfigNow().flags.syncEnabled) return; // admin kill switch
   if (!canSync({ signedIn: session.signedIn, authEnabled: isAuthEnabled, online: true })) {
     return;
@@ -130,15 +129,21 @@ export function requestSync(
   // Anything but the engine's own "one more round" is a real event (a tick, a
   // setting change, the app opening, the network returning): it starts a fresh
   // chain of follow-ups.
-  if (!opts.followUp) followUps = 0;
-  const now = Date.now();
-  if (timer === null) firstQueuedAt = now;
-  clearTimer();
-  const debounce = opts.immediate ? 0 : (opts.delayMs ?? DEBOUNCE_MS);
-  timer = setTimeout(() => {
-    timer = null;
-    void syncNow();
-  }, nextSendDelay(now, firstQueuedAt, debounce, MAX_WAIT_MS));
+  if (reason !== 'followup') followUps = 0;
+  scheduler.add(reason, opts.delayMs);
+}
+
+/**
+ * Compatibility entry for callers that still ask for a sync directly (refresh
+ * from the cloud, resuming after sign-in). New code announces a fact on the bus
+ * instead. `immediate` means "soon" (the merge window), not "this instant".
+ */
+export function requestSync(
+  opts: { immediate?: boolean; delayMs?: number; followUp?: boolean } = {}
+): void {
+  schedule(opts.followUp ? 'followup' : opts.immediate ? 'manual' : 'progress', {
+    delayMs: opts.delayMs,
+  });
 }
 
 /** Study tab opened: sync at most once a minute. */
@@ -146,7 +151,7 @@ export function requestSyncOnStudyOpen(): void {
   const now = Date.now();
   if (now - lastTabTrigger < TAB_OPEN_MIN_GAP_MS) return;
   lastTabTrigger = now;
-  requestSync({ immediate: true });
+  schedule('study-open');
 }
 
 /** Called by the auth layer whenever Clerk's signed-in state or user changes. */
@@ -154,7 +159,7 @@ export function configureSyncSession(next: { signedIn: boolean; userId: string |
   const changedUser = next.userId !== session.userId;
   session = next;
   if (!next.signedIn) {
-    clearTimer();
+    scheduler.clearPending();
     failures = 0;
     pausedForAuth = false;
     quotaBlocked = false;
@@ -163,9 +168,10 @@ export function configureSyncSession(next: { signedIn: boolean; userId: string |
   if (changedUser) {
     pausedForAuth = false;
     failures = 0;
+    scheduler.clearPending();
     quotaBlocked = false;
   }
-  void requestSync({ immediate: true });
+  schedule('auth');
 }
 
 /** Waits (up to `timeoutMs`) for the outbox to drain. True if it is empty. */
@@ -307,15 +313,18 @@ async function runRound(): Promise<void> {
   // event instead of syncing every few seconds while the phone is idle.
   const next = nextFollowUps(followUps, needsAnotherRound);
   followUps = next.followUps;
-  if (next.schedule) requestSync({ followUp: true });
+  if (next.schedule) schedule('followup');
 }
 
 /** Runs one sync round (push then pull). Safe to call at any time. */
 export function syncNow(): Promise<void> {
   if (inFlight) {
-    rerun = true;
+    scheduler.add('manual'); // asked for mid-round: one more round follows it
     return inFlight;
   }
+  // Everything that wanted this round is served by it; anything arriving while
+  // it runs lands in a fresh set for the next one.
+  scheduler.beginWithoutRound();
   inFlight = (async () => {
     try {
       if (!canSync({ signedIn: session.signedIn, authEnabled: isAuthEnabled, online: true })) {
@@ -329,6 +338,7 @@ export function syncNow(): Promise<void> {
         return;
       }
       setStatus({ state: 'syncing' });
+      scheduler.roundStarted();
       await runRound();
       failures = 0;
       setStatus({ state: 'idle' });
@@ -339,8 +349,7 @@ export function syncNow(): Promise<void> {
         // stops asking) and look again much later; local data is untouched.
         void refreshAppConfig({ force: true });
         setStatus({ state: 'idle' });
-        clearTimer();
-        timer = setTimeout(() => void syncNow(), 15 * 60 * 1000);
+        scheduler.retryIn(15 * 60 * 1000);
         return;
       }
       if (e?.status === 401) {
@@ -349,22 +358,18 @@ export function syncNow(): Promise<void> {
         setStatus({ state: 'paused' });
       } else if (e?.status === 429) {
         const wait = Math.max(1, e.retryAfterSec ?? 60) * 1000;
+        scheduler.holdFor(wait); // no event may bring the next round forward
         setStatus({ state: 'error' });
-        clearTimer();
-        timer = setTimeout(() => void syncNow(), wait);
+        scheduler.retryIn(wait);
       } else {
         setStatus({ state: e?.kind === 'offline' ? 'offline' : 'error' });
-        clearTimer();
-        timer = setTimeout(() => void syncNow(), backoffMs(failures));
+        scheduler.retryIn(backoffMs(failures));
         failures += 1;
       }
     } finally {
       await refreshPending().catch(() => {});
       inFlight = null;
-      if (rerun) {
-        rerun = false;
-        requestSync();
-      }
+      scheduler.end(); // events that arrived mid-round get their one timer
     }
   })();
   return inFlight;
@@ -405,29 +410,41 @@ export async function refreshFromCloud(): Promise<void> {
   try {
     await AsyncStorage.removeItem(CURSOR_KEY);
   } catch {}
-  requestSync({ immediate: true });
+  schedule('manual');
 }
 
 /** The sign-in sheet or token refresh resolved: allow syncing again. */
 export function resumeAfterAuth(): void {
   pausedForAuth = false;
-  requestSync({ immediate: true });
+  schedule('auth');
 }
 
 // --- wiring ----------------------------------------------------------------
+//
+// The engine reacts to facts announced on the bus (src/events). It announces
+// only results ('sync.status'), never anything that would trigger itself.
 
-// A local tick schedules a debounced sync.
-setLocalChangeHandler(() => {
+on('progress.changed', () => {
   void refreshPending();
-  requestSync();
+  schedule('progress');
 });
-
-// A changed account setting schedules a sync (a no-op when signed out).
-setSettingChangeHandler(() => requestSync({ immediate: true }));
+on('setting.changed', () => schedule('setting'));
+on('recents.changed', () => schedule('recents'));
+on('nudge.received', () => schedule('nudge'));
+on('network.online', () => schedule('network'));
+on('app.foreground', () => {
+  if (pausedForAuth) pausedForAuth = false;
+  schedule('foreground');
+});
+// Going to the background: send what is queued now rather than wait for the
+// debounce, which the OS may never let run.
+on('app.background', () => {
+  if (scheduler.hasTimer || scheduler.pending > 0) schedule('background');
+});
 
 // Everything in memory that mirrors the removed data is reset with the wipe.
 registerWipeHook(() => {
-  clearTimer();
+  scheduler.reset();
   followUps = 0;
   resetSettingsSyncMemory();
   failures = 0;
@@ -437,23 +454,6 @@ registerWipeHook(() => {
   lastAuxSyncAt = 0;
   setStatus({ state: 'idle', pending: 0, lastSyncAt: null });
 });
-
-AppState.addEventListener('change', (state) => {
-  if (state === 'active') {
-    if (pausedForAuth) pausedForAuth = false;
-    requestSync({ immediate: true });
-  } else if (state === 'background') {
-    // Going to the background: send what is queued now rather than wait for the
-    // debounce, which the OS may never let run.
-    if (timer) requestSync({ immediate: true });
-  }
-});
-
-try {
-  Network.addNetworkStateListener((event) => {
-    if (event.isConnected && event.isInternetReachable !== false) requestSync({ immediate: true });
-  });
-} catch {}
 
 void AsyncStorage.getItem(LAST_SYNC_KEY)
   .then((raw) => raw && setStatus({ lastSyncAt: Number(raw) || null }))

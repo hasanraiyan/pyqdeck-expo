@@ -4,11 +4,40 @@
  * under `node --test`.
  */
 
+/** How the app batches its sync requests; tuned from the server (SRS-event-driven-architecture). */
+export interface SyncHints {
+  /** Smallest gap between two rounds started by lifecycle events alone. */
+  minRoundGapMs: number;
+  /** How long events arriving together are folded into one round. */
+  mergeWindowMs: number;
+}
+
+export const DEFAULT_SYNC_HINTS: SyncHints = { minRoundGapMs: 3000, mergeWindowMs: 400 };
+
+/** The same bounds the server enforces (appConfigService.js SYNC_HINT_BOUNDS). */
+export const SYNC_HINT_BOUNDS = {
+  minRoundGapMs: [1000, 300_000],
+  mergeWindowMs: [100, 2000],
+} as const;
+
+/** Whatever came from the server, made safe: a bad value falls back to the default. */
+export function clampSyncHints(raw: unknown): SyncHints {
+  const r = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>;
+  const pick = (name: keyof SyncHints): number => {
+    const v = r[name];
+    const [lo, hi] = SYNC_HINT_BOUNDS[name];
+    if (typeof v !== 'number' || !Number.isFinite(v)) return DEFAULT_SYNC_HINTS[name];
+    return Math.min(hi, Math.max(lo, Math.round(v)));
+  };
+  return { minRoundGapMs: pick('minRoundGapMs'), mergeWindowMs: pick('mergeWindowMs') };
+}
+
 export interface AppConfig {
   minAppVersion: string;
   recommendedAppVersion: string;
   banner: { message: string; level: 'info' | 'warning'; id: string };
   flags: { syncEnabled: boolean; settingsSyncEnabled: boolean; nudgesEnabled: boolean; adsEnabled: boolean };
+  syncHints: SyncHints;
 }
 
 export const DEFAULT_APP_CONFIG: AppConfig = {
@@ -16,6 +45,7 @@ export const DEFAULT_APP_CONFIG: AppConfig = {
   recommendedAppVersion: '',
   banner: { message: '', level: 'info', id: '' },
   flags: { syncEnabled: true, settingsSyncEnabled: true, nudgesEnabled: true, adsEnabled: true },
+  syncHints: DEFAULT_SYNC_HINTS,
 };
 
 const SEMVER = /^(\d{1,4})\.(\d{1,4})\.(\d{1,4})$/;
@@ -68,6 +98,7 @@ export function sanitizeAppConfig(raw: unknown): AppConfig {
       nudgesEnabled: bool(f.nudgesEnabled),
       adsEnabled: bool(f.adsEnabled),
     },
+    syncHints: clampSyncHints(r.syncHints),
   };
 }
 

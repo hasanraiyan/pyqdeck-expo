@@ -132,6 +132,9 @@ async function run(reason: string): Promise<void> {
   }
 }
 
+/** True while a wipe is running: event reactions (sync) stand down until it ends. */
+export const isWipeRunning = (): boolean => running !== null;
+
 /** Idempotent; concurrent callers share one run. */
 export function wipeUserData(reason = 'sign-out'): Promise<void> {
   running ??= run(reason).finally(() => {

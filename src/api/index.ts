@@ -19,6 +19,8 @@ import {
   BranchSemester,
   SyllabusSubject,
 } from '../types/syllabus';
+import { Platform } from 'react-native';
+import Constants from 'expo-constants';
 import * as Backend from './backend';
 import { authHeader, getAuthToken } from '../auth/token';
 import {
@@ -158,6 +160,20 @@ async function request<T>(
 // AbortSignal.timeout for Hermes support on older Android. A caller's own
 // signal (React Query cancelling a superseded search, say) is forwarded so
 // either one aborts the request.
+// Tells the server which build is calling, so it can count versions in its sync
+// metrics (docs/SRS-event-driven-architecture.md, SRV-FR-1). Advisory only: the
+// server never changes an answer because of it. Native builds only - on the web
+// preview a custom header would turn every GET into a CORS preflight for nothing.
+const VERSION_HEADERS: Record<string, string> = (() => {
+  if (Platform.OS === 'web') return {};
+  const out: Record<string, string> = {};
+  const version = Constants.expoConfig?.version;
+  const build = Constants.expoConfig?.android?.versionCode;
+  if (version) out['X-App-Version'] = version;
+  if (build) out['X-App-Build'] = String(build);
+  return out;
+})();
+
 async function fetchWithTimeout(url: string, init?: RequestInit): Promise<Response> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
@@ -168,7 +184,11 @@ async function fetchWithTimeout(url: string, init?: RequestInit): Promise<Respon
     else outer.addEventListener('abort', onOuterAbort);
   }
   try {
-    return await fetch(url, { ...init, signal: controller.signal });
+    return await fetch(url, {
+      ...init,
+      headers: { ...(init?.headers as Record<string, string> | undefined), ...VERSION_HEADERS },
+      signal: controller.signal,
+    });
   } finally {
     clearTimeout(timer);
     outer?.removeEventListener('abort', onOuterAbort);

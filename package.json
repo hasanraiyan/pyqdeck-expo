@@ -74,7 +74,7 @@
     "android": "expo run:android",
     "ios": "expo run:ios",
     "web": "expo start --web",
-    "test": "node --test src/theme/layout.test.ts src/db/progressLogic.test.ts src/db/settingsLogic.test.ts src/config/appConfigLogic.test.ts src/admin/adminLogic.test.ts src/admin/cropLogic.test.ts src/admin/paperEdit.test.ts src/utils/imageZoom.test.ts src/admin/quadLogic.test.ts src/utils/searchGuard.test.ts src/utils/highlight.test.ts src/admin/pageSize.test.ts scripts/manifestPermissions.test.mjs src/admin/directUpload.test.ts src/api/paperStatusUrl.test.ts"
+    "test": "node --import ./scripts/tsResolve.mjs --test src/theme/layout.test.ts src/db/progressLogic.test.ts src/db/settingsLogic.test.ts src/config/appConfigLogic.test.ts src/admin/adminLogic.test.ts src/admin/cropLogic.test.ts src/admin/paperEdit.test.ts src/utils/imageZoom.test.ts src/admin/quadLogic.test.ts src/utils/searchGuard.test.ts src/utils/highlight.test.ts src/admin/pageSize.test.ts scripts/manifestPermissions.test.mjs src/admin/directUpload.test.ts src/api/paperStatusUrl.test.ts src/db/serverContract.test.ts src/events/bus.test.ts src/events/syncPlan.test.ts src/events/syncScheduler.test.ts"
   },
   "private": true
 }

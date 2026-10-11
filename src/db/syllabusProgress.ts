@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Crypto from 'expo-crypto';
+import { emit, on } from '../events/bus';
 import {
   applyRemote,
   enqueue,
@@ -41,21 +42,11 @@ function exclusive<T>(fn: () => Promise<T>): Promise<T> {
 
 // --- change notifications --------------------------------------------------
 
-const listeners = new Set<() => void>();
 /** Fires after progress changes locally or a pull applied remote changes. */
 export function subscribeProgress(fn: () => void): () => void {
-  listeners.add(fn);
-  return () => {
-    listeners.delete(fn);
-  };
+  return on('progress.updated', () => fn());
 }
-const notify = () => listeners.forEach((fn) => fn());
-
-let onLocalChange: (() => void) | null = null;
-/** The sync engine registers here so a tick can schedule a debounced sync. */
-export function setLocalChangeHandler(fn: (() => void) | null): void {
-  onLocalChange = fn;
-}
+const notify = () => emit('progress.updated');
 
 // --- low-level read/write --------------------------------------------------
 
@@ -240,7 +231,8 @@ export function setTopicDone(
       await AsyncStorage.setItem(OUTBOX_KEY, JSON.stringify(outbox));
     }
     notify();
-    onLocalChange?.();
+    // A fact for the sync coordinator (which decides when to send); not a command.
+    emit('progress.changed', { subjectId });
   }).catch(() => {});
 }
 

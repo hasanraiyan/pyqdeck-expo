@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
 import { getRemoteAppConfig } from '../api';
+import { emit, on } from '../events/bus';
 import {
   DEFAULT_APP_CONFIG,
   sanitizeAppConfig,
@@ -27,22 +28,16 @@ const REFRESH_MIN_GAP_MS = 10 * 60 * 1000;
 let current: AppConfig = DEFAULT_APP_CONFIG;
 let lastFetchAt = 0;
 let inFlight: Promise<void> | null = null;
-const listeners = new Set<() => void>();
 
 const set = (next: AppConfig) => {
   if (JSON.stringify(next) === JSON.stringify(current)) return;
   current = next;
-  listeners.forEach((fn) => fn());
+  emit('config.changed');
 };
 
 export const getAppConfigNow = (): AppConfig => current;
 
-export const subscribeAppConfig = (fn: () => void) => {
-  listeners.add(fn);
-  return () => {
-    listeners.delete(fn);
-  };
-};
+export const subscribeAppConfig = (fn: () => void) => on('config.changed', () => fn());
 
 export const getCurrentAppVersion = (): string => Constants.expoConfig?.version ?? '0.0.0';
 

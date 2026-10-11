@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Alert, AppState, Platform, View } from 'react-native';
+import { Alert, Platform, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import {
   NavigationContainer,
@@ -77,7 +77,7 @@ import { configureSyncSession, pendingCount } from './src/db/progressSync';
 import { OWNER_KEY } from './src/db/storageRegistry';
 import { isAuthEnabled } from './src/config/features';
 import { linkPushTokenToAccount, subscribeToSyncNudges } from './src/utils/notifications';
-import { requestSync } from './src/db/progressSync';
+import { emit, on, setEventErrorReporter } from './src/events/bus';
 import {
   clearAdsEntitlement,
   loadCachedAdsEntitlement,
@@ -103,6 +103,11 @@ Sentry.init({
   dsn: 'https://a3710bead072e5656e354d44d062719c@o4511315369197568.ingest.us.sentry.io/4511965378314240',
   sendDefaultPii: false,
   enableLogs: true,
+});
+
+// A bus handler that throws must not break the emitter; it is reported instead.
+setEventErrorReporter((err, event) => {
+  Sentry.captureException(err, { tags: { busEvent: event } });
 });
 
 installWebStyles();
@@ -512,10 +517,11 @@ function AppContent() {
       .then(() => refreshAppConfig())
       .then(() => refreshAdsEntitlement())
       .then(maybePrompt);
-    const sub = AppState.addEventListener('change', (state) => {
-      if (state === 'active') void refreshAppConfig().then(() => refreshAdsEntitlement()).then(maybePrompt);
-    });
-    return () => sub.remove();
+    // One foreground event (src/events/lifecycle.ts) drives the refresh; the
+    // stores keep their own 10-minute throttles.
+    return on('app.foreground', () =>
+      refreshAppConfig().then(() => refreshAdsEntitlement()).then(maybePrompt)
+    );
   }, []);
 
   // An interrupted sign-out wipe is finished before anything reads user data:
@@ -576,7 +582,7 @@ function AppContent() {
     const unsubscribeNudges = subscribeToSyncNudges(() => {
       if (!getAppConfigNow().flags.nudgesEnabled) return; // admin switch
       void recordNudgeRun('foreground', 'received while the app was open, sync requested');
-      requestSync({ immediate: true });
+      emit('nudge.received', { via: 'foreground' });
     });
 
     // Start backend selection alongside the rest of boot. It runs in the
@@ -586,14 +592,12 @@ function AppContent() {
     // A session that fell back to Render should climb back onto EC2 once it
     // recovers. Returning to the foreground is the natural moment to look,
     // and recheckIfStale() ignores brief tab-aways.
-    const appStateSub = AppState.addEventListener('change', (state) => {
-      if (state === 'active') Backend.recheckIfStale();
-    });
+    const offForeground = on('app.foreground', () => Backend.recheckIfStale());
 
     return () => {
       unsubscribe();
       unsubscribeNudges();
-      appStateSub.remove();
+      offForeground();
     };
   }, []);
 

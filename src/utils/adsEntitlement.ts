@@ -2,6 +2,7 @@ import { useSyncExternalStore } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getMyAdsEntitlement } from '../api';
 import { getAppConfigNow } from '../config/appConfig';
+import { emit, on } from '../events/bus';
 
 /**
  * Per-account paid-ads entitlement (docs/SRS-advertisements.md, FR-ADS-13..19).
@@ -31,22 +32,16 @@ interface EntitlementState {
 let current: EntitlementState = { userId: null, adFree: false };
 let lastFetchAt = 0;
 let inFlight: Promise<void> | null = null;
-const listeners = new Set<() => void>();
 
 const set = (next: EntitlementState) => {
   if (next.userId === current.userId && next.adFree === current.adFree) return;
   current = next;
-  listeners.forEach((fn) => fn());
+  emit('ads.changed');
 };
 
 export const getAdsEntitlementNow = (): EntitlementState => current;
 
-export const subscribeAdsEntitlement = (fn: () => void) => {
-  listeners.add(fn);
-  return () => {
-    listeners.delete(fn);
-  };
-};
+export const subscribeAdsEntitlement = (fn: () => void) => on('ads.changed', () => fn());
 
 /** Reactive read for components (AdBanner re-renders when it resolves). */
 export function useAdsEntitlement(): EntitlementState {
