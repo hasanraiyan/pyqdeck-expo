@@ -23,6 +23,7 @@ import { ScreenError, ScreenEmpty } from '../components/ScreenState';
 import { CircleLoader } from '../components/CircleLoader';
 import { userMessage } from '../utils/netError';
 import { useContainerStyle } from '../components/ScreenContainer';
+import { SyncStatusBar } from '../components/SyncStatusBar';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -335,6 +336,10 @@ export const SubjectSyllabusScreen = () => {
           />
         }
       >
+        {/* Signed out: persistent, non-dismissible login prompt so ticks are saved. */}
+        <View style={{ paddingHorizontal: 16, paddingTop: 8 }}>
+          <SyncStatusBar dismissible={false} />
+        </View>
         {/* Live Syllabus Progress Meter */}
         {totalTopics > 0 && (
           <View style={styles.progressCard}>

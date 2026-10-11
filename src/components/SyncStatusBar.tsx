@@ -10,34 +10,64 @@ import { isAuthEnabled } from '../config/features';
 const HINT_DISMISSED_KEY = 'pyqdeck:sync_hint_dismissed';
 
 /**
- * Signed out: a dismissible nudge under the Study header to sign in and back up
+ * Signed out: a nudge under the Study header to sign in and back up
  * progress. Signed in: renders nothing - syncing happens silently in the background.
+ *
+ * `dismissible={false}` (used by the Study tab) renders a persistent,
+ * non-dismissible "Log in to save your progress" card - no X button, no
+ * AsyncStorage opt-out. The default `dismissible` pill keeps its old
+ * dismiss behaviour for the Home slot.
  */
-export const SyncStatusBar = () => {
+export const SyncStatusBar = ({ dismissible = true }: { dismissible?: boolean } = {}) => {
   const navigation = useNavigation<any>();
   const { isLoaded, isSignedIn } = useAuth();
   const [hintDismissed, setHintDismissed] = useState(true); // hidden until read
 
   useEffect(() => {
+    if (!dismissible) return;
     AsyncStorage.getItem(HINT_DISMISSED_KEY)
       .then((v) => setHintDismissed(v === '1'))
       .catch(() => setHintDismissed(false));
-  }, []);
+  }, [dismissible]);
 
   if (!isAuthEnabled || !isLoaded) return null;
 
   if (!isSignedIn) {
-    if (hintDismissed) return null;
+    if (dismissible && hintDismissed) return null;
+    if (!dismissible) {
+      return (
+        <View style={styles.persistentCard}>
+          <View style={styles.persistentIcon}>
+            <Feather name="cloud" size={16} color={COLORS.primary} />
+          </View>
+          <View style={styles.persistentCopy}>
+            <Text style={styles.persistentTitle}>Log in to save your progress</Text>
+            <Text style={styles.persistentSub}>
+              Your ticks stay on this device until you log in.
+            </Text>
+          </View>
+          <TouchableOpacity
+            style={styles.persistentBtn}
+            activeOpacity={0.7}
+            onPress={() => navigation.navigate('SignIn', { reason: 'progress' })}
+            accessibilityRole="button"
+            accessibilityLabel="Log in to save your progress"
+          >
+            <Text style={styles.persistentBtnText}>Log in</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
     return (
       <View style={styles.row}>
         <View style={styles.chip}>
           <TouchableOpacity
             style={styles.chipMain}
             activeOpacity={0.7}
-            onPress={() => navigation.navigate('SignIn', { reason: 'vote' })}
+            onPress={() => navigation.navigate('SignIn', { reason: 'progress' })}
           >
             <Feather name="cloud" size={13} color={COLORS.primary} />
-            <Text style={styles.hintText}>Sign in to back up your progress</Text>
+            <Text style={styles.hintText}>Log in to save your progress</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.dismiss}
@@ -96,4 +126,37 @@ const styles = StyleSheet.create({
     borderLeftColor: COLORS.border,
   },
   hintText: { fontFamily: FONTS.bodyMedium, fontSize: 12.5, color: COLORS.primary },
+  // Persistent Study-tab variant: full-width card, no dismiss control.
+  persistentCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: COLORS.card,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    marginBottom: 12,
+  },
+  persistentIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 9,
+    backgroundColor: COLORS.primaryLight,
+    borderWidth: 1,
+    borderColor: COLORS.primaryBorder,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  persistentCopy: { flex: 1, minWidth: 0 },
+  persistentTitle: { fontFamily: FONTS.bodyBold, fontSize: 13.5, color: COLORS.text },
+  persistentSub: { fontFamily: FONTS.bodyMedium, fontSize: 11.5, color: COLORS.textMuted, marginTop: 1 },
+  persistentBtn: {
+    backgroundColor: COLORS.primary,
+    borderRadius: 9,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+  },
+  persistentBtnText: { fontFamily: FONTS.bodyBold, fontSize: 13, color: '#ffffff' },
 });

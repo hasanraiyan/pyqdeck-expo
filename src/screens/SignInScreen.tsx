@@ -7,9 +7,10 @@ import { COLORS } from '../theme/colors';
 import { rf } from '../utils/responsive';
 
 /**
- * Sign-in sheet. Reached only from Settings or from an AI entry point - no
- * other screen in the app routes here, because nothing else requires an
- * account.
+ * Sign-in sheet. Reached from Settings, from an AI entry point, from a vote /
+ * report gate, or from the Study tab's persistent "Log in to save your
+ * progress" card - no other screen in the app routes here, because nothing
+ * else requires an account.
  *
  * Uses Clerk's native AuthView rather than a hand-rolled form: the pyqdeck
  * Clerk instance has Google, GitHub, email-code and passkeys all enabled
@@ -33,7 +34,9 @@ export const SignInScreen = ({ navigation, route }: any) => {
         ? 'Sign in to report a solution'
         : reason === 'ai'
           ? 'Sign in to use Ask AI'
-          : null;
+          : reason === 'progress'
+            ? 'Log in to save your progress'
+            : null;
 
   // AuthView has no onSuccess callback - the documented pattern is to watch
   // auth state and close once the session lands.

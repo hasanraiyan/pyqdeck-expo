@@ -278,7 +278,7 @@ export const SyllabusOverviewScreen = () => {
           />
         }
       >
-        <SyncStatusBar />
+        <SyncStatusBar dismissible={false} />
         {semester.subjects.length > 0 && renderSummary()}
 
         {semester.subjects.length === 0 ? (
