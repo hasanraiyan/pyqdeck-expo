@@ -387,7 +387,7 @@ export const QuestionListScreen = () => {
                   accessibilityRole="button"
                   accessibilityLabel={`Manage original paper for ${selectedYear}`}
                 >
-                  <Feather name="settings" size={14} color={COLORS.primary} />
+                  <Feather name={hasServerPaper ? 'layers' : 'upload'} size={14} color={COLORS.primary} />
                   <Text style={styles.manageBtnText}>
                     {hasServerPaper ? 'Manage paper' : 'Upload paper'}
                   </Text>
@@ -446,38 +446,27 @@ export const QuestionListScreen = () => {
       {/* Paper manage sheet (admins): upload / replace / remove scans. */}
       <Modal
         visible={manageOpen}
-        transparent
-        animationType={dlg.animationType}
+        animationType="slide"
+        presentationStyle="fullScreen"
+        statusBarTranslucent
         onRequestClose={() => setManageOpen(false)}
       >
-        <TouchableWithoutFeedback onPress={() => setManageOpen(false)}>
-          <View style={[styles.modalOverlay, dlg.overlay]}>
-            <TouchableWithoutFeedback>
-              <View
-                style={[
-                  styles.modalContent,
-                  { paddingBottom: insets.bottom + 16, maxWidth: readMaxWidth, width: '100%', alignSelf: 'center' },
-                  dlg.sheet,
-                ]}
-              >
-                {selectedYear != null && (
-                  <ManagePaperSheet
-                    subjectId={subjectId}
-                    subjectName={subjectName}
-                    year={selectedYear}
-                    status={paperStatusQ.data}
-                    onChanged={() => {
-                      void queryClient.invalidateQueries({
-                        queryKey: qk.paperStatus(subjectId, selectedYear),
-                      });
-                    }}
-                    onClose={() => setManageOpen(false)}
-                  />
-                )}
-              </View>
-            </TouchableWithoutFeedback>
-          </View>
-        </TouchableWithoutFeedback>
+        <View style={{ flex: 1, paddingTop: insets.top, paddingBottom: insets.bottom, backgroundColor: COLORS.background }}>
+          {selectedYear != null && (
+            <ManagePaperSheet
+              subjectId={subjectId}
+              subjectName={subjectName}
+              year={selectedYear}
+              status={paperStatusQ.data}
+              onChanged={() => {
+                void queryClient.invalidateQueries({
+                  queryKey: qk.paperStatus(subjectId, selectedYear),
+                });
+              }}
+              onClose={() => setManageOpen(false)}
+            />
+          )}
+        </View>
       </Modal>
 
       {/* Filter Bottom Sheet Modal */}
