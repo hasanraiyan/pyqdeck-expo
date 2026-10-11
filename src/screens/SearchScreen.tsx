@@ -38,6 +38,7 @@ import { rf, verticalScale, useResponsive } from '../utils/responsive';
 import { normalizeQuery, consumeSearchToken, shouldDebounceTap, applyServerRetryAfter, isLowText } from '../utils/searchGuard';
 import { ScreenContainer } from '../components/ScreenContainer';
 import { scanTextFromImage, ScanSource } from '../utils/scanText';
+import { HighlightedText } from '../components/HighlightedText';
 
 const RECENT_SEARCHES_KEY = 'pyq_recent_searches';
 
@@ -119,12 +120,42 @@ export const SearchScreen = () => {
     };
   }, [onlineEmpty, submitted]);
 
+  // The subject and note searches match the typed text literally, so a long
+  // scanned question finds none even when its questions match. Fill those gaps
+  // from what did match: the subjects of the top questions, and the notes the
+  // AI overview cites.
+  const derivedSubjects: any[] = useMemo(() => {
+    const questions: any[] = Array.isArray(qsQ.data?.questions) ? qsQ.data.questions : [];
+    const counts = new Map<string, { subject: any; n: number }>();
+    for (const qu of questions) {
+      const sub = qu?.subject;
+      if (!sub?.id) continue;
+      const hit = counts.get(sub.id);
+      if (hit) hit.n += 1;
+      else counts.set(sub.id, { subject: sub, n: 1 });
+    }
+    return [...counts.values()]
+      .sort((a, b) => b.n - a.n)
+      .slice(0, 3)
+      .map(({ subject }) => ({
+        id: subject.id,
+        name: subject.name,
+        code: subject.code,
+        semester: {
+          id: subject.semesterId ?? '',
+          number: Number(String(subject.semesterId ?? '').match(/\d+/)?.[0]) || undefined,
+        },
+      }));
+  }, [qsQ.data]);
+
   const subjectResults: any[] = useMemo(
     () =>
       onlineEmpty
         ? (localResults?.subjects ?? []).map((s: any) => ({ ...s, semester: { id: '', number: 0 } }))
-        : onlineSubjects,
-    [onlineEmpty, localResults, onlineSubjects]
+        : onlineSubjects.length > 0
+          ? onlineSubjects
+          : derivedSubjects,
+    [onlineEmpty, localResults, onlineSubjects, derivedSubjects]
   );
   const questionResults: any[] = useMemo(
     () =>
@@ -478,18 +509,62 @@ export const SearchScreen = () => {
   // Only subjects from the server; with none loaded the section is simply hidden.
   const activeSuggestions = dynamicSuggestions;
 
-  const totalResultsCount = subjectResults.length + questionResults.length + noteResults.length;
+  const aiNoteItems: AiOverviewReference[] = useMemo(() => {
+    const seen = new Set(noteResults.map((n) => `${n.subjectSlug}/${n.topicId}`));
+    const out: AiOverviewReference[] = [];
+    for (const r of aiOverview?.references ?? []) {
+      const nav = r.navigate;
+      if (nav?.target !== 'topic' || !nav.subjectSlug || !nav.topicId) continue;
+      const key = `${nav.subjectSlug}/${nav.topicId}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push(r);
+    }
+    return out;
+    // noteResults is derived from notesQ.data
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [aiOverview, notesQ.data]);
+  const noteCount = noteResults.length + aiNoteItems.length;
+
+  const totalResultsCount = subjectResults.length + questionResults.length + noteCount;
 
   const noResults =
     hasSearched &&
     !loading &&
     !validationError &&
     cooldownSec === 0 &&
+    !aiLoading &&
     totalResultsCount === 0;
 
   // Only a cooldown locks the input. A search in flight never does: typing a
   // new query and submitting simply cancels the old one.
   const isInputDisabled = cooldownSec > 0;
+
+  // Not `q`: the question list below shadows that name with each result.
+  const hlQuery = submitted ?? '';
+
+  // A note the AI overview cited: no module/subject name on hand, so it opens
+  // by bare ids like any AI source (TopicNotes fills in the rest).
+  const renderAiNoteCard = (ref: AiOverviewReference) => (
+    <TouchableOpacity
+      key={`ai-${ref.index}`}
+      style={[styles.noteResultCard, compact && styles.cardCompact]}
+      activeOpacity={0.7}
+      onPress={() => openAiReference(ref)}
+    >
+      <Text style={styles.resultSubjectName} numberOfLines={1}>
+        Suggested by AI overview
+      </Text>
+      <HighlightedText style={styles.noteTitle} text={ref.title} query={hlQuery} />
+      <View style={styles.noteFooter}>
+        <View style={{ flex: 1 }} />
+        <View style={styles.readNoteLink}>
+          <Text style={styles.readNoteLinkText}>Read Note</Text>
+          <Feather name="arrow-right" size={12} color={COLORS.primary} style={{ marginLeft: 4 }} />
+        </View>
+      </View>
+    </TouchableOpacity>
+  );
 
   const renderNoteCard = (note: TopicNoteSearchResultItem) => (
     <TouchableOpacity
@@ -523,12 +598,15 @@ export const SearchScreen = () => {
         {note.moduleNumber ? ` · Module ${note.moduleNumber}` : ''}
       </Text>
 
-      <Text style={styles.noteTitle}>{note.topicTitle}</Text>
+      <HighlightedText style={styles.noteTitle} text={note.topicTitle} query={hlQuery} />
 
       {note.snippet ? (
-        <Text style={styles.noteSnippet} numberOfLines={2}>
-          {note.snippet}
-        </Text>
+        <HighlightedText
+          style={styles.noteSnippet}
+          numberOfLines={2}
+          text={note.snippet}
+          query={hlQuery}
+        />
       ) : null}
 
       <View style={styles.noteFooter}>
@@ -733,7 +811,7 @@ export const SearchScreen = () => {
                     style={{ marginRight: 5 }}
                   />
                   <Text style={[styles.filterTabPillText, activeTab === 'notes' && styles.filterTabPillTextActive]}>
-                    Notes ({noteResults.length})
+                    Notes ({noteCount})
                   </Text>
                 </TouchableOpacity>
 
@@ -879,16 +957,16 @@ export const SearchScreen = () => {
                     }}
                   >
                     <View style={styles.subjectLeft}>
-                      <Text style={styles.subjectName}>{item.name}</Text>
+                      <HighlightedText style={styles.subjectName} text={item.name ?? ''} query={hlQuery} />
                       <Text style={styles.subjectSub}>
-                        Semester {item.semester?.number}
+                        {item.semester?.number ? `Semester ${item.semester.number}` : 'Subject'}
                         {item.code ? ` · ${item.code}` : ''}
                       </Text>
                     </View>
                     <View style={styles.subjectRight}>
-                      <Text style={styles.questionCountText}>
-                        {item.questionCount}q
-                      </Text>
+                      {typeof item.questionCount === 'number' ? (
+                        <Text style={styles.questionCountText}>{item.questionCount}q</Text>
+                      ) : null}
                       <Feather name="chevron-right" size={16} color={COLORS.textMuted} />
                     </View>
                   </TouchableOpacity>
@@ -929,9 +1007,12 @@ export const SearchScreen = () => {
                         ? ` · ${q.score.toFixed(3)} match`
                         : ''}
                     </Text>
-                    <Text style={styles.resultTextPreview} numberOfLines={2}>
-                      {q.textPreview || q.text}
-                    </Text>
+                    <HighlightedText
+                      style={styles.resultTextPreview}
+                      numberOfLines={2}
+                      text={q.textPreview || q.text || ''}
+                      query={hlQuery}
+                    />
                     <ScrollView
                       horizontal
                       showsHorizontalScrollIndicator={false}
@@ -966,13 +1047,13 @@ export const SearchScreen = () => {
           )}
 
           {/* Study Notes Result Section */}
-          {!loading && (activeTab === 'all' || activeTab === 'notes') && noteResults.length > 0 && (
+          {!loading && (activeTab === 'all' || activeTab === 'notes') && noteCount > 0 && (
             <View style={styles.section}>
               <View style={styles.sectionHeaderRow}>
                 <Text style={styles.sectionHeading}>
-                  STUDY NOTES ({noteResults.length})
+                  STUDY NOTES ({noteCount})
                 </Text>
-                {activeTab === 'all' && noteResults.length > 3 && (
+                {activeTab === 'all' && noteCount > 3 && (
                   <TouchableOpacity
                     onPress={() => {
                       Haptics.selectionAsync().catch(() => {});
@@ -980,20 +1061,24 @@ export const SearchScreen = () => {
                     }}
                     hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                   >
-                    <Text style={styles.seeAllLink}>View all {noteResults.length} →</Text>
+                    <Text style={styles.seeAllLink}>View all {noteCount} →</Text>
                   </TouchableOpacity>
                 )}
               </View>
               <View style={{ gap: 10 }}>
-                {(activeTab === 'all' ? noteResults.slice(0, 3) : noteResults).map((note) =>
-                  renderNoteCard(note)
-                )}
+                {(() => {
+                  const cards = [
+                    ...noteResults.map((note) => renderNoteCard(note)),
+                    ...aiNoteItems.map((ref) => renderAiNoteCard(ref)),
+                  ];
+                  return activeTab === 'all' ? cards.slice(0, 3) : cards;
+                })()}
               </View>
             </View>
           )}
 
           {/* Empty Notes Tab */}
-          {!loading && activeTab === 'notes' && noteResults.length === 0 && (
+          {!loading && activeTab === 'notes' && noteCount === 0 && (
             <View style={styles.tabEmptyContainer}>
               <Feather name="book-open" size={24} color={COLORS.textSubtle} style={{ marginBottom: 8 }} />
               <Text style={styles.tabEmptyTitle}>No matching study notes</Text>
