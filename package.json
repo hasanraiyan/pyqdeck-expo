@@ -1,6 +1,6 @@
 {
   "name": "pyqdeck-expo",
-  "version": "1.10.3",
+  "version": "1.10.4",
   "main": "index.ts",
   "dependencies": {
     "@clerk/expo": "^4.6.1",
