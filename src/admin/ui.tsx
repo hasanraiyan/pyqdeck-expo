@@ -87,11 +87,13 @@ export const Section = ({
   </View>
 );
 
-/** A card with an optional title; kept for compatibility with older callers. */
-export const Card = ({ title, children }: { title?: string; children: React.ReactNode }) => (
-  <Section title={title}>
-    <View style={s.card}>{children}</View>
-  </Section>
+/**
+ * A plain card box. Place it inside a Section's body - it carries no page
+ * margin or side padding of its own, so a `<Section><Card>` nest keeps the
+ * single 16pt page inset and one title-to-card gap instead of doubling both.
+ */
+export const Card = ({ children }: { children: React.ReactNode }) => (
+  <View style={s.card}>{children}</View>
 );
 
 /** Big number with a label: the building block of the dashboard. */
