@@ -36,13 +36,21 @@ export async function readPendingSettings(): Promise<Set<SettingName>> {
   }
 }
 
-export async function markSettingPending(name: SettingName): Promise<void> {
+/**
+ * `silent` marks it without asking for a sync of its own: the sync engine uses
+ * that when it re-marks a setting INSIDE a round (it schedules its own, limited,
+ * follow-up), so marking can never restart sync by itself in a loop.
+ */
+export async function markSettingPending(
+  name: SettingName,
+  opts: { silent?: boolean } = {}
+): Promise<void> {
   try {
     const pending = await readPendingSettings();
     pending.add(name);
     await AsyncStorage.setItem(PENDING_KEY, JSON.stringify([...pending]));
   } catch {}
-  onChange?.();
+  if (!opts.silent) onChange?.();
 }
 
 export async function clearPendingSettings(names: SettingName[]): Promise<void> {

@@ -9,6 +9,7 @@ import {
   type RecentNote,
   type RecentStudy,
 } from '../utils/recentStudy';
+import { decideSettingAction } from './settingsLogic';
 import {
   clearPendingSettings,
   markSettingPending,
@@ -88,6 +89,13 @@ const HANDLERS: { name: AccountSettingName; handler: Handler<any> }[] = [
   { name: 'syllabusBranch', handler: syllabusBranch },
 ];
 
+// Values this phone already tried to push because the account lacked them, so a
+// setting the server does not keep is adopted once, not forever (settingsLogic.ts).
+const adoptTried = new Map<AccountSettingName, unknown>();
+
+/** Forget what was tried (sign-out / wipe / different account). */
+export const resetSettingsSyncMemory = (): void => adoptTried.clear();
+
 export interface AuxSent {
   /** The `settings` and `recents` sections to put in the request. */
   request: { settings: { changes?: Partial<AccountSettings> }; recents: RecentsPayload };
@@ -142,23 +150,44 @@ export async function applyAuxResponse(
       const local = await handler.readLocal().catch(() => null);
       const remoteValue = remote[name];
       const remoteSet = handler.isValid(remoteValue);
+      const action = decideSettingAction({
+        wasSent: name in sent.sentChanges,
+        sentValue: sent.sentChanges[name],
+        local,
+        stillPending: stillPending.has(name),
+        remoteSet,
+        remoteValue,
+        accountWins: sent.accountWins,
+        alreadyTriedAdopt: adoptTried.has(name) && adoptTried.get(name) === local,
+      });
+      if (remoteSet) adoptTried.delete(name); // the account has it now
 
-      if (name in sent.sentChanges) {
-        // Pushed. Settled only if the student did not change it again meanwhile.
-        if (local === sent.sentChanges[name]) await clearPendingSettings([name]);
-        else needsAnotherRound = true;
-      } else if (stillPending.has(name)) {
-        needsAnotherRound = true; // changed mid-flight: next round pushes it
-      } else if (remoteSet && remoteValue !== local) {
-        await handler.writeLocal(remoteValue).catch(() => {});
-        if (sent.accountWins) await clearPendingSettings([name]);
-        notifySettingsApplied();
-      } else if (remoteSet && sent.accountWins) {
-        await clearPendingSettings([name]); // same value both sides: nothing pending
-      } else if (!remoteSet && local !== null) {
-        // The account never chose, this device did: adopt it on the next round.
-        await markSettingPending(name);
-        needsAnotherRound = true;
+      switch (action) {
+        case 'settled':
+          // Pushed and the student did not change it again meanwhile.
+          await clearPendingSettings([name]);
+          break;
+        case 'again':
+          needsAnotherRound = true; // changed again, or mid-flight: next round pushes it
+          break;
+        case 'adopt-remote':
+          await handler.writeLocal(remoteValue).catch(() => {});
+          if (sent.accountWins) await clearPendingSettings([name]);
+          notifySettingsApplied();
+          break;
+        case 'clear-same':
+          await clearPendingSettings([name]); // same value both sides: nothing pending
+          break;
+        case 'adopt-local':
+          // The account never chose, this device did: push it on the next round.
+          // Once per value: if the account STILL lacks it afterwards (a server that
+          // does not keep it) we must not keep re-adopting it forever.
+          adoptTried.set(name, local);
+          await markSettingPending(name, { silent: true });
+          needsAnotherRound = true;
+          break;
+        default:
+          break;
       }
     }
   }

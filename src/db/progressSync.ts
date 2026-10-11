@@ -23,7 +23,13 @@ import {
   type RemoteItem,
 } from './progressLogic';
 import { OWNER_KEY } from './storageRegistry';
-import { applyAuxResponse, buildAuxRequest, type AuxSent } from './settingsSync';
+import {
+  applyAuxResponse,
+  buildAuxRequest,
+  resetSettingsSyncMemory,
+  type AuxSent,
+} from './settingsSync';
+import { nextFollowUps } from './settingsLogic';
 import { readPendingSettings } from './settingsPending';
 import { setSettingChangeHandler } from './settingsPending';
 import { registerWipeHook, wipeUserData } from '../auth/wipeUserData';
@@ -47,6 +53,8 @@ const BATCH_SIZE = 200;
 const DEBOUNCE_MS = 2_000;
 const MAX_WAIT_MS = 30_000;
 let firstQueuedAt = 0;
+// Follow-up rounds in a row since the last real trigger (see requestSync).
+let followUps = 0;
 const TAB_OPEN_MIN_GAP_MS = 60_000;
 const AUX_SYNC_MIN_GAP_MS = 60_000;
 let lastAuxSyncAt = 0;
@@ -112,11 +120,17 @@ const clearTimer = () => {
  * never past MAX_WAIT_MS after the first one, so a steady stream of changes
  * still goes out regularly. `immediate` flushes now.
  */
-export function requestSync(opts: { immediate?: boolean; delayMs?: number } = {}): void {
+export function requestSync(
+  opts: { immediate?: boolean; delayMs?: number; followUp?: boolean } = {}
+): void {
   if (!getAppConfigNow().flags.syncEnabled) return; // admin kill switch
   if (!canSync({ signedIn: session.signedIn, authEnabled: isAuthEnabled, online: true })) {
     return;
   }
+  // Anything but the engine's own "one more round" is a real event (a tick, a
+  // setting change, the app opening, the network returning): it starts a fresh
+  // chain of follow-ups.
+  if (!opts.followUp) followUps = 0;
   const now = Date.now();
   if (timer === null) firstQueuedAt = now;
   clearTimer();
@@ -288,8 +302,12 @@ async function runRound(): Promise<void> {
   setStatus({ lastSyncAt: now });
 
   // A setting or recent changed while the request was in flight, or an account
-  // value needs adopting: one more (coalesced) round settles it.
-  if (needsAnotherRound) requestSync();
+  // value needs adopting: one more (coalesced) round settles it. Never more than
+  // MAX_FOLLOW_UPS in a row: if something keeps asking, stop and wait for a real
+  // event instead of syncing every few seconds while the phone is idle.
+  const next = nextFollowUps(followUps, needsAnotherRound);
+  followUps = next.followUps;
+  if (next.schedule) requestSync({ followUp: true });
 }
 
 /** Runs one sync round (push then pull). Safe to call at any time. */
@@ -410,6 +428,8 @@ setSettingChangeHandler(() => requestSync({ immediate: true }));
 // Everything in memory that mirrors the removed data is reset with the wipe.
 registerWipeHook(() => {
   clearTimer();
+  followUps = 0;
+  resetSettingsSyncMemory();
   failures = 0;
   pausedForAuth = false;
   quotaBlocked = false;
