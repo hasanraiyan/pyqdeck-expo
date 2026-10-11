@@ -405,6 +405,22 @@ export async function syncFromBackground(): Promise<string> {
   return status.state === 'idle' ? 'synced' : `ended in state "${status.state}"`;
 }
 
+/**
+ * Re-reads everything from the account: forgets the sync cursor so the next
+ * round is a full pull and merge (the same path as a first sign-in on a phone),
+ * then syncs now. Anything the account has that this phone lost comes back; what
+ * the phone has that the account lacks is pushed. Safe to call any time while
+ * signed in - used after "Clear cached data" as a belt-and-braces refresh, so a
+ * signed-in student never has to sign out and in again to get their progress back.
+ */
+export async function refreshFromCloud(): Promise<void> {
+  if (!session.signedIn) return;
+  try {
+    await AsyncStorage.removeItem(CURSOR_KEY);
+  } catch {}
+  requestSync({ immediate: true });
+}
+
 /** The sign-in sheet or token refresh resolved: allow syncing again. */
 export function resumeAfterAuth(): void {
   pausedForAuth = false;

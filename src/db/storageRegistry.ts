@@ -95,3 +95,18 @@ export function planWipe(allKeys: readonly string[]): WipePlan {
   }
   return { remove, unregistered };
 }
+
+/**
+ * What "Clear cached data" may remove: ONLY downloaded content (registry
+ * category `cache`, e.g. the persisted React Query cache) plus the search
+ * history, which that button has always cleared. It is an allow-list on purpose:
+ * progress, the sync outbox and cursor, the owner marker, account settings,
+ * recents and every device preference are never in it, whatever their key looks
+ * like. (The old version removed every key starting `pyq_`, which also took the
+ * `pyq_cache_migrated_rq` housekeeping flag with it.)
+ */
+const CLEARABLE_EXTRA = new Set(['pyq_recent_searches']);
+
+export function planCacheClear(allKeys: readonly string[]): string[] {
+  return allKeys.filter((k) => categoryOf(k) === 'cache' || CLEARABLE_EXTRA.has(k));
+}

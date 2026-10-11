@@ -195,7 +195,8 @@ Use your admin MCP client. Changes reach the phone on its next launch or foregro
 ## 20. Regression sweep
 
 - [ ] Papers, question detail, solutions, Ask AI, search, notes, settings still behave as before.
-- [ ] "Clear cached data" in Settings clears the cache but **keeps** your progress.
+- [ ] "Clear cached data" in Settings clears downloaded content but **keeps** progress, Jump Back In, account settings, the sync state and preferences: tick a few topics, clear the cache, open the Study tab (online): the ticks are still there. Signed in: they are also still there after a force-stop and reopen, and nothing needs a sign-out and sign-in.
+- [ ] Signed in, clear the cache **offline**: ticks show again as soon as the syllabus can re-download (and sync resumes when online).
 - [ ] No crash on launch (the R8 crash from build 44 must not return).
 - [ ] No new errors in Sentry for the session.
 
