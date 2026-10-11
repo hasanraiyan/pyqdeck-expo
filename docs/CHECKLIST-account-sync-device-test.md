@@ -26,6 +26,7 @@ Tester: ____________  Device/Android: ____________  Build (versionCode): ______ 
 - [x] Study tab: tick 3 topics in a subject. Ticks show instantly.
 - [ ] Force-stop the app and reopen: the 3 ticks are still there.
 - [ ] A small pill "Sign in to back up your progress  |  x" shows on the Study tab, with the x right next to the text (even padding). Tap **x**: it disappears and stays gone after restarting the app.
+- [ ] The same pill also shows on **Home**, in the slot where the admin banner goes, when there is no banner (or it was dismissed). While a banner is active it shows instead of the pill. Signed in: neither the pill nor an empty gap shows.
 - [ ] Turn on airplane mode: everything above still works. No error popups.
 
 ## 2. First sign-in merge (account A)

@@ -25,6 +25,7 @@ import { HeroArt } from '../components/HeroArt';
 import { ResponsiveGrid } from '../components/ResponsiveGrid';
 import { yearNumberOf, YEAR_NUMBERS } from '../utils/year';
 import { AppBanner } from '../components/AppBanner';
+import { SyncStatusBar } from '../components/SyncStatusBar';
 import {
   getRecentStudies,
   RecentStudy,
@@ -240,8 +241,9 @@ export const HomeScreen = () => {
         }
       >
         <ScreenContainer variant="wide">
-          {/* Admin notice (maintenance, news); hidden when empty or dismissed */}
-          <AppBanner />
+          {/* Admin notice (maintenance, news). With no notice to show, the slot carries
+              the signed-out "Sign in to back up your progress" nudge instead. */}
+          <AppBanner fallback={<SyncStatusBar />} />
 
           {/* Hero Section */}
           <View style={[styles.hero, styles.heroRow, !heroTwoCol && styles.heroRowPhone]}>
