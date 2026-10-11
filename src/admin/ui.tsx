@@ -12,10 +12,22 @@ import {
   type RefreshControlProps,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Feather } from '@expo/vector-icons';
 import { COLORS, FONTS } from '../theme/colors';
 
-// Small shared pieces for the admin screens, kept plain on purpose: these are
-// working tools, not marketing screens.
+// Shared pieces for the admin screens. One visual language everywhere: a page
+// header, titled sections, stat tiles, status pills, and the same empty, loading
+// and error states. Colours and fonts come from the app theme so the admin area
+// reads as part of PyQdeck.
+
+const DANGER = '#b91c1c';
+const DANGER_BG = '#fef2f2';
+const DANGER_BORDER = '#fecaca';
+const WARN = '#92400e';
+const WARN_BG = '#fef3c7';
+const WARN_BORDER = '#fcd34d';
+const OK = COLORS.success;
+const OK_BG = 'rgba(22, 163, 74, 0.1)';
 
 export const AdminScroll = ({
   children,
@@ -30,37 +42,150 @@ export const AdminScroll = ({
       style={s.screen}
       refreshControl={refreshControl}
       keyboardShouldPersistTaps="handled"
-      contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 32, gap: 12 }}
+      contentContainerStyle={{ paddingBottom: insets.bottom + 40 }}
     >
       {children}
     </ScrollView>
   );
 };
 
+/** Top of every admin page: a kicker, a title, and an optional one-line summary. */
+export const PageHeader = ({
+  kicker = 'Admin',
+  title,
+  summary,
+}: {
+  kicker?: string;
+  title: string;
+  summary?: string;
+}) => (
+  <View style={s.header}>
+    <Text style={s.kicker}>{kicker.toUpperCase()}</Text>
+    <Text style={s.title}>{title}</Text>
+    {summary ? <Text style={s.summary}>{summary}</Text> : null}
+  </View>
+);
+
+/** A titled group of content with consistent spacing. */
+export const Section = ({
+  title,
+  action,
+  children,
+}: {
+  title?: string;
+  action?: React.ReactNode;
+  children: React.ReactNode;
+}) => (
+  <View style={s.section}>
+    {title || action ? (
+      <View style={s.sectionHead}>
+        {title ? <Text style={s.sectionTitle}>{title}</Text> : <View />}
+        {action}
+      </View>
+    ) : null}
+    <View style={s.sectionBody}>{children}</View>
+  </View>
+);
+
+/** A card with an optional title; kept for compatibility with older callers. */
 export const Card = ({ title, children }: { title?: string; children: React.ReactNode }) => (
-  <View style={s.card}>
-    {title ? <Text style={s.cardTitle}>{title}</Text> : null}
-    {children}
+  <Section title={title}>
+    <View style={s.card}>{children}</View>
+  </Section>
+);
+
+/** Big number with a label: the building block of the dashboard. */
+export const StatTile = ({
+  label,
+  value,
+  hint,
+  tone = 'neutral',
+}: {
+  label: string;
+  value: React.ReactNode;
+  hint?: string;
+  tone?: 'neutral' | 'ok' | 'danger';
+}) => (
+  <View style={[s.tile, tone === 'danger' && s.tileDanger]}>
+    <Text style={s.tileLabel}>{label}</Text>
+    <Text style={[s.tileValue, tone === 'danger' && { color: DANGER }]}>{value}</Text>
+    {hint ? <Text style={s.tileHint}>{hint}</Text> : null}
   </View>
 );
 
-export const Line = ({ label, value }: { label: string; value: React.ReactNode }) => (
-  <View style={s.line}>
-    <Text style={s.lineLabel}>{label}</Text>
-    <Text style={s.lineValue}>{value === null || value === undefined ? '-' : String(value)}</Text>
+export const TileGrid = ({ children }: { children: React.ReactNode }) => (
+  <View style={s.grid}>{children}</View>
+);
+
+/** Small coloured status label. */
+export const Pill = ({
+  label,
+  tone = 'neutral',
+  icon,
+}: {
+  label: string;
+  tone?: 'neutral' | 'ok' | 'warn' | 'danger' | 'primary';
+  icon?: React.ComponentProps<typeof Feather>['name'];
+}) => {
+  const palette = {
+    neutral: { bg: COLORS.cardSecondary, fg: COLORS.textMuted, bd: COLORS.border },
+    ok: { bg: OK_BG, fg: '#15803d', bd: 'rgba(22,163,74,0.3)' },
+    warn: { bg: WARN_BG, fg: WARN, bd: WARN_BORDER },
+    danger: { bg: DANGER_BG, fg: DANGER, bd: DANGER_BORDER },
+    primary: { bg: COLORS.primaryLight, fg: COLORS.primary, bd: COLORS.primaryBorder },
+  }[tone];
+  return (
+    <View style={[s.pill, { backgroundColor: palette.bg, borderColor: palette.bd }]}>
+      {icon ? <Feather name={icon} size={11} color={palette.fg} /> : null}
+      <Text style={[s.pillText, { color: palette.fg }]}>{label}</Text>
+    </View>
+  );
+};
+
+/** A label and value on one row, for facts about a record. */
+export const Fact = ({ label, value }: { label: string; value: React.ReactNode }) => (
+  <View style={s.fact}>
+    <Text style={s.factLabel}>{label}</Text>
+    <Text style={s.factValue}>
+      {value === null || value === undefined || value === '' ? '-' : String(value)}
+    </Text>
   </View>
 );
 
-export const Field = ({ label, ...props }: { label: string } & TextInputProps) => (
-  <View style={{ gap: 4 }}>
+export const Line = Fact;
+
+/** Empty-result message with an icon, so an empty list never looks broken. */
+export const EmptyState = ({
+  icon = 'inbox',
+  title,
+  body,
+}: {
+  icon?: React.ComponentProps<typeof Feather>['name'];
+  title: string;
+  body?: string;
+}) => (
+  <View style={s.empty}>
+    <Feather name={icon} size={22} color={COLORS.textSubtle} />
+    <Text style={s.emptyTitle}>{title}</Text>
+    {body ? <Text style={s.emptyBody}>{body}</Text> : null}
+  </View>
+);
+
+export const Field = ({
+  label,
+  hint,
+  ...props
+}: { label: string; hint?: string } & TextInputProps) => (
+  <View style={{ gap: 6 }}>
     <Text style={s.fieldLabel}>{label}</Text>
     <TextInput
       placeholderTextColor={COLORS.textSubtle}
       autoCapitalize="none"
       autoCorrect={false}
       {...props}
-      style={[s.input, props.multiline && { minHeight: 70, textAlignVertical: 'top' }, props.style]}
+      style={[s.input, props.multiline && { minHeight: 84, textAlignVertical: 'top' }, props.style]}
     />
+    {hint ? <Text style={s.hint}>{hint}</Text> : null}
   </View>
 );
 
@@ -70,31 +195,40 @@ export const Btn = ({
   kind = 'primary',
   disabled,
   busy,
+  icon,
 }: {
   label: string;
   onPress: () => void;
-  kind?: 'primary' | 'secondary' | 'danger';
+  kind?: 'primary' | 'secondary' | 'danger' | 'ghost';
   disabled?: boolean;
   busy?: boolean;
-}) => (
-  <TouchableOpacity
-    activeOpacity={0.75}
-    disabled={disabled || busy}
-    onPress={onPress}
-    style={[
-      s.btn,
-      kind === 'secondary' && s.btnSecondary,
-      kind === 'danger' && s.btnDanger,
-      (disabled || busy) && { opacity: 0.45 },
-    ]}
-  >
-    {busy ? (
-      <ActivityIndicator color={kind === 'secondary' ? COLORS.primary : '#fff'} />
-    ) : (
-      <Text style={[s.btnText, kind === 'secondary' && { color: COLORS.primary }]}>{label}</Text>
-    )}
-  </TouchableOpacity>
-);
+  icon?: React.ComponentProps<typeof Feather>['name'];
+}) => {
+  const fg = kind === 'primary' || kind === 'danger' ? '#fff' : kind === 'ghost' ? COLORS.textMuted : COLORS.primary;
+  return (
+    <TouchableOpacity
+      activeOpacity={0.75}
+      disabled={disabled || busy}
+      onPress={onPress}
+      style={[
+        s.btn,
+        kind === 'secondary' && s.btnSecondary,
+        kind === 'danger' && s.btnDanger,
+        kind === 'ghost' && s.btnGhost,
+        (disabled || busy) && { opacity: 0.45 },
+      ]}
+    >
+      {busy ? (
+        <ActivityIndicator color={fg} />
+      ) : (
+        <View style={s.btnInner}>
+          {icon ? <Feather name={icon} size={15} color={fg} /> : null}
+          <Text style={[s.btnText, { color: fg }]}>{label}</Text>
+        </View>
+      )}
+    </TouchableOpacity>
+  );
+};
 
 export const Chip = ({
   label,
@@ -115,19 +249,22 @@ export const ToggleRow = ({
   hint,
   value,
   onChange,
+  disabled,
 }: {
   label: string;
   hint?: string;
   value: boolean;
   onChange: (v: boolean) => void;
+  disabled?: boolean;
 }) => (
   <View style={s.toggleRow}>
-    <View style={{ flex: 1 }}>
+    <View style={{ flex: 1, gap: 2 }}>
       <Text style={s.toggleLabel}>{label}</Text>
       {hint ? <Text style={s.hint}>{hint}</Text> : null}
     </View>
     <Switch
       value={value}
+      disabled={disabled}
       onValueChange={onChange}
       trackColor={{ true: COLORS.primary, false: COLORS.border }}
       thumbColor={COLORS.card}
@@ -139,87 +276,228 @@ export const Hint = ({ children }: { children: React.ReactNode }) => (
   <Text style={s.hint}>{children}</Text>
 );
 
+/** A notice box: warning (amber), danger (red) or info (neutral). */
+export const Notice = ({
+  tone = 'info',
+  title,
+  children,
+  onRetry,
+}: {
+  tone?: 'info' | 'warn' | 'danger';
+  title?: string;
+  children?: React.ReactNode;
+  onRetry?: () => void;
+}) => {
+  const c = {
+    info: { bg: COLORS.cardSecondary, bd: COLORS.border, fg: COLORS.text, icon: 'info' as const },
+    warn: { bg: WARN_BG, bd: WARN_BORDER, fg: WARN, icon: 'alert-triangle' as const },
+    danger: { bg: DANGER_BG, bd: DANGER_BORDER, fg: DANGER, icon: 'alert-circle' as const },
+  }[tone];
+  return (
+    <View style={[s.notice, { backgroundColor: c.bg, borderColor: c.bd }]}>
+      <Feather name={c.icon} size={16} color={c.fg} style={{ marginTop: 1 }} />
+      <View style={{ flex: 1, gap: 6 }}>
+        {title ? <Text style={[s.noticeTitle, { color: c.fg }]}>{title}</Text> : null}
+        {children ? <Text style={[s.noticeBody, { color: c.fg }]}>{children}</Text> : null}
+        {onRetry ? (
+          <TouchableOpacity onPress={onRetry} style={{ alignSelf: 'flex-start', marginTop: 4 }}>
+            <Text style={[s.noticeTitle, { color: c.fg, textDecorationLine: 'underline' }]}>Try again</Text>
+          </TouchableOpacity>
+        ) : null}
+      </View>
+    </View>
+  );
+};
+
 export const ErrorBox = ({ message, onRetry }: { message: string; onRetry?: () => void }) => (
-  <View style={s.errorBox}>
-    <Text style={s.errorText}>{message}</Text>
-    {onRetry ? <Btn label="Retry" kind="secondary" onPress={onRetry} /> : null}
+  <Notice tone="danger" onRetry={onRetry}>
+    {message}
+  </Notice>
+);
+
+/** Loading placeholder that matches the page rhythm. */
+export const Loading = ({ label = 'Loading' }: { label?: string }) => (
+  <View style={{ padding: 40, alignItems: 'center', gap: 10 }}>
+    <ActivityIndicator color={COLORS.primary} />
+    <Text style={s.hint}>{label}…</Text>
   </View>
 );
 
-export const Loading = () => (
-  <View style={{ padding: 32, alignItems: 'center' }}>
-    <ActivityIndicator color={COLORS.primary} />
+/** Fixed bar at the bottom of a page that has unsaved changes. */
+export const ActionBar = ({
+  dirtyLabel,
+  children,
+}: {
+  dirtyLabel: string;
+  children: React.ReactNode;
+}) => (
+  <View style={s.actionBar}>
+    <Text style={s.actionBarLabel}>{dirtyLabel}</Text>
+    <View style={{ flexDirection: 'row', gap: 8 }}>{children}</View>
   </View>
 );
+
+/** A phone-sized preview of how the Home banner will look. */
+export const BannerPreview = ({
+  message,
+  level,
+}: {
+  message: string;
+  level: 'info' | 'warning';
+}) => {
+  if (!message.trim()) return <Hint>No banner is shown while the message is empty.</Hint>;
+  const warning = level === 'warning';
+  return (
+    <View style={[s.bannerPreview, warning && { backgroundColor: WARN_BG, borderColor: WARN_BORDER }]}>
+      <Feather name={warning ? 'alert-triangle' : 'info'} size={15} color={warning ? WARN : COLORS.primary} />
+      <Text style={[s.bannerPreviewText, warning && { color: '#78350f' }]}>{message}</Text>
+    </View>
+  );
+};
+
+export const formatWhen = (v: unknown) => {
+  if (!v) return '-';
+  const d = new Date(String(v));
+  return Number.isNaN(d.getTime()) ? '-' : d.toLocaleString();
+};
+
+export const num = (n: unknown) => (typeof n === 'number' ? n.toLocaleString() : '-');
 
 const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: COLORS.background },
+  header: { paddingHorizontal: 16, paddingTop: 14, paddingBottom: 6, gap: 4 },
+  kicker: { fontFamily: FONTS.bodyBold, fontSize: 11, letterSpacing: 1.2, color: COLORS.primary },
+  title: { fontFamily: FONTS.displayBold, fontSize: 24, color: COLORS.text },
+  summary: { fontFamily: FONTS.body, fontSize: 13, lineHeight: 19, color: COLORS.textMuted },
+  section: { paddingHorizontal: 16, marginTop: 18, gap: 10 },
+  sectionHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: 24 },
+  sectionTitle: {
+    fontFamily: FONTS.bodyBold,
+    fontSize: 12,
+    letterSpacing: 0.8,
+    color: COLORS.textMuted,
+    textTransform: 'uppercase',
+  },
+  sectionBody: { gap: 10 },
   card: {
     backgroundColor: COLORS.card,
-    borderRadius: 12,
+    borderRadius: 14,
     borderWidth: 1,
     borderColor: COLORS.border,
     padding: 14,
-    gap: 10,
+    gap: 12,
   },
-  cardTitle: { fontFamily: FONTS.displayBold, fontSize: 15, color: COLORS.text },
-  line: { flexDirection: 'row', justifyContent: 'space-between', gap: 12 },
-  lineLabel: { fontFamily: FONTS.body, fontSize: 13, color: COLORS.textMuted, flexShrink: 1 },
-  lineValue: {
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  tile: {
+    flexBasis: '47%',
+    flexGrow: 1,
+    backgroundColor: COLORS.card,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    padding: 14,
+    gap: 4,
+  },
+  tileDanger: { borderColor: DANGER_BORDER, backgroundColor: DANGER_BG },
+  tileLabel: { fontFamily: FONTS.bodySemi, fontSize: 12, color: COLORS.textMuted },
+  tileValue: { fontFamily: FONTS.displayBold, fontSize: 24, color: COLORS.text },
+  tileHint: { fontFamily: FONTS.body, fontSize: 11, color: COLORS.textSubtle },
+  pill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    alignSelf: 'flex-start',
+    borderWidth: 1,
+    borderRadius: 999,
+    paddingHorizontal: 9,
+    paddingVertical: 3,
+  },
+  pillText: { fontFamily: FONTS.bodySemi, fontSize: 11 },
+  fact: { flexDirection: 'row', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start' },
+  factLabel: { fontFamily: FONTS.body, fontSize: 13, color: COLORS.textMuted, flexShrink: 1 },
+  factValue: {
     fontFamily: FONTS.bodySemi,
     fontSize: 13,
     color: COLORS.text,
     flexShrink: 1,
     textAlign: 'right',
   },
+  empty: { alignItems: 'center', gap: 6, paddingVertical: 24 },
+  emptyTitle: { fontFamily: FONTS.bodySemi, fontSize: 14, color: COLORS.text },
+  emptyBody: { fontFamily: FONTS.body, fontSize: 12, color: COLORS.textMuted, textAlign: 'center' },
   fieldLabel: { fontFamily: FONTS.bodyMedium, fontSize: 12, color: COLORS.textMuted },
   input: {
     borderWidth: 1,
     borderColor: COLORS.border,
-    borderRadius: 10,
+    borderRadius: 12,
     paddingHorizontal: 12,
-    paddingVertical: 10,
+    paddingVertical: 11,
     fontFamily: FONTS.body,
-    fontSize: 14,
+    fontSize: 15,
     color: COLORS.text,
     backgroundColor: COLORS.background,
   },
   btn: {
     backgroundColor: COLORS.primary,
-    borderRadius: 10,
-    paddingVertical: 12,
+    borderRadius: 12,
+    paddingVertical: 13,
     paddingHorizontal: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 44,
+    minHeight: 46,
   },
-  btnSecondary: {
-    backgroundColor: 'transparent',
-    borderWidth: 1,
-    borderColor: COLORS.primary,
-  },
-  btnDanger: { backgroundColor: '#dc2626' },
-  btnText: { fontFamily: FONTS.bodySemi, fontSize: 14, color: '#fff' },
+  btnSecondary: { backgroundColor: COLORS.card, borderWidth: 1, borderColor: COLORS.primaryBorder },
+  btnDanger: { backgroundColor: DANGER },
+  btnGhost: { backgroundColor: 'transparent' },
+  btnInner: { flexDirection: 'row', alignItems: 'center', gap: 7 },
+  btnText: { fontFamily: FONTS.bodySemi, fontSize: 14 },
   chip: {
-    paddingHorizontal: 12,
-    paddingVertical: 7,
+    paddingHorizontal: 13,
+    paddingVertical: 8,
     borderRadius: 999,
     borderWidth: 1,
     borderColor: COLORS.border,
-    backgroundColor: COLORS.background,
+    backgroundColor: COLORS.card,
   },
   chipActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
   chipText: { fontFamily: FONTS.bodyMedium, fontSize: 13, color: COLORS.text },
   toggleRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   toggleLabel: { fontFamily: FONTS.bodySemi, fontSize: 14, color: COLORS.text },
   hint: { fontFamily: FONTS.body, fontSize: 12, lineHeight: 17, color: COLORS.textMuted },
-  errorBox: {
-    backgroundColor: '#fef2f2',
-    borderColor: '#fecaca',
-    borderWidth: 1,
-    borderRadius: 10,
-    padding: 12,
+  notice: {
+    flexDirection: 'row',
     gap: 10,
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 12,
   },
-  errorText: { fontFamily: FONTS.bodyMedium, fontSize: 13, color: '#991b1b' },
+  noticeTitle: { fontFamily: FONTS.bodySemi, fontSize: 13 },
+  noticeBody: { fontFamily: FONTS.body, fontSize: 13, lineHeight: 18 },
+  actionBar: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: COLORS.card,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
+  },
+  actionBarLabel: { fontFamily: FONTS.bodySemi, fontSize: 13, color: COLORS.text, flexShrink: 1 },
+  bannerPreview: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.cardSecondary,
+  },
+  bannerPreviewText: { flex: 1, fontFamily: FONTS.bodyMedium, fontSize: 13, color: COLORS.text },
 });

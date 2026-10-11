@@ -5,17 +5,40 @@ import { COLORS, FONTS } from '../../theme/colors';
 import { userMessage } from '../../utils/netError';
 import { useAdminAccess } from '../../admin/useAdminAccess';
 import { can } from '../../admin/adminLogic';
-import { AdminScroll, Btn, Card, ErrorBox, Hint, Line, Loading } from '../../admin/ui';
+import {
+  AdminScroll,
+  Btn,
+  EmptyState,
+  Fact,
+  formatWhen,
+  Hint,
+  Loading,
+  Notice,
+  num,
+  PageHeader,
+  Pill,
+  Section,
+  StatTile,
+  TileGrid,
+  Card,
+} from '../../admin/ui';
 
-type Audit = Awaited<ReturnType<typeof adminAudit>>['entries'];
+type Entry = Awaited<ReturnType<typeof adminAudit>>['entries'][number];
+const PAGE = 30;
 
-const num = (n: unknown) => (typeof n === 'number' ? n.toLocaleString() : '-');
+const outcomeTone = (o: Entry['outcome']) => (o === 'ok' ? 'ok' : 'danger');
 
-/** Read-only numbers (app_insights) and the recent admin actions (audit_log). */
+const countsLine = (obj: Record<string, number> | undefined) => {
+  const entries = Object.entries(obj ?? {});
+  if (entries.length === 0) return 'None yet';
+  return entries.map(([k, v]) => `${k}: ${num(v)}`).join('  ·  ');
+};
+
+/** Headline numbers, sync health, and the recent admin actions. */
 export const AdminDashboardScreen = () => {
   const { tools } = useAdminAccess();
   const [insights, setInsights] = useState<Record<string, any> | null>(null);
-  const [audit, setAudit] = useState<Audit>([]);
+  const [audit, setAudit] = useState<Entry[]>([]);
   const [more, setMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [auditError, setAuditError] = useState<string | null>(null);
@@ -31,13 +54,13 @@ export const AdminDashboardScreen = () => {
     setAuditError(null);
     const [ins, aud] = await Promise.allSettled([
       canInsights ? adminInsights() : Promise.resolve(null),
-      canAudit ? adminAudit({ limit: 30 }) : Promise.resolve(null),
+      canAudit ? adminAudit({ limit: PAGE }) : Promise.resolve(null),
     ]);
     if (ins.status === 'fulfilled') setInsights(ins.value);
     else setError(userMessage(ins.reason, 'Could not load the numbers.'));
     if (aud.status === 'fulfilled' && aud.value) {
       setAudit(aud.value.entries);
-      setMore(aud.value.count >= 30);
+      setMore(aud.value.count >= PAGE);
     } else if (aud.status === 'rejected') {
       setAuditError(userMessage(aud.reason, 'Could not load the audit log.'));
     }
@@ -52,9 +75,9 @@ export const AdminDashboardScreen = () => {
   const loadMore = async () => {
     setLoadingMore(true);
     try {
-      const next = await adminAudit({ limit: 30, offset: audit.length });
+      const next = await adminAudit({ limit: PAGE, offset: audit.length });
       setAudit((cur) => [...cur, ...next.entries]);
-      setMore(next.count >= 30);
+      setMore(next.count >= PAGE);
     } catch (e) {
       setAuditError(userMessage(e, 'Could not load more.'));
     } finally {
@@ -62,12 +85,13 @@ export const AdminDashboardScreen = () => {
     }
   };
 
-  if (loading) return <Loading />;
+  if (loading) return <Loading label="Loading the dashboard" />;
 
   const a = insights?.accounts;
   const sy = insights?.sync;
   const dv = insights?.devices;
   const ops = insights?.ops;
+  const reports = (insights?.openReports?.solutions ?? 0) + (insights?.openReports?.notes ?? 0);
 
   return (
     <AdminScroll
@@ -82,69 +106,101 @@ export const AdminDashboardScreen = () => {
         />
       }
     >
-      {error && <ErrorBox message={error} onRetry={() => void load()} />}
+      <PageHeader title="Dashboard" summary="How PyQdeck is being used right now." />
+
+      {error && (
+        <Section>
+          <Notice tone="danger" onRetry={() => void load()}>
+            {error}
+          </Notice>
+        </Section>
+      )}
 
       {insights && (
         <>
-          <Card title="Accounts">
-            <Line label="Total" value={num(a?.total)} />
-            <Line label="New (7 / 30 days)" value={`${num(a?.created7d)} / ${num(a?.created30d)}`} />
-            <Line label="Active (7 / 30 days)" value={`${num(a?.active7d)} / ${num(a?.active30d)}`} />
-          </Card>
-          <Card title="Sync">
-            <Line label="Accounts with progress" value={num(sy?.accountsWithProgress)} />
-            <Line label="Progress records (done)" value={`${num(sy?.progressRecords)} (${num(sy?.doneRecords)})`} />
-            <Line
-              label="Changed progress (7 / 30 days)"
-              value={`${num(sy?.accountsChanged7d)} / ${num(sy?.accountsChanged30d)}`}
-            />
-            <Line label="Use Jump Back In" value={num(sy?.accountsWithJumpBackIn)} />
-            <Line label="Ask AI choices" value={JSON.stringify(sy?.askAiEngineChoices ?? {})} />
-            <Line label="Layout choices" value={JSON.stringify(sy?.readingLayoutChoices ?? {})} />
-          </Card>
-          <Card title="Devices, votes and reports">
-            <Line label="Registered devices" value={num(dv?.registered)} />
-            <Line label="Linked to an account" value={num(dv?.linkedToAccount)} />
-            <Line label="Accounts with 2+ devices" value={num(dv?.accountsWithTwoOrMore)} />
-            <Line label="Solution / note votes" value={`${num(insights.votes?.solutions)} / ${num(insights.votes?.notes)}`} />
-            <Line
-              label="Open reports (solutions / notes)"
-              value={`${num(insights.openReports?.solutions)} / ${num(insights.openReports?.notes)}`}
-            />
-          </Card>
-          <Card title={`This server (${ops?.origin ?? '?'})`}>
-            <Line label="Sync requests" value={num(ops?.requests)} />
-            <Line
-              label="Ops applied / superseded / rejected"
-              value={`${num(ops?.opsApplied)} / ${num(ops?.opsSuperseded)} / ${num(ops?.opsRejected)}`}
-            />
-            <Line label="Section errors" value={num(ops?.sectionErrors)} />
-            <Hint>Counts since this server process started; the other server has its own.</Hint>
-          </Card>
+          <Section title="Accounts">
+            <TileGrid>
+              <StatTile label="Total accounts" value={num(a?.total)} />
+              <StatTile label="Active, last 7 days" value={num(a?.active7d)} hint={`${num(a?.active30d)} in 30 days`} />
+              <StatTile label="New, last 7 days" value={num(a?.created7d)} hint={`${num(a?.created30d)} in 30 days`} />
+              <StatTile label="Open reports" value={num(reports)} tone={reports > 0 ? 'danger' : 'neutral'} />
+            </TileGrid>
+          </Section>
+
+          <Section title="Sync">
+            <Card>
+              <Fact label="Accounts with synced progress" value={num(sy?.accountsWithProgress)} />
+              <Fact label="Records (done)" value={`${num(sy?.progressRecords)} (${num(sy?.doneRecords)})`} />
+              <Fact label="Changed, last 7 / 30 days" value={`${num(sy?.accountsChanged7d)} / ${num(sy?.accountsChanged30d)}`} />
+              <Fact label="Use Jump Back In" value={num(sy?.accountsWithJumpBackIn)} />
+              <Fact label="Ask AI engine choices" value={countsLine(sy?.askAiEngineChoices)} />
+              <Fact label="Reading layout choices" value={countsLine(sy?.readingLayoutChoices)} />
+            </Card>
+          </Section>
+
+          <Section title="Devices and votes">
+            <TileGrid>
+              <StatTile label="Registered devices" value={num(dv?.registered)} hint={`${num(dv?.linkedToAccount)} linked to an account`} />
+              <StatTile label="Accounts with 2+ devices" value={num(dv?.accountsWithTwoOrMore)} />
+              <StatTile label="Solution votes" value={num(insights.votes?.solutions)} />
+              <StatTile label="Note votes" value={num(insights.votes?.notes)} />
+            </TileGrid>
+          </Section>
+
+          <Section title={`This server (${ops?.origin ?? 'unknown'})`}>
+            <Card>
+              <Fact label="Sync requests" value={num(ops?.requests)} />
+              <Fact label="Applied / superseded / rejected" value={`${num(ops?.opsApplied)} / ${num(ops?.opsSuperseded)} / ${num(ops?.opsRejected)}`} />
+              <Fact label="Section errors" value={num(ops?.sectionErrors)} />
+              <Hint>Counted since this server last restarted. The other server keeps its own count.</Hint>
+            </Card>
+          </Section>
         </>
       )}
 
       {canAudit && (
-        <Card title="Recent admin actions">
-          {auditError && <ErrorBox message={auditError} onRetry={() => void load()} />}
-          {audit.length === 0 && !auditError && <Hint>Nothing recorded yet.</Hint>}
-          {audit.map((e, i) => (
-            <View key={`${e.at}-${i}`} style={{ gap: 2 }}>
-              <Text style={{ fontFamily: FONTS.bodySemi, fontSize: 13, color: e.outcome === 'ok' ? COLORS.text : '#b91c1c' }}>
-                {e.tool}
-                {e.action ? ` · ${e.action}` : ''} · {e.outcome}
-              </Text>
-              <Text style={{ fontFamily: FONTS.body, fontSize: 12, color: COLORS.textMuted }}>
-                {new Date(e.at).toLocaleString()} · {e.admin}
-                {e.target ? ` · ${e.target}` : ''}
-              </Text>
-              {e.detail ? (
-                <Text style={{ fontFamily: FONTS.body, fontSize: 12, color: COLORS.textMuted }}>{e.detail}</Text>
-              ) : null}
-            </View>
-          ))}
-          {more && <Btn label="Load more" kind="secondary" busy={loadingMore} onPress={() => void loadMore()} />}
-        </Card>
+        <Section title="Recent admin actions">
+          {auditError && (
+            <Notice tone="danger" onRetry={() => void load()}>
+              {auditError}
+            </Notice>
+          )}
+          {audit.length === 0 && !auditError ? (
+            <EmptyState icon="shield" title="No admin actions yet" body="Changes you make from the admin tools appear here." />
+          ) : (
+            <Card>
+              {audit.map((e, i) => (
+                <View
+                  key={`${e.at}-${i}`}
+                  style={{
+                    gap: 6,
+                    paddingBottom: 12,
+                    borderBottomWidth: i === audit.length - 1 ? 0 : 1,
+                    borderBottomColor: COLORS.borderLight,
+                  }}
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                    <Text style={{ fontFamily: FONTS.bodySemi, fontSize: 14, color: COLORS.text, flexShrink: 1 }}>
+                      {e.tool}
+                      {e.action ? ` · ${e.action}` : ''}
+                    </Text>
+                    <Pill label={e.outcome === 'ok' ? 'Done' : 'Failed'} tone={outcomeTone(e.outcome)} />
+                  </View>
+                  <Text style={{ fontFamily: FONTS.body, fontSize: 12, color: COLORS.textMuted }}>
+                    {formatWhen(e.at)} · {e.admin}
+                    {e.target ? ` · ${e.target}` : ''}
+                  </Text>
+                  {e.detail ? (
+                    <Text style={{ fontFamily: FONTS.body, fontSize: 12, color: COLORS.textMuted }}>{e.detail}</Text>
+                  ) : null}
+                </View>
+              ))}
+              {more && (
+                <Btn label="Load more" kind="secondary" busy={loadingMore} onPress={() => void loadMore()} />
+              )}
+            </Card>
+          )}
+        </Section>
       )}
     </AdminScroll>
   );

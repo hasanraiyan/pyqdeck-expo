@@ -1,11 +1,27 @@
 import React, { useState } from 'react';
-import { Alert, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Pressable, Text, View } from 'react-native';
+import { Feather } from '@expo/vector-icons';
 import { adminUsers } from '../../api';
 import { COLORS, FONTS } from '../../theme/colors';
 import { userMessage } from '../../utils/netError';
 import { useAdminAccess } from '../../admin/useAdminAccess';
 import { can } from '../../admin/adminLogic';
-import { AdminScroll, Btn, Card, ErrorBox, Field, Hint, Line } from '../../admin/ui';
+import {
+  AdminScroll,
+  Btn,
+  Card,
+  EmptyState,
+  Fact,
+  Field,
+  formatWhen,
+  Hint,
+  Notice,
+  PageHeader,
+  Pill,
+  Section,
+  StatTile,
+  TileGrid,
+} from '../../admin/ui';
 
 interface Found {
   name: string;
@@ -14,12 +30,17 @@ interface Found {
   isBeta: boolean;
 }
 
-const when = (v: unknown) => (v ? new Date(String(v)).toLocaleString() : '-');
+const initials = (name: string) =>
+  name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((p) => p[0]?.toUpperCase() ?? '')
+    .join('') || '?';
 
 /**
- * Find an account and help with a problem. Shows counts and settings only - never
- * which topics were ticked, tokens or recents - and hides actions the grants do
- * not allow (the server enforces them regardless).
+ * Find a student, see a support summary of counts and settings (never which
+ * topics were ticked, tokens or recents), and take the actions their grants allow.
  */
 export const AdminUsersScreen = () => {
   const { tools } = useAdminAccess();
@@ -29,6 +50,10 @@ export const AdminUsersScreen = () => {
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
+
+  const canBeta = can(tools, 'manage_users', 'set_beta');
+  const canUnlink = can(tools, 'manage_users', 'unlink_devices');
+  const canReset = can(tools, 'manage_users', 'reset_progress');
 
   const run = async (label: string, fn: () => Promise<void>) => {
     setBusy(label);
@@ -56,119 +81,220 @@ export const AdminUsersScreen = () => {
       setSummary(await adminUsers({ action: 'get', email }));
     });
 
-  const act = (action: 'set_beta' | 'unlink_devices' | 'reset_progress', extra: Record<string, unknown>, text: string) =>
+  const act = (
+    action: 'set_beta' | 'unlink_devices' | 'reset_progress',
+    extra: Record<string, unknown>,
+    fallback: string
+  ) =>
     run(action, async () => {
       const res = await adminUsers({ action, email: summary!.email, ...extra });
-      setNote(res.note ?? text);
+      setNote(res.note ?? fallback);
       setSummary(await adminUsers({ action: 'get', email: summary!.email }));
     });
 
   const confirmThen = (title: string, message: string, go: () => void) =>
     Alert.alert(title, message, [
       { text: 'Cancel', style: 'cancel' },
-      { text: 'Do it', style: 'destructive', onPress: go },
+      { text: 'Continue', style: 'destructive', onPress: go },
     ]);
+
+  const closeSummary = () => {
+    setSummary(null);
+    setNote(null);
+  };
+
+  if (summary) {
+    return (
+      <AdminScroll>
+        <PageHeader kicker="User support" title={summary.name || 'Account'} summary={summary.email} />
+
+        <Section>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+            <Pill label={summary.role} tone="primary" />
+            {summary.isBeta ? <Pill label="Beta" tone="ok" /> : null}
+            {summary.progress?.records > 0 ? <Pill label="Syncing" tone="ok" icon="cloud" /> : <Pill label="No synced progress" />}
+          </View>
+        </Section>
+
+        {note && (
+          <Section>
+            <Notice tone="info" title="Done">
+              {note}
+            </Notice>
+          </Section>
+        )}
+        {error && (
+          <Section>
+            <Notice tone="danger">{error}</Notice>
+          </Section>
+        )}
+
+        <Section title="Activity">
+          <TileGrid>
+            <StatTile label="Topics done" value={summary.progress?.done ?? '-'} hint={`of ${summary.progress?.records ?? 0} records`} />
+            <StatTile label="Subjects started" value={summary.progress?.subjects ?? '-'} />
+            <StatTile label="Devices linked" value={summary.devicesLinkedToAccount ?? '-'} />
+            <StatTile label="Votes" value={`${summary.votes?.solutions ?? 0} / ${summary.votes?.notes ?? 0}`} hint="solutions / notes" />
+          </TileGrid>
+          <Card>
+            <Fact label="Signed up" value={formatWhen(summary.signedUpAt)} />
+            <Fact label="Last active" value={formatWhen(summary.lastActiveAt)} />
+            <Fact label="Last progress change" value={formatWhen(summary.progress?.lastChangeAt)} />
+            <Fact label="Reports (solutions / notes)" value={`${summary.reports?.solutions ?? 0} / ${summary.reports?.notes ?? 0}`} />
+          </Card>
+        </Section>
+
+        <Section title="Settings on their account">
+          <Card>
+            <Fact label="Ask AI engine" value={summary.settings?.askAiEngine} />
+            <Fact label="Reading layout" value={summary.settings?.readingLayout} />
+            <Fact label="Volume-key scroll" value={summary.settings?.volumeScroll === null ? null : summary.settings?.volumeScroll ? 'On' : 'Off'} />
+            <Fact label="Syllabus branch" value={summary.settings?.syllabusBranch} />
+          </Card>
+          <Hint>Topic names, push tokens and recent items are never shown here.</Hint>
+        </Section>
+
+        {(canBeta || canUnlink || canReset) && (
+          <Section title="Actions">
+            {canBeta && (
+              <Btn
+                label={summary.isBeta ? 'Remove from beta testers' : 'Add to beta testers'}
+                kind="secondary"
+                icon="star"
+                busy={busy === 'set_beta'}
+                onPress={() => void act('set_beta', { value: !summary.isBeta }, 'Beta flag updated.')}
+              />
+            )}
+            {canUnlink && (
+              <Card>
+                <Text style={{ fontFamily: FONTS.bodySemi, fontSize: 14, color: COLORS.text }}>Unlink devices</Text>
+                <Hint>For a shared phone that gets someone else's account notifications. The phones stay registered for general announcements.</Hint>
+                <Btn
+                  label="Unlink devices"
+                  kind="danger"
+                  icon="smartphone"
+                  busy={busy === 'unlink_devices'}
+                  onPress={() =>
+                    confirmThen(
+                      'Unlink devices?',
+                      'Account notifications stop reaching their phones.',
+                      () => void act('unlink_devices', { confirm: true }, 'Devices unlinked.')
+                    )
+                  }
+                />
+              </Card>
+            )}
+            {canReset && (
+              <Card>
+                <Text style={{ fontFamily: FONTS.bodySemi, fontSize: 14, color: COLORS.text }}>Reset synced progress</Text>
+                <Hint>Deletes this account's {summary.progress?.records ?? 0} synced record(s). Their phones keep their own copy and only re-send a topic if they change it. This cannot be undone.</Hint>
+                <Btn
+                  label="Reset progress"
+                  kind="danger"
+                  icon="rotate-ccw"
+                  busy={busy === 'reset_progress'}
+                  onPress={() =>
+                    confirmThen(
+                      'Reset synced progress?',
+                      `Deletes ${summary.progress?.records ?? 0} record(s) for ${summary.email}. This cannot be undone.`,
+                      () => void act('reset_progress', { confirm: true }, 'Progress reset.')
+                    )
+                  }
+                />
+              </Card>
+            )}
+          </Section>
+        )}
+
+        <Section>
+          <Btn label="Back to results" kind="ghost" icon="arrow-left" onPress={closeSummary} />
+        </Section>
+      </AdminScroll>
+    );
+  }
 
   return (
     <AdminScroll>
-      <Card title="Find an account">
-        <Field label="Email, email start (3+ letters) or Clerk id" value={query} onChangeText={setQuery} placeholder="asha@example.com" onSubmitEditing={() => query.trim().length >= 3 && void search()} />
-        <Btn label="Search" disabled={query.trim().length < 3} busy={busy === 'find'} onPress={() => void search()} />
-      </Card>
+      <PageHeader kicker="User support" title="Find a student" summary="Search by email, the start of an email, or a Clerk id." />
 
-      {error && <ErrorBox message={error} />}
-
-      {results && !summary && (
-        <Card title={`${results.length} match${results.length === 1 ? '' : 'es'}`}>
-          {results.map((u) => (
-            <TouchableOpacity key={u.email} onPress={() => void open(u.email)} style={{ paddingVertical: 6 }}>
-              <Text style={{ fontFamily: FONTS.bodySemi, color: COLORS.text }}>{u.name}</Text>
-              <Text style={{ fontFamily: FONTS.body, fontSize: 12, color: COLORS.textMuted }}>
-                {u.email} · {u.role}
-                {u.isBeta ? ' · beta' : ''}
-              </Text>
-            </TouchableOpacity>
-          ))}
-          {results.length === 0 && <Hint>No account matches.</Hint>}
+      <Section>
+        <Card>
+          <Field
+            label="Email or Clerk id"
+            value={query}
+            onChangeText={setQuery}
+            placeholder="asha@example.com"
+            returnKeyType="search"
+            onSubmitEditing={() => query.trim().length >= 3 && void search()}
+          />
+          <Btn
+            label="Search"
+            icon="search"
+            disabled={query.trim().length < 3}
+            busy={busy === 'find'}
+            onPress={() => void search()}
+          />
+          {query.trim().length > 0 && query.trim().length < 3 && <Hint>Type at least 3 characters.</Hint>}
         </Card>
+      </Section>
+
+      {error && (
+        <Section>
+          <Notice tone="danger">{error}</Notice>
+        </Section>
       )}
 
-      {summary && (
-        <>
-          <Card title={summary.name}>
-            <Line label="Email" value={summary.email} />
-            <Line label="Role / beta" value={`${summary.role} / ${summary.isBeta ? 'yes' : 'no'}`} />
-            <Line label="Signed up" value={when(summary.signedUpAt)} />
-            <Line label="Last active" value={when(summary.lastActiveAt)} />
-          </Card>
-          <Card title="Account data (counts only)">
-            <Line label="Progress records (done)" value={`${summary.progress?.records} (${summary.progress?.done})`} />
-            <Line label="Subjects started" value={summary.progress?.subjects} />
-            <Line label="Last progress change" value={when(summary.progress?.lastChangeAt)} />
-            <Line label="Devices linked" value={summary.devicesLinkedToAccount} />
-            <Line label="Votes (solutions / notes)" value={`${summary.votes?.solutions} / ${summary.votes?.notes}`} />
-            <Line label="Reports (solutions / notes)" value={`${summary.reports?.solutions} / ${summary.reports?.notes}`} />
-          </Card>
-          <Card title="Their settings">
-            <Line label="Ask AI engine" value={summary.settings?.askAiEngine} />
-            <Line label="Reading layout" value={summary.settings?.readingLayout} />
-            <Line label="Volume scroll" value={summary.settings?.volumeScroll} />
-            <Line label="Syllabus branch" value={summary.settings?.syllabusBranch} />
-          </Card>
-
-          {(can(tools, 'manage_users', 'set_beta') ||
-            can(tools, 'manage_users', 'unlink_devices') ||
-            can(tools, 'manage_users', 'reset_progress')) && (
-            <Card title="Actions">
-              {can(tools, 'manage_users', 'set_beta') && (
-                <Btn
-                  label={summary.isBeta ? 'Remove from beta' : 'Add to beta'}
-                  kind="secondary"
-                  busy={busy === 'set_beta'}
-                  onPress={() => void act('set_beta', { value: !summary.isBeta }, 'Beta flag updated.')}
-                />
-              )}
-              {can(tools, 'manage_users', 'unlink_devices') && (
-                <>
-                  <Btn
-                    label="Unlink devices from account"
-                    kind="danger"
-                    busy={busy === 'unlink_devices'}
-                    onPress={() =>
-                      confirmThen(
-                        'Unlink devices?',
-                        'Account notifications stop reaching their phones. The phones stay registered for general announcements.',
-                        () => void act('unlink_devices', { confirm: true }, 'Devices unlinked.')
-                      )
-                    }
-                  />
-                  <Hint>For a student getting someone else's notifications on a shared phone.</Hint>
-                </>
-              )}
-              {can(tools, 'manage_users', 'reset_progress') && (
-                <>
-                  <Btn
-                    label="Reset synced progress"
-                    kind="danger"
-                    busy={busy === 'reset_progress'}
-                    onPress={() =>
-                      confirmThen(
-                        'Reset synced progress?',
-                        `Deletes ${summary.progress?.records} synced record(s) for this account. Their phones keep their own local copy and only re-send a topic if the student changes it. This cannot be undone.`,
-                        () => void act('reset_progress', { confirm: true }, 'Progress reset.')
-                      )
-                    }
-                  />
-                </>
-              )}
-            </Card>
+      {results && (
+        <Section title={`${results.length} result${results.length === 1 ? '' : 's'}`}>
+          {results.length === 0 ? (
+            <EmptyState icon="user-x" title="No account matches" body="Check the spelling, or try the first few letters of the email." />
+          ) : (
+            results.map((u) => (
+              <Pressable
+                key={u.email}
+                onPress={() => void open(u.email)}
+                style={({ pressed }) => ({
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 12,
+                  backgroundColor: COLORS.card,
+                  borderWidth: 1,
+                  borderColor: COLORS.border,
+                  borderRadius: 14,
+                  padding: 12,
+                  opacity: pressed ? 0.7 : 1,
+                })}
+              >
+                <View
+                  style={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: 20,
+                    backgroundColor: COLORS.primaryLight,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Text style={{ fontFamily: FONTS.bodyBold, color: COLORS.primary }}>{initials(u.name)}</Text>
+                </View>
+                <View style={{ flex: 1, gap: 2 }}>
+                  <Text style={{ fontFamily: FONTS.bodySemi, fontSize: 14, color: COLORS.text }} numberOfLines={1}>
+                    {u.name}
+                  </Text>
+                  <Text style={{ fontFamily: FONTS.body, fontSize: 12, color: COLORS.textMuted }} numberOfLines={1}>
+                    {u.email}
+                  </Text>
+                </View>
+                <View style={{ alignItems: 'flex-end', gap: 4 }}>
+                  {u.isBeta ? <Pill label="Beta" tone="ok" /> : null}
+                  {u.role !== 'student' ? <Pill label={u.role} tone="primary" /> : null}
+                </View>
+                <Feather name="chevron-right" size={18} color={COLORS.textSubtle} />
+              </Pressable>
+            ))
           )}
-
-          {note && <Card title="Result"><Text>{note}</Text></Card>}
-          <Btn label="Back to results" kind="secondary" onPress={() => { setSummary(null); setNote(null); }} />
-        </>
+        </Section>
       )}
-      <View style={{ height: 8 }} />
     </AdminScroll>
   );
 };

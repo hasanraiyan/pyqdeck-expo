@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Alert, Text, View } from 'react-native';
+import { Alert, View } from 'react-native';
 import { adminNotify } from '../../api';
 import { userMessage } from '../../utils/netError';
 import {
@@ -9,13 +9,27 @@ import {
   validateNotify,
   type NotifyInput,
 } from '../../admin/adminLogic';
-import { AdminScroll, Btn, Card, Chip, ErrorBox, Field, Hint, Line } from '../../admin/ui';
+import {
+  AdminScroll,
+  Btn,
+  Card,
+  Chip,
+  Field,
+  Fact,
+  Hint,
+  Notice,
+  PageHeader,
+  Pill,
+  Section,
+  StatTile,
+  TileGrid,
+} from '../../admin/ui';
 
-const AUDIENCES: { id: NotifyInput['audience']; label: string }[] = [
-  { id: 'all', label: 'Everyone' },
-  { id: 'signed_in', label: 'Signed in' },
-  { id: 'signed_out', label: 'Signed out' },
-  { id: 'beta', label: 'Beta' },
+const AUDIENCES: { id: NotifyInput['audience']; label: string; hint: string }[] = [
+  { id: 'all', label: 'Everyone', hint: 'Every phone with the app' },
+  { id: 'signed_in', label: 'Signed in', hint: 'Phones linked to an account' },
+  { id: 'signed_out', label: 'Signed out', hint: 'Phones with no account' },
+  { id: 'beta', label: 'Beta testers', hint: 'Accounts marked beta' },
 ];
 
 interface Preview {
@@ -26,9 +40,8 @@ interface Preview {
 }
 
 /**
- * Send is possible only for exactly what was previewed: any edit after a preview
- * disables it until previewing again, and sending asks to confirm the audience
- * and the count it showed.
+ * Three steps: write it, choose who gets it, preview the count. Send stays off
+ * until the preview matches what is on screen, and it confirms before sending.
  */
 export const AdminNotifyScreen = () => {
   const [title, setTitle] = useState('');
@@ -45,6 +58,9 @@ export const AdminNotifyScreen = () => {
   const problem = validateNotify(input);
   const sendable = canSend(input, preview?.fingerprint ?? null);
   const named = parsed.emails.length > 0;
+  const audienceLabel = named
+    ? `${parsed.emails.length} named account${parsed.emails.length === 1 ? '' : 's'}`
+    : (AUDIENCES.find((a) => a.id === audience)?.label ?? audience);
 
   const request = (dryRun: boolean) => ({
     title: title.trim(),
@@ -75,12 +91,9 @@ export const AdminNotifyScreen = () => {
 
   const send = () => {
     if (!preview) return;
-    const who = named
-      ? `${parsed.emails.length} named account(s)`
-      : (AUDIENCES.find((a) => a.id === audience)?.label ?? audience);
     Alert.alert(
-      'Send notification?',
-      `"${title.trim()}"\n\nTo: ${who}\nDevices reached: ${preview.recipients}\n\nThis cannot be undone.`,
+      'Send this notification?',
+      `"${title.trim()}"\n\nTo: ${audienceLabel}\nPhones reached: ${preview.recipients}\n\nIt cannot be unsent.`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -91,7 +104,7 @@ export const AdminNotifyScreen = () => {
             setError(null);
             try {
               const res = await adminNotify(request(false));
-              setResult(`Sent ${res.sent ?? 0}, failed ${res.failed ?? 0}, removed ${res.pruned ?? 0} dead device(s).`);
+              setResult(`Sent to ${res.sent ?? 0} phone(s). Failed: ${res.failed ?? 0}. Removed dead devices: ${res.pruned ?? 0}.`);
               setPreview(null);
               setTitle('');
               setBody('');
@@ -109,55 +122,91 @@ export const AdminNotifyScreen = () => {
 
   return (
     <AdminScroll>
-      <Card title="Message">
-        <Field label={`Title (${title.length}/80)`} value={title} onChangeText={setTitle} maxLength={80} autoCapitalize="sentences" />
-        <Field
-          label={`Message (${body.length}/180)`}
-          value={body}
-          onChangeText={setBody}
-          maxLength={180}
-          multiline
-          autoCapitalize="sentences"
-        />
-      </Card>
+      <PageHeader title="Send notification" summary="A push to phones. Preview the count before you send." />
 
-      <Card title="Who gets it">
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, opacity: named ? 0.4 : 1 }}>
-          {AUDIENCES.map((a) => (
-            <Chip key={a.id} label={a.label} active={!named && audience === a.id} onPress={() => setAudience(a.id)} />
-          ))}
-        </View>
-        <Field
-          label="Or only these accounts (emails, comma or line separated)"
-          value={emailText}
-          onChangeText={setEmailText}
-          multiline
-          placeholder="asha@example.com, ravi@example.com"
-        />
-        {named && <Hint>Naming accounts overrides the group above. They only receive it on phones where they are signed in.</Hint>}
-        {parsed.invalid.length > 0 && <Hint>Ignored (not an email): {parsed.invalid.join(', ')}</Hint>}
-      </Card>
-
-      {problem && (title || body) ? <Hint>{problem}</Hint> : null}
-
-      <Btn label="Preview recipients" kind="secondary" disabled={!!problem} busy={busy === 'preview'} onPress={() => void runPreview()} />
-
-      {preview && (
-        <Card title="Preview">
-          <Line label="Devices reached" value={preview.recipients} />
-          {named && <Line label="Accounts with no device" value={preview.usersWithoutDevice ?? 0} />}
-          {preview.unmatchedEmails.length > 0 && (
-            <Text style={{ color: '#b91c1c', fontSize: 12 }}>No account for: {preview.unmatchedEmails.join(', ')}</Text>
-          )}
-          {!sendable && <Hint>You changed something after previewing. Preview again to send.</Hint>}
-        </Card>
+      {result && (
+        <Section>
+          <Notice tone="info" title="Sent">
+            {result}
+          </Notice>
+        </Section>
       )}
 
-      <Btn label="Send" disabled={!sendable || (preview?.recipients ?? 0) === 0} busy={busy === 'send'} onPress={send} />
-      {preview && preview.recipients === 0 && <Hint>Nobody would receive this, so Send is off.</Hint>}
+      <Section title="1 · Write">
+        <Card>
+          <Field label={`Title · ${title.length}/80`} value={title} onChangeText={setTitle} maxLength={80} autoCapitalize="sentences" />
+          <Field label={`Message · ${body.length}/180`} value={body} onChangeText={setBody} maxLength={180} multiline autoCapitalize="sentences" />
+        </Card>
+      </Section>
 
-      {error && <ErrorBox message={error} />}
-      {result && <Card title="Done"><Text>{result}</Text></Card>}
+      <Section title="2 · Who gets it">
+        <TileGrid>
+          {AUDIENCES.map((a) => (
+            <View key={a.id} style={{ flexBasis: '47%', flexGrow: 1, opacity: named ? 0.45 : 1 }}>
+              <Chip label={a.label} active={!named && audience === a.id} onPress={() => setAudience(a.id)} />
+              <Hint>{a.hint}</Hint>
+            </View>
+          ))}
+        </TileGrid>
+        <Card>
+          <Field
+            label="Or only these accounts"
+            hint="Emails, separated by commas or new lines. Naming accounts replaces the group above. They receive it only on phones where they are signed in."
+            value={emailText}
+            onChangeText={setEmailText}
+            multiline
+            placeholder="asha@example.com, ravi@example.com"
+          />
+          {parsed.invalid.length > 0 && (
+            <Notice tone="warn">Not an email, ignored: {parsed.invalid.join(', ')}</Notice>
+          )}
+        </Card>
+      </Section>
+
+      <Section title="3 · Preview and send">
+        {problem && (title || body) ? <Notice tone="warn">{problem}</Notice> : null}
+
+        <Btn
+          label="Preview recipients"
+          kind="secondary"
+          icon="users"
+          disabled={!!problem}
+          busy={busy === 'preview'}
+          onPress={() => void runPreview()}
+        />
+
+        {preview && (
+          <Card>
+            <TileGrid>
+              <StatTile label="Phones reached" value={preview.recipients} tone={preview.recipients === 0 ? 'danger' : 'neutral'} />
+              {named && <StatTile label="Accounts with no phone" value={preview.usersWithoutDevice ?? 0} />}
+            </TileGrid>
+            <Fact label="Audience" value={audienceLabel} />
+            {preview.unmatchedEmails.length > 0 && (
+              <Notice tone="warn">No account for: {preview.unmatchedEmails.join(', ')}</Notice>
+            )}
+            {!sendable ? (
+              <Pill label="Changed since preview: preview again" tone="warn" icon="refresh-cw" />
+            ) : (
+              <Pill label="Ready to send" tone="ok" icon="check" />
+            )}
+          </Card>
+        )}
+
+        <Btn
+          label={preview && preview.recipients === 0 ? 'Nobody would receive this' : 'Send notification'}
+          icon="send"
+          disabled={!sendable || (preview?.recipients ?? 0) === 0}
+          busy={busy === 'send'}
+          onPress={send}
+        />
+      </Section>
+
+      {error && (
+        <Section>
+          <Notice tone="danger">{error}</Notice>
+        </Section>
+      )}
     </AdminScroll>
   );
 };
