@@ -44,8 +44,6 @@ Tester: ____________  Device/Android: ____________  Build (versionCode): ______ 
 
 ### 3b. "Sync now" nudge to other devices (background push)
 
-**Quick way to know if background sync works on a phone:** Settings → **Test background sync**.
-It sends a nudge to every device on the account. Swipe the app away, wait about a minute, reopen Settings: the line under that row says what happened, e.g. `Last nudge 14:32 (headless): received, synced`.
 
 - `(headless)` + `synced` = the closed-app task works.
 - `(headless)` + `skipped: Clerk reports signed out...` = the task ran but Clerk could not restore the session without the app UI. Foreground and background nudges still work; closed-app speed-up does not.
