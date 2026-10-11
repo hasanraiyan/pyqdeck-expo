@@ -389,6 +389,9 @@ export const SearchScreen = () => {
     setValidationError(null);
     const res = await scanTextFromImage(source);
     setScanning(false);
+    // Outcome only (ok | cancelled | denied | empty | error): never the image or
+    // the recognised text, which can be personal.
+    logEvent('scan_search', { source, result: res.status });
     if (res.status === 'ok') {
       const norm = normalizeQuery(res.text);
       setQuery(res.text);
