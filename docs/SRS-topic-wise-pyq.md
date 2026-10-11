@@ -8,7 +8,7 @@ Structured after IEEE Std 830-1998. Builds on `SRS-pyqdeck-app.md`, `SRS-admin-f
 | Feature | A "PYQ" icon on each syllabus topic that opens only that topic's past-paper questions; a question may belong to several topics |
 | Document version | 1.0 (draft for review) |
 | Date | 2026-10-12 |
-| Status | Approved. Phase 1 implemented on the server (manual linking only; no automatic suggestions or mapping). Later phases not started. |
+| Status | Approved. Phases 1 and 3 implemented on the server inside the existing `manage_content` and `manage_syllabus` tools (manual linking only; no automatic suggestions or mapping). Student screens and the in-app workbench not started. |
 | Evidence | Verified against server `main` and the live database (read-only counts) on 2026-10-12. |
 
 ---
@@ -174,19 +174,19 @@ Add a **topic link** collection (question, syllabus subject, topic, source, who 
 
 ### 5.3 Server: admin writes (MCP tool, REST, audit)
 
-New admin tool `manage_topic_links` (actions listed here), exposed through the admin MCP and `/api/admin-app`, using the shared guard.
+**No new tool.** Topic links are handled by the tools admins already use: **`manage_syllabus`** maps a syllabus subject to its PYQ subject (`data.pyqSubjectId`, now validated), and **`manage_content`** gets a new level **`topic_link`** next to `question` and `solution`, using the same actions (create, read, update, delete, bulk_create). They go through the shared guard, so grants and audit apply. Link actions are granted separately from editing question text, as `topic_link:<action>`.
 
 | ID | Requirement | Priority |
 |---|---|---|
-| TQ-AD-1 | `map_subject`: set or clear `pyqSubjectId` for a syllabus subject, chosen by an admin. **Nothing is mapped automatically** (decision D11). | M |
-| TQ-AD-2 | `set`: for one question and one syllabus subject, replace its confirmed topics with the given list (ids or exact titles). `add` and `remove` change single links. All enforce TQ-DR-1 and TQ-DR-3. | M |
-| TQ-AD-3 | `bulk`: apply an array of `{ question, topics }` (question by `subject` plus `questionId`, topics by id or title). `dryRun` returns counts of matched, unmatched titles and rows that would change; `confirm: true` writes. Capped at 500 rows per call. | M |
-| TQ-AD-4 | `list_unlinked`: questions of a PYQ subject with no confirmed link, filterable by chapter and year, paged. | M |
-| TQ-AD-5 | `get_question` returns a question's topics (all syllabus subjects); `list_topic` returns a topic's questions with how each was linked; `sample` returns random links made by bulk upload for spot checks; `undo_import` removes the links of one bulk batch. | M |
+| TQ-AD-1 | Subject mapping uses `manage_syllabus` (subject update, `data.pyqSubjectId`); the value must be an existing PYQ subject slug or empty to clear it. **Nothing is mapped automatically** (decision D11). | M |
+| TQ-AD-2 | `manage_content` level `topic_link`: `create` adds topics to a question, `update` replaces them, `delete` removes them (topics by id or exact title; a title shared by several topics is refused as ambiguous). Enforces TQ-DR-1 and TQ-DR-3. | M |
+| TQ-AD-3 | `bulk_create`: `data.rows:[{questionId, topics}]` with `dryRun` (reports matched, unmatched questions and topics, writes nothing) and `confirm: true` to write; capped at 500 rows; returns a `batchId`; links made by it carry `source: import` and that `batchId`. | M |
+| TQ-AD-4 | `read` with `data.view`: `question` (a question's topics; also shown as `topicLinks` on a normal question read), `topic` (a topic's questions), `unlinked` (questions with no link, filterable by chapter and year), `coverage`, `sample` (random links, optionally one batch or source). | M |
+| TQ-AD-5 | `delete` with `data.batchId` and `confirm: true` undoes one bulk batch; with `data.all` (and optional `data.topic`) and `confirm: true` it clears a topic or a whole syllabus subject. | M |
 | TQ-AD-6 | `coverage`: per syllabus subject, questions total, linked, unlinked; topics with no question; orphaned links. | M |
-| TQ-AD-7 | `unlink_all` for a topic or a subject needs `confirm: true`. | S |
+| TQ-AD-7 | Destructive deletes (a batch, a topic, a whole syllabus subject) need `confirm: true`. | S |
 | TQ-AD-8 | Every write is audited by the shared guard (tool, action, target, counts), never the question text. | M |
-| TQ-AD-9 | Grants: `manage_topic_links` honours `actions`, so a reviewer can be given `list_unlinked`, `set`, `review_queue` and `review` only; `bulk` and `unlink_all` stay with full admins. | M |
+| TQ-AD-9 | Grants: link actions are checked as `topic_link:<action>` (for example `topic_link:read`, `topic_link:update`, `topic_link:bulk_create`) inside the `manage_content` grant. A reviewer can be given `topic_link:read`, `create`, `update`, `delete` without `bulk_create` and without any right to edit question text; an editor with only plain content actions cannot change links. `*` covers both. | M |
 | TQ-AD-10 | After any write the topic-link caches and the public edge cache for the affected subject are invalidated through the existing cache-clear path. | M |
 
 ### 5.4 No automatic suggestions (decision)
@@ -317,3 +317,4 @@ Phases 2 and 3 can run in parallel after Phase 1. **The student feature ships th
 |---|---|---|
 | 1.0 (draft) | 2026-10-12 | Initial requirement analysis, SRS and plan from the verified data model |
 | 1.1 | 2026-10-13 | Owner decision: no automatic subject mapping and no AI suggestions; links are manual or bulk upload; spot-check and undo tools added to the plan |
+| 1.2 | 2026-10-13 | Owner decision: no new tool; topic links are a `topic_link` level in `manage_content` and subject mapping stays in `manage_syllabus` |
