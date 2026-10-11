@@ -105,6 +105,12 @@ jobs:
       - name: 📥 Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: 🧪 Run unit tests
+        # Before the slow prebuild/Gradle steps, and before anything is
+        # uploaded to Play or committed back, so a red test stops the release
+        # early and cheaply.
+        run: pnpm test
+
       - name: 🔥 Setup Firebase config
         env:
           GOOGLE_SERVICES_JSON_BASE64: ${{ secrets.GOOGLE_SERVICES_JSON_BASE64 }}
