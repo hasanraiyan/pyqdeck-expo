@@ -141,7 +141,8 @@
           "cameraPermission": "PyQdeck needs camera access so admins can scan original paper pages.",
           "microphonePermission": false
         }
-      ]
+      ],
+      "./plugins/withNoBroadPhotoAccess"
     ],
     "extra": {
       "eas": {
