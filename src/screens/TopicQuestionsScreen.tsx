@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { useRoute } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useInfiniteQuery } from '@tanstack/react-query';
+import { useInfiniteQuery, keepPreviousData } from '@tanstack/react-query';
 import { Feather } from '@expo/vector-icons';
 import { topicQuestionsQuery } from '../api/queries';
 import type { TopicQuestion } from '../api';
@@ -43,9 +43,13 @@ export const TopicQuestionsScreen = () => {
     void getOldUiEnabled().then(setOldUi);
   }, []);
 
-  const q = useInfiniteQuery(
-    topicQuestionsQuery(subjectId, topicId, { year, hasSolution: solvedOnly ? true : undefined })
-  );
+  // keepPreviousData: changing a filter keeps the header, chips and old rows on
+  // screen (dimmed) until the new rows arrive, instead of a full-page loader.
+  const q = useInfiniteQuery({
+    ...topicQuestionsQuery(subjectId, topicId, { year, hasSolution: solvedOnly ? true : undefined }),
+    placeholderData: keepPreviousData,
+  });
+  const switching = q.isPlaceholderData;
   const pages = q.data?.pages ?? [];
   const questions: TopicQuestion[] = useMemo(() => pages.flatMap((p) => p.questions), [pages]);
   // The header numbers describe the whole topic, so read them from the first page.
@@ -144,6 +148,7 @@ export const TopicQuestionsScreen = () => {
   return (
     <View style={styles.container}>
       <FlatList
+        style={switching ? styles.switching : undefined}
         data={oldUi === null ? [] : questions}
         keyExtractor={(item) => `${item.subjectId}:${item.questionId}`}
         renderItem={renderItem}
@@ -186,6 +191,7 @@ export const TopicQuestionsScreen = () => {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
+  switching: { opacity: 0.45 },
   center: { flex: 1, backgroundColor: COLORS.background, alignItems: 'center', justifyContent: 'center' },
   header: { paddingHorizontal: 16, paddingTop: 14, paddingBottom: 8, gap: 6 },
   kicker: { fontFamily: FONTS.bodyBold, fontSize: 11, letterSpacing: 1.1, color: COLORS.primary },

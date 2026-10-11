@@ -223,7 +223,6 @@ const styles = StyleSheet.create({
   answerWrapper: {
     paddingHorizontal: 14,
     paddingTop: 4,
-    paddingBottom: 14,
     backgroundColor: COLORS.background,
     borderTopWidth: 1,
     borderTopColor: COLORS.borderLight || '#f1f5f9',

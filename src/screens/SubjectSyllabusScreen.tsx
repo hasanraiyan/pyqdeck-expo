@@ -288,7 +288,7 @@ export const SubjectSyllabusScreen = () => {
                       accessibilityLabel={`${topicCounts?.[t.id]} past paper questions on ${t.title}`}
                       hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
                     >
-                      <Feather name="clipboard" size={16} color={COLORS.secondary} />
+                      <Feather name="file-text" size={16} color={COLORS.secondary} />
                       <Text style={styles.pyqCount}>{topicCounts?.[t.id]}</Text>
                     </TouchableOpacity>
                   )}
@@ -302,7 +302,7 @@ export const SubjectSyllabusScreen = () => {
                       hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
                     >
                       <Feather
-                        name="file-text"
+                        name="book-open"
                         size={17}
                         color={t.hasNotes ? COLORS.primary : COLORS.textSubtle}
                       />
