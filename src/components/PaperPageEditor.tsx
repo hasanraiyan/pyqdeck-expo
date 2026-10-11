@@ -14,6 +14,7 @@ import { Image } from 'expo-image';
 import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 import * as Haptics from 'expo-haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Svg, { Polygon } from 'react-native-svg';
 import { COLORS, FONTS } from '../theme/colors';
 import {
   dragRect,
@@ -23,6 +24,8 @@ import {
   type Rect,
   type Size,
 } from '../admin/cropLogic';
+import { isValidQuad, type Pt, type Quad } from '../admin/perspectiveLogic';
+import { PerspectiveWarper, type PerspectiveWarperHandle } from './PerspectiveWarper';
 
 /**
  * Full-screen page editor for scanned paper pages: crop with draggable
@@ -39,6 +42,60 @@ type Base = { uri: string; w: number; h: number };
 const save = async (ctx: ReturnType<typeof ImageManipulator.manipulate>) => {
   const ref = await ctx.renderAsync();
   return ref.saveAsync({ format: SaveFormat.JPEG, compress: 0.9 });
+};
+
+const initialQuad = (box: Size): Quad => {
+  const r = initialCrop(box);
+  return [
+    { x: r.x, y: r.y },
+    { x: r.x + r.w, y: r.y },
+    { x: r.x + r.w, y: r.y + r.h },
+    { x: r.x, y: r.y + r.h },
+  ];
+};
+
+const QuadHandle = ({
+  index,
+  quadRef,
+  box,
+  onChange,
+  pt,
+}: {
+  index: number;
+  quadRef: React.MutableRefObject<Quad>;
+  box: Size;
+  onChange: (q: Quad) => void;
+  pt: Pt;
+}) => {
+  const start = useRef<Pt>(pt);
+  const boxRef = useRef(box);
+  boxRef.current = box;
+  const responder = useMemo(
+    () =>
+      PanResponder.create({
+        onStartShouldSetPanResponder: () => true,
+        onPanResponderGrant: () => {
+          start.current = quadRef.current[index];
+        },
+        onPanResponderMove: (_, g) => {
+          const b = boxRef.current;
+          const next = quadRef.current.slice() as Quad;
+          next[index] = {
+            x: Math.max(0, Math.min(b.w, start.current.x + g.dx)),
+            y: Math.max(0, Math.min(b.h, start.current.y + g.dy)),
+          };
+          onChange(next);
+        },
+      }),
+    [index, onChange, quadRef]
+  );
+  return (
+    <View
+      {...responder.panHandlers}
+      hitSlop={10}
+      style={[styles.handle, { left: pt.x - HANDLE / 2, top: pt.y - HANDLE / 2 }]}
+    />
+  );
 };
 
 const initialCrop = (box: Size): Rect => ({
@@ -95,6 +152,11 @@ export const PaperPageEditor = ({
   const [area, setArea] = useState<Size>({ w: 0, h: 0 });
   const [tilt, setTilt] = useState(0);
   const [crop, setCrop] = useState<Rect>({ x: 0, y: 0, w: 0, h: 0 });
+  const [perspective, setPerspective] = useState(false);
+  const [quad, setQuad] = useState<Quad>(initialQuad({ w: 1, h: 1 }));
+  const quadRef = useRef(quad);
+  quadRef.current = quad;
+  const warper = useRef<PerspectiveWarperHandle>(null);
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
   const rectRef = useRef(crop);
@@ -107,6 +169,7 @@ export const PaperPageEditor = ({
     let alive = true;
     setBase(null);
     setTilt(0);
+    setPerspective(false);
     setFailed(false);
     (async () => {
       try {
@@ -127,7 +190,10 @@ export const PaperPageEditor = ({
   // Reset the crop frame when the box changes shape (load / 90° turn / resize).
   const boxKey = `${Math.round(box.w)}x${Math.round(box.h)}`;
   useEffect(() => {
-    if (box.w > 0) setCrop(initialCrop(box));
+    if (box.w > 0) {
+      setCrop(initialCrop(box));
+      setQuad(initialQuad(box));
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [boxKey]);
 
@@ -153,6 +219,15 @@ export const PaperPageEditor = ({
     if (!base || busy) return;
     setBusy(true);
     try {
+      if (perspective) {
+        if (!isValidQuad(quad)) {
+          setFailed(true);
+          return;
+        }
+        const srcQuad = quad.map((p) => ({ x: p.x / scale, y: p.y / scale })) as Quad;
+        onDone(await warper.current!.warp(base.uri, srcQuad));
+        return;
+      }
       let ctx = ImageManipulator.manipulate(base.uri);
       if (tilt !== 0) ctx = ctx.rotate(tilt);
       ctx = ctx.crop(toSourceCrop(crop, scale, base, tilt));
@@ -233,9 +308,25 @@ export const PaperPageEditor = ({
             <View style={{ width: box.w, height: box.h, backgroundColor: '#111' }}>
               <Image
                 source={{ uri: base!.uri }}
-                style={[StyleSheet.absoluteFill, { transform: [{ rotate: `${tilt}deg` }] }]}
+                style={[StyleSheet.absoluteFill, { transform: [{ rotate: `${perspective ? 0 : tilt}deg` }] }]}
                 contentFit="fill"
               />
+              {perspective ? (
+                <>
+                  <Svg width={box.w} height={box.h} style={StyleSheet.absoluteFill} pointerEvents="none">
+                    <Polygon
+                      points={quad.map((p) => `${p.x},${p.y}`).join(' ')}
+                      fill="rgba(255,255,255,0.12)"
+                      stroke="#fff"
+                      strokeWidth={2}
+                    />
+                  </Svg>
+                  {quad.map((pt, i) => (
+                    <QuadHandle key={i} index={i} quadRef={quadRef} box={box} onChange={setQuad} pt={pt} />
+                  ))}
+                </>
+              ) : (
+                <>
               {/* Dim everything outside the crop frame */}
               <View style={[styles.dim, { left: 0, top: 0, right: 0, height: crop.y }]} pointerEvents="none" />
               <View
@@ -276,11 +367,16 @@ export const PaperPageEditor = ({
                   ]}
                 />
               ))}
+                </>
+              )}
             </View>
           )}
         </View>
 
         <View style={styles.tools}>
+          {perspective ? (
+            <Text style={styles.hintText}>Drag each corner onto a corner of the page, then tap Done to flatten it.</Text>
+          ) : (
           <View style={styles.tiltRow}>
             <TouchableOpacity onPress={() => setTiltClamped(tilt - 0.5)} hitSlop={8}>
               <Feather name="rotate-ccw" size={16} color="#fff" />
@@ -299,20 +395,32 @@ export const PaperPageEditor = ({
             </TouchableOpacity>
             <Text style={styles.tiltValue}>{tilt > 0 ? '+' : ''}{tilt.toFixed(1)}°</Text>
           </View>
+          )}
           <View style={styles.btnRow}>
             <ToolBtn icon="rotate-ccw" label="Rotate left" onPress={() => rotate90(-1)} disabled={!ready || busy} />
             <ToolBtn icon="rotate-cw" label="Rotate right" onPress={() => rotate90(1)} disabled={!ready || busy} />
             <ToolBtn
+              icon="grid"
+              label={perspective ? 'Plain crop' : 'Perspective'}
+              onPress={() => {
+                setTilt(0);
+                setPerspective((v) => !v);
+              }}
+              disabled={!ready || busy}
+            />
+            <ToolBtn
               icon="maximize"
-              label="Reset crop"
+              label="Reset"
               onPress={() => {
                 setTilt(0);
                 setCrop(initialCrop(box));
+                setQuad(initialQuad(box));
               }}
               disabled={!ready || busy}
             />
           </View>
         </View>
+        <PerspectiveWarper ref={warper} />
       </View>
     </Modal>
   );
@@ -369,6 +477,7 @@ const styles = StyleSheet.create({
     borderColor: COLORS.primary,
   },
   tools: { paddingHorizontal: 16, paddingTop: 10, paddingBottom: 8, gap: 12 },
+  hintText: { fontFamily: FONTS.bodyMedium, fontSize: 12, color: '#fff', textAlign: 'center', paddingVertical: 8 },
   tiltRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   track: { flex: 1, height: 36, justifyContent: 'center' },
   trackLine: { height: 3, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.35)' },
