@@ -35,13 +35,16 @@ import { COLORS, FONTS } from '../theme/colors';
 import { Badge, MarksBadge, YearBadge } from '../components/Badge';
 import { CircleLoader } from '../components/CircleLoader';
 import { rf, verticalScale, useResponsive } from '../utils/responsive';
-import { normalizeQuery, consumeSearchToken, shouldDebounceTap, applyServerRetryAfter } from '../utils/searchGuard';
+import { normalizeQuery, consumeSearchToken, shouldDebounceTap, applyServerRetryAfter, isLowText } from '../utils/searchGuard';
 import { ScreenContainer } from '../components/ScreenContainer';
 import { scanTextFromImage, ScanSource } from '../utils/scanText';
 
 const RECENT_SEARCHES_KEY = 'pyq_recent_searches';
 
 type SearchTab = 'all' | 'notes' | 'questions' | 'subjects';
+
+// `scanned` marks searches that came from a photo, so the list can show a camera icon.
+type RecentSearch = { term: string; scanned?: boolean };
 
 export const SearchScreen = () => {
   const insets = useSafeAreaInsets();
@@ -53,7 +56,7 @@ export const SearchScreen = () => {
   const [inputFocused, setInputFocused] = useState(false);
   const [activeTab, setActiveTab] = useState<SearchTab>('all');
   const queryClient = useQueryClient();
-  const [recentSearches, setRecentSearches] = useState<string[]>([]);
+  const [recentSearches, setRecentSearches] = useState<RecentSearch[]>([]);
   const [cooldownSec, setCooldownSec] = useState(0);
   const [validationError, setValidationError] = useState<string | null>(null);
   // The validated query the results below belong to. null = nothing submitted.
@@ -162,7 +165,21 @@ export const SearchScreen = () => {
     AsyncStorage.getItem(RECENT_SEARCHES_KEY)
       .then((raw) => {
         if (raw) {
-          setRecentSearches(JSON.parse(raw));
+          // Older versions stored a plain string[]; accept both shapes.
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed)) {
+            setRecentSearches(
+              parsed
+                .map((e: any): RecentSearch | null =>
+                  typeof e === 'string'
+                    ? { term: e }
+                    : e && typeof e.term === 'string'
+                      ? { term: e.term, scanned: e.scanned === true }
+                      : null
+                )
+                .filter((e): e is RecentSearch => e !== null)
+            );
+          }
         }
       })
       .catch(() => {});
@@ -199,12 +216,12 @@ export const SearchScreen = () => {
     setCooldownSec(Math.max(1, Math.round(sec)));
   };
 
-  const saveRecentSearch = (term: string) => {
+  const saveRecentSearch = (term: string, scanned = false) => {
     const trimmed = term.trim();
     if (!trimmed) return;
     setRecentSearches((prev) => {
-      const filtered = prev.filter((t) => t.toLowerCase() !== trimmed.toLowerCase());
-      const updated = [trimmed, ...filtered].slice(0, 6);
+      const filtered = prev.filter((t) => t.term.toLowerCase() !== trimmed.toLowerCase());
+      const updated = [{ term: trimmed, ...(scanned ? { scanned: true } : {}) }, ...filtered].slice(0, 6);
       AsyncStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(updated)).catch(() => {});
       return updated;
     });
@@ -295,8 +312,9 @@ export const SearchScreen = () => {
   // Shared by typed searches, suggestion taps and deep links. A new value here
   // unmounts the previous query's observers, which cancels its in-flight
   // requests (each fetcher forwards React Query's signal).
-  const submitQuery = (normalized: string) => {
+  const submitQuery = (normalized: string, scanned = false) => {
     setValidationError(null);
+    setScanHint(null);
     setActiveTab('all');
     // Re-submitting the same text: React Query sees no key change, and the
     // search options disable retries, so a failed search would just sit in its
@@ -307,7 +325,7 @@ export const SearchScreen = () => {
       });
     }
     setSubmitted(normalized);
-    saveRecentSearch(normalized);
+    saveRecentSearch(normalized, scanned);
   };
 
   // Spends a rate-limit token only when a request will really be sent: a repeat
@@ -354,6 +372,7 @@ export const SearchScreen = () => {
   };
 
   const handleClear = () => {
+    setScanHint(null);
     setQuery('');
     setScanImageUri(null);
     setSubmitted(null);
@@ -383,10 +402,12 @@ export const SearchScreen = () => {
   // While set, the bar shows this photo instead of the OCR text. Tapping it
   // reveals the text for fixing misreads; clearing drops both.
   const [scanImageUri, setScanImageUri] = useState<string | null>(null);
+  const [scanHint, setScanHint] = useState<string | null>(null);
   const searchInputRef = useRef<TextInput>(null);
   const runScan = async (source: ScanSource) => {
     setScanning(true);
     setValidationError(null);
+    setScanHint(null);
     const res = await scanTextFromImage(source);
     setScanning(false);
     // Outcome only (ok | cancelled | denied | empty | error): never the image or
@@ -402,7 +423,9 @@ export const SearchScreen = () => {
       }
       if (!allowSearch(norm.query)) return;
       setQuery(norm.query);
-      submitQuery(norm.query);
+      submitQuery(norm.query, true);
+      // Searched anyway; just nudge toward a better crop when little was read.
+      if (isLowText(res.text)) setScanHint('Only a little text was read. Crop closer to the question for better results.');
     } else if (res.status === 'denied') {
       setValidationError('Camera permission is needed to scan a question.');
     } else if (res.status === 'empty') {
@@ -643,6 +666,12 @@ export const SearchScreen = () => {
               <Text style={styles.validationText}>{validationError}</Text>
             </View>
           )}
+          {scanHint && !validationError && (
+            <View style={styles.validationRow}>
+              <Feather name="info" size={12} color={COLORS.textMuted} style={{ marginRight: 6 }} />
+              <Text style={styles.cooldownText}>{scanHint}</Text>
+            </View>
+          )}
           {cooldownSec > 0 && !validationError && (
             <View style={styles.validationRow}>
               <Feather name="clock" size={12} color={COLORS.textMuted} style={{ marginRight: 6 }} />
@@ -751,20 +780,20 @@ export const SearchScreen = () => {
                     </TouchableOpacity>
                   </View>
                   <View style={styles.suggestedList}>
-                    {recentSearches.map((term, idx) => (
+                    {recentSearches.map((item, idx) => (
                       <TouchableOpacity
                         key={idx}
                         style={[styles.suggestedRow, isInputDisabled && { opacity: 0.5 }]}
                         activeOpacity={0.7}
                         disabled={isInputDisabled}
-                        onPress={() => handleSuggestionPress(term)}
+                        onPress={() => handleSuggestionPress(item.term)}
                       >
                         <View style={styles.suggestedRowLeft}>
                           <View style={styles.rowIcon}>
-                            <Feather name="clock" size={13} color={COLORS.textMuted} />
+                            <Feather name={item.scanned ? 'camera' : 'clock'} size={13} color={COLORS.textMuted} />
                           </View>
                           <Text style={styles.suggestedRowText} numberOfLines={2} ellipsizeMode="tail">
-                            {term}
+                            {item.term}
                           </Text>
                         </View>
                         <Feather name="arrow-up-left" size={14} color={COLORS.textMuted} />

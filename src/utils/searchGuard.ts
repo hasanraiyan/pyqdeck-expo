@@ -86,3 +86,24 @@ export function __resetBucket() {
   lastSearchTap = 0;
   blockedUntil = 0;
 }
+
+// OCR text is multi-line and noisy. Flatten it to one line and cut it to the
+// search limit on a word boundary so the cut never lands mid-word.
+export function toSearchQuery(raw: string, maxLen = MAX_LEN): string {
+  const flat = raw
+    .replace(/[\r\n\t]+/g, ' ')
+    .replace(/[^\p{L}\p{M}\p{N}\s.,?()+\-*/=%^'"]/gu, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (flat.length <= maxLen) return flat;
+  const cut = flat.slice(0, maxLen);
+  const lastSpace = cut.lastIndexOf(' ');
+  return (lastSpace > maxLen * 0.6 ? cut.slice(0, lastSpace) : cut).trim();
+}
+
+// A scan that read only a few words usually means the crop was too loose or
+// the photo too blurry: worth a "crop closer" nudge.
+export function isLowText(text: string): boolean {
+  const t = text.trim();
+  return t.length < 12 || t.split(/\s+/).length < 3;
+}
