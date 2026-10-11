@@ -181,7 +181,19 @@ Use your admin MCP client. Changes reach the phone on its next launch or foregro
 - [ ] **Nudges switch:** `nudgesEnabled: false`: a tick on one phone no longer triggers a background sync on the other (it still syncs when opened).
 - [ ] **Audit:** every `update` above appears in `audit_log` with the changed keys only.
 
-## 19. Regression sweep
+## 19. Admin tools in the app (needs the server with `/api/admin-app` deployed)
+
+- [ ] Signed in as a **normal student**: Settings shows **no** "Admin tools" row.
+- [ ] Signed in as an **admin** (role `admin` or an entry in `config/adminAccess.js`): Settings → **Admin tools** appears and lists only the screens your grants allow.
+- [ ] A scoped account granted only `manage_users` `find` and `get` sees only **User support**, with **no** unlink/reset/beta buttons.
+- [ ] **Dashboard & audit log:** numbers match `app_insights` on the MCP; the recent-actions list matches `audit_log`; pull to refresh; "Load more" pages.
+- [ ] **Send notification:** Send is disabled until you tap **Preview recipients**; the preview shows the device count; editing the title, message, group or emails afterwards disables Send until you preview again; Send asks to confirm naming the group and count; a real send appears in the audit list with the title and counts but **not** the message text.
+- [ ] Named emails: an address with no account is listed as unmatched; one with no signed-in phone counts under "Accounts with no device".
+- [ ] **User support:** search by email prefix; open a result; the summary shows counts and settings and **no** topic names, tokens or recents. "Add to beta" then a beta-audience preview counts that account. Unlink and Reset ask for confirmation stating the effect; both appear in the audit log.
+- [ ] **App config:** change the banner and save; Home on another phone shows it. Setting a minimum version **above** the installed one warns that this phone will be blocked too. Turning a kill switch off asks to confirm. An invalid version shows the server's message.
+- [ ] Airplane mode: each admin screen shows a retry state instead of crashing. Sign out: the Admin row disappears.
+
+## 20. Regression sweep
 
 - [ ] Papers, question detail, solutions, Ask AI, search, notes, settings still behave as before.
 - [ ] "Clear cached data" in Settings clears the cache but **keeps** your progress.
@@ -192,7 +204,7 @@ Use your admin MCP client. Changes reach the phone on its next launch or foregro
 
 ## Sign-off
 
-- [ ] Sections 1 to 10, 13, 16, 17 and 18 pass.
+- [ ] Sections 1 to 10, 13, 16, 17, 18 and 19 pass.
 - [ ] Section 11 reviewed and the offline cold start is safe.
 - [ ] Google Play **Data Safety** form updated (progress, votes, reports collected and linked to the account).
 - [ ] Privacy policy page is live and mentions synced progress and app preferences.
