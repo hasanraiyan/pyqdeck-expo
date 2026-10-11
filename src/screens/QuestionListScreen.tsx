@@ -78,7 +78,7 @@ export const QuestionListScreen = () => {
   // on every call; this only decides whether the entry is shown.
   const canManagePapers = can(admin.tools, 'manage_papers', 'upload');
   const paperStatusQ = useQuery({
-    ...paperStatusQuery(subjectId, selectedYear ?? 0),
+    ...paperStatusQuery(subjectId, selectedYear ?? 0, canManagePapers),
     enabled: !!subjectId && selectedYear != null,
   });
   const [manageOpen, setManageOpen] = useState(false);
@@ -461,6 +461,12 @@ export const QuestionListScreen = () => {
               onChanged={() => {
                 void queryClient.invalidateQueries({
                   queryKey: qk.paperStatus(subjectId, selectedYear),
+                });
+                // The viewer's signed pages are cached for minutes; a replaced
+                // or removed paper must not keep showing the old ones. Prefix
+                // match covers both the signed-in and signed-out variants.
+                void queryClient.invalidateQueries({
+                  queryKey: ['paperPages', subjectId, selectedYear],
                 });
               }}
               onClose={() => setManageOpen(false)}
