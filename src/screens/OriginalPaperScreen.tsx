@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { OriginalPaperViewer } from '../components/OriginalPaperViewer';
+import { recordContentOpenedAndMaybeShowInterstitial } from '../utils/ads';
 
 /**
  * Paper-level viewer route for one year's original scanned paper
@@ -15,6 +16,12 @@ export const OriginalPaperScreen = () => {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const { subjectId, year } = route.params ?? {};
+
+  // A viewer open counts like any other content open: the shared interstitial
+  // budget (every 4th open, 2-minute cooldown) decides whether one shows.
+  useEffect(() => {
+    void recordContentOpenedAndMaybeShowInterstitial();
+  }, []);
 
   return (
     <OriginalPaperViewer

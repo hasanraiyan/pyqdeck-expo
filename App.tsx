@@ -22,7 +22,6 @@ import { tokenCache } from '@clerk/expo/token-cache';
 import { clerkPublishableKey } from './src/auth/publishableKey';
 import { mobileAds } from './src/utils/mobileAds';
 import { initInterstitial } from './src/utils/ads';
-import { initRewarded } from './src/utils/rewardedAds';
 import { navigationRef } from './src/utils/navigationRef';
 import { logScreenView } from './src/utils/analytics';
 import * as Backend from './src/api/backend';
@@ -570,7 +569,6 @@ function AppContent() {
   useEffect(() => {
     Promise.resolve(mobileAds().initialize())
       .then(initInterstitial)
-      .then(initRewarded)
       .catch(() => {});
     // A tap on a notification must never be missed, even mid-onboarding.
     const unsubscribe = subscribeToNotificationResponses();

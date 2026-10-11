@@ -40,7 +40,6 @@ import { recordRecentStudy } from '../utils/recentStudy';
 import { useDialogLayout } from '../utils/dialog';
 import { useRequireAuth } from '../auth/useRequireAuth';
 import { hasPlaceholderPaper } from '../utils/originalPaperPlaceholder';
-import { isPaperUnlocked, markPaperUnlocked, showRewardedAd } from '../utils/rewardedAds';
 
 const VOLUME_SCROLL_STEP = 320;
 
@@ -239,44 +238,22 @@ export const QuestionListScreen = () => {
   }, [navigation, hasActiveFilters, openFilterModal, showFilterText]);
 
   // Paper-level original scan for the selected year, pushed as a headerless
-  // route (fullscreen, own top bar, no tab bar). Watch-to-unlock: a rewarded
-  // ad plays first and the paper opens only on EARNED_REWARD (ad-free users
-  // and ad failures open straight through - content is never blocked).
-  // Sign-in is required so every viewing session has an identity for the
-  // watermark (FR-PAPER-8); availability is placeholder-gated in dev until
-  // the real backend lands.
-  const [adBusy, setAdBusy] = useState(false);
+  // route (fullscreen, own top bar, no tab bar). Sign-in is required
+  // (FR-PAPER-8); availability is placeholder-gated in dev until the real
+  // backend lands.
   const openOriginalPaper = useCallback(() => {
-    if (selectedYear == null || adBusy) return;
+    if (selectedYear == null) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-    guard(() => {
-      const paperKey = `${subjectId}:${selectedYear}`;
-      // Already paid for with a watch this session: straight back in.
-      if (isPaperUnlocked(paperKey)) {
+    guard(
+      () =>
         navigation.navigate('OriginalPaper', {
           subjectId,
           subjectName,
           year: selectedYear,
-        });
-        return;
-      }
-      void (async () => {
-        setAdBusy(true);
-        try {
-          const verdict = await showRewardedAd();
-          if (verdict === 'dismissed') return;
-          if (verdict === 'earned') markPaperUnlocked(paperKey);
-          navigation.navigate('OriginalPaper', {
-            subjectId,
-            subjectName,
-            year: selectedYear,
-          });
-        } finally {
-          setAdBusy(false);
-        }
-      })();
-    }, 'paper');
-  }, [adBusy, guard, navigation, selectedYear, subjectId, subjectName]);
+        }),
+      'paper'
+    );
+  }, [guard, navigation, selectedYear, subjectId, subjectName]);
 
   const listRef = useRef<FlatList>(null);
   const scrollOffsetRef = useRef(0);
@@ -374,17 +351,14 @@ export const QuestionListScreen = () => {
             {selectedYear != null && hasPlaceholderPaper() && (
               <View style={styles.paperBtnWrapper}>
                 <TouchableOpacity
-                  style={[styles.paperBtn, adBusy && styles.paperBtnBusy]}
+                  style={styles.paperBtn}
                   activeOpacity={0.7}
                   onPress={openOriginalPaper}
-                  disabled={adBusy}
                   accessibilityRole="button"
                   accessibilityLabel={`View original paper for ${selectedYear}`}
                 >
                   <Feather name="eye" size={14} color="#ffffff" />
-                  <Text style={styles.paperBtnText}>
-                    {adBusy ? 'Loading ad…' : 'View Original Paper'}
-                  </Text>
+                  <Text style={styles.paperBtnText}>View Original Paper</Text>
                 </TouchableOpacity>
               </View>
             )}
@@ -597,9 +571,6 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.displayBold,
     fontSize: rf(13),
     color: '#ffffff',
-  },
-  paperBtnBusy: {
-    opacity: 0.7,
   },
   yearChip: {
     paddingHorizontal: 12,

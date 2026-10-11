@@ -13,6 +13,7 @@ import { Feather } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import * as Haptics from 'expo-haptics';
 import { WebView } from './WebViewCompat';
+import { AdBanner } from './AdBanner';
 import { COLORS, FONTS } from '../theme/colors';
 import { usePreventScreenCapture } from '../utils/screenCapture';
 import {
@@ -191,6 +192,9 @@ export const OriginalPaperViewer = ({
         onViewableItemsChanged={onViewableItemsChanged.current}
       />
 
+      {/* Bottom banner, same as every content screen (hidden when gated off). */}
+      <AdBanner />
+
       {/* Pinch-to-zoom fullscreen: WebView for native zoom, context menu off,
           no copy/share buttons anywhere. */}
       <Modal
@@ -220,6 +224,8 @@ export const OriginalPaperViewer = ({
               )}
             />
           )}
+          {/* Bottom banner in zoom too (hidden when gated off). */}
+          <AdBanner />
           <TouchableOpacity
             style={[styles.zoomClose, { top: insets.top + 10, right: 12 }]}
             activeOpacity={0.7}
