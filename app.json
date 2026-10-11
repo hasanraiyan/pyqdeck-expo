@@ -133,7 +133,15 @@
       ],
       "expo-secure-store",
       "expo-asset",
-      "expo-image"
+      "expo-image",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "PyQdeck needs photo access so admins can upload original paper scans.",
+          "cameraPermission": "PyQdeck needs camera access so admins can scan original paper pages.",
+          "microphonePermission": false
+        }
+      ]
     ],
     "extra": {
       "eas": {

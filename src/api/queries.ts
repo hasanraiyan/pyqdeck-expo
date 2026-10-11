@@ -23,6 +23,8 @@ import {
   getTopicQuestions,
   getQuestionTopicRefs,
   getSyllabusForPyqSubject,
+  getPaperStatus,
+  getOriginalPaperPages,
 } from './index';
 import type { QueryClient } from '@tanstack/react-query';
 import { qk, QuestionParams } from './queryKeys';
@@ -54,6 +56,24 @@ export const questionsQuery = (subjectId: string, params: QuestionParams = {}) =
     queryKey: qk.questions(subjectId, params),
     queryFn: ({ signal }) => getQuestions(subjectId, params, signal),
     meta: persistMeta,
+  });
+
+// Original-paper existence for the question list button. Short stale time so
+// an admin's fresh upload flips the button quickly; not persisted (the manage
+// sheet invalidates it explicitly after every change).
+export const paperStatusQuery = (subjectId: string, year: number) =>
+  queryOptions({
+    queryKey: qk.paperStatus(subjectId, year),
+    queryFn: ({ signal }) => getPaperStatus(subjectId, year, signal),
+  });
+
+// Signed viewer pages. Per-account URLs: never persisted (a stored copy would
+// serve expired signatures offline), refetched while fresh-ish.
+export const paperPagesQuery = (subjectId: string, year: number, signedIn: boolean) =>
+  queryOptions({
+    queryKey: qk.paperPages(subjectId, year, signedIn),
+    queryFn: () => getOriginalPaperPages(subjectId, year),
+    staleTime: 5 * 60 * 1000,
   });
 
 export const questionQuery = (subjectId: string, questionId: string) =>

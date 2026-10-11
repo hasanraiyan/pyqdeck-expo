@@ -54,6 +54,11 @@ export const qk = {
   questionTopics: (subjectId: string, questionId: string) =>
     ['questionTopics', subjectId, questionId] as const,
   syllabusForPyq: (subjectId: string) => ['syllabusForPyq', subjectId] as const,
+  paperStatus: (subjectId: string, year: number) =>
+    ['paperStatus', subjectId, year] as const,
+  // `signedIn` is part of the key so one account never reads another's URLs.
+  paperPages: (subjectId: string, year: number, signedIn: boolean) =>
+    ['paperPages', subjectId, year, signedIn] as const,
   topicNotes: (subjectId: string, topicId: string) =>
     ['topicNotes', subjectId, topicId] as const,
   // `signedIn` is part of the key so the caller's own vote is refetched on sign-in/out.

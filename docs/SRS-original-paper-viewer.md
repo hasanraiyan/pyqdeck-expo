@@ -79,7 +79,7 @@ Today a year's questions exist only as retyped text. The original paper viewer a
 3. Block screenshots and screen recording while the viewer is open; restore normal capture when it closes.
 4. Show no download, share, save, or open-in-browser affordance anywhere in the flow.
 5. Serve every page through authed, expiring signed URLs; never expose a permanent public URL.
-6. Let an admin upload, replace, or remove a year's original pages without a redeploy.
+6. Let an admin upload, replace, or remove a year's original pages from inside the Android app (no MCP upload path — MCP cannot carry images), without a redeploy.
 7. Carry the app's standard ads: shared-budget interstitial on open, bottom banner under the page list and the zoom view.
 
 ### 2.3 User classes and characteristics
@@ -89,7 +89,7 @@ Today a year's questions exist only as retyped text. The original paper viewer a
 | Signed-out student | No viewer access (see FR-PAPER-8 for the rationale). Sees the button's absence, never a locked screen. |
 | Signed-in standard student | Full viewer access, where originals exist. |
 | Signed-in ad-free student | Same viewer access; ad-free changes ads only, not papers. |
-| Admin | Same viewer access, plus upload/replace/remove tooling. |
+| Admin | Same viewer access, plus in-app paper management (upload / replace / remove) on the question list screen. |
 
 ### 2.4 As-is starting point (why this SRS is spec-first)
 
@@ -147,9 +147,11 @@ These limits are documented in-product nowhere (no scary copy for students); the
 | FR-PAPER-11 | M | The backend SHALL store paper assets per subject/year: ordered pages (page number, private image reference, dimensions), uploader, and timestamps. One paper per subject/year (re-upload replaces). |
 | FR-PAPER-12 | M | The question-list payload (or a lightweight sibling field) SHALL include a boolean `hasOriginal` per subject/year so the app shows the button with no extra round trip. |
 | FR-PAPER-13 | M | A per-account endpoint (e.g. `GET /api/me/papers/:subject/:year`, private no-store, 401 when signed out) SHALL return that paper's pages as short-lived signed URLs minted for the requesting account, and SHALL log the issuance (account, paper, page count — identifiers only) for leak tracing. |
-| FR-PAPER-14 | M | Signed URLs SHALL expire within minutes (**TBD-3**) and SHALL be bound to the viewing session/account where the storage provider allows it. Refresh of a single page's URL SHALL NOT require re-issuing the whole paper. |
-| FR-PAPER-15 | M | An admin tool SHALL upload (ordered pages), replace, and remove a year's paper, with validation (image types, page count cap, size caps — **TBD-5**) and audit entries like all admin writes. Until originals exist, the tooling is exercised against placeholder uploads. |
+| FR-PAPER-14 | M | Page URLs SHALL be server-signed (authenticated delivery: only server-minted URLs resolve) with a client-side refresh contract (`refreshAfter` ~10 min, **TBD-3**; the app re-fetches by then and treats stale URLs as expired). Honest limit: true self-expiring URLs need Cloudinary token auth (Advanced plan) — until then mitigation is unguessable signatures + short refresh discipline, never public delivery. |
+| FR-PAPER-15 | M | Paper management SHALL live in the Android app, not in MCP (MCP cannot transport images). On the question list screen with a year selected, an admin holding the `manage_papers` grant SHALL see a "Manage paper" entry alongside the student button: with no paper it offers upload-new; with a paper it shows page count + upload date with replace and remove actions. Every upload/replace/remove SHALL be audited like all admin writes. |
 | FR-PAPER-16 | M | No endpoint, log, or error body SHALL EVER emit a permanent public URL for an original page. Storage SHALL use private/authenticated delivery; any public-delivery misconfiguration SHALL fail closed (no URL issued). |
+| FR-PAPER-23 | M | Upload sources SHALL be camera capture ("scan") and gallery multi-pick (new `expo-image-picker` dependency, runtime camera + media-library permissions via Expo config). Picked pages SHALL be reviewable/reorderable before upload, within validation caps (image types, ≤20 pages, ≤10 MB each — **TBD-5**). Replace and remove SHALL confirm first (replace overwrites, remove deletes); all three SHALL be audited. |
+| FR-PAPER-24 | M | Uploads SHALL travel app → backend → Cloudinary (multipart POST to an admin endpoint; the Cloudinary secret never ships in the app — **TBD-9**), with visible progress and a quiet retry on failure. A finished upload SHALL flip `hasOriginal` so the student button appears without an app update. |
 
 > NOTE (2026-10-11): the watch-to-unlock gate with server-persisted unlocks + SSV verification (former FR-PAPER-18–22) was deliberately removed — the viewer opens directly and ads in the app are the single bottom banner only. The design is kept in git history if it is ever revived.
 
@@ -185,12 +187,14 @@ These limits are documented in-product nowhere (no scary copy for students); the
 |---|---|---|
 | TBD-1 | Vertical list vs horizontal pager? | Recommend vertical scroll list (matches question-list reading, simpler zoom); pager only if QA finds list jank on low-end phones. |
 | TBD-2 | — | REMOVED (2026-10-11) with the watermark (FR-PAPER-6). |
-| TBD-3 | Signed-URL lifetime? | Recommend 10 minutes, per-page refresh on 403; whole-paper session token optional later. |
+| TBD-3 | Refresh interval? | Recommend 10 minutes client-side refresh; whole-paper session token optional later. True URL self-expiry (token auth) only with an Advanced-plan upgrade. |
 | TBD-4 | Auth transport: header session vs URL token? | Recommend Authorization header (nothing shareable in the URL); fall back to single-use URL tokens only if the image component cannot set headers. |
 | TBD-5 | Upload caps: page count, file size, resolution ceiling? | Recommend ≤ 20 pages, ≤ 5 MB/page in, ≤ 1600px long-edge served. Confirm with content owner. |
 | TBD-6 | Website originals? | Explicitly undecided; web cannot enforce FLAG_SECURE, so default is app-only until a web protection story exists. |
 | TBD-7 | — | REMOVED (2026-10-11) with the unlock gate. |
 | TBD-8 | — | REMOVED (2026-10-11) with the unlock gate + SSV plan (kept in git history). |
+| TBD-9 | Upload path: app → backend → Cloudinary, or direct unsigned upload preset? | Recommend via-backend multipart POST (secret stays server-side, validation + audit in one place); direct preset only if backend upload throughput becomes a problem. |
+| TBD-10 | Scan enhancement (edge detect, perspective fix)? | Recommend plain camera capture first; add a scanner SDK only if admins complain about quality. |
 
 ---
 
@@ -201,7 +205,7 @@ These limits are documented in-product nowhere (no scary copy for students); the
 | Requirement | Planned change |
 |---|---|
 | FR-PAPER-1 (button) | `src/screens/QuestionListScreen.tsx` (year selected + `hasOriginal` from question-list payload) |
-| FR-PAPER-2/4/5/7 (viewer) | `src/screens/OriginalPaperScreen.tsx` + `src/components/OriginalPaperViewer.tsx`; `expo-image` with memory-only caching, selection/long-press disabled; zoom via WebView surface |
+| FR-PAPER-2/4/5/7 (viewer) | `src/screens/OriginalPaperScreen.tsx` (signed pages via `paperPagesQuery`, dev placeholder fallback, loader/error/retry states) + `src/components/OriginalPaperViewer.tsx`; `expo-image` with memory-only caching, selection/long-press disabled; zoom via WebView surface |
 | FR-PAPER-3 (capture block) | `expo-screen-capture` `usePreventScreenCapture` while the viewer is mounted, guarded fallback (`src/utils/screenCapture.ts`) |
 | FR-PAPER-17 (viewer ads) | `recordContentOpenedAndMaybeShowInterstitial` on viewer open (shared budget); `AdBanner` under page list and zoom view |
 | FR-PAPER-8 (sign-in gate) | Existing `useRequireAuth` guard with `reason: 'paper'` + `SignInScreen` heading |
@@ -214,7 +218,7 @@ These limits are documented in-product nowhere (no scary copy for students); the
 | FR-PAPER-11 (asset model) | New `server/models/PaperAsset.js` (subject, year, pages[], uploader, timestamps) |
 | FR-PAPER-12 (`hasOriginal`) | Question-list service payload extension (cheap existence check, cached) |
 | FR-PAPER-13/14 (signed URLs) | New `GET /api/me/papers/:subject/:year` route + minting service; issuance log (identifiers only) |
-| FR-PAPER-15 (admin tooling) | Admin tool (upload/replace/remove) + audit, exercised with placeholder uploads first |
+| FR-PAPER-15 (admin tooling) | New `manage_papers` grant + in-app manage sheet on the question list (upload-new / replace / remove) + audit, exercised with placeholder uploads first |
 | FR-PAPER-16 (never public) | Private/authenticated storage delivery; fail-closed issuance |
 
 ---

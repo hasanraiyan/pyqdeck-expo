@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -16,21 +16,16 @@ import { WebView } from './WebViewCompat';
 import { AdBanner } from './AdBanner';
 import { COLORS, FONTS } from '../theme/colors';
 import { usePreventScreenCapture } from '../utils/screenCapture';
-import {
-  getPlaceholderPaper,
-  type PlaceholderPage,
-} from '../utils/originalPaperPlaceholder';
+import type { PaperViewerPage } from '../api';
 
 /**
  * Paper-level viewer for one year's original scanned paper
  * (docs/SRS-original-paper-viewer.md).
  *
- * Rendered as a fullscreen modal INSIDE the question list screen - it has no
- * route and no navigation header of its own, only this in-modal top bar.
- *
- * UI-first build: pages come from the temporary placeholder provider (a sample
- * scan URL). The protections are real already: capture blocking while mounted,
- * no save/share affordance, long-press menu disabled, memory-only image caching.
+ * Rendered as a headerless route with its own top bar. Pages arrive resolved
+ * (signed server URLs, or the dev placeholder) via props - this component
+ * never fetches. The protections: capture blocking while mounted, no
+ * save/share affordance, long-press menu disabled, memory-only image caching.
  *
  * Deliberately ad-free and chrome-light: no banner, no extra buttons.
  */
@@ -59,12 +54,12 @@ const zoomHtml = (src: string) => `<!DOCTYPE html>
 </html>`;
 
 export const OriginalPaperViewer = ({
-  subjectId,
   year,
+  pages,
   onClose,
 }: {
-  subjectId: string;
   year: number;
+  pages: PaperViewerPage[];
   onClose: () => void;
 }) => {
   // Blocks screenshots + screen recordings while this viewer is mounted;
@@ -73,13 +68,8 @@ export const OriginalPaperViewer = ({
 
   const insets = useSafeAreaInsets();
 
-  const pages: PlaceholderPage[] = useMemo(
-    () => getPlaceholderPaper(String(subjectId ?? ''), Number(year ?? 0)),
-    [subjectId, year]
-  );
-
   const [visiblePage, setVisiblePage] = useState(1);
-  const [zoomed, setZoomed] = useState<PlaceholderPage | null>(null);
+  const [zoomed, setZoomed] = useState<PaperViewerPage | null>(null);
   const [failed, setFailed] = useState<Set<number>>(new Set());
   const [retryTick, setRetryTick] = useState(0);
   // FlatList demands exactly one threshold key in viewabilityConfig, and a
@@ -100,14 +90,17 @@ export const OriginalPaperViewer = ({
     setRetryTick((t) => t + 1);
   }, []);
 
-  const openZoom = useCallback((page: PlaceholderPage) => {
+  const openZoom = useCallback((page: PaperViewerPage) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     setZoomed(page);
   }, []);
 
+  const aspectOf = (page: PaperViewerPage) =>
+    page.width && page.height ? page.width / page.height : 800 / 1130;
+
   const renderPage = useCallback(
-    ({ item }: { item: PlaceholderPage }) => {
-      const isFailed = failed.has(item.index);
+    ({ item, index }: { item: PaperViewerPage; index: number }) => {
+      const isFailed = failed.has(index);
       return (
         <TouchableOpacity
           activeOpacity={0.9}
@@ -115,17 +108,17 @@ export const OriginalPaperViewer = ({
           // No long-press handler on purpose: nothing to save through.
           delayLongPress={800}
           accessibilityRole="imagebutton"
-          accessibilityLabel={`Page ${item.index + 1}, tap to zoom`}
+          accessibilityLabel={`Page ${index + 1}, tap to zoom`}
         >
-          <View style={styles.pageFrame}>
+          <View style={[styles.pageFrame, { aspectRatio: aspectOf(item) }]}>
             {isFailed ? (
               <TouchableOpacity
                 style={styles.pageError}
                 activeOpacity={0.7}
-                onPress={() => retryPage(item.index)}
+                onPress={() => retryPage(index)}
               >
                 <Feather name="refresh-cw" size={18} color={COLORS.textMuted} />
-                <Text style={styles.pageErrorText}>Could not load page {item.index + 1}. Tap to retry.</Text>
+                <Text style={styles.pageErrorText}>Could not load page {index + 1}. Tap to retry.</Text>
               </TouchableOpacity>
             ) : (
               <Image
@@ -136,7 +129,7 @@ export const OriginalPaperViewer = ({
                 // Memory only: pages must never land in a user-visible cache.
                 cachePolicy="memory"
                 onError={() =>
-                  setFailed((prev) => new Set(prev).add(item.index))
+                  setFailed((prev) => new Set(prev).add(index))
                 }
               />
             )}
@@ -181,7 +174,7 @@ export const OriginalPaperViewer = ({
 
       <FlatList
         data={pages}
-        keyExtractor={(p) => `page-${p.index}`}
+        keyExtractor={(_, i) => `page-${i}`}
         renderItem={renderPage}
         contentContainerStyle={[styles.list, { paddingBottom: Math.max(insets.bottom, 16) + 32 }]}
         showsVerticalScrollIndicator={false}
@@ -272,7 +265,6 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.card,
     borderWidth: 1,
     borderColor: COLORS.border,
-    aspectRatio: 800 / 1130,
   },
   pageImage: { width: '100%', height: '100%' },
   pageError: {

@@ -20,7 +20,7 @@ import {
   SyllabusSubject,
 } from '../types/syllabus';
 import * as Backend from './backend';
-import { authHeader } from '../auth/token';
+import { authHeader, getAuthToken } from '../auth/token';
 import {
   FailureKind,
   MESSAGES,
@@ -472,6 +472,120 @@ export interface MyVotes {
 
 export const getMyVotes = (subjectId: string) =>
   requestMe<MyVotes>(`/votes?subject=${encodeURIComponent(subjectId)}`, 'GET');
+
+// -------------------------------------------------------------
+// ORIGINAL PAPERS (docs/SRS-original-paper-viewer.md)
+// -------------------------------------------------------------
+
+export interface PaperStatus {
+  subject: string;
+  year: number;
+  hasOriginal: boolean;
+  pages: number;
+  updatedAt: string | null;
+}
+
+/** Public existence check: drives the question list's paper buttons. */
+export const getPaperStatus = (subjectId: string, year: number, signal?: AbortSignal) =>
+  fetchApi<PaperStatus>(`/papers/${encodeURIComponent(subjectId)}/${year}`, signal);
+
+export interface PaperViewerPage {
+  order: number;
+  width: number | null;
+  height: number | null;
+  url: string;
+}
+
+export interface PaperViewerPayload {
+  subject: string;
+  year: number;
+  refreshAfter: string;
+  pages: PaperViewerPage[];
+}
+
+// Signed page URLs for the viewer. Authed per account; throws (never empty)
+// so the screen can show loading / retry / offline states. No fallback in
+// here - the screen decides about placeholder data in dev.
+export const getOriginalPaperPages = (subjectId: string, year: number) =>
+  requestMe<PaperViewerPayload>(`/papers/${encodeURIComponent(subjectId)}/${year}/pages`, 'GET');
+
+export interface PaperUploadSummary {
+  subject: string;
+  year: number;
+  pages: number;
+  replaced: boolean;
+  uploadedBy: string | null;
+  updatedAt: string;
+}
+
+export interface PaperPageAsset {
+  uri: string;
+  name: string;
+  type: string;
+}
+
+// Admin upload of scanned pages (multipart). fetch has no upload progress, so
+// this goes over XMLHttpRequest; progress is the uploaded fraction 0..1.
+// Never throws on its own terms: HTTP errors come back as ApiError.
+export const adminUploadPaper = (
+  subjectId: string,
+  year: number,
+  assets: PaperPageAsset[],
+  onProgress?: (fraction: number) => void
+): Promise<PaperUploadSummary> =>
+  (async () => {
+    const origin = await Backend.ready();
+    const token = await getAuthToken();
+    return new Promise<PaperUploadSummary>((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', `${origin.root}/api/admin-app/papers`);
+      if (token) xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+      const form = new FormData();
+      form.append('subject', subjectId);
+      form.append('year', String(year));
+      assets.forEach((a, i) => {
+        form.append('pages', {
+          uri: a.uri,
+          name: a.name || `page-${i + 1}.jpg`,
+          type: a.type || 'image/jpeg',
+        } as any);
+      });
+      if (xhr.upload && onProgress) {
+        xhr.upload.onprogress = (e) => {
+          if (e.lengthComputable && e.total > 0) onProgress(Math.min(1, e.loaded / e.total));
+        };
+      }
+      xhr.onload = () => {
+        let body: any = {};
+        try {
+          body = JSON.parse(xhr.responseText || '{}');
+        } catch {}
+        if (xhr.status >= 200 && xhr.status < 300) {
+          resolve(body as PaperUploadSummary);
+          return;
+        }
+        const kind = kindForStatus(xhr.status);
+        const err = new ApiError(
+          (body && body.message) || MESSAGES[kind],
+          xhr.status,
+          undefined,
+          kind
+        );
+        if (typeof body?.code === 'string') err.code = body.code;
+        reject(err);
+      };
+      xhr.onerror = () => reject(new ApiError(MESSAGES.unreachable, undefined, undefined, 'unreachable'));
+      xhr.ontimeout = () => reject(new ApiError(MESSAGES.timeout, undefined, undefined, 'timeout'));
+      xhr.send(form as any);
+    });
+  })();
+
+/** Admin removal of a year's paper. */
+export const adminDeletePaper = (subjectId: string, year: number) =>
+  requestAdmin<{ subject: string; year: number; deleted: boolean; pages: number }>(
+    `/papers/${encodeURIComponent(subjectId)}/${year}`,
+    'DELETE'
+  );
 
 // Paid-ads entitlement for the signed-in account (docs/SRS-advertisements.md,
 // FR-ADS-14). Never throws for the caller: signed-out, offline and error all

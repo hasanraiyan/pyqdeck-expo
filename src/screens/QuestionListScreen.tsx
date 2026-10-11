@@ -15,8 +15,9 @@ import { useRoute, useNavigation, useFocusEffect } from '@react-navigation/nativ
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import { useQuery, keepPreviousData } from '@tanstack/react-query';
-import { useSubjectMeta, questionsQuery } from '../api/queries';
+import { useQuery, keepPreviousData, useQueryClient } from '@tanstack/react-query';
+import { useSubjectMeta, questionsQuery, paperStatusQuery } from '../api/queries';
+import { qk } from '../api/queryKeys';
 import { SubjectMeta, QuestionSummary } from '../types';
 import { COLORS, FONTS } from '../theme/colors';
 import { QuestionItem } from '../components/QuestionItem';
@@ -40,6 +41,9 @@ import { recordRecentStudy } from '../utils/recentStudy';
 import { useDialogLayout } from '../utils/dialog';
 import { useRequireAuth } from '../auth/useRequireAuth';
 import { hasPlaceholderPaper } from '../utils/originalPaperPlaceholder';
+import { useAdminAccess } from '../admin/useAdminAccess';
+import { can } from '../admin/adminLogic';
+import { ManagePaperSheet } from '../components/ManagePaperSheet';
 
 const VOLUME_SCROLL_STEP = 320;
 
@@ -51,6 +55,8 @@ export const QuestionListScreen = () => {
   const showFilterText = bp({ phone: false, tablet: true });
   const dlg = useDialogLayout();
   const { guard } = useRequireAuth();
+  const queryClient = useQueryClient();
+  const admin = useAdminAccess();
   const {
     semesterId,
     subjectId,
@@ -68,6 +74,16 @@ export const QuestionListScreen = () => {
   const [selectedChapter, setSelectedChapter] = useState<string | undefined>(
     initialChapter || undefined
   );
+  // Paper management for admins (FR-PAPER-15): the server re-checks the grant
+  // on every call; this only decides whether the entry is shown.
+  const canManagePapers = can(admin.tools, 'manage_papers', 'upload');
+  const paperStatusQ = useQuery({
+    ...paperStatusQuery(subjectId, selectedYear ?? 0),
+    enabled: !!subjectId && selectedYear != null,
+  });
+  const [manageOpen, setManageOpen] = useState(false);
+  const hasServerPaper = paperStatusQ.data?.hasOriginal ?? false;
+  const showViewBtn = selectedYear != null && (hasPlaceholderPaper() || hasServerPaper);
   // False until the default year (from meta) has been decided, so the first
   // question fetch isn't fired for "all years" and then again for the default.
   const [yearResolved, setYearResolved] = useState(Boolean(initialYear || initialChapter));
@@ -348,7 +364,7 @@ export const QuestionListScreen = () => {
         }
         ListHeaderComponent={
           <>
-            {selectedYear != null && hasPlaceholderPaper() && (
+            {showViewBtn && (
               <View style={styles.paperBtnWrapper}>
                 <TouchableOpacity
                   style={styles.paperBtn}
@@ -359,6 +375,22 @@ export const QuestionListScreen = () => {
                 >
                   <Feather name="eye" size={14} color="#ffffff" />
                   <Text style={styles.paperBtnText}>View Original Paper</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+            {selectedYear != null && canManagePapers && (
+              <View style={styles.paperBtnWrapper}>
+                <TouchableOpacity
+                  style={styles.manageBtn}
+                  activeOpacity={0.7}
+                  onPress={() => setManageOpen(true)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Manage original paper for ${selectedYear}`}
+                >
+                  <Feather name="settings" size={14} color={COLORS.primary} />
+                  <Text style={styles.manageBtnText}>
+                    {hasServerPaper ? 'Manage paper' : 'Upload paper'}
+                  </Text>
                 </TouchableOpacity>
               </View>
             )}
@@ -410,6 +442,43 @@ export const QuestionListScreen = () => {
       </View>
 
       <AdBanner />
+
+      {/* Paper manage sheet (admins): upload / replace / remove scans. */}
+      <Modal
+        visible={manageOpen}
+        transparent
+        animationType={dlg.animationType}
+        onRequestClose={() => setManageOpen(false)}
+      >
+        <TouchableWithoutFeedback onPress={() => setManageOpen(false)}>
+          <View style={[styles.modalOverlay, dlg.overlay]}>
+            <TouchableWithoutFeedback>
+              <View
+                style={[
+                  styles.modalContent,
+                  { paddingBottom: insets.bottom + 16, maxWidth: readMaxWidth, width: '100%', alignSelf: 'center' },
+                  dlg.sheet,
+                ]}
+              >
+                {selectedYear != null && (
+                  <ManagePaperSheet
+                    subjectId={subjectId}
+                    subjectName={subjectName}
+                    year={selectedYear}
+                    status={paperStatusQ.data}
+                    onChanged={() => {
+                      void queryClient.invalidateQueries({
+                        queryKey: qk.paperStatus(subjectId, selectedYear),
+                      });
+                    }}
+                    onClose={() => setManageOpen(false)}
+                  />
+                )}
+              </View>
+            </TouchableWithoutFeedback>
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
 
       {/* Filter Bottom Sheet Modal */}
       <Modal
@@ -571,6 +640,25 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.displayBold,
     fontSize: rf(13),
     color: '#ffffff',
+  },
+  manageBtn: {
+    width: '100%',
+    maxWidth: 560,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: COLORS.card,
+    borderWidth: 1,
+    borderColor: COLORS.primaryBorder,
+    borderRadius: 10,
+    paddingVertical: 11,
+    paddingHorizontal: 14,
+  },
+  manageBtnText: {
+    fontFamily: FONTS.displayBold,
+    fontSize: rf(13),
+    color: COLORS.primary,
   },
   yearChip: {
     paddingHorizontal: 12,

@@ -30,6 +30,7 @@
     "expo-font": "~57.0.2",
     "expo-haptics": "^57.0.2",
     "expo-image": "~57.0.5",
+    "expo-image-picker": "~57.0.20",
     "expo-network": "~57.0.2",
     "expo-notifications": "~57.0.15",
     "expo-screen-capture": "~57.0.4",
