@@ -166,7 +166,22 @@ Needs two devices (or one device plus an emulator) signed in as the same account
 - [ ] Sign out on device 1: Jump Back In is empty. Sign back in: the account's recents return.
 - [ ] Sign in as account B on a shared phone: B sees none of A's recents.
 
-## 18. Regression sweep
+## 18. Remote app config (admin MCP `manage_app_config`)
+
+Use your admin MCP client. Changes reach the phone on its next launch or foreground (the app asks at most every 10 minutes, so reopen after waiting or swipe the app away and open it).
+
+- [ ] **Banner:** `update` with `banner: { message: "Test notice", level: "info", id: "t1" }`. Home shows the strip. Dismiss it, reopen: it stays hidden. Edit only the text, keep `id: "t1"`: still hidden. Change `id` to `t2`: it shows again. `banner: null` removes it.
+- [ ] **Warning level** shows in amber.
+- [ ] **Recommended version:** set `recommendedAppVersion` above the installed version. The app shows "Update available" once; "Later" dismisses it and it does not come back for that version.
+- [ ] **Required version:** set `minAppVersion` above the installed version. The full-screen **Update required** appears and "Update now" opens the store page. Set it to `""`: it goes away (no reinstall needed).
+- [ ] **Offline:** with a banner or minimum version set, turn on airplane mode, kill and reopen: the stored config still applies.
+- [ ] **Garbage:** `update` with `minAppVersion: "latest"` is rejected by the admin tool (the phone never sees it).
+- [ ] **Sync kill switch:** `flags: { syncEnabled: false }`. Tick a topic: it works locally. On the next sync the app stops quietly (no error popup). In Settings → Sync progress nothing breaks; `app_insights` shows no new sync requests from this phone. Set it back to `true`: the tick syncs.
+- [ ] **Settings/recents switch:** `settingsSyncEnabled: false`: progress still syncs, but changing the reading layout on one phone no longer reaches the other.
+- [ ] **Nudges switch:** `nudgesEnabled: false`: a tick on one phone no longer triggers a background sync on the other (it still syncs when opened).
+- [ ] **Audit:** every `update` above appears in `audit_log` with the changed keys only.
+
+## 19. Regression sweep
 
 - [ ] Papers, question detail, solutions, Ask AI, search, notes, settings still behave as before.
 - [ ] "Clear cached data" in Settings clears the cache but **keeps** your progress.
@@ -177,7 +192,7 @@ Needs two devices (or one device plus an emulator) signed in as the same account
 
 ## Sign-off
 
-- [ ] Sections 1 to 10, 13, 16 and 17 pass.
+- [ ] Sections 1 to 10, 13, 16, 17 and 18 pass.
 - [ ] Section 11 reviewed and the offline cold start is safe.
 - [ ] Google Play **Data Safety** form updated (progress, votes, reports collected and linked to the account).
 - [ ] Privacy policy page is live and mentions synced progress and app preferences.

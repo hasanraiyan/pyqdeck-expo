@@ -208,6 +208,10 @@ const requestMe = async <T,>(path: string, method: string, body?: unknown): Prom
     '/api/me'
   );
 
+// Remote app config (minimum version, banner, kill switches). Anonymous.
+export const getRemoteAppConfig = (signal?: AbortSignal): Promise<unknown> =>
+  fetchApi<unknown>('/app-config', signal);
+
 // -------------------------------------------------------------
 // CATALOG ENDPOINTS
 // -------------------------------------------------------------

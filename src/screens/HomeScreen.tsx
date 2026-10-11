@@ -24,6 +24,7 @@ import { ScreenContainer } from '../components/ScreenContainer';
 import { HeroArt } from '../components/HeroArt';
 import { ResponsiveGrid } from '../components/ResponsiveGrid';
 import { yearNumberOf, YEAR_NUMBERS } from '../utils/year';
+import { AppBanner } from '../components/AppBanner';
 import {
   getRecentStudies,
   RecentStudy,
@@ -239,6 +240,9 @@ export const HomeScreen = () => {
         }
       >
         <ScreenContainer variant="wide">
+          {/* Admin notice (maintenance, news); hidden when empty or dismissed */}
+          <AppBanner />
+
           {/* Hero Section */}
           <View style={[styles.hero, styles.heroRow, !heroTwoCol && styles.heroRowPhone]}>
             <View style={styles.heroCopyCol}>

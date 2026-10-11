@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { AppState, Platform, View } from 'react-native';
+import { Alert, AppState, Platform, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import {
   NavigationContainer,
@@ -71,6 +71,15 @@ import { isAuthEnabled } from './src/config/features';
 import { linkPushTokenToAccount, subscribeToSyncNudges } from './src/utils/notifications';
 import { requestSync } from './src/db/progressSync';
 import { recordNudgeRun } from './src/background/diagnostics';
+import {
+  getAppConfigNow,
+  loadCachedAppConfig,
+  markRecommendedPromptShown,
+  refreshAppConfig,
+  shouldShowRecommendedPrompt,
+} from './src/config/appConfig';
+import { UpdateRequiredScreen } from './src/components/UpdateRequiredScreen';
+import { openStoreListing } from './src/utils/appUpdate';
 
 // Crash/error monitoring only - deliberately not sendDefaultPii (would send
 // IP address etc, undisclosed in the Play Store Data Safety form) and no
@@ -444,6 +453,27 @@ function AppContent() {
     void getOldUiEnabled();
   }, []);
 
+  // Remote app config: use the stored copy straight away, refresh in the
+  // background at launch and when the app returns to the foreground (throttled
+  // to every 10 minutes). It never blocks startup.
+  useEffect(() => {
+    const maybePrompt = async () => {
+      if (!(await shouldShowRecommendedPrompt())) return;
+      await markRecommendedPromptShown();
+      Alert.alert('Update available', 'A newer version of PyQdeck is available.', [
+        { text: 'Later', style: 'cancel' },
+        { text: 'Update', onPress: () => void openStoreListing() },
+      ]);
+    };
+    void loadCachedAppConfig()
+      .then(() => refreshAppConfig())
+      .then(maybePrompt);
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') void refreshAppConfig().then(maybePrompt);
+    });
+    return () => sub.remove();
+  }, []);
+
   // An interrupted sign-out wipe is finished before anything reads user data:
   // onboarded stays null (nothing renders) until it is done.
   useEffect(() => {
@@ -496,6 +526,7 @@ function AppContent() {
     const unsubscribe = subscribeToNotificationResponses();
     // Another device changed something: sync now (no-op when signed out).
     const unsubscribeNudges = subscribeToSyncNudges(() => {
+      if (!getAppConfigNow().flags.nudgesEnabled) return; // admin switch
       void recordNudgeRun('foreground', 'received while the app was open, sync requested');
       requestSync({ immediate: true });
     });
@@ -621,6 +652,7 @@ function AppContent() {
     return (
       <>
         {tree}
+        <UpdateRequiredScreen />
         <MermaidWorker />
       </>
     );
@@ -635,6 +667,7 @@ function AppContent() {
       <SafeAreaInsetsContext.Provider value={{ ...insets, top: 0 }}>
         {tree}
       </SafeAreaInsetsContext.Provider>
+      <UpdateRequiredScreen />
       <MermaidWorker />
     </View>
   );

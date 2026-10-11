@@ -37,6 +37,10 @@ export const STORAGE_REGISTRY: Entry[] = [
   { key: 'pyq_cache_migrated_rq', category: 'device' },
   { key: 'pyqdeck:sync_enabled', category: 'device' },
   { key: 'pyqdeck:sync_hint_dismissed', category: 'device' },
+  // Remote app config (an admin notice, not the student's data): kept on sign-out.
+  { key: 'pyqdeck:app_config', category: 'device' },
+  { key: 'pyqdeck:banner_dismissed', category: 'device' },
+  { key: 'pyqdeck:update_prompted', category: 'device' },
   // Journal flag: managed by the wipe itself, never wiped as data.
   { key: WIPE_PENDING_KEY, category: 'device' },
 
