@@ -37,10 +37,7 @@ import { resetOnboarding } from '../utils/onboarding';
 import {
   flushOutbox,
   getSyncStatus,
-  isSyncEnabled,
-  loadSyncEnabled,
   pendingCount,
-  setSyncEnabled,
   subscribeSyncStatus,
   syncNow,
   refreshFromCloud,
@@ -71,12 +68,10 @@ export const SettingsScreen = ({ navigation }: any) => {
   const [clearing, setClearing] = useState(false);
   const [cleared, setCleared] = useState(false);
   const [checkingUpdate, setCheckingUpdate] = useState(false);
-  const [syncOn, setSyncOn] = useState(isSyncEnabled());
   const [syncStatus, setSyncStatusState] = useState<SyncStatus>(getSyncStatus());
   const [signingOut, setSigningOut] = useState(false);
   const admin = useAdminAccess();
   useEffect(() => {
-    void loadSyncEnabled().then(setSyncOn);
     void pendingCount();
     return subscribeSyncStatus((s) => {
       setSyncStatusState(s);
@@ -167,13 +162,7 @@ export const SettingsScreen = ({ navigation }: any) => {
     }
   };
 
-  const toggleSync = async (value: boolean) => {
-    setSyncOn(value);
-    await setSyncEnabled(value);
-  };
-
   const syncSubtitle = () => {
-    if (!syncOn) return 'Progress stays on this device only';
     const { state, pending, lastSyncAt } = syncStatus;
     if (state === 'syncing') return 'Syncing...';
     if (state === 'paused') return 'Sync paused - sign in again to continue';
@@ -204,11 +193,7 @@ export const SettingsScreen = ({ navigation }: any) => {
   const handleSignOut = () => {
     Alert.alert(
       'Sign out?',
-      `Progress, history and downloaded content on this device will be removed. ${
-        syncOn
-          ? 'Your progress stays saved to your account.'
-          : 'Sync is off, so your progress on this device will not be kept anywhere.'
-      } You can keep using everything except Ask AI while signed out.`,
+      'Progress, history and downloaded content on this device will be removed. Your progress stays saved to your account. You can keep using everything except Ask AI while signed out.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -292,23 +277,9 @@ export const SettingsScreen = ({ navigation }: any) => {
                     icon="refresh-cw"
                     label="Sync progress"
                     subtitle={syncSubtitle()}
-                    right={
-                      <Switch
-                        value={syncOn}
-                        onValueChange={toggleSync}
-                        trackColor={{ true: COLORS.primary, false: COLORS.border }}
-                        thumbColor={COLORS.card}
-                      />
-                    }
+                    onPress={() => void syncNow()}
+                    disabled={syncStatus.state === 'syncing'}
                   />
-                  {syncOn && (
-                    <SettingsRow
-                      icon="upload-cloud"
-                      label="Sync now"
-                      onPress={() => void syncNow()}
-                      disabled={syncStatus.state === 'syncing'}
-                    />
-                  )}
                   {admin.isAdmin && (
                     <SettingsRow
                       icon="shield"

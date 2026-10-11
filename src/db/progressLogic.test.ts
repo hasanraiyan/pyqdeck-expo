@@ -134,7 +134,7 @@ test('backoff doubles from 5s and caps at 15 min', () => {
 });
 
 test('canSync needs every condition', () => {
-  const all = { signedIn: true, authEnabled: true, syncEnabled: true, online: true };
+  const all = { signedIn: true, authEnabled: true, online: true };
   assert.equal(canSync(all), true);
   for (const k of Object.keys(all) as (keyof typeof all)[]) {
     assert.equal(canSync({ ...all, [k]: false }), false);

@@ -35,6 +35,9 @@ export const STORAGE_REGISTRY: Entry[] = [
   { key: 'review_prompt_shown', category: 'device' },
   { key: 'pyqdeck:backend_origin', category: 'device' },
   { key: 'pyq_cache_migrated_rq', category: 'device' },
+  // Legacy: the Settings sync toggle was removed (sync is always on while
+  // signed in), so nothing reads this key anymore. Kept registered so it
+  // stays classified and is never mistaken for user data.
   { key: 'pyqdeck:sync_enabled', category: 'device' },
   { key: 'pyqdeck:sync_hint_dismissed', category: 'device' },
   // Remote app config (an admin notice, not the student's data): kept on sign-out.

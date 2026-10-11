@@ -43,7 +43,6 @@ import { getKnownPushToken } from '../utils/notifications';
 
 const CURSOR_KEY = 'pyqdeck:progress_cursor';
 const LAST_SYNC_KEY = 'pyqdeck:last_sync_at';
-const SYNC_ENABLED_KEY = 'pyqdeck:sync_enabled';
 const BATCH_SIZE = 200;
 const DEBOUNCE_MS = 2_000;
 const MAX_WAIT_MS = 30_000;
@@ -52,7 +51,7 @@ const TAB_OPEN_MIN_GAP_MS = 60_000;
 const AUX_SYNC_MIN_GAP_MS = 60_000;
 let lastAuxSyncAt = 0;
 
-export type SyncState = 'idle' | 'syncing' | 'offline' | 'paused' | 'error' | 'off';
+export type SyncState = 'idle' | 'syncing' | 'offline' | 'paused' | 'error';
 
 export interface SyncStatus {
   state: SyncState;
@@ -61,7 +60,6 @@ export interface SyncStatus {
 }
 
 let session: { signedIn: boolean; userId: string | null } = { signedIn: false, userId: null };
-let syncEnabled = true;
 let status: SyncStatus = { state: 'idle', pending: 0, lastSyncAt: null };
 let inFlight: Promise<void> | null = null;
 let rerun = false;
@@ -116,7 +114,7 @@ const clearTimer = () => {
  */
 export function requestSync(opts: { immediate?: boolean; delayMs?: number } = {}): void {
   if (!getAppConfigNow().flags.syncEnabled) return; // admin kill switch
-  if (!canSync({ signedIn: session.signedIn, authEnabled: isAuthEnabled, syncEnabled, online: true })) {
+  if (!canSync({ signedIn: session.signedIn, authEnabled: isAuthEnabled, online: true })) {
     return;
   }
   const now = Date.now();
@@ -137,34 +135,6 @@ export function requestSyncOnStudyOpen(): void {
   requestSync({ immediate: true });
 }
 
-export async function loadSyncEnabled(): Promise<boolean> {
-  try {
-    syncEnabled = (await AsyncStorage.getItem(SYNC_ENABLED_KEY)) !== '0';
-  } catch {
-    syncEnabled = true;
-  }
-  setStatus({ state: syncEnabled ? status.state : 'off' });
-  return syncEnabled;
-}
-
-export async function setSyncEnabled(enabled: boolean): Promise<void> {
-  syncEnabled = enabled;
-  try {
-    await AsyncStorage.setItem(SYNC_ENABLED_KEY, enabled ? '1' : '0');
-  } catch {}
-  if (!enabled) {
-    clearTimer();
-    setStatus({ state: 'off' });
-  } else {
-    setStatus({ state: 'idle' });
-    requestSync({ immediate: true });
-  }
-}
-
-export function isSyncEnabled(): boolean {
-  return syncEnabled;
-}
-
 /** Called by the auth layer whenever Clerk's signed-in state or user changes. */
 export function configureSyncSession(next: { signedIn: boolean; userId: string | null }): void {
   const changedUser = next.userId !== session.userId;
@@ -181,13 +151,13 @@ export function configureSyncSession(next: { signedIn: boolean; userId: string |
     failures = 0;
     quotaBlocked = false;
   }
-  void loadSyncEnabled().then(() => requestSync({ immediate: true }));
+  void requestSync({ immediate: true });
 }
 
 /** Waits (up to `timeoutMs`) for the outbox to drain. True if it is empty. */
 export async function flushOutbox(timeoutMs: number): Promise<boolean> {
   if ((await refreshPending()) === 0) return true;
-  if (!canSync({ signedIn: session.signedIn, authEnabled: isAuthEnabled, syncEnabled, online: await isOnline() })) {
+  if (!canSync({ signedIn: session.signedIn, authEnabled: isAuthEnabled, online: await isOnline() })) {
     return false;
   }
   await Promise.race([syncNow(), new Promise<void>((r) => setTimeout(r, timeoutMs))]);
@@ -330,7 +300,7 @@ export function syncNow(): Promise<void> {
   }
   inFlight = (async () => {
     try {
-      if (!canSync({ signedIn: session.signedIn, authEnabled: isAuthEnabled, syncEnabled, online: true })) {
+      if (!canSync({ signedIn: session.signedIn, authEnabled: isAuthEnabled, online: true })) {
         return;
       }
       if (pausedForAuth) return;
@@ -399,7 +369,6 @@ export async function syncFromBackground(): Promise<string> {
   await loadCachedAppConfig(); // headless: nothing has loaded the config yet
   if (!getAppConfigNow().flags.syncEnabled) return 'skipped: sync is paused by an admin';
   if (!getAppConfigNow().flags.nudgesEnabled) return 'skipped: nudges are paused by an admin';
-  await loadSyncEnabled();
   session = { signedIn: true, userId };
   await syncNow();
   return status.state === 'idle' ? 'synced' : `ended in state "${status.state}"`;
@@ -446,7 +415,7 @@ registerWipeHook(() => {
   quotaBlocked = false;
   lastTabTrigger = 0;
   lastAuxSyncAt = 0;
-  setStatus({ state: syncEnabled ? 'idle' : 'off', pending: 0, lastSyncAt: null });
+  setStatus({ state: 'idle', pending: 0, lastSyncAt: null });
 });
 
 AppState.addEventListener('change', (state) => {

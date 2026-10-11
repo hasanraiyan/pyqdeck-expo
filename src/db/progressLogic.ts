@@ -168,13 +168,12 @@ export function backoffMs(failures: number): number {
 export interface SyncGate {
   signedIn: boolean;
   authEnabled: boolean;
-  syncEnabled: boolean;
   online: boolean;
 }
 
 /** AND-FR-9: the only conditions under which a sync round may run. */
 export function canSync(g: SyncGate): boolean {
-  return g.signedIn && g.authEnabled && g.syncEnabled && g.online;
+  return g.signedIn && g.authEnabled && g.online;
 }
 
 /** Count of done topics, optionally limited to keys in the loaded syllabus. */
