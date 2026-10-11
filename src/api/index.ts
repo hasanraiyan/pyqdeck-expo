@@ -28,6 +28,7 @@ import {
   isTimeoutError,
   kindForStatus,
 } from '../utils/netError';
+import { cloudinaryErrorMessage, overallProgress } from '../admin/directUpload';
 
 export class ApiError extends Error {
   status?: number;
@@ -524,10 +525,12 @@ export interface PaperPageAsset {
   type: string;
 }
 
-// Admin upload of scanned pages (multipart). fetch has no upload progress, so
-// this goes over XMLHttpRequest; progress is the uploaded fraction 0..1.
+// Legacy admin upload: the pages travel through OUR server (multipart). Kept
+// only as a fallback for a server that does not have the direct-upload
+// endpoints yet. fetch has no upload progress, so this goes over
+// XMLHttpRequest; progress is the uploaded fraction 0..1.
 // Never throws on its own terms: HTTP errors come back as ApiError.
-export const adminUploadPaper = (
+const adminUploadPaperViaServer = (
   subjectId: string,
   year: number,
   assets: PaperPageAsset[],
@@ -579,6 +582,119 @@ export const adminUploadPaper = (
       xhr.send(form as any);
     });
   })();
+
+// Direct upload: our server only SIGNS each page and later records the result;
+// the image bytes go straight from the phone to Cloudinary. That keeps large
+// photos out of the host's request-size limits and out of the server's memory.
+interface PaperSignedPage {
+  order: number;
+  /** Exactly the fields Cloudinary must receive, covered by `signature`. */
+  params: Record<string, string>;
+  signature: string;
+}
+interface PaperSignResponse {
+  uploadUrl: string;
+  apiKey: string;
+  pages: PaperSignedPage[];
+}
+
+const uploadPageToCloudinary = (
+  uploadUrl: string,
+  apiKey: string,
+  page: PaperSignedPage,
+  asset: PaperPageAsset,
+  onProgress: (fraction: number) => void
+): Promise<{ public_id: string }> =>
+  new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', uploadUrl);
+    xhr.timeout = 120000;
+    const form = new FormData();
+    form.append('file', {
+      uri: asset.uri,
+      name: asset.name || `page-${page.order}.jpg`,
+      type: asset.type || 'image/jpeg',
+    } as any);
+    form.append('api_key', apiKey);
+    form.append('signature', page.signature);
+    Object.entries(page.params).forEach(([k, v]) => form.append(k, v));
+    if (xhr.upload) {
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable && e.total > 0) onProgress(Math.min(1, e.loaded / e.total));
+      };
+    }
+    xhr.onload = () => {
+      let body: any = null;
+      try {
+        body = JSON.parse(xhr.responseText || 'null');
+      } catch {}
+      if (xhr.status >= 200 && xhr.status < 300 && typeof body?.public_id === 'string') {
+        resolve(body);
+        return;
+      }
+      reject(
+        new ApiError(
+          `Page ${page.order}: ${cloudinaryErrorMessage(body, xhr.status)}`,
+          xhr.status,
+          undefined,
+          kindForStatus(xhr.status)
+        )
+      );
+    };
+    xhr.onerror = () => reject(new ApiError(MESSAGES.unreachable, undefined, undefined, 'unreachable'));
+    xhr.ontimeout = () => reject(new ApiError(MESSAGES.timeout, undefined, undefined, 'timeout'));
+    xhr.send(form as any);
+  });
+
+/**
+ * Admin upload of scanned pages. Sign with our server, send each page straight
+ * to Cloudinary (one at a time, so progress is smooth and memory stays low),
+ * then commit the page ids so the server records the paper. Progress is the
+ * overall fraction 0..1. Falls back to the through-the-server route when the
+ * server predates the sign/commit endpoints.
+ */
+export const adminUploadPaper = async (
+  subjectId: string,
+  year: number,
+  assets: PaperPageAsset[],
+  onProgress?: (fraction: number) => void
+): Promise<PaperUploadSummary> => {
+  let signed: PaperSignResponse;
+  try {
+    signed = await requestAdmin<PaperSignResponse>('/papers/sign', 'POST', {
+      subject: subjectId,
+      year,
+      count: assets.length,
+    });
+  } catch (e) {
+    if (e instanceof ApiError && (e.status === 404 || e.status === 405)) {
+      return adminUploadPaperViaServer(subjectId, year, assets, onProgress);
+    }
+    throw e;
+  }
+  if (!Array.isArray(signed?.pages) || signed.pages.length !== assets.length) {
+    throw new ApiError('The server returned an unexpected upload plan.', undefined, undefined, 'unknown');
+  }
+
+  const uploaded: { publicId: string }[] = [];
+  for (let i = 0; i < assets.length; i++) {
+    const res = await uploadPageToCloudinary(
+      signed.uploadUrl,
+      signed.apiKey,
+      signed.pages[i],
+      assets[i],
+      (fraction) => onProgress?.(overallProgress(i, assets.length, fraction))
+    );
+    uploaded.push({ publicId: res.public_id });
+    onProgress?.(overallProgress(i + 1, assets.length, 0));
+  }
+
+  return requestAdmin<PaperUploadSummary>('/papers/commit', 'POST', {
+    subject: subjectId,
+    year,
+    pages: uploaded,
+  });
+};
 
 /** Admin removal of a year's paper. */
 export const adminDeletePaper = (subjectId: string, year: number) =>

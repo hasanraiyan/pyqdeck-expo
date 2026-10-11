@@ -14,6 +14,7 @@ import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import { COLORS, FONTS } from '../theme/colors';
 import {
+  ApiError,
   adminDeletePaper,
   adminUploadPaper,
   type PaperPageAsset,
@@ -167,7 +168,13 @@ export const ManagePaperSheet = ({
       );
       onChanged();
     } catch (e) {
-      setError(userMessage(e, 'Upload failed. Check your connection and try again.'));
+      // Admin-only screen: append the HTTP status and server code so a failure
+      // says what happened instead of a generic line.
+      const detail =
+        e instanceof ApiError && e.status
+          ? ` (HTTP ${e.status}${e.code ? `, ${e.code}` : ''})`
+          : '';
+      setError(userMessage(e, 'Upload failed. Check your connection and try again.') + detail);
     } finally {
       setUploading(false);
     }
