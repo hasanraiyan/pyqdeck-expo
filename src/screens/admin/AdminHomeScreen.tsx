@@ -1,75 +1,113 @@
 import React from 'react';
 import { Text } from 'react-native';
-import { SettingsRow } from '../../components/SettingsRow';
+import { Feather } from '@expo/vector-icons';
 import { useAdminAccess } from '../../admin/useAdminAccess';
 import { can } from '../../admin/adminLogic';
-import { AdminScroll, Card, Hint, Loading } from '../../admin/ui';
+import { AdminScroll, Loading, Notice, PageHeader, Section, Card } from '../../admin/ui';
+import { COLORS, FONTS } from '../../theme/colors';
+import { Pressable, View } from 'react-native';
 
-/** Lists only the admin screens this account's grants allow. */
+type Icon = React.ComponentProps<typeof Feather>['name'];
+
+/** The admin area's front page: one tappable card per tool this account may use. */
 export const AdminHomeScreen = ({ navigation }: any) => {
   const { loading, isAdmin, tools, name } = useAdminAccess();
 
-  if (loading) return <Loading />;
+  if (loading) return <Loading label="Checking your access" />;
+
   if (!isAdmin) {
     return (
       <AdminScroll>
-        <Card>
-          <Text>Admin tools are not available for this account.</Text>
-        </Card>
+        <PageHeader title="Admin tools" />
+        <Section>
+          <Notice tone="info">These tools are only available to admin accounts.</Notice>
+        </Section>
       </AdminScroll>
     );
   }
 
-  const rows = [
+  const tools_ = [
     {
       show: can(tools, 'app_insights') || can(tools, 'audit_log'),
-      icon: 'bar-chart-2' as const,
-      label: 'Dashboard & audit log',
-      subtitle: 'Accounts, sync, devices, recent admin actions',
+      icon: 'bar-chart-2' as Icon,
+      label: 'Dashboard',
+      subtitle: 'Accounts, sync, devices and recent admin actions',
       to: 'AdminDashboard',
     },
     {
       show: can(tools, 'send_notification'),
-      icon: 'send' as const,
+      icon: 'send' as Icon,
       label: 'Send notification',
-      subtitle: 'Preview recipients, then send',
+      subtitle: 'Preview the audience, then send a push',
       to: 'AdminNotify',
     },
     {
       show: can(tools, 'manage_users', 'find'),
-      icon: 'users' as const,
+      icon: 'users' as Icon,
       label: 'User support',
-      subtitle: 'Find an account and help with a problem',
+      subtitle: 'Find a student and help with a problem',
       to: 'AdminUsers',
     },
     {
       show: can(tools, 'manage_app_config', 'read'),
-      icon: 'sliders' as const,
+      icon: 'sliders' as Icon,
       label: 'App config',
-      subtitle: 'Banner, minimum version, kill switches',
+      subtitle: 'Banner, versions and sync switches',
       to: 'AdminConfig',
     },
-  ].filter((r) => r.show);
+  ].filter((t) => t.show);
 
   return (
     <AdminScroll>
-      <Hint>
-        Signed in as {name || 'admin'}. Everything here uses your normal account; the server
-        checks what you may do on every action and records changes in the audit log.
-      </Hint>
-      <Card>
-        {rows.map((r) => (
-          <SettingsRow
-            key={r.to}
-            icon={r.icon}
-            label={r.label}
-            subtitle={r.subtitle}
-            onPress={() => navigation.navigate(r.to)}
-            last={false}
-          />
-        ))}
-        {rows.length === 0 && <Text>No admin tools are granted to this account.</Text>}
-      </Card>
+      <PageHeader title="Admin tools" summary={`Signed in as ${name || 'admin'}.`} />
+      <Section>
+        {tools_.length === 0 ? (
+          <Notice tone="info">No admin tools are granted to this account.</Notice>
+        ) : (
+          tools_.map((t) => (
+            <Pressable
+              key={t.to}
+              onPress={() => navigation.navigate(t.to)}
+              style={({ pressed }) => ({
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 14,
+                backgroundColor: COLORS.card,
+                borderWidth: 1,
+                borderColor: COLORS.border,
+                borderRadius: 14,
+                padding: 14,
+                opacity: pressed ? 0.7 : 1,
+              })}
+            >
+              <View
+                style={{
+                  width: 42,
+                  height: 42,
+                  borderRadius: 12,
+                  backgroundColor: COLORS.primaryLight,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Feather name={t.icon} size={20} color={COLORS.primary} />
+              </View>
+              <View style={{ flex: 1, gap: 2 }}>
+                <Text style={{ fontFamily: FONTS.bodySemi, fontSize: 15, color: COLORS.text }}>{t.label}</Text>
+                <Text style={{ fontFamily: FONTS.body, fontSize: 12, color: COLORS.textMuted }}>{t.subtitle}</Text>
+              </View>
+              <Feather name="chevron-right" size={18} color={COLORS.textSubtle} />
+            </Pressable>
+          ))
+        )}
+      </Section>
+      <Section>
+        <Card>
+          <Text style={{ fontFamily: FONTS.body, fontSize: 12, lineHeight: 18, color: COLORS.textMuted }}>
+            The server checks what you may do on every action and records changes in the audit log.
+          </Text>
+        </Card>
+      </Section>
     </AdminScroll>
   );
 };
