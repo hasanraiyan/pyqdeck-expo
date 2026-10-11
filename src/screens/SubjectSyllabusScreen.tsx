@@ -9,16 +9,14 @@ import {
   Platform,
   UIManager,
   RefreshControl,
-  Linking,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRoute, useNavigation, useFocusEffect } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
-import * as WebBrowser from 'expo-web-browser';
 import { COLORS, FONTS } from '../theme/colors';
-import { useSyllabusSubject } from '../api/queries';
+import { useSyllabusSubject, useTopicQuestionCounts } from '../api/queries';
 import { SyllabusModule, SyllabusSubject, Topic } from '../types/syllabus';
 import { adoptRenamedSubject, getDoneTopicsIn, setTopicDone, subscribeProgress } from '../db/syllabusProgress';
 import { ScreenError, ScreenEmpty } from '../components/ScreenState';
@@ -60,6 +58,10 @@ export const SubjectSyllabusScreen = () => {
 
   const subjectQ = useSyllabusSubject(subjectId);
   const subject: SyllabusSubject | null = subjectQ.data ?? null;
+  // How many past-paper questions an admin has linked to each topic. A missing or
+  // failed answer simply means no PYQ icons; it is never an error on this screen.
+  const countsQ = useTopicQuestionCounts(subject?.id);
+  const topicCounts = countsQ.data?.topics;
   // Only an error when there is nothing (not even a persisted copy) to show.
   const error =
     subjectQ.isError && !subjectQ.data ? userMessage(subjectQ.error, 'Could not load this subject.') : null;
@@ -180,29 +182,21 @@ export const SubjectSyllabusScreen = () => {
     [navigation, subject, subjectId]
   );
 
-  const openYouTubeSearch = useCallback(
-    async (topicTitle: string) => {
+  const openTopicQuestions = useCallback(
+    (module: SyllabusModule, topic: Topic) => {
+      if (!subject) return;
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      // Using Google Video search with site:youtube.com prevents Android/iOS OS App Link intent
-      // from intercepting youtube.com and forcing open the native YouTube app.
-      // This ensures the in-app browser sheet loads inside the app so the student never leaves the ecosystem.
-      const query = subject?.name ? `${topicTitle} ${subject.name} lecture` : `${topicTitle} lecture`;
-      const url = `https://www.google.com/search?q=${encodeURIComponent(query + ' site:youtube.com')}&tbm=vid`;
-      try {
-        await WebBrowser.openBrowserAsync(url, {
-          toolbarColor: COLORS.card,
-          controlsColor: COLORS.primary,
-          secondaryToolbarColor: COLORS.background,
-          showTitle: true,
-          enableBarCollapsing: true,
-        });
-      } catch {
-        Linking.openURL(url).catch((err) => {
-          console.warn('Could not open video search:', err);
-        });
-      }
+      navigation.navigate('TopicQuestions', {
+        subjectId,
+        subjectName: subject.name,
+        topicId: topic.id,
+        topicTitle: topic.title,
+        moduleId: module.id,
+        moduleName: module.title,
+        semesterId: subject.semester ? `sem-${subject.semester}` : undefined,
+      });
     },
-    [subject]
+    [navigation, subject, subjectId]
   );
 
   if (!subjectId) {
@@ -286,19 +280,18 @@ export const SubjectSyllabusScreen = () => {
                 </TouchableOpacity>
 
                 <View style={styles.actionsWrap}>
-                  <TouchableOpacity
-                    style={[styles.actionBtn, isDone && styles.actionBtnDone]}
-                    onPress={() => openYouTubeSearch(t.title)}
-                    activeOpacity={0.7}
-                    accessibilityLabel={`Search YouTube for ${t.title}`}
-                    hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
-                  >
-                    <Feather
-                      name="youtube"
-                      size={18}
-                      color="#e02424"
-                    />
-                  </TouchableOpacity>
+                  {(topicCounts?.[t.id] ?? 0) > 0 && (
+                    <TouchableOpacity
+                      style={[styles.actionBtn, styles.pyqBtn, isDone && styles.actionBtnDone]}
+                      onPress={() => openTopicQuestions(m, t)}
+                      activeOpacity={0.7}
+                      accessibilityLabel={`${topicCounts?.[t.id]} past paper questions on ${t.title}`}
+                      hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
+                    >
+                      <Feather name="clipboard" size={16} color={COLORS.secondary} />
+                      <Text style={styles.pyqCount}>{topicCounts?.[t.id]}</Text>
+                    </TouchableOpacity>
+                  )}
 
                   {(t.hasNotes || __DEV__) && (
                     <TouchableOpacity
@@ -397,6 +390,9 @@ export const SubjectSyllabusScreen = () => {
 };
 
 const styles = StyleSheet.create({
+  // PYQ icon with the number of linked past-paper questions beside it.
+  pyqBtn: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  pyqCount: { fontFamily: FONTS.bodyBold, fontSize: 12, color: COLORS.secondary },
   container: { flex: 1, backgroundColor: COLORS.background },
   centerContainer: {
     flex: 1,

@@ -45,6 +45,7 @@ import { recordQuestionOpenedAndMaybeShowInterstitial } from '../utils/ads';
 import { AdBanner } from '../components/AdBanner';
 import { getMyVote, setMyVote, restoreVotesForSubject, votesRestored } from '../utils/votes';
 import { useRequireAuth } from '../auth/useRequireAuth';
+import { QuestionTopicChips } from '../components/QuestionTopicChips';
 import { WaveLoader } from '../components/WaveLoader';
 import { CircleLoader } from '../components/CircleLoader';
 import { isAiEnabled } from '../config/features';
@@ -542,6 +543,9 @@ export const QuestionDetailScreen = () => {
                 </Text>
               </View>
             )}
+
+            {/* Syllabus topics an admin linked this question to; tap one for its notes. */}
+            <QuestionTopicChips subjectId={subjectId} questionId={question.questionId} />
 
             <NativeContentRenderer
               content={question.text}

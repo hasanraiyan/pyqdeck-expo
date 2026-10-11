@@ -19,6 +19,10 @@ import {
   getAiOverviewStatus,
   listAllSubjects,
   getTopicNotes,
+  getTopicQuestionCounts,
+  getTopicQuestions,
+  getQuestionTopicRefs,
+  getSyllabusForPyqSubject,
 } from './index';
 import type { QueryClient } from '@tanstack/react-query';
 import { qk, QuestionParams } from './queryKeys';
@@ -114,6 +118,59 @@ export const syllabusSubjectQuery = (subject: string) =>
     queryFn: ({ signal }) => getSyllabusSubject(subject, signal),
     staleTime: STALE.syllabus,
     meta: persistMeta,
+  });
+
+// -------------------------------------------------------------
+// Topic-wise past papers
+// -------------------------------------------------------------
+// Counts are tiny and shown on every topic row, so they are persisted (work
+// offline after the first view) but revalidated often: an admin adds links over
+// time. A failed fetch just means "no icons", never an error screen.
+
+export const topicCountsQuery = (subject: string) =>
+  queryOptions({
+    queryKey: qk.topicCounts(subject),
+    queryFn: ({ signal }) => getTopicQuestionCounts(subject, signal),
+    staleTime: STALE.volatile,
+    meta: persistMeta,
+    retry: 0,
+  });
+
+export const useTopicQuestionCounts = (subject: string | undefined) =>
+  useQuery({ ...topicCountsQuery(subject ?? ''), enabled: !!subject });
+
+export const topicQuestionsQuery = (
+  subject: string,
+  topicId: string,
+  filters: { year?: number; hasSolution?: boolean } = {}
+) =>
+  infiniteQueryOptions({
+    queryKey: qk.topicQuestions(subject, topicId, filters.year, filters.hasSolution),
+    queryFn: ({ signal, pageParam }) =>
+      getTopicQuestions(subject, topicId, { ...filters, offset: pageParam, limit: 30 }, signal),
+    initialPageParam: 0,
+    getNextPageParam: (last) =>
+      last.offset + last.returned < last.total ? last.offset + last.returned : undefined,
+    staleTime: STALE.volatile,
+    meta: persistMeta,
+  });
+
+export const questionTopicsQuery = (subjectId: string, questionId: string) =>
+  queryOptions({
+    queryKey: qk.questionTopics(subjectId, questionId),
+    queryFn: ({ signal }) => getQuestionTopicRefs(subjectId, questionId, signal),
+    staleTime: STALE.volatile,
+    meta: persistMeta,
+    retry: 0,
+  });
+
+export const syllabusForPyqQuery = (subjectId: string) =>
+  queryOptions({
+    queryKey: qk.syllabusForPyq(subjectId),
+    queryFn: ({ signal }) => getSyllabusForPyqSubject(subjectId, signal),
+    staleTime: STALE.catalog,
+    meta: persistMeta,
+    retry: 0,
   });
 
 // -------------------------------------------------------------

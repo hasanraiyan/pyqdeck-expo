@@ -61,6 +61,7 @@ import { SemesterSelectScreen } from './src/screens/SemesterSelectScreen';
 import { SyllabusOverviewScreen } from './src/screens/SyllabusOverviewScreen';
 import { SubjectSyllabusScreen } from './src/screens/SubjectSyllabusScreen';
 import { TopicNotesScreen } from './src/screens/TopicNotesScreen';
+import { TopicQuestionsScreen } from './src/screens/TopicQuestionsScreen';
 import { checkForStoreUpdate } from './src/utils/appUpdate';
 import { maybeRequestReview } from './src/utils/appReview';
 import { isSyllabusEnabled } from './src/config/features';
@@ -209,6 +210,11 @@ function renderSharedScreens(StackNav: typeof Stack, syllabusTitle = 'Syllabus')
         name="TopicNotes"
         component={TopicNotesScreen}
         options={({ route }: any) => ({ title: route.params?.moduleName || 'Notes' })}
+      />
+      <StackNav.Screen
+        name="TopicQuestions"
+        component={TopicQuestionsScreen}
+        options={({ route }: any) => ({ title: route.params?.topicTitle || 'Past papers' })}
       />
       <StackNav.Screen
         name="SubjectSyllabus"

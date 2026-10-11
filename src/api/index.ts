@@ -504,6 +504,87 @@ export const getBranchSemester = (branch: string, semester: number, signal?: Abo
 export const getSyllabusSubject = (subject: string, signal?: AbortSignal) =>
   syllabusRead<SyllabusSubject>(`/syllabus/subjects/${encodeURIComponent(subject)}`, signal);
 
+// --- topic-wise past papers (links an admin made between questions and topics) ---
+
+/** Distinct past-paper questions per topic and per module of one syllabus subject. */
+export interface TopicQuestionCounts {
+  subject: string;
+  topics: Record<string, number>;
+  modules: Record<string, number>;
+  total: number;
+}
+
+export const getTopicQuestionCounts = (subject: string, signal?: AbortSignal) =>
+  syllabusRead<TopicQuestionCounts>(
+    `/syllabus/subjects/${encodeURIComponent(subject)}/topic-questions/counts`,
+    signal
+  );
+
+export interface TopicQuestion extends QuestionSummary {
+  /** The past-paper subject the question belongs to (open it there). */
+  subjectId: string | null;
+  subjectName: string | null;
+  /** The question's other topics in the same syllabus subject. */
+  otherTopics: { id: string; title: string; moduleId: string }[];
+}
+
+export interface TopicQuestionsResult {
+  syllabusSubject: string;
+  topic: { id: string; title: string; moduleId: string; moduleTitle: string };
+  summary: { count: number; withSolution: number; years: { year: number; count: number }[] };
+  total: number;
+  returned: number;
+  offset: number;
+  questions: TopicQuestion[];
+}
+
+export const getTopicQuestions = (
+  subject: string,
+  topicId: string,
+  params: { year?: number; hasSolution?: boolean; limit?: number; offset?: number } = {},
+  signal?: AbortSignal
+) => {
+  const qs = new URLSearchParams();
+  if (params.year) qs.set('year', String(params.year));
+  if (params.hasSolution !== undefined) qs.set('hasSolution', String(params.hasSolution));
+  qs.set('limit', String(params.limit ?? 30));
+  qs.set('offset', String(params.offset ?? 0));
+  return syllabusRead<TopicQuestionsResult>(
+    `/syllabus/subjects/${encodeURIComponent(subject)}/topics/${encodeURIComponent(topicId)}/questions?${qs}`,
+    signal
+  );
+};
+
+/** The syllabus topics a past-paper question is linked to (chips on its detail screen). */
+export interface QuestionTopicRef {
+  syllabusSubject: string;
+  syllabusSubjectName: string;
+  moduleId: string;
+  moduleTitle: string;
+  topicId: string;
+  title: string;
+}
+
+export const getQuestionTopicRefs = (subjectId: string, questionId: string, signal?: AbortSignal) =>
+  fetchApi<{ subject: string; questionId: string; topics: QuestionTopicRef[] }>(
+    `/subjects/${encodeURIComponent(subjectId)}/questions/${encodeURIComponent(questionId)}/topics`,
+    signal
+  );
+
+/** The syllabus subject(s) a past-paper subject belongs to (the way back from the PYQ tab). */
+export interface SyllabusForPyq {
+  subject: string;
+  syllabusSubjects: {
+    id: string;
+    name: string;
+    semester: number;
+    branches: { id: string; name: string }[];
+  }[];
+}
+
+export const getSyllabusForPyqSubject = (subjectId: string, signal?: AbortSignal) =>
+  fetchApi<SyllabusForPyq>(`/subjects/${encodeURIComponent(subjectId)}/syllabus`, signal);
+
 // Deliberately not part of getSyllabusSubject's payload - a subject screen
 // renders every topic in the tree at once, so bundling every topic's notes
 // into that one fetch would make it slow for a subject whose notes most
