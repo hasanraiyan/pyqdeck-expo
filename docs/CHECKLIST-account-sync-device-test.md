@@ -192,7 +192,21 @@ Use your admin MCP client. Changes reach the phone on its next launch or foregro
 - [ ] **App config:** change the banner and save; Home on another phone shows it. Setting a minimum version **above** the installed one warns that this phone will be blocked too. Turning a kill switch off asks to confirm. An invalid version shows the server's message.
 - [ ] Airplane mode: each admin screen shows a retry state instead of crashing. Sign out: the Admin row disappears.
 
-## 20. Regression sweep
+## 20. Topic-wise past papers (needs the server with the topic reads deployed and links made by an admin)
+
+Set up first: map the subject (`manage_syllabus`, subject update, `data.pyqSubjectId`) and link a few questions to topics (`manage_content`, level `topic_link`).
+
+- [ ] **Study tab → a subject → expand a module.** Each topic row shows **two** icons at most: the PYQ icon with a number, and notes. **No YouTube icon** in the list (it is still on the topic's notes screen).
+- [ ] A topic with no linked questions shows **no PYQ icon**. A subject with no links at all looks exactly as before.
+- [ ] Tap the PYQ icon: the topic's questions open, newest year first, with a summary line ("N questions asked across Y years · S with solutions") and year chips plus a "With solution" chip. The chips filter the list; the summary stays about the whole topic.
+- [ ] A question linked to two topics appears under **both**, and its row shows "Also in <other topic>" chips; tapping one opens that topic's list.
+- [ ] Open a question from the list: it opens as in the PYQ tab (solution, share, copy).
+- [ ] On any question's detail screen, a **Topics** row of chips appears when it is linked; tapping a chip opens that topic's notes. A question with no links shows no row.
+- [ ] **PYQ tab → a subject:** a **Syllabus & notes** button appears only when the subject is mapped; it opens the syllabus. A subject shared by two branches asks "Which branch?" unless your saved branch settles it.
+- [ ] Airplane mode after viewing once: counts, the list and the chips still show from the cache; with nothing cached they simply do not appear (no error screen).
+- [ ] After an admin adds a link, it shows in the app within about 5 minutes (pull to refresh on the list).
+
+## 21. Regression sweep
 
 - [ ] Papers, question detail, solutions, Ask AI, search, notes, settings still behave as before.
 - [ ] "Clear cached data" in Settings clears downloaded content but **keeps** progress, Jump Back In, account settings, the sync state and preferences: tick a few topics, clear the cache, open the Study tab (online): the ticks are still there. Signed in: they are also still there after a force-stop and reopen, and nothing needs a sign-out and sign-in.
@@ -204,7 +218,7 @@ Use your admin MCP client. Changes reach the phone on its next launch or foregro
 
 ## Sign-off
 
-- [ ] Sections 1 to 10, 13, 16, 17, 18 and 19 pass.
+- [ ] Sections 1 to 10, 13, 16, 17, 18, 19 and 20 pass.
 - [ ] Section 11 reviewed and the offline cold start is safe.
 - [ ] Google Play **Data Safety** form updated (progress, votes, reports collected and linked to the account).
 - [ ] Privacy policy page is live and mentions synced progress and app preferences.
