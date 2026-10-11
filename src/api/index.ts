@@ -29,6 +29,7 @@ import {
   kindForStatus,
 } from '../utils/netError';
 import { cloudinaryErrorMessage, overallProgress } from '../admin/directUpload';
+import { paperStatusPath } from './paperStatusUrl';
 
 export class ApiError extends Error {
   status?: number;
@@ -486,9 +487,18 @@ export interface PaperStatus {
   updatedAt: string | null;
 }
 
-/** Public existence check: drives the question list's paper buttons. */
-export const getPaperStatus = (subjectId: string, year: number, signal?: AbortSignal) =>
-  fetchApi<PaperStatus>(`/papers/${encodeURIComponent(subjectId)}/${year}`, signal);
+/**
+ * Public existence check: drives the question list's paper buttons. `fresh`
+ * skips the public cache (see paperStatusUrl.ts); admins use it so a paper they
+ * just uploaded or removed is reflected immediately.
+ */
+export const getPaperStatus = (
+  subjectId: string,
+  year: number,
+  signal?: AbortSignal,
+  fresh = false
+) =>
+  fetchApi<PaperStatus>(paperStatusPath(subjectId, year, fresh ? Date.now() : undefined), signal);
 
 export interface PaperViewerPage {
   order: number;

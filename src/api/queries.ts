@@ -58,13 +58,18 @@ export const questionsQuery = (subjectId: string, params: QuestionParams = {}) =
     meta: persistMeta,
   });
 
-// Original-paper existence for the question list button. Short stale time so
-// an admin's fresh upload flips the button quickly; not persisted (the manage
-// sheet invalidates it explicitly after every change).
-export const paperStatusQuery = (subjectId: string, year: number) =>
+// Original-paper existence for the question list button. Not persisted, and
+// deliberately SHORT-lived: without its own staleTime this inherited the 12-hour
+// catalog default, so after an admin removed a paper the button stayed (and
+// after an upload it never appeared) until the app was restarted. `fresh` is for
+// admins: it skips the public cache so their own change shows straight away
+// (the manage sheet also invalidates this after every change).
+export const PAPER_STATUS_STALE = 30 * 1000;
+export const paperStatusQuery = (subjectId: string, year: number, fresh = false) =>
   queryOptions({
     queryKey: qk.paperStatus(subjectId, year),
-    queryFn: ({ signal }) => getPaperStatus(subjectId, year, signal),
+    queryFn: ({ signal }) => getPaperStatus(subjectId, year, signal, fresh),
+    staleTime: PAPER_STATUS_STALE,
   });
 
 // Signed viewer pages. Per-account URLs: never persisted (a stored copy would
