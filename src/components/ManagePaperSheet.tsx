@@ -21,6 +21,23 @@ import {
 } from '../api';
 import { userMessage } from '../utils/netError';
 import { PaperPageEditor } from './PaperPageEditor';
+import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
+import { fitLongEdge } from '../admin/pageSize';
+
+// Scale a page down before upload (see admin/pageSize.ts). Any failure here
+// falls back to the original page, so shrinking can never block an upload.
+const shrinkPage = async (page: PaperPageAsset): Promise<PaperPageAsset> => {
+  try {
+    const probe = await ImageManipulator.manipulate(page.uri).renderAsync();
+    const resize = fitLongEdge(probe.width, probe.height);
+    if (!resize) return page;
+    const ref = await ImageManipulator.manipulate(page.uri).resize(resize).renderAsync();
+    const out = await ref.saveAsync({ format: SaveFormat.JPEG, compress: 0.85 });
+    return { ...page, uri: out.uri, type: 'image/jpeg' };
+  } catch {
+    return page;
+  }
+};
 
 /**
  * In-app paper management for admins (docs/SRS-original-paper-viewer.md,
@@ -138,7 +155,10 @@ export const ManagePaperSheet = ({
     setUploading(true);
     setProgress(0);
     try {
-      const res = await adminUploadPaper(subjectId, year, picked, setProgress);
+      // One at a time: full-size photos are large, so avoid holding many decoded.
+      const pages: PaperPageAsset[] = [];
+      for (const p of picked) pages.push(await shrinkPage(p));
+      const res = await adminUploadPaper(subjectId, year, pages, setProgress);
       setPicked([]);
       setDone(
         res.replaced
