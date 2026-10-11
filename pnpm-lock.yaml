@@ -29,6 +29,9 @@ importers:
       '@react-native-firebase/app':
         specifier: 26.4.0
         version: 26.4.0(@react-native-async-storage/async-storage@2.2.0(react-native@0.86.3(@babel/core@7.29.7)(@types/react@19.2.18)(bufferutil@4.1.0)(react@19.2.3)(utf-8-validate@6.0.6)))(expo@57.0.26)(react-native@0.86.3(@babel/core@7.29.7)(@types/react@19.2.18)(bufferutil@4.1.0)(react@19.2.3)(utf-8-validate@6.0.6))(react@19.2.3)
+      '@react-native-ml-kit/text-recognition':
+        specifier: ^2.0.0
+        version: 2.0.0(react-native@0.86.3(@babel/core@7.29.7)(@types/react@19.2.18)(bufferutil@4.1.0)(react@19.2.3)(utf-8-validate@6.0.6))(react@19.2.3)
       '@react-navigation/bottom-tabs':
         specifier: ^7.18.17
         version: 7.19.2(@react-navigation/native@7.4.1(react-native@0.86.3(@babel/core@7.29.7)(@types/react@19.2.18)(bufferutil@4.1.0)(react@19.2.3)(utf-8-validate@6.0.6))(react@19.2.3))(react-native-safe-area-context@5.10.0(react-native@0.86.3(@babel/core@7.29.7)(@types/react@19.2.18)(bufferutil@4.1.0)(react@19.2.3)(utf-8-validate@6.0.6))(react@19.2.3))(react-native-screens@4.28.0(react-native@0.86.3(@babel/core@7.29.7)(@types/react@19.2.18)(bufferutil@4.1.0)(react@19.2.3)(utf-8-validate@6.0.6))(react@19.2.3))(react-native@0.86.3(@babel/core@7.29.7)(@types/react@19.2.18)(bufferutil@4.1.0)(react@19.2.3)(utf-8-validate@6.0.6))(react@19.2.3)
@@ -1152,6 +1155,12 @@ packages:
     peerDependenciesMeta:
       expo:
         optional: true
+
+  '@react-native-ml-kit/text-recognition@2.0.0':
+    resolution: {integrity: sha512-RHefLYKndSyoDtgqHQptYQe+mftFk6/H30IQDenKX7PgMlJqoDejX+HdZ8gnP1kVNAt3iH+wyl/P6vCOkLMW9Q==}
+    peerDependencies:
+      react: '>=16.8.1'
+      react-native: '>=0.60.0-rc.0 <1.0.x'
 
   '@react-native/assets-registry@0.86.3':
     resolution: {integrity: sha512-TDhgCZA4wjJg84d5A9swiOQYPIWSKEEVdg9IwMFZDupQzW/F3QoLUrfAJOcalgqTDA9/buTB8awhE3Whwg6u9Q==}
@@ -5796,6 +5805,11 @@ snapshots:
       expo: 57.0.26(@babel/core@7.29.7)(@expo/dom-webview@57.0.1)(bufferutil@4.1.0)(react-dom@19.2.3(react@19.2.3))(react-native-web@0.21.2(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(react-native-webview@13.16.1(react-native@0.86.3(@babel/core@7.29.7)(@types/react@19.2.18)(bufferutil@4.1.0)(react@19.2.3)(utf-8-validate@6.0.6))(react@19.2.3))(react-native@0.86.3(@babel/core@7.29.7)(@types/react@19.2.18)(bufferutil@4.1.0)(react@19.2.3)(utf-8-validate@6.0.6))(react@19.2.3)(typescript@6.0.3)(utf-8-validate@6.0.6)
     transitivePeerDependencies:
       - '@react-native-async-storage/async-storage'
+
+  '@react-native-ml-kit/text-recognition@2.0.0(react-native@0.86.3(@babel/core@7.29.7)(@types/react@19.2.18)(bufferutil@4.1.0)(react@19.2.3)(utf-8-validate@6.0.6))(react@19.2.3)':
+    dependencies:
+      react: 19.2.3
+      react-native: 0.86.3(@babel/core@7.29.7)(@types/react@19.2.18)(bufferutil@4.1.0)(react@19.2.3)(utf-8-validate@6.0.6)
 
   '@react-native/assets-registry@0.86.3': {}
 

@@ -67,11 +67,9 @@ export const ManagePaperSheet = ({
 
   const pickFromGallery = async () => {
     setError(null);
-    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!perm.granted) {
-      setError('Gallery permission is needed to pick scan images.');
-      return;
-    }
+    // No permission request: this opens the system photo picker, which hands
+    // back only the chosen images. READ_MEDIA_* is deliberately not declared
+    // (Play photo/video policy), so asking for it would always come back denied.
     const res = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
       allowsMultipleSelection: true,
