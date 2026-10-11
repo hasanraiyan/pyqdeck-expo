@@ -9,11 +9,10 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useRoute } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { Feather } from '@expo/vector-icons';
-import * as Haptics from 'expo-haptics';
 import { topicQuestionsQuery } from '../api/queries';
 import type { TopicQuestion } from '../api';
 import { COLORS, FONTS } from '../theme/colors';
@@ -28,12 +27,10 @@ import { useContainerStyle } from '../components/ScreenContainer';
 /**
  * The past-paper questions an admin has linked to ONE syllabus topic, newest year
  * first. Rows are the same ones the PYQ tab uses, so opening, solutions, sharing
- * and prev/next behave exactly as there. A question can belong to several topics,
- * so each row also lists the others, and tapping one opens that topic's questions.
+ * and prev/next behave exactly as there.
  */
 export const TopicQuestionsScreen = () => {
   const route = useRoute<any>();
-  const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
   const frame = useContainerStyle('read', false);
   const { subjectId, subjectName, topicId, topicTitle, moduleId, moduleName, semesterId } =
@@ -55,51 +52,21 @@ export const TopicQuestionsScreen = () => {
   const summary = pages[0]?.summary;
   const [refreshing, setRefreshing] = useState(false);
 
-  const openOtherTopic = useCallback(
-    (t: { id: string; title: string; moduleId: string }) => {
-      Haptics.selectionAsync();
-      navigation.push('TopicQuestions', {
-        subjectId,
-        subjectName,
-        topicId: t.id,
-        topicTitle: t.title,
-        moduleId: t.moduleId,
-        moduleName,
-        semesterId,
-      });
-    },
-    [navigation, subjectId, subjectName, moduleName, semesterId]
-  );
-
   const renderItem = useCallback(
     ({ item }: { item: TopicQuestion }) => {
       const rowSubject = item.subjectId ?? subjectId;
       const Row = oldUi ? QuestionItemClassic : QuestionItem;
       return (
-        <View>
-          <Row
-            question={item}
-            subjectId={rowSubject}
-            semesterId={semesterId ?? ''}
-            subjectName={item.subjectName ?? subjectName}
-            hideYearBadge={false}
-          />
-          {item.otherTopics.length > 0 && (
-            <View style={styles.alsoRow}>
-              <Text style={styles.alsoLabel}>Also in</Text>
-              {item.otherTopics.slice(0, 4).map((t) => (
-                <TouchableOpacity key={t.id} style={styles.alsoChip} onPress={() => openOtherTopic(t)}>
-                  <Text style={styles.alsoChipText} numberOfLines={1}>
-                    {t.title}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          )}
-        </View>
+        <Row
+          question={item}
+          subjectId={rowSubject}
+          semesterId={semesterId ?? ''}
+          subjectName={item.subjectName ?? subjectName}
+          hideYearBadge={false}
+        />
       );
     },
-    [oldUi, subjectId, subjectName, semesterId, openOtherTopic]
+    [oldUi, subjectId, subjectName, semesterId]
   );
 
   if (!subjectId || !topicId) {
@@ -239,22 +206,4 @@ const styles = StyleSheet.create({
   chipActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
   chipText: { fontFamily: FONTS.bodyMedium, fontSize: 12.5, color: COLORS.text },
   chipTextActive: { color: '#fff' },
-  alsoRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 16,
-    paddingBottom: 10,
-    marginTop: -4,
-  },
-  alsoLabel: { fontFamily: FONTS.bodyMedium, fontSize: 11.5, color: COLORS.textSubtle },
-  alsoChip: {
-    maxWidth: 190,
-    paddingHorizontal: 9,
-    paddingVertical: 4,
-    borderRadius: 999,
-    backgroundColor: COLORS.secondaryLight,
-  },
-  alsoChipText: { fontFamily: FONTS.bodyMedium, fontSize: 11.5, color: COLORS.secondary },
 });
