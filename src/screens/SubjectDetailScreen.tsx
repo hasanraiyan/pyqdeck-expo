@@ -21,6 +21,7 @@ import { useResponsive } from '../utils/responsive';
 import { ScreenContainer } from '../components/ScreenContainer';
 import { ResponsiveGrid } from '../components/ResponsiveGrid';
 import { recordRecentStudy } from '../utils/recentStudy';
+import { SyllabusLinkButton } from '../components/SyllabusLinkButton';
 
 export const SubjectDetailScreen = () => {
   const insets = useSafeAreaInsets();
@@ -108,6 +109,8 @@ export const SubjectDetailScreen = () => {
               {meta?.years?.reduce((n, y) => n + y.questionCount, 0) ?? '—'} questions available across{' '}
               {meta?.years?.length ?? '—'} exam papers.
             </Text>
+            {/* Only appears once an admin has mapped this subject to its syllabus. */}
+            <SyllabusLinkButton subjectId={subjectId} />
           </View>
 
           {/* Papers by Year */}

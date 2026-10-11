@@ -48,6 +48,12 @@ export const qk = {
   aiOverviewStatus: () => ['search', 'ai-status'] as const,
   aiOverview: (q: string) => ['search', 'ai-overview', q.toLowerCase()] as const,
   allSubjects: (q: string) => ['allSubjects', q.trim().toLowerCase()] as const,
+  topicCounts: (subject: string) => ['topicCounts', subject] as const,
+  topicQuestions: (subject: string, topicId: string, year?: number, solved?: boolean) =>
+    ['topicQuestions', subject, topicId, year ?? null, solved ?? null] as const,
+  questionTopics: (subjectId: string, questionId: string) =>
+    ['questionTopics', subjectId, questionId] as const,
+  syllabusForPyq: (subjectId: string) => ['syllabusForPyq', subjectId] as const,
   topicNotes: (subjectId: string, topicId: string) =>
     ['topicNotes', subjectId, topicId] as const,
   // `signedIn` is part of the key so the caller's own vote is refetched on sign-in/out.
