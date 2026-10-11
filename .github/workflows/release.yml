@@ -177,6 +177,14 @@ jobs:
             ./gradlew assembleRelease bundleRelease --no-daemon
           fi
 
+      - name: 🛂 Check merged manifest for forbidden permissions
+        # The merged manifest is the one that ships: libraries add permissions
+        # to it that app.json never shows (expo-screen-capture added
+        # READ_MEDIA_IMAGES, which Play then demanded a declaration for).
+        # Runs before any upload, versionCode commit or Play publish, so a bad
+        # build goes no further. See scripts/manifestPermissions.mjs.
+        run: node scripts/check-manifest-permissions.mjs
+
       - name: 📤 Upload Release APK
         if: github.event.inputs.build_type != 'aab'
         uses: actions/upload-artifact@v4
