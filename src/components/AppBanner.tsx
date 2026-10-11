@@ -55,13 +55,11 @@ const styles = StyleSheet.create({
     height: 28,
     alignItems: 'center',
     justifyContent: 'center',
-    marginLeft: 4,
   },
   strip: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    marginHorizontal: 16,
     marginBottom: 10,
     paddingVertical: 8,
     paddingLeft: 12,

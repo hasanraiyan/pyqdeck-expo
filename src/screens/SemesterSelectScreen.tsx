@@ -207,7 +207,11 @@ export const SemesterSelectScreen = () => {
           </Text>
         </View>
 
-        <SyncStatusBar />
+        {/* The scroll frame has no side padding of its own here (each block adds its
+            own), so the hint needs the same 16pt inset as the header and chips. */}
+        <View style={{ paddingHorizontal: 16 }}>
+          <SyncStatusBar />
+        </View>
 
         {/* Horizontal Branch Selector Chips */}
         {branches && branches.length > 0 && (
