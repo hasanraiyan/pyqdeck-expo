@@ -9,7 +9,6 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useUser } from '@clerk/expo';
 import { Feather } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import * as Haptics from 'expo-haptics';
@@ -30,8 +29,7 @@ import {
  *
  * UI-first build: pages come from the temporary placeholder provider (a sample
  * scan URL). The protections are real already: capture blocking while mounted,
- * no save/share affordance, long-press menu disabled, identity watermark on
- * every page, memory-only image caching.
+ * no save/share affordance, long-press menu disabled, memory-only image caching.
  *
  * Deliberately ad-free and chrome-light: no banner, no extra buttons.
  */
@@ -45,30 +43,19 @@ const zoomHtml = (src: string) => `<!DOCTYPE html>
     * { box-sizing: border-box; -webkit-touch-callout: none !important; user-select: none !important; }
     html, body { margin: 0; padding: 0; width: 100%; height: 100%; background: #f5f6f2; }
     body { display: flex; align-items: center; justify-content: center; }
-    img { max-width: 100%; max-height: 100%; object-fit: contain; }
+    .sheet { position: relative; display: inline-block; max-width: 100%; max-height: 100%; }
+    .sheet img { display: block; max-width: 100%; max-height: 100%; object-fit: contain; }
   </style>
 </head>
 <body>
-  <img src="${src.replace(/"/g, '&quot;')}" />
+  <div class="sheet">
+    <img src="${src.replace(/"/g, '&quot;')}" />
+  </div>
   <script>
     document.addEventListener('contextmenu', function (e) { e.preventDefault(); }, true);
   </script>
 </body>
 </html>`;
-
-/** Diagonal identity tile that scrolls with the page (never a fixed header). */
-const Watermark = ({ text }: { text: string }) => {
-  const line = useMemo(() => Array(6).fill(text).join('  ·  '), [text]);
-  return (
-    <View pointerEvents="none" style={styles.watermark}>
-      {Array.from({ length: 9 }, (_, i) => (
-        <Text key={i} style={styles.watermarkText} numberOfLines={1}>
-          {line}
-        </Text>
-      ))}
-    </View>
-  );
-};
 
 export const OriginalPaperViewer = ({
   subjectId,
@@ -84,9 +71,6 @@ export const OriginalPaperViewer = ({
   usePreventScreenCapture('original-paper');
 
   const insets = useSafeAreaInsets();
-  const { user } = useUser();
-
-  const identity = user?.fullName || user?.primaryEmailAddress?.emailAddress || 'Preview copy';
 
   const pages: PlaceholderPage[] = useMemo(
     () => getPlaceholderPaper(String(subjectId ?? ''), Number(year ?? 0)),
@@ -155,12 +139,11 @@ export const OriginalPaperViewer = ({
                 }
               />
             )}
-            <Watermark text={identity} />
           </View>
         </TouchableOpacity>
       );
     },
-    [failed, identity, openZoom, retryPage, retryTick]
+    [failed, openZoom, retryPage, retryTick]
   );
 
   return (
@@ -209,7 +192,7 @@ export const OriginalPaperViewer = ({
       />
 
       {/* Pinch-to-zoom fullscreen: WebView for native zoom, context menu off,
-          no copy/share buttons anywhere. Watermark stays on top. */}
+          no copy/share buttons anywhere. */}
       <Modal
         visible={zoomed !== null}
         transparent={false}
@@ -237,7 +220,6 @@ export const OriginalPaperViewer = ({
               )}
             />
           )}
-          <Watermark text={identity} />
           <TouchableOpacity
             style={[styles.zoomClose, { top: insets.top + 10, right: 12 }]}
             activeOpacity={0.7}
@@ -298,21 +280,6 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.bodyMedium,
     fontSize: 12.5,
     color: COLORS.textMuted,
-    textAlign: 'center',
-  },
-  watermark: {
-    ...StyleSheet.absoluteFill,
-    overflow: 'hidden',
-    alignItems: 'center',
-    justifyContent: 'space-evenly',
-  },
-  watermarkText: {
-    fontFamily: FONTS.bodyBold,
-    fontSize: 13,
-    color: COLORS.primary,
-    opacity: 0.22,
-    transform: [{ rotate: '-28deg' }],
-    width: '140%',
     textAlign: 'center',
   },
   zoomRoot: { flex: 1, backgroundColor: COLORS.background },
