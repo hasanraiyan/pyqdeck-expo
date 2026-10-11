@@ -28,6 +28,7 @@ interface Found {
   email: string;
   role: string;
   isBeta: boolean;
+  adFree: boolean;
 }
 
 const initials = (name: string) =>
@@ -52,6 +53,7 @@ export const AdminUsersScreen = () => {
   const [note, setNote] = useState<string | null>(null);
 
   const canBeta = can(tools, 'manage_users', 'set_beta');
+  const canAdFree = can(tools, 'manage_users', 'set_ad_free');
   const canUnlink = can(tools, 'manage_users', 'unlink_devices');
   const canReset = can(tools, 'manage_users', 'reset_progress');
 
@@ -82,7 +84,7 @@ export const AdminUsersScreen = () => {
     });
 
   const act = (
-    action: 'set_beta' | 'unlink_devices' | 'reset_progress',
+    action: 'set_beta' | 'set_ad_free' | 'unlink_devices' | 'reset_progress',
     extra: Record<string, unknown>,
     fallback: string
   ) =>
@@ -112,6 +114,7 @@ export const AdminUsersScreen = () => {
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
             <Pill label={summary.role} tone="primary" />
             {summary.isBeta ? <Pill label="Beta" tone="ok" /> : null}
+            {summary.adFree ? <Pill label="Ad-free" tone="ok" icon="eye-off" /> : null}
             {summary.progress?.records > 0 ? <Pill label="Syncing" tone="ok" icon="cloud" /> : <Pill label="No synced progress" />}
           </View>
         </Section>
@@ -154,7 +157,7 @@ export const AdminUsersScreen = () => {
           <Hint>Topic names, push tokens and recent items are never shown here.</Hint>
         </Section>
 
-        {(canBeta || canUnlink || canReset) && (
+        {(canBeta || canAdFree || canUnlink || canReset) && (
           <Section title="Actions">
             {canBeta && (
               <Btn
@@ -163,6 +166,15 @@ export const AdminUsersScreen = () => {
                 icon="star"
                 busy={busy === 'set_beta'}
                 onPress={() => void act('set_beta', { value: !summary.isBeta }, 'Beta flag updated.')}
+              />
+            )}
+            {canAdFree && (
+              <Btn
+                label={summary.adFree ? 'Turn ads back on' : 'Make ad-free (hide ads)'}
+                kind="secondary"
+                icon="eye-off"
+                busy={busy === 'set_ad_free'}
+                onPress={() => void act('set_ad_free', { value: !summary.adFree }, 'Ad-free flag updated.')}
               />
             )}
             {canUnlink && (
@@ -287,6 +299,7 @@ export const AdminUsersScreen = () => {
                 </View>
                 <View style={{ alignItems: 'flex-end', gap: 4 }}>
                   {u.isBeta ? <Pill label="Beta" tone="ok" /> : null}
+                  {u.adFree ? <Pill label="Ad-free" tone="ok" /> : null}
                   {u.role !== 'student' ? <Pill label={u.role} tone="primary" /> : null}
                 </View>
                 <Feather name="chevron-right" size={18} color={COLORS.textSubtle} />

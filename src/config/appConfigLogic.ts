@@ -8,14 +8,14 @@ export interface AppConfig {
   minAppVersion: string;
   recommendedAppVersion: string;
   banner: { message: string; level: 'info' | 'warning'; id: string };
-  flags: { syncEnabled: boolean; settingsSyncEnabled: boolean; nudgesEnabled: boolean };
+  flags: { syncEnabled: boolean; settingsSyncEnabled: boolean; nudgesEnabled: boolean; adsEnabled: boolean };
 }
 
 export const DEFAULT_APP_CONFIG: AppConfig = {
   minAppVersion: '',
   recommendedAppVersion: '',
   banner: { message: '', level: 'info', id: '' },
-  flags: { syncEnabled: true, settingsSyncEnabled: true, nudgesEnabled: true },
+  flags: { syncEnabled: true, settingsSyncEnabled: true, nudgesEnabled: true, adsEnabled: true },
 };
 
 const SEMVER = /^(\d{1,4})\.(\d{1,4})\.(\d{1,4})$/;
@@ -66,6 +66,7 @@ export function sanitizeAppConfig(raw: unknown): AppConfig {
       syncEnabled: bool(f.syncEnabled),
       settingsSyncEnabled: bool(f.settingsSyncEnabled),
       nudgesEnabled: bool(f.nudgesEnabled),
+      adsEnabled: bool(f.adsEnabled),
     },
   };
 }

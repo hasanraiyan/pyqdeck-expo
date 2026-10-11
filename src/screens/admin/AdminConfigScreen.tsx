@@ -192,7 +192,15 @@ export const AdminConfigScreen = () => {
             disabled={!canEdit}
             onChange={(v) => set('nudgesEnabled', v)}
           />
+          <ToggleRow
+            label="Paid ads"
+            hint="Off hides AdMob banners and interstitials for everyone, including signed-out devices."
+            value={draft.adsEnabled}
+            disabled={!canEdit}
+            onChange={(v) => set('adsEnabled', v)}
+          />
           {!draft.syncEnabled && <Pill label="Sync is paused for everyone" tone="danger" icon="pause-circle" />}
+          {!draft.adsEnabled && <Pill label="Ads are hidden for everyone" tone="warn" icon="eye-off" />}
         </Card>
       </Section>
 

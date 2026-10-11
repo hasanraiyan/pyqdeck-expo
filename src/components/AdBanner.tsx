@@ -4,6 +4,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { BannerAd, BannerAdSize, adsAvailable } from '../utils/mobileAds';
 import { AD_UNIT_IDS } from '../config/ads';
 import { useResponsive } from '../utils/responsive';
+import { useAppConfig } from '../config/useAppConfig';
+import { useAdsEntitlement } from '../utils/adsEntitlement';
 
 // ANCHORED_ADAPTIVE_BANNER spans the full device width - on a tablet
 // that's a very wide, uncommon banner slot with far fewer advertiser
@@ -30,6 +32,12 @@ type Status = 'unavailable' | 'loading' | 'loaded' | 'failed' | 'exhausted';
 
 export const AdBanner: React.FC = () => {
   const { isTablet } = useResponsive();
+  // Paid ads are gated by the global kill switch and the account's ad-free
+  // entitlement (docs/SRS-advertisements.md, FR-ADS-16): gated off renders
+  // null, so no space is reserved and no ad is requested.
+  const { flags } = useAppConfig();
+  const entitlement = useAdsEntitlement();
+  const adsGatedOff = flags.adsEnabled === false || entitlement.adFree;
   const [status, setStatus] = useState<Status>(adsAvailable && BannerAd ? 'loading' : 'unavailable');
   const [lastError, setLastError] = useState<string>('');
   const attemptRef = useRef(0);
@@ -78,6 +86,8 @@ export const AdBanner: React.FC = () => {
   // whenever BannerAd is null - but TS can't infer that from component
   // state, so this satisfies the JSX type check below.
   if (!BannerAd) return null;
+
+  if (adsGatedOff) return null;
 
   return (
     <SafeAreaView edges={['bottom']} style={styles.safeArea}>

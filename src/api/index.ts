@@ -473,6 +473,18 @@ export interface MyVotes {
 export const getMyVotes = (subjectId: string) =>
   requestMe<MyVotes>(`/votes?subject=${encodeURIComponent(subjectId)}`, 'GET');
 
+// Paid-ads entitlement for the signed-in account (docs/SRS-advertisements.md,
+// FR-ADS-14). Never throws for the caller: signed-out, offline and error all
+// mean "not proven ad-free", so the caller fails open (shows ads).
+export const getMyAdsEntitlement = async (): Promise<{ adFree: boolean }> => {
+  try {
+    const res = await requestMe<{ adFree: boolean }>('/ads', 'GET');
+    return { adFree: res?.adFree === true };
+  } catch {
+    return { adFree: false };
+  }
+};
+
 
 
 // -------------------------------------------------------------

@@ -82,6 +82,7 @@ test('configWarnings flags changes that block students, including this phone', (
   const below = configWarnings(cfg, { ...cfg, minAppVersion: '1.4.0' }, '1.5.0');
   assert.match(below[0], /older than 1\.4\.0/);
   assert.equal(configWarnings(cfg, { ...cfg, syncEnabled: false }, '1.5.0').length, 1);
+  assert.match(configWarnings(cfg, { ...cfg, adsEnabled: false }, '1.5.0')[0], /ads will hide/);
   // Turning a switch back ON needs no warning.
   assert.deepEqual(configWarnings({ ...cfg, syncEnabled: false }, cfg, '1.5.0'), []);
   // An unchanged existing minimum is not warned about again.
@@ -102,4 +103,9 @@ test('configChanges sends only what changed, and null clears a banner', () => {
   assert.deepEqual(configChanges(cfg, { ...cfg, nudgesEnabled: false }), {
     flags: { nudgesEnabled: false },
   });
+  assert.deepEqual(configChanges(cfg, { ...cfg, adsEnabled: false }), {
+    flags: { adsEnabled: false },
+  });
+  assert.equal(configToDraft({ flags: {} }).adsEnabled, true);
+  assert.equal(configToDraft({ flags: { adsEnabled: false } }).adsEnabled, false);
 });

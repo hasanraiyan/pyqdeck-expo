@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { InterstitialAd as InterstitialAdType } from 'react-native-google-mobile-ads';
 import { InterstitialAd, AdEventType, adsAvailable } from './mobileAds';
 import { AD_UNIT_IDS } from '../config/ads';
+import { areAdsEnabled } from './adsEntitlement';
 
 const OPENS_KEY = 'interstitial_opens_since_last_shown';
 const LAST_SHOWN_KEY = 'interstitial_last_shown_at';
@@ -56,6 +57,9 @@ async function setState(key: string, value: string) {
  */
 export async function recordContentOpenedAndMaybeShowInterstitial() {
   try {
+    // Gated off (kill switch or ad-free account): neither count the open nor
+    // show anything, so the budget does not advance while ads are hidden.
+    if (!areAdsEnabled()) return;
     const opens = Number((await getState(OPENS_KEY)) ?? '0') + 1;
 
     if (opens < OPENS_BEFORE_SHOW) {

@@ -75,6 +75,7 @@ export interface ConfigDraft {
   syncEnabled: boolean;
   settingsSyncEnabled: boolean;
   nudgesEnabled: boolean;
+  adsEnabled: boolean;
 }
 
 const SEMVER = /^\d{1,4}\.\d{1,4}\.\d{1,4}$/;
@@ -118,6 +119,7 @@ export function configWarnings(
     out.push('Settings and Jump Back In sync will stop for everyone.');
   }
   if (before.nudgesEnabled && !after.nudgesEnabled) out.push('Background sync nudges will stop.');
+  if (before.adsEnabled && !after.adsEnabled) out.push('Paid ads will hide for everyone.');
   return out;
 }
 
@@ -140,7 +142,7 @@ export function configChanges(before: ConfigDraft, after: ConfigDraft): Record<s
       : null;
   }
   const flags: Record<string, boolean> = {};
-  for (const k of ['syncEnabled', 'settingsSyncEnabled', 'nudgesEnabled'] as const) {
+  for (const k of ['syncEnabled', 'settingsSyncEnabled', 'nudgesEnabled', 'adsEnabled'] as const) {
     if (after[k] !== before[k]) flags[k] = after[k];
   }
   if (Object.keys(flags).length > 0) out.flags = flags;
@@ -157,5 +159,6 @@ export function configToDraft(c: any): ConfigDraft {
     syncEnabled: c?.flags?.syncEnabled !== false,
     settingsSyncEnabled: c?.flags?.settingsSyncEnabled !== false,
     nudgesEnabled: c?.flags?.nudgesEnabled !== false,
+    adsEnabled: c?.flags?.adsEnabled !== false,
   };
 }

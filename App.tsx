@@ -77,6 +77,11 @@ import { OWNER_KEY } from './src/db/storageRegistry';
 import { isAuthEnabled } from './src/config/features';
 import { linkPushTokenToAccount, subscribeToSyncNudges } from './src/utils/notifications';
 import { requestSync } from './src/db/progressSync';
+import {
+  clearAdsEntitlement,
+  loadCachedAdsEntitlement,
+  refreshAdsEntitlement,
+} from './src/utils/adsEntitlement';
 import { recordNudgeRun } from './src/background/diagnostics';
 import {
   getAppConfigNow,
@@ -498,9 +503,10 @@ function AppContent() {
     };
     void loadCachedAppConfig()
       .then(() => refreshAppConfig())
+      .then(() => refreshAdsEntitlement())
       .then(maybePrompt);
     const sub = AppState.addEventListener('change', (state) => {
-      if (state === 'active') void refreshAppConfig().then(maybePrompt);
+      if (state === 'active') void refreshAppConfig().then(() => refreshAdsEntitlement()).then(maybePrompt);
     });
     return () => sub.remove();
   }, []);
@@ -527,9 +533,13 @@ function AppContent() {
       wasSignedInRef.current = true;
       configureSyncSession({ signedIn: true, userId });
       void linkPushTokenToAccount();
+      // Paid-ads entitlement for this account: stored copy first (offline),
+      // then a background refresh. Never blocks anything.
+      void loadCachedAdsEntitlement(userId).then(() => refreshAdsEntitlement(userId));
       return;
     }
     configureSyncSession({ signedIn: false, userId: null });
+    clearAdsEntitlement();
     const justSignedOut = wasSignedInRef.current;
     wasSignedInRef.current = false;
     void (async () => {

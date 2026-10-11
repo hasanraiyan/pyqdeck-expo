@@ -46,6 +46,9 @@ export const STORAGE_REGISTRY: Entry[] = [
 
   // --- user data: wiped on sign-out ----------------------------------------
   { key: OWNER_KEY, category: 'user' },
+  // Per-account ads entitlement (ad-free flag): belongs to whoever is signed
+  // in, so the next person on the phone starts ads-eligible, not ad-free.
+  { key: 'pyqdeck:ads_entitlement', category: 'user' },
   { key: 'pyqdeck:progress_outbox', category: 'user' },
   { key: 'pyqdeck:progress_cursor', category: 'user' },
   { key: 'pyqdeck:last_sync_at', category: 'user' },
