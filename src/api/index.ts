@@ -30,6 +30,7 @@ import {
 } from '../utils/netError';
 import { cloudinaryErrorMessage, overallProgress } from '../admin/directUpload';
 import { paperStatusPath } from './paperStatusUrl';
+import { buildCommitPages, newPagesOf, type Slot } from '../admin/paperEdit';
 
 export class ApiError extends Error {
   status?: number;
@@ -656,55 +657,109 @@ const uploadPageToCloudinary = (
     xhr.send(form as any);
   });
 
+export interface AdminPaperPage {
+  order: number;
+  publicId: string;
+  width: number | null;
+  height: number | null;
+  /** Signed full image and a small signed thumbnail. */
+  url: string;
+  thumbUrl: string;
+}
+export interface AdminPaperPages {
+  subject: string;
+  year: number;
+  /** Send back as `baseUpdatedAt` when saving so a stale edit is refused. */
+  updatedAt: string | null;
+  pages: AdminPaperPage[];
+}
+
+/** The paper's current pages for the editor (ids + signed thumbnails). */
+export const adminPaperPages = (subjectId: string, year: number) =>
+  requestAdmin<AdminPaperPages>(`/papers/${encodeURIComponent(subjectId)}/${year}`, 'GET');
+
 /**
- * Admin upload of scanned pages. Sign with our server, send each page straight
- * to Cloudinary (one at a time, so progress is smooth and memory stays low),
- * then commit the page ids so the server records the paper. Progress is the
- * overall fraction 0..1. Falls back to the through-the-server route when the
- * server predates the sign/commit endpoints.
+ * Saves the paper as the given ordered list of pages: each is either a page the
+ * paper already has (kept by id) or a new local photo. Only the NEW photos are
+ * sent: sign with our server, upload each straight to Cloudinary (one at a time,
+ * so progress is smooth and memory stays low), then commit the whole ordered
+ * list so the server records it and deletes the pages left out. Progress is the
+ * overall fraction 0..1 of the new uploads. `baseUpdatedAt` is the paper's
+ * updatedAt when it was opened; if someone else changed it since, the server
+ * answers 409. A list of only new pages falls back to the through-the-server
+ * route when the server predates the sign/commit endpoints.
  */
-export const adminUploadPaper = async (
+export const adminSavePaper = async (
   subjectId: string,
   year: number,
-  assets: PaperPageAsset[],
+  slots: Slot[],
+  baseUpdatedAt: string | null,
   onProgress?: (fraction: number) => void
 ): Promise<PaperUploadSummary> => {
-  let signed: PaperSignResponse;
-  try {
-    signed = await requestAdmin<PaperSignResponse>('/papers/sign', 'POST', {
-      subject: subjectId,
-      year,
-      count: assets.length,
-    });
-  } catch (e) {
-    if (e instanceof ApiError && (e.status === 404 || e.status === 405)) {
-      return adminUploadPaperViaServer(subjectId, year, assets, onProgress);
-    }
-    throw e;
-  }
-  if (!Array.isArray(signed?.pages) || signed.pages.length !== assets.length) {
-    throw new ApiError('The server returned an unexpected upload plan.', undefined, undefined, 'unknown');
-  }
+  const fresh = newPagesOf(slots);
+  const issued: string[] = [];
 
-  const uploaded: { publicId: string }[] = [];
-  for (let i = 0; i < assets.length; i++) {
-    const res = await uploadPageToCloudinary(
-      signed.uploadUrl,
-      signed.apiKey,
-      signed.pages[i],
-      assets[i],
-      (fraction) => onProgress?.(overallProgress(i, assets.length, fraction))
-    );
-    uploaded.push({ publicId: res.public_id });
-    onProgress?.(overallProgress(i + 1, assets.length, 0));
+  if (fresh.length > 0) {
+    let signed: PaperSignResponse;
+    try {
+      signed = await requestAdmin<PaperSignResponse>('/papers/sign', 'POST', {
+        subject: subjectId,
+        year,
+        count: fresh.length,
+      });
+    } catch (e) {
+      if (e instanceof ApiError && (e.status === 404 || e.status === 405)) {
+        // Server without direct upload: only a whole-paper replace can work.
+        if (fresh.length === slots.length) {
+          return adminUploadPaperViaServer(subjectId, year, fresh, onProgress);
+        }
+        throw new ApiError(
+          'The server needs updating before single pages can be edited.',
+          e.status,
+          undefined,
+          'unknown'
+        );
+      }
+      throw e;
+    }
+    if (!Array.isArray(signed?.pages) || signed.pages.length !== fresh.length) {
+      throw new ApiError('The server returned an unexpected upload plan.', undefined, undefined, 'unknown');
+    }
+    for (let i = 0; i < fresh.length; i++) {
+      const res = await uploadPageToCloudinary(
+        signed.uploadUrl,
+        signed.apiKey,
+        signed.pages[i],
+        fresh[i],
+        (fraction) => onProgress?.(overallProgress(i, fresh.length, fraction))
+      );
+      issued.push(res.public_id);
+      onProgress?.(overallProgress(i + 1, fresh.length, 0));
+    }
   }
 
   return requestAdmin<PaperUploadSummary>('/papers/commit', 'POST', {
     subject: subjectId,
     year,
-    pages: uploaded,
+    pages: buildCommitPages(slots, issued),
+    ...(baseUpdatedAt ? { baseUpdatedAt } : {}),
   });
 };
+
+/** Replace a whole paper with these photos (every page new). */
+export const adminUploadPaper = (
+  subjectId: string,
+  year: number,
+  assets: PaperPageAsset[],
+  onProgress?: (fraction: number) => void
+): Promise<PaperUploadSummary> =>
+  adminSavePaper(
+    subjectId,
+    year,
+    assets.map((page) => ({ kind: 'new' as const, page })),
+    null,
+    onProgress
+  );
 
 /** Admin removal of a year's paper. */
 export const adminDeletePaper = (subjectId: string, year: number) =>
