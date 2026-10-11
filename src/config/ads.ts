@@ -5,4 +5,6 @@ import { TestIds } from '../utils/mobileAds';
 export const AD_UNIT_IDS = {
   banner: __DEV__ ? TestIds.BANNER : 'ca-app-pub-6179737775385101/2841064525',
   interstitial: __DEV__ ? TestIds.INTERSTITIAL : 'ca-app-pub-6179737775385101/3967227754',
+  // Production rewarded unit (AdMob console > PyQdeck > Rewarded).
+  rewarded: __DEV__ ? TestIds.REWARDED : 'ca-app-pub-6179737775385101/1383130704',
 };

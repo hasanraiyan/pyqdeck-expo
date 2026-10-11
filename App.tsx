@@ -22,6 +22,7 @@ import { tokenCache } from '@clerk/expo/token-cache';
 import { clerkPublishableKey } from './src/auth/publishableKey';
 import { mobileAds } from './src/utils/mobileAds';
 import { initInterstitial } from './src/utils/ads';
+import { initRewarded } from './src/utils/rewardedAds';
 import { navigationRef } from './src/utils/navigationRef';
 import { logScreenView } from './src/utils/analytics';
 import * as Backend from './src/api/backend';
@@ -60,6 +61,7 @@ import { AdminAiScreen } from './src/screens/admin/AdminAiScreen';
 import { SemesterSelectScreen } from './src/screens/SemesterSelectScreen';
 import { SyllabusOverviewScreen } from './src/screens/SyllabusOverviewScreen';
 import { SubjectSyllabusScreen } from './src/screens/SubjectSyllabusScreen';
+import { OriginalPaperScreen } from './src/screens/OriginalPaperScreen';
 import { TopicNotesScreen } from './src/screens/TopicNotesScreen';
 import { TopicQuestionsScreen } from './src/screens/TopicQuestionsScreen';
 import { checkForStoreUpdate } from './src/utils/appUpdate';
@@ -225,6 +227,12 @@ function renderSharedScreens(StackNav: typeof Stack, syllabusTitle = 'Syllabus')
         name="SubjectSyllabus"
         component={SubjectSyllabusScreen}
         options={({ route }: any) => ({ title: route.params?.subjectName || syllabusTitle })}
+      />
+      {/* No navigation header: the viewer draws its own top bar, fullscreen. */}
+      <StackNav.Screen
+        name="OriginalPaper"
+        component={OriginalPaperScreen}
+        options={{ headerShown: false }}
       />
       <StackNav.Screen
         name="MermaidDemo"
@@ -562,6 +570,7 @@ function AppContent() {
   useEffect(() => {
     Promise.resolve(mobileAds().initialize())
       .then(initInterstitial)
+      .then(initRewarded)
       .catch(() => {});
     // A tap on a notification must never be missed, even mid-onboarding.
     const unsubscribe = subscribeToNotificationResponses();

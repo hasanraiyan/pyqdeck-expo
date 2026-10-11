@@ -36,7 +36,9 @@ export const SignInScreen = ({ navigation, route }: any) => {
           ? 'Sign in to use Ask AI'
           : reason === 'progress'
             ? 'Log in to save your progress'
-            : null;
+            : reason === 'paper'
+              ? 'Sign in to view the original paper'
+              : null;
 
   // AuthView has no onSuccess callback - the documented pattern is to watch
   // auth state and close once the session lands.

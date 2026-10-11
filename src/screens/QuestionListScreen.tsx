@@ -38,6 +38,9 @@ import {
 } from '../utils/settings';
 import { recordRecentStudy } from '../utils/recentStudy';
 import { useDialogLayout } from '../utils/dialog';
+import { useRequireAuth } from '../auth/useRequireAuth';
+import { hasPlaceholderPaper } from '../utils/originalPaperPlaceholder';
+import { isPaperUnlocked, markPaperUnlocked, showRewardedAd } from '../utils/rewardedAds';
 
 const VOLUME_SCROLL_STEP = 320;
 
@@ -48,6 +51,7 @@ export const QuestionListScreen = () => {
   const { readMaxWidth, bp } = useResponsive();
   const showFilterText = bp({ phone: false, tablet: true });
   const dlg = useDialogLayout();
+  const { guard } = useRequireAuth();
   const {
     semesterId,
     subjectId,
@@ -234,6 +238,46 @@ export const QuestionListScreen = () => {
     });
   }, [navigation, hasActiveFilters, openFilterModal, showFilterText]);
 
+  // Paper-level original scan for the selected year, pushed as a headerless
+  // route (fullscreen, own top bar, no tab bar). Watch-to-unlock: a rewarded
+  // ad plays first and the paper opens only on EARNED_REWARD (ad-free users
+  // and ad failures open straight through - content is never blocked).
+  // Sign-in is required so every viewing session has an identity for the
+  // watermark (FR-PAPER-8); availability is placeholder-gated in dev until
+  // the real backend lands.
+  const [adBusy, setAdBusy] = useState(false);
+  const openOriginalPaper = useCallback(() => {
+    if (selectedYear == null || adBusy) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    guard(() => {
+      const paperKey = `${subjectId}:${selectedYear}`;
+      // Already paid for with a watch this session: straight back in.
+      if (isPaperUnlocked(paperKey)) {
+        navigation.navigate('OriginalPaper', {
+          subjectId,
+          subjectName,
+          year: selectedYear,
+        });
+        return;
+      }
+      void (async () => {
+        setAdBusy(true);
+        try {
+          const verdict = await showRewardedAd();
+          if (verdict === 'dismissed') return;
+          if (verdict === 'earned') markPaperUnlocked(paperKey);
+          navigation.navigate('OriginalPaper', {
+            subjectId,
+            subjectName,
+            year: selectedYear,
+          });
+        } finally {
+          setAdBusy(false);
+        }
+      })();
+    }, 'paper');
+  }, [adBusy, guard, navigation, selectedYear, subjectId, subjectName]);
+
   const listRef = useRef<FlatList>(null);
   const scrollOffsetRef = useRef(0);
   const [showVolumeHint, setShowVolumeHint] = useState(false);
@@ -326,11 +370,30 @@ export const QuestionListScreen = () => {
           />
         }
         ListHeaderComponent={
-          loading && questions.length > 0 ? (
-            <View style={styles.headerLoaderWrapper}>
-              <WaveLoader color={COLORS.primary} dotSize={5} />
-            </View>
-          ) : null
+          <>
+            {selectedYear != null && hasPlaceholderPaper() && (
+              <View style={styles.paperBtnWrapper}>
+                <TouchableOpacity
+                  style={[styles.paperBtn, adBusy && styles.paperBtnBusy]}
+                  activeOpacity={0.7}
+                  onPress={openOriginalPaper}
+                  disabled={adBusy}
+                  accessibilityRole="button"
+                  accessibilityLabel={`View original paper for ${selectedYear}`}
+                >
+                  <Feather name="eye" size={14} color="#ffffff" />
+                  <Text style={styles.paperBtnText}>
+                    {adBusy ? 'Loading ad…' : 'View Original Paper'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            )}
+            {loading && questions.length > 0 ? (
+              <View style={styles.headerLoaderWrapper}>
+                <WaveLoader color={COLORS.primary} dotSize={5} />
+              </View>
+            ) : null}
+          </>
         }
         ListEmptyComponent={
           loading || oldUiPref === null ? (
@@ -513,6 +576,30 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 7,
+  },
+  paperBtnWrapper: {
+    paddingHorizontal: 14,
+    paddingBottom: 12,
+  },
+  paperBtn: {
+    width: '100%',
+    maxWidth: 560,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: COLORS.primary,
+    borderRadius: 10,
+    paddingVertical: 11,
+    paddingHorizontal: 14,
+  },
+  paperBtnText: {
+    fontFamily: FONTS.displayBold,
+    fontSize: rf(13),
+    color: '#ffffff',
+  },
+  paperBtnBusy: {
+    opacity: 0.7,
   },
   yearChip: {
     paddingHorizontal: 12,

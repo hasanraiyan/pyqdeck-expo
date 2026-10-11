@@ -32,7 +32,7 @@ export const useRequireAuth = () => {
   }, [isLoaded, isSignedIn]);
 
   const guard = useCallback(
-    (run: () => void, reason: 'vote' | 'report' | 'ai' | 'progress' = 'vote') => {
+    (run: () => void, reason: 'vote' | 'report' | 'ai' | 'progress' | 'paper' = 'vote') => {
       // If auth is disabled (e.g. for Play Store review), do not launch the SignIn sheet.
       if (!isAuthEnabled) {
         if (reason === 'report') {

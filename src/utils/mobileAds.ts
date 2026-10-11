@@ -23,3 +23,6 @@ export const BannerAdSize = mod?.BannerAdSize ?? ({} as typeof import('react-nat
 export const TestIds = mod?.TestIds ?? ({ BANNER: '', INTERSTITIAL: '' } as typeof import('react-native-google-mobile-ads').TestIds);
 export const InterstitialAd = mod?.InterstitialAd ?? null;
 export const AdEventType = mod?.AdEventType ?? ({} as typeof import('react-native-google-mobile-ads').AdEventType);
+export const RewardedAd = mod?.RewardedAd ?? null;
+export const RewardedAdEventType =
+  mod?.RewardedAdEventType ?? ({} as typeof import('react-native-google-mobile-ads').RewardedAdEventType);
