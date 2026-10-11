@@ -84,23 +84,43 @@ const GeneratingState = () => {
     return () => loop.stop();
   }, [sweep, native]);
 
-  // Cross-fades the label out, swaps the text, fades back in.
+  // When phase changes (after initial render), fade the new label in.
+  useEffect(() => {
+    if (phase > 0) {
+      Animated.timing(fade, {
+        toValue: 1,
+        duration: 220,
+        useNativeDriver: native,
+      }).start();
+    }
+  }, [phase, fade, native]);
+
+  // Advances to the next phase after PHASE_MS by fading out first.
   useEffect(() => {
     if (phase >= PHASES.length - 1) return;
     let cancelled = false;
     const t = setTimeout(() => {
-      Animated.timing(fade, { toValue: 0, duration: 180, useNativeDriver: native }).start(() => {
-        if (cancelled) return;
+      Animated.timing(fade, {
+        toValue: 0,
+        duration: 180,
+        useNativeDriver: native,
+      }).start(({ finished }) => {
+        if (cancelled || !finished) return;
         setPhase((p) => p + 1);
-        Animated.timing(fade, { toValue: 1, duration: 220, useNativeDriver: native }).start();
       });
     }, PHASE_MS);
+
     return () => {
       cancelled = true;
       clearTimeout(t);
-      fade.stopAnimation();
     };
   }, [phase, fade, native]);
+
+  useEffect(() => {
+    return () => {
+      fade.stopAnimation();
+    };
+  }, [fade]);
 
   const band = Math.max(width * 0.45, 80);
   const translateX = sweep.interpolate({
