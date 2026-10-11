@@ -2,6 +2,42 @@
 
 All notable changes to PYQDeck are listed here, newest first.
 
+## 1.10.0
+
+### Added
+- **Scan a question to search.** Tap the camera icon in Search, take a photo or pick an image, crop it to the question, and the app reads the text on your phone and searches it. Nothing is uploaded, and the photo stays on your device.
+- **Matched words are highlighted** in search results, so you can see why each question, note or subject came up.
+- Recent searches that came from a scan show a camera icon, and long searches are shortened to two lines.
+
+### Changed
+- Long searches, like a whole scanned question, now find study notes and subjects too. Before, they only found questions.
+- The scanner uses the system photo picker, so the app no longer needs access to your whole photo gallery.
+- Search accepts questions up to 200 characters (it was 100).
+
+### Fixed
+- Uploading original question papers (for admins) is more reliable: pages are scaled down before they are sent, so large camera photos no longer trip the size limit.
+
+## 1.1.0 to 1.9.0
+
+These releases shipped close together; this is the combined list of what changed since 1.0.5.
+
+### Added
+- **Sign in to keep your progress.** Your syllabus progress, reading settings, selected branch, saved votes and "Jump back in" list now sync across your devices.
+- **Original question papers.** View the scanned original paper for a year, unlocked by watching a short ad.
+- **Study notes** can be voted on, reported and shared, and open full screen for distraction-free reading.
+- **Richer notes.** Notes can now show highlighted callouts, tabbed code in several languages, step-by-step timelines, "hint" sections that expand, SVG and Mermaid diagrams, YouTube videos with timestamps, and image galleries with a full-screen viewer.
+- **Topic questions.** Syllabus topics show a PYQ icon that opens the previous-year questions for that topic.
+- Home shows what you read recently, and your profile picture once you sign in.
+
+### Changed
+- The bottom tab bar hides on detail screens so there is more room to read.
+- A sign-in reminder appears in the banner area when you are not signed in.
+
+### Fixed
+- The "Clear cached data" setting now removes only downloaded content, not your account data.
+- The AI overview no longer drops its "generating" message too early.
+- Several layout and spacing fixes on Home, Study and notes screens.
+
 ## 1.0.5
 
 ### Added
