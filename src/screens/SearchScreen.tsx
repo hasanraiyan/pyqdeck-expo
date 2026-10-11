@@ -7,6 +7,8 @@ import {
   TouchableOpacity,
   ScrollView,
   StyleSheet,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLinkTo, useNavigation, useRoute } from '@react-navigation/native';
@@ -34,6 +36,7 @@ import { CircleLoader } from '../components/CircleLoader';
 import { rf, verticalScale, useResponsive } from '../utils/responsive';
 import { normalizeQuery, consumeSearchToken, shouldDebounceTap, applyServerRetryAfter } from '../utils/searchGuard';
 import { ScreenContainer } from '../components/ScreenContainer';
+import { scanTextFromImage, ScanSource } from '../utils/scanText';
 
 const RECENT_SEARCHES_KEY = 'pyq_recent_searches';
 
@@ -371,6 +374,42 @@ export const SearchScreen = () => {
     submitQuery(norm.query);
   };
 
+  // Scan a question from a photo: pick/capture, crop, read the text on-device,
+  // then search it through the same validation + rate-limit path as typing.
+  const [scanning, setScanning] = useState(false);
+  const runScan = async (source: ScanSource) => {
+    setScanning(true);
+    setValidationError(null);
+    const res = await scanTextFromImage(source);
+    setScanning(false);
+    if (res.status === 'ok') {
+      const norm = normalizeQuery(res.text);
+      setQuery(res.text);
+      if (!norm.ok) {
+        setValidationError(norm.error);
+        return;
+      }
+      if (!allowSearch(norm.query)) return;
+      setQuery(norm.query);
+      submitQuery(norm.query);
+    } else if (res.status === 'denied') {
+      setValidationError('Camera permission is needed to scan a question.');
+    } else if (res.status === 'empty') {
+      setValidationError('No text found in that image. Try cropping closer to the text.');
+    } else if (res.status === 'error') {
+      setValidationError('Could not read that image. Please try again.');
+    }
+  };
+
+  const handleScanPress = () => {
+    if (cooldownSec > 0 || scanning) return;
+    Alert.alert('Scan a question', 'Take a photo or choose an image, crop to the text, and we will search it.', [
+      { text: 'Camera', onPress: () => void runScan('camera') },
+      { text: 'Gallery', onPress: () => void runScan('gallery') },
+      { text: 'Cancel', style: 'cancel' },
+    ]);
+  };
+
   const clearRecentSearches = () => {
     setRecentSearches([]);
     AsyncStorage.removeItem(RECENT_SEARCHES_KEY).catch(() => {});
@@ -527,6 +566,21 @@ export const SearchScreen = () => {
               autoCorrect={false}
               style={[styles.searchInput, isInputDisabled && { opacity: 0.6 }]}
             />
+            {query.length === 0 && cooldownSec === 0 && (
+              <TouchableOpacity
+                onPress={handleScanPress}
+                disabled={scanning}
+                accessibilityLabel="Scan a question from a photo"
+                style={styles.clearBtn}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                {scanning ? (
+                  <ActivityIndicator size="small" color={COLORS.primary} />
+                ) : (
+                  <Feather name="camera" size={18} color={COLORS.textMuted} />
+                )}
+              </TouchableOpacity>
+            )}
             {query.length > 0 && cooldownSec === 0 && (
               <TouchableOpacity onPress={handleClear} style={styles.clearBtn} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
                 <Feather name="x" size={15} color={COLORS.textMuted} />

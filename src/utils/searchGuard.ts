@@ -5,7 +5,8 @@
  */
 
 const MIN_LEN = 2;
-const MAX_LEN = 100;
+// Long enough for a whole scanned exam question (see scanText.ts).
+export const MAX_LEN = 200;
 
 // Token bucket: burst 5, sustained 1 per 2s = 30/min
 const CAPACITY = 5;
