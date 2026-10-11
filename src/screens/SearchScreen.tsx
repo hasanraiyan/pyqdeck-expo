@@ -64,6 +64,11 @@ export const SearchScreen = () => {
   // Everything on screen is derived from React Query for this string, so a new
   // submit cancels the old requests and a repeat is served from cache.
   const [submitted, setSubmitted] = useState<string | null>(null);
+  // Counts submissions (not distinct texts) so each one is judged once, and
+  // remembers whether the current one came from a photo scan.
+  const submitSeqRef = useRef(0);
+  const loggedEmptySeqRef = useRef(0);
+  const submittedScannedRef = useRef(false);
   const hasSearched = submitted !== null;
   useEffect(() => {
     // Length only - the query text itself can be personal.
@@ -355,6 +360,8 @@ export const SearchScreen = () => {
         if (x.isError) void x.refetch();
       });
     }
+    submitSeqRef.current += 1;
+    submittedScannedRef.current = scanned;
     setSubmitted(normalized);
     saveRecentSearch(normalized, scanned);
   };
@@ -535,6 +542,21 @@ export const SearchScreen = () => {
     cooldownSec === 0 &&
     !aiLoading &&
     totalResultsCount === 0;
+
+  // Searches that found nothing show where the content has gaps. Outcome only:
+  // never the text, which can be personal. A search that FAILED (offline, rate
+  // limited) answered nothing either way, so it is not counted as "no results".
+  const anySearchFailed = subsQ.isError || qsQ.isError || notesQ.isError;
+  useEffect(() => {
+    if (!noResults || anySearchFailed || !submitted) return;
+    if (loggedEmptySeqRef.current === submitSeqRef.current) return;
+    loggedEmptySeqRef.current = submitSeqRef.current;
+    logEvent('search_no_results', {
+      query_length: submitted.length,
+      scanned: submittedScannedRef.current,
+      result_count: 0,
+    });
+  }, [noResults, anySearchFailed, submitted]);
 
   // Only a cooldown locks the input. A search in flight never does: typing a
   // new query and submitting simply cancels the old one.
