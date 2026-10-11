@@ -35,28 +35,37 @@ export const AppBanner = () => {
       />
       <Text style={[styles.text, warning && styles.warningText]}>{banner.message}</Text>
       <TouchableOpacity
-        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        style={styles.close}
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         accessibilityLabel="Dismiss"
         onPress={() => {
           setDismissed(true);
           void dismissBanner(banner.id);
         }}
       >
-        <Feather name="x" size={15} color={warning ? '#92400e' : COLORS.textSubtle} />
+        <Feather name="x" size={16} color={warning ? '#92400e' : COLORS.textSubtle} />
       </TouchableOpacity>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
+  close: {
+    width: 28,
+    height: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 4,
+  },
   strip: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
     marginHorizontal: 16,
     marginBottom: 10,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
+    paddingVertical: 8,
+    paddingLeft: 12,
+    paddingRight: 6,
     borderRadius: 10,
     backgroundColor: COLORS.card,
     borderWidth: 1,
