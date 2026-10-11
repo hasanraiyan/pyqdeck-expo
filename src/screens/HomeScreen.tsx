@@ -338,6 +338,9 @@ export const HomeScreen = () => {
                       <Text style={styles.recentCode} numberOfLines={1}>
                         {recentItems[0].data.subjectName}
                       </Text>
+                      <View style={styles.recentRecentPill}>
+                        <Text style={styles.recentRecentPillText}>Read recently</Text>
+                      </View>
                     </View>
                     <Text style={[styles.recentSubjectName, styles.recentSubjectNameFull]} numberOfLines={1}>
                       {(recentItems[0].data as RecentNote).topicTitle}
@@ -428,6 +431,9 @@ export const HomeScreen = () => {
                           <Text style={styles.recentCode} numberOfLines={1}>
                             {note.subjectName}
                           </Text>
+                          <View style={styles.recentRecentPill}>
+                            <Text style={styles.recentRecentPillText}>Recent</Text>
+                          </View>
                         </View>
                         <Text style={styles.recentSubjectName} numberOfLines={1}>
                           {note.topicTitle}
