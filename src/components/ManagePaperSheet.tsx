@@ -20,6 +20,7 @@ import {
   type PaperStatus,
 } from '../api';
 import { userMessage } from '../utils/netError';
+import { PaperPageEditor } from './PaperPageEditor';
 
 /**
  * In-app paper management for admins (docs/SRS-original-paper-viewer.md,
@@ -59,6 +60,7 @@ export const ManagePaperSheet = ({
   const [removing, setRemoving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<string | null>(null);
+  const [editing, setEditing] = useState<number | null>(null);
 
   const hasPaper = status?.hasOriginal === true;
   const busy = uploading || removing;
@@ -89,7 +91,12 @@ export const ManagePaperSheet = ({
     }
     // One shot per tap: repeat for multi-page scans, in order.
     const res = await ImagePicker.launchCameraAsync({ quality: 0.9 });
-    if (!res.canceled) appendAssets(res.assets);
+    if (!res.canceled) {
+      const before = picked.length;
+      appendAssets(res.assets);
+      // Straight into crop/rotate so the fresh scan can be cleaned up.
+      if (before < MAX_PAGES) setEditing(before);
+    }
   };
 
   const appendAssets = (assets: ImagePicker.ImagePickerAsset[]) => {
@@ -113,6 +120,13 @@ export const ManagePaperSheet = ({
       [next[index], next[j]] = [next[j], next[index]];
       return next;
     });
+  };
+
+  const replaceEdited = (index: number, uri: string) => {
+    setPicked((prev) =>
+      prev.map((p, i) => (i === index ? { ...p, uri, name: `page-${i + 1}.jpg`, type: 'image/jpeg' } : p))
+    );
+    setEditing(null);
   };
 
   const removePicked = (index: number) => {
@@ -172,7 +186,14 @@ export const ManagePaperSheet = ({
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
+    <View style={styles.screen}>
+    <View style={styles.header}>
+      <Text style={styles.headerTitle}>Original paper</Text>
+      <TouchableOpacity onPress={onClose} hitSlop={10} accessibilityLabel="Close" disabled={uploading}>
+        <Feather name="x" size={22} color={COLORS.text} />
+      </TouchableOpacity>
+    </View>
+    <ScrollView style={styles.scroll} contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
       <Text style={styles.kicker}>MANAGE PAPER</Text>
       <Text style={styles.title}>
         {subjectName || 'Subject'} · {year}
@@ -217,12 +238,22 @@ export const ManagePaperSheet = ({
       {picked.length > 0 && (
         <View style={styles.reviewWrap}>
           <Text style={styles.reviewTitle}>
-            {picked.length} page{picked.length === 1 ? '' : 's'} ready
+            {picked.length} page{picked.length === 1 ? '' : 's'} ready · tap a page to crop or rotate
           </Text>
           <View style={styles.grid}>
             {picked.map((p, i) => (
               <View key={`${p.uri}-${i}`} style={styles.thumbWrap}>
-                <Image source={{ uri: p.uri }} style={styles.thumb} contentFit="cover" />
+                <TouchableOpacity
+                  activeOpacity={0.85}
+                  onPress={() => setEditing(i)}
+                  style={styles.thumb}
+                  accessibilityLabel={`Crop or rotate page ${i + 1}`}
+                >
+                  <Image source={{ uri: p.uri }} style={styles.thumb} contentFit="cover" />
+                  <View style={styles.thumbEdit}>
+                    <Feather name="crop" size={11} color="#fff" />
+                  </View>
+                </TouchableOpacity>
                 <View style={styles.thumbIndex}>
                   <Text style={styles.thumbIndexText}>{i + 1}</Text>
                 </View>
@@ -262,7 +293,7 @@ export const ManagePaperSheet = ({
             </View>
           ) : (
             <TouchableOpacity style={styles.uploadBtn} activeOpacity={0.7} onPress={upload} disabled={busy}>
-              <Feather name="upload-cloud" size={15} color="#fff" />
+              <Feather name="arrow-up-circle" size={16} color="#fff" />
               <Text style={styles.uploadText}>
                 {hasPaper ? `Replace with ${picked.length} page${picked.length === 1 ? '' : 's'}` : `Upload ${picked.length} page${picked.length === 1 ? '' : 's'}`}
               </Text>
@@ -294,11 +325,38 @@ export const ManagePaperSheet = ({
         <Text style={styles.closeText}>Done</Text>
       </TouchableOpacity>
     </ScrollView>
+    <PaperPageEditor
+      uri={editing != null ? picked[editing]?.uri ?? null : null}
+      pageLabel={editing != null ? `Page ${editing + 1} of ${picked.length}` : ''}
+      onCancel={() => setEditing(null)}
+      onDone={(uri) => editing != null && replaceEdited(editing, uri)}
+    />
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  body: { paddingHorizontal: 18, paddingTop: 10, paddingBottom: 24, gap: 10 },
+  screen: { flex: 1, backgroundColor: COLORS.background },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 18,
+    paddingVertical: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: COLORS.border,
+  },
+  headerTitle: { fontFamily: FONTS.displayBold, fontSize: 16, color: COLORS.text },
+  scroll: { flex: 1 },
+  thumbEdit: {
+    position: 'absolute',
+    left: 4,
+    bottom: 4,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    borderRadius: 8,
+    padding: 4,
+  },
+  body: { paddingHorizontal: 18, paddingTop: 14, paddingBottom: 32, gap: 10 },
   kicker: {
     fontFamily: FONTS.displayBold,
     fontSize: 11,
@@ -348,7 +406,7 @@ const styles = StyleSheet.create({
   reviewTitle: { fontFamily: FONTS.displayBold, fontSize: 13, color: COLORS.text },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   thumbWrap: {
-    width: '31%',
+    width: '31.5%',
     aspectRatio: 3 / 4,
     borderRadius: 8,
     overflow: 'hidden',
