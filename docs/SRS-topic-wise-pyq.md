@@ -181,7 +181,7 @@ New admin tool `manage_topic_links` (actions listed here), exposed through the a
 
 | ID | Requirement | Priority |
 |---|---|---|
-| TQ-AD-1 | `map_subject`: set or clear `pyqSubjectId` for a syllabus subject; `suggest_subject_map` ranks PYQ subjects by name and code similarity for unmapped syllabus subjects. | M |
+| TQ-AD-1 | `map_subject`: set or clear `pyqSubjectId` for a syllabus subject, chosen by an admin. **Nothing is mapped automatically** (decision D11). | M |
 | TQ-AD-2 | `set`: for one question and one syllabus subject, replace its confirmed topics with the given list (ids or exact titles). `add` and `remove` change single links. All enforce TQ-DR-1 and TQ-DR-3. | M |
 | TQ-AD-3 | `bulk`: apply an array of `{ question, topics }` (question by `subject` plus `questionId`, topics by id or title). `dryRun` returns counts of matched, unmatched titles and rows that would change; `confirm: true` writes. Capped at 500 rows per call. | M |
 | TQ-AD-4 | `list_unlinked`: questions of a PYQ subject with no confirmed link, filterable by chapter and year, paged. | M |
@@ -261,7 +261,7 @@ New admin tool `manage_topic_links` (actions listed here), exposed through the a
 
 | Phase | What | Output | Depends on |
 |---|---|---|---|
-| **0. Data preparation** | Map PYQ subjects to syllabus subjects (suggest by name and code, review, save) for all 46 syllabus subjects that have papers. Decide the pilot subject. | Mapping filled; list of subjects with no past papers | none |
+| **0. Data preparation** | An admin maps PYQ subjects to syllabus subjects **by hand** with `map_subject` (no automatic matching) for each syllabus subject that has papers. Decide the pilot subject. | Mapping filled; list of subjects with no past papers | none |
 | **1. Link foundation (server)** | Topic link model and indexes; `manage_topic_links` with `map_subject`, `set`, `add`, `remove`, `bulk`, `list_unlinked`, `coverage`; audit; REST under `/api/admin-app`; tests. | A person can link questions by tool or file | Phase 0 |
 | **2. Student reads and screens** | Public counts, topic question list, topic chips on question detail, reverse link in the PYQ tab; app icon, topic list screen, chips; offline; tests. | Students see the PYQ icon on linked subjects | Phase 1 |
 | **3. Suggestions** | Embedding ranking, store, review queue and review actions; the Computer Networks pilot and acceptance measurement. | Review queue; measured accuracy | Phase 1 |
@@ -306,6 +306,7 @@ Phases 2 and 3 can run in parallel after Phase 1. **The student feature ships th
 | D7 | First subjects? | **Computer Networks (CSE and IT)**, the two already mapped. |
 | D8 | Student "wrong topic" reports in v1? | **Later (phase 5).** |
 | D9 | Edge cache TTL for these reads | **5 minutes**, with cache clear after admin writes. |
+| D11 | Automatic subject mapping? | **No. Subject mapping is manual, by an admin.** |
 | D10 | Who may link? | **Full admins for everything; a reviewer grant limited to `list_unlinked`, `set`, `review_queue`, `review`.** |
 
 ---
