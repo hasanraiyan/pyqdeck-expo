@@ -284,9 +284,14 @@ export const listAllSubjects = async (
   return { ...res, subjects: Array.isArray(res?.subjects) ? res.subjects.map(trimName) : [] };
 };
 
+// Hybrid, not semantic-only: the meaning-based search cannot represent a rare
+// acronym ("OSI model" came back as COCOMO / ER models / waterfall), so the
+// server combines it with a keyword search that weighs rare words and exact
+// phrases (hybridSearchService.js). Its `score` is a fusion value, not a
+// similarity, so the UI must not show it as a "match" number.
 export const searchAllQuestions = (query: string, limit = 20, signal?: AbortSignal) =>
   fetchApi<AllQuestionsSearchResult>(
-    `/questions/semantic-search?q=${encodeURIComponent(query)}&limit=${limit}`,
+    `/questions/hybrid-search?q=${encodeURIComponent(query)}&limit=${limit}`,
     signal
   );
 

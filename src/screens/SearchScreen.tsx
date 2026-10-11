@@ -1023,12 +1023,7 @@ export const SearchScreen = () => {
                     activeOpacity={0.7}
                     onPress={() => openQuestion(q)}
                   >
-                    <Text style={styles.resultSubjectName}>
-                      {q.subject?.name}
-                      {typeof q.score === 'number'
-                        ? ` · ${q.score.toFixed(3)} match`
-                        : ''}
-                    </Text>
+                    <Text style={styles.resultSubjectName}>{q.subject?.name}</Text>
                     <HighlightedText
                       style={styles.resultTextPreview}
                       numberOfLines={2}
