@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
+import { planCacheClear } from './storageRegistry';
 
 // API data caching now lives in React Query (src/api/queryClient.ts,
 // queries.ts), persisted under the single `pyq_rq_cache` key. This file only
@@ -7,13 +8,12 @@ import { Platform } from 'react-native';
 // up the hand-written caches that React Query replaced.
 
 /**
- * Wipes all cached content - every cache key in this app is prefixed `pyq_`
- * (including the persisted React Query cache, `pyq_rq_cache`).
- * Leaves behavioral/preference keys (volume_scroll_*, interstitial_*,
- * review_prompt_*, my_solution_votes_v2) untouched.
+ * Clears downloaded content only (see planCacheClear in storageRegistry.ts for
+ * exactly which keys). Student progress, sync state, account settings and device
+ * preferences are never touched, so this is safe for a signed-in student.
  *
  * On web AsyncStorage IS localStorage, but the driver's getAllKeys can miss
- * keys its own getItem never stored, so sweep localStorage directly too -
+ * keys its own getItem never stored, so plan from localStorage directly too -
  * otherwise a web session keeps serving stale caches after "Clear" says done.
  */
 export async function clearAllCache(): Promise<void> {
@@ -21,17 +21,15 @@ export async function clearAllCache(): Promise<void> {
     try {
       const storage = (globalThis as any).localStorage;
       if (storage) {
-        Object.keys(storage)
-          .filter((k) => k.startsWith('pyq_'))
-          .forEach((k) => storage.removeItem(k));
+        planCacheClear(Object.keys(storage)).forEach((k) => storage.removeItem(k));
       }
     } catch {}
   }
 
   const keys = await AsyncStorage.getAllKeys();
-  const cacheKeys = keys.filter((k) => k.startsWith('pyq_'));
-  if (cacheKeys.length > 0) {
-    await AsyncStorage.multiRemove(cacheKeys);
+  const clearable = planCacheClear(keys);
+  if (clearable.length > 0) {
+    await AsyncStorage.multiRemove(clearable);
   }
 }
 

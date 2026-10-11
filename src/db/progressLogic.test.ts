@@ -15,7 +15,13 @@ import {
   topicKey,
   type OutboxOp,
 } from './progressLogic.ts';
-import { categoryOf, planWipe, STORAGE_REGISTRY, WIPE_PENDING_KEY } from './storageRegistry.ts';
+import {
+  categoryOf,
+  planCacheClear,
+  planWipe,
+  STORAGE_REGISTRY,
+  WIPE_PENDING_KEY,
+} from './storageRegistry.ts';
 
 const op = (over: Partial<OutboxOp> = {}): OutboxOp => ({
   opId: 'o1',
@@ -186,4 +192,39 @@ test('nextSendDelay debounces but never waits past the max wait', () => {
   assert.equal(nextSendDelay(1000, 1000, 2000, 30000), 2000);
   assert.equal(nextSendDelay(29000, 0, 2000, 30000), 1000);
   assert.equal(nextSendDelay(31000, 0, 2000, 30000), 0);
+});
+
+test('clear cached data removes only downloaded content, never progress or account state', () => {
+  const keys = [
+    // must go
+    'pyq_rq_cache',
+    'pyq_semesters_legacy',
+    'pyq_recent_searches',
+    // must stay: progress and sync state
+    'pyqdeck:progress:cse5-micro',
+    'syllabus_done_cse5-micro',
+    'pyqdeck:progress_outbox',
+    'pyqdeck:progress_cursor',
+    'pyqdeck:owner',
+    'pyqdeck:last_sync_at',
+    // must stay: account settings, recents, votes
+    'ask_ai_engine',
+    'pyqdeck:settings_pending',
+    'selected_syllabus_branch',
+    'pyqdeck:recent_study',
+    'pyqdeck:recent_notes',
+    'pyqdeck:vote:s:q1',
+    // must stay: device preferences and housekeeping (incl. a pyq_-prefixed one)
+    'old_ui_enabled',
+    'pyqdeck:onboarded',
+    'pyq_cache_migrated_rq',
+    'pyqdeck:wipe_pending',
+    // unknown keys are not ours to delete
+    'some_new_unregistered_key',
+  ];
+  assert.deepEqual(planCacheClear(keys).sort(), [
+    'pyq_recent_searches',
+    'pyq_rq_cache',
+    'pyq_semesters_legacy',
+  ]);
 });

@@ -43,6 +43,7 @@ import {
   setSyncEnabled,
   subscribeSyncStatus,
   syncNow,
+  refreshFromCloud,
   type SyncStatus,
 } from '../db/progressSync';
 import { useAdminAccess } from '../admin/useAdminAccess';
@@ -122,7 +123,7 @@ export const SettingsScreen = ({ navigation }: any) => {
   const handleClearCache = () => {
     Alert.alert(
       'Clear cached data?',
-      'Downloaded subjects, questions, and solutions will be removed. They’ll re-download automatically as you browse.',
+      'Downloaded subjects, questions, and solutions will be removed. They’ll re-download automatically as you browse. Your progress, settings and account data are not affected.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -132,6 +133,8 @@ export const SettingsScreen = ({ navigation }: any) => {
             setClearing(true);
             await clearQueryCache();
             await Cache.clearAllCache();
+            // Signed in: re-read the account's progress too, so nothing needs a re-login.
+            if (isSignedIn) await refreshFromCloud();
             setClearing(false);
             setCleared(true);
             setTimeout(() => setCleared(false), 2000);
