@@ -19,12 +19,15 @@ import { COLORS, FONTS } from '../theme/colors';
 import {
   dragRect,
   fitScale,
+  handlePoint,
   toSourceCrop,
   type Handle,
   type Rect,
   type Size,
 } from '../admin/cropLogic';
 import { isValidQuad, type Pt, type Quad } from '../admin/perspectiveLogic';
+import { edgeMidpoint, moveEdge, quadToRect, rectToQuad } from '../admin/quadLogic';
+import { CornerLoupe } from './CornerLoupe';
 import { PerspectiveWarper, type PerspectiveWarperHandle } from './PerspectiveWarper';
 
 /**
@@ -36,6 +39,7 @@ import { PerspectiveWarper, type PerspectiveWarperHandle } from './PerspectiveWa
 
 const MAX_TILT = 15;
 const HANDLE = 28;
+const EDGE = 22; // side handles are a little smaller than corner handles
 
 type Base = { uri: string; w: number; h: number };
 
@@ -59,12 +63,15 @@ const QuadHandle = ({
   quadRef,
   box,
   onChange,
+  onActive,
   pt,
 }: {
   index: number;
   quadRef: React.MutableRefObject<Quad>;
   box: Size;
   onChange: (q: Quad) => void;
+  /** The corner being dragged (for the zoom loupe), or null when released. */
+  onActive: (p: Pt | null) => void;
   pt: Pt;
 }) => {
   const start = useRef<Pt>(pt);
@@ -76,6 +83,7 @@ const QuadHandle = ({
         onStartShouldSetPanResponder: () => true,
         onPanResponderGrant: () => {
           start.current = quadRef.current[index];
+          onActive(quadRef.current[index]);
         },
         onPanResponderMove: (_, g) => {
           const b = boxRef.current;
@@ -85,15 +93,58 @@ const QuadHandle = ({
             y: Math.max(0, Math.min(b.h, start.current.y + g.dy)),
           };
           onChange(next);
+          onActive(next[index]);
         },
+        onPanResponderRelease: () => onActive(null),
+        onPanResponderTerminate: () => onActive(null),
       }),
-    [index, onChange, quadRef]
+    [index, onChange, onActive, quadRef]
   );
   return (
     <View
       {...responder.panHandlers}
       hitSlop={10}
       style={[styles.handle, { left: pt.x - HANDLE / 2, top: pt.y - HANDLE / 2 }]}
+    />
+  );
+};
+
+// Pulls one side of the four-corner frame (both its corners together, in and
+// out along the side's own perpendicular), for when the page edge is easier to
+// line up than a corner.
+const QuadEdgeHandle = ({
+  edge,
+  quadRef,
+  box,
+  onChange,
+  pt,
+}: {
+  edge: number;
+  quadRef: React.MutableRefObject<Quad>;
+  box: Size;
+  onChange: (q: Quad) => void;
+  pt: Pt;
+}) => {
+  const start = useRef<Quad>(quadRef.current);
+  const boxRef = useRef(box);
+  boxRef.current = box;
+  const responder = useMemo(
+    () =>
+      PanResponder.create({
+        onStartShouldSetPanResponder: () => true,
+        onPanResponderGrant: () => {
+          start.current = quadRef.current;
+        },
+        onPanResponderMove: (_, g) =>
+          onChange(moveEdge(start.current, edge, g.dx, g.dy, boxRef.current)),
+      }),
+    [edge, onChange, quadRef]
+  );
+  return (
+    <View
+      {...responder.panHandlers}
+      hitSlop={10}
+      style={[styles.edgeHandle, { left: pt.x - EDGE / 2, top: pt.y - EDGE / 2 }]}
     />
   );
 };
@@ -110,12 +161,15 @@ const CornerHandle = ({
   rectRef,
   box,
   onChange,
+  onActive,
   style,
 }: {
-  handle: Handle;
+  handle: Exclude<Handle, 'move'>;
   rectRef: React.MutableRefObject<Rect>;
   box: Size;
   onChange: (r: Rect) => void;
+  /** Reports the dragged point for the zoom loupe; only corners pass this. */
+  onActive?: (p: Pt | null) => void;
   style: object;
 }) => {
   const start = useRef<Rect>(rectRef.current);
@@ -127,11 +181,17 @@ const CornerHandle = ({
         onStartShouldSetPanResponder: () => true,
         onPanResponderGrant: () => {
           start.current = rectRef.current;
+          onActive?.(handlePoint(rectRef.current, handle));
         },
-        onPanResponderMove: (_, g) =>
-          onChange(dragRect(start.current, handle, g.dx, g.dy, boxRef.current)),
+        onPanResponderMove: (_, g) => {
+          const next = dragRect(start.current, handle, g.dx, g.dy, boxRef.current);
+          onChange(next);
+          onActive?.(handlePoint(next, handle));
+        },
+        onPanResponderRelease: () => onActive?.(null),
+        onPanResponderTerminate: () => onActive?.(null),
       }),
-    [handle, onChange, rectRef]
+    [handle, onChange, onActive, rectRef]
   );
   return <View {...responder.panHandlers} style={style} hitSlop={10} />;
 };
@@ -153,6 +213,8 @@ export const PaperPageEditor = ({
   const [tilt, setTilt] = useState(0);
   const [crop, setCrop] = useState<Rect>({ x: 0, y: 0, w: 0, h: 0 });
   const [perspective, setPerspective] = useState(false);
+  // The corner being dragged right now (drives the zoom loupe), or null.
+  const [loupePt, setLoupePt] = useState<Pt | null>(null);
   const [quad, setQuad] = useState<Quad>(initialQuad({ w: 1, h: 1 }));
   const quadRef = useRef(quad);
   quadRef.current = quad;
@@ -321,8 +383,27 @@ export const PaperPageEditor = ({
                       strokeWidth={2}
                     />
                   </Svg>
+                  {/* Sides first so a corner always wins where they overlap. */}
+                  {[0, 1, 2, 3].map((e) => (
+                    <QuadEdgeHandle
+                      key={`e${e}`}
+                      edge={e}
+                      quadRef={quadRef}
+                      box={box}
+                      onChange={setQuad}
+                      pt={edgeMidpoint(quad, e)}
+                    />
+                  ))}
                   {quad.map((pt, i) => (
-                    <QuadHandle key={i} index={i} quadRef={quadRef} box={box} onChange={setQuad} pt={pt} />
+                    <QuadHandle
+                      key={i}
+                      index={i}
+                      quadRef={quadRef}
+                      box={box}
+                      onChange={setQuad}
+                      onActive={setLoupePt}
+                      pt={pt}
+                    />
                   ))}
                 </>
               ) : (
@@ -351,6 +432,20 @@ export const PaperPageEditor = ({
                 <View style={[styles.gridH, { top: '33.3%' }]} pointerEvents="none" />
                 <View style={[styles.gridH, { top: '66.6%' }]} pointerEvents="none" />
               </View>
+              {/* Sides first so a corner always wins where they overlap. */}
+              {(['t', 'b', 'l', 'r'] as const).map((h) => {
+                const p = handlePoint(crop, h);
+                return (
+                  <CornerHandle
+                    key={h}
+                    handle={h}
+                    rectRef={rectRef}
+                    box={box}
+                    onChange={setCrop}
+                    style={[styles.edgeHandle, { left: p.x - EDGE / 2, top: p.y - EDGE / 2 }]}
+                  />
+                );
+              })}
               {(['tl', 'tr', 'bl', 'br'] as const).map((h) => (
                 <CornerHandle
                   key={h}
@@ -358,6 +453,7 @@ export const PaperPageEditor = ({
                   rectRef={rectRef}
                   box={box}
                   onChange={setCrop}
+                  onActive={setLoupePt}
                   style={[
                     styles.handle,
                     {
@@ -369,13 +465,18 @@ export const PaperPageEditor = ({
               ))}
                 </>
               )}
+              {loupePt && (
+                <CornerLoupe uri={base!.uri} box={box} tiltDeg={perspective ? 0 : tilt} pt={loupePt} />
+              )}
             </View>
           )}
         </View>
 
         <View style={styles.tools}>
           {perspective ? (
-            <Text style={styles.hintText}>Drag each corner onto a corner of the page, then tap Done to flatten it.</Text>
+            <Text style={styles.hintText}>
+              Drag each corner onto a corner of the page (a zoom circle shows the exact spot). The side dots pull a whole edge. Tap Done to flatten it.
+            </Text>
           ) : (
           <View style={styles.tiltRow}>
             <TouchableOpacity onPress={() => setTiltClamped(tilt - 0.5)} hitSlop={8}>
@@ -403,7 +504,12 @@ export const PaperPageEditor = ({
               icon="grid"
               label={perspective ? 'Plain crop' : 'Perspective'}
               onPress={() => {
+                // Carry the frame across instead of resetting it: the corners
+                // placed in one mode are where the other mode starts.
+                if (perspective) setCrop(quadToRect(quad, box));
+                else setQuad(rectToQuad(crop));
                 setTilt(0);
+                setLoupePt(null);
                 setPerspective((v) => !v);
               }}
               disabled={!ready || busy}
@@ -475,6 +581,18 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderWidth: 3,
     borderColor: COLORS.primary,
+  },
+  // Side handles: smaller and squarer than the round corner handles, so the two
+  // kinds are easy to tell apart under a finger.
+  edgeHandle: {
+    position: 'absolute',
+    width: EDGE,
+    height: EDGE,
+    borderRadius: 6,
+    backgroundColor: '#fff',
+    borderWidth: 2,
+    borderColor: COLORS.primary,
+    opacity: 0.95,
   },
   tools: { paddingHorizontal: 16, paddingTop: 10, paddingBottom: 8, gap: 12 },
   hintText: { fontFamily: FONTS.bodyMedium, fontSize: 12, color: '#fff', textAlign: 'center', paddingVertical: 8 },
