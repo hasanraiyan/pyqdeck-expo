@@ -12,7 +12,6 @@ import {
 import { useRoute } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useInfiniteQuery, keepPreviousData } from '@tanstack/react-query';
-import { Feather } from '@expo/vector-icons';
 import { topicQuestionsQuery } from '../api/queries';
 import type { TopicQuestion } from '../api';
 import { COLORS, FONTS } from '../theme/colors';
@@ -37,7 +36,6 @@ export const TopicQuestionsScreen = () => {
     route.params ?? {};
 
   const [year, setYear] = useState<number | undefined>(undefined);
-  const [solvedOnly, setSolvedOnly] = useState(false);
   const [oldUi, setOldUi] = useState<boolean | null>(peekOldUiEnabled());
   React.useEffect(() => {
     void getOldUiEnabled().then(setOldUi);
@@ -46,7 +44,7 @@ export const TopicQuestionsScreen = () => {
   // keepPreviousData: changing a filter keeps the header, chips and old rows on
   // screen (dimmed) until the new rows arrive, instead of a full-page loader.
   const q = useInfiniteQuery({
-    ...topicQuestionsQuery(subjectId, topicId, { year, hasSolution: solvedOnly ? true : undefined }),
+    ...topicQuestionsQuery(subjectId, topicId, { year }),
     placeholderData: keepPreviousData,
   });
   const switching = q.isPlaceholderData;
@@ -93,7 +91,7 @@ export const TopicQuestionsScreen = () => {
         </Text>
       ) : null}
 
-      {summary && (summary.years.length > 1 || summary.withSolution > 0) ? (
+      {summary && summary.years.length > 1 ? (
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
           <TouchableOpacity
             style={[styles.chip, !year && styles.chipActive]}
@@ -112,15 +110,6 @@ export const TopicQuestionsScreen = () => {
               </Text>
             </TouchableOpacity>
           ))}
-          {summary.withSolution > 0 && (
-            <TouchableOpacity
-              style={[styles.chip, solvedOnly && styles.chipActive]}
-              onPress={() => setSolvedOnly((v) => !v)}
-            >
-              <Feather name="check-circle" size={12} color={solvedOnly ? '#fff' : COLORS.secondary} />
-              <Text style={[styles.chipText, solvedOnly && styles.chipTextActive]}>With solution</Text>
-            </TouchableOpacity>
-          )}
         </ScrollView>
       ) : null}
     </View>
@@ -175,7 +164,7 @@ export const TopicQuestionsScreen = () => {
           />
         }
         ListEmptyComponent={
-          <ScreenEmpty message={year || solvedOnly ? 'No questions match these filters.' : 'No questions are linked to this topic yet.'} />
+          <ScreenEmpty message={year ? 'No questions match this year.' : 'No questions are linked to this topic yet.'} />
         }
         ListFooterComponent={
           q.isFetchingNextPage ? (
