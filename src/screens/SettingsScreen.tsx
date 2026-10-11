@@ -47,6 +47,7 @@ import {
 } from '../db/progressSync';
 import { readNudgeRun, subscribeNudgeRun, type NudgeRun } from '../background/diagnostics';
 import { ApiError, sendTestNudge } from '../api';
+import { useAdminAccess } from '../admin/useAdminAccess';
 import { unlinkPushTokenFromAccount } from '../utils/notifications';
 
 const WEBSITE_URL = 'https://pyqdeck.in';
@@ -74,6 +75,7 @@ export const SettingsScreen = ({ navigation }: any) => {
   const [syncOn, setSyncOn] = useState(isSyncEnabled());
   const [syncStatus, setSyncStatusState] = useState<SyncStatus>(getSyncStatus());
   const [signingOut, setSigningOut] = useState(false);
+  const admin = useAdminAccess();
   const [nudgeRun, setNudgeRun] = useState<NudgeRun | null>(null);
   const [testingNudge, setTestingNudge] = useState(false);
 
@@ -345,6 +347,14 @@ export const SettingsScreen = ({ navigation }: any) => {
                     subtitle={nudgeSubtitle()}
                     onPress={testingNudge ? undefined : () => void testBackgroundSync()}
                   />
+                  {admin.isAdmin && (
+                    <SettingsRow
+                      icon="shield"
+                      label="Admin tools"
+                      subtitle="Dashboard, notifications, user support, app config"
+                      onPress={() => navigation.navigate('AdminHome')}
+                    />
+                  )}
                   <SettingsRow
                     icon="log-out"
                     label={signingOut ? 'Signing out...' : 'Sign out'}

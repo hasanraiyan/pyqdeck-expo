@@ -81,7 +81,7 @@ function trimName<T extends { name: string }>(item: T): T {
 // anonymous /api/public; per-account endpoints (progress sync) live under
 // /api/me, which the server marks private + no-store so no shared cache can
 // serve one student's data to another.
-type Mount = '/api/public' | '/api/me';
+type Mount = '/api/public' | '/api/me' | '/api/admin-app';
 async function request<T>(
   path: string,
   init?: RequestInit,
@@ -342,6 +342,57 @@ export const registerPushToken = (token: string, platform: 'ios' | 'android') =>
 // registered, so broadcasts still arrive). Called just before sign-out.
 export const unlinkPushToken = (token: string) =>
   requestMe<{ success: boolean }>('/push-token', 'DELETE', { token });
+
+// -------------------------------------------------------------
+// ADMIN (/api/admin-app, admin accounts only)
+// -------------------------------------------------------------
+// The same tools as the admin MCP, authenticated with the normal session. The
+// server decides what the account may do; these are only the calls.
+
+const requestAdmin = async <T,>(path: string, method: string, body?: unknown): Promise<T> =>
+  request<T>(
+    path,
+    {
+      method,
+      headers: { 'Content-Type': 'application/json', ...(await authHeader()) },
+      ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+    },
+    false,
+    '/api/admin-app'
+  );
+
+export interface AdminGrant {
+  actions: '*' | string[];
+  branches?: '*' | string[];
+}
+export interface AdminMe {
+  name: string;
+  role: string;
+  access: { full: boolean; source: string; tools: Record<string, AdminGrant> };
+}
+
+export const adminMe = () => requestAdmin<AdminMe>('/me', 'GET');
+export const adminInsights = () => requestAdmin<Record<string, any>>('/insights', 'GET');
+export const adminAudit = (p: { limit?: number; offset?: number } = {}) =>
+  requestAdmin<{
+    count: number;
+    entries: {
+      at: string;
+      admin: string;
+      tool: string;
+      action?: string;
+      target?: string;
+      outcome: 'ok' | 'error';
+      detail?: string;
+    }[];
+  }>(`/audit?limit=${p.limit ?? 30}&offset=${p.offset ?? 0}`, 'GET');
+export const adminUsers = (body: Record<string, unknown>) =>
+  requestAdmin<Record<string, any>>('/users', 'POST', body);
+export const adminGetConfig = () => requestAdmin<Record<string, any>>('/config', 'GET');
+export const adminPutConfig = (data: Record<string, unknown>) =>
+  requestAdmin<Record<string, any>>('/config', 'PUT', data);
+export const adminNotify = (body: Record<string, unknown>) =>
+  requestAdmin<Record<string, any>>('/notify', 'POST', body);
 
 // -------------------------------------------------------------
 // ACCOUNT PROGRESS SYNC (/api/me, signed-in only)

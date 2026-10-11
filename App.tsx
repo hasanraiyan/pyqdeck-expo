@@ -51,6 +51,11 @@ import { SettingsScreen } from './src/screens/SettingsScreen';
 import { MermaidDemoScreen } from './src/screens/MermaidDemoScreen';
 import { SignInScreen } from './src/screens/SignInScreen';
 import { ManageAccountScreen } from './src/screens/ManageAccountScreen';
+import { AdminHomeScreen } from './src/screens/admin/AdminHomeScreen';
+import { AdminDashboardScreen } from './src/screens/admin/AdminDashboardScreen';
+import { AdminNotifyScreen } from './src/screens/admin/AdminNotifyScreen';
+import { AdminUsersScreen } from './src/screens/admin/AdminUsersScreen';
+import { AdminConfigScreen } from './src/screens/admin/AdminConfigScreen';
 import { SemesterSelectScreen } from './src/screens/SemesterSelectScreen';
 import { SyllabusOverviewScreen } from './src/screens/SyllabusOverviewScreen';
 import { SubjectSyllabusScreen } from './src/screens/SubjectSyllabusScreen';
@@ -214,6 +219,12 @@ function renderSharedScreens(StackNav: typeof Stack, syllabusTitle = 'Syllabus')
         component={MermaidDemoScreen}
         options={{ title: 'Diagram Preview' }}
       />
+      {/* Admin tools: reachable only from Settings, and only for admin accounts. */}
+      <StackNav.Screen name="AdminHome" component={AdminHomeScreen} options={{ title: 'Admin tools' }} />
+      <StackNav.Screen name="AdminDashboard" component={AdminDashboardScreen} options={{ title: 'Dashboard' }} />
+      <StackNav.Screen name="AdminNotify" component={AdminNotifyScreen} options={{ title: 'Send notification' }} />
+      <StackNav.Screen name="AdminUsers" component={AdminUsersScreen} options={{ title: 'User support' }} />
+      <StackNav.Screen name="AdminConfig" component={AdminConfigScreen} options={{ title: 'App config' }} />
     </>
   );
 }
