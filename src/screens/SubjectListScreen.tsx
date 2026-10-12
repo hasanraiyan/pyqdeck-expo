@@ -25,6 +25,10 @@ import { AdBanner } from '../components/AdBanner';
 import { getGridColumns } from '../theme/layout';
 import { useResponsive } from '../utils/responsive';
 import { semesterNumbersForYear } from '../utils/year';
+import { useAdminAccess } from '../admin/useAdminAccess';
+import { can } from '../admin/adminLogic';
+import { EditorModal } from '../admin/EditorFrame';
+import { ManagePyqSubjectSheet } from '../components/ManagePyqSubjectSheet';
 
 const Tab = createMaterialTopTabNavigator();
 
@@ -59,6 +63,12 @@ const SemesterTabContent = ({
   yearNumber,
   navigation,
 }: SemesterTabContentProps) => {
+  const admin = useAdminAccess();
+  const [addOpen, setAddOpen] = useState(false);
+  // The parent semester id comes from its existing subjects, so the button is
+  // only offered once the semester has at least one.
+  const semesterId = subjects[0]?.semesterId;
+  const canAdd = !!semesterId && can(admin.tools, 'manage_catalog', 'create');
   const renderSubjectItem = useCallback(
     ({ item }: { item: SubjectSummary & { semesterId: string; semesterNumber: number } }) => {
       const isComingSoon = item.questionCount === 0;
@@ -154,6 +164,19 @@ const SemesterTabContent = ({
               tintColor={COLORS.primary}
             />
           }
+          ListFooterComponent={
+            canAdd ? (
+              <TouchableOpacity
+                style={styles.addSubjectBtn}
+                activeOpacity={0.7}
+                onPress={() => setAddOpen(true)}
+                accessibilityLabel={`Add a subject to semester ${semesterNumber}`}
+              >
+                <Feather name="plus" size={15} color={COLORS.primary} />
+                <Text style={styles.addSubjectText}>Add subject</Text>
+              </TouchableOpacity>
+            ) : null
+          }
           ListEmptyComponent={
             <View style={styles.comingSoonContainer}>
               <View style={styles.comingSoonBadge}>
@@ -178,6 +201,16 @@ const SemesterTabContent = ({
           }
         />
       )}
+      <EditorModal visible={addOpen} onRequestClose={() => setAddOpen(false)}>
+        {semesterId ? (
+          <ManagePyqSubjectSheet
+            semesterId={semesterId}
+            semesterNumber={semesterNumber}
+            onSaved={() => setAddOpen(false)}
+            onClose={() => setAddOpen(false)}
+          />
+        ) : null}
+      </EditorModal>
     </View>
   );
 };
@@ -385,6 +418,21 @@ export const SubjectListScreen = () => {
 };
 
 const styles = StyleSheet.create({
+  addSubjectBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    marginTop: 12,
+    marginHorizontal: 16,
+    minHeight: 46,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: COLORS.primaryBorder,
+    backgroundColor: COLORS.primaryLight,
+  },
+  addSubjectText: { fontFamily: FONTS.bodySemi, fontSize: 14, color: COLORS.primary },
   container: {
     flex: 1,
     backgroundColor: COLORS.background,

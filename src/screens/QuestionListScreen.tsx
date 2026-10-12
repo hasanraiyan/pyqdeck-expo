@@ -44,6 +44,10 @@ import { hasPlaceholderPaper } from '../utils/originalPaperPlaceholder';
 import { useAdminAccess } from '../admin/useAdminAccess';
 import { can } from '../admin/adminLogic';
 import { ManagePaperSheet } from '../components/ManagePaperSheet';
+import { ManageQuestionSheet } from '../components/ManageQuestionSheet';
+import { ManagePyqSubjectSheet } from '../components/ManagePyqSubjectSheet';
+import { EditorModal } from '../admin/EditorFrame';
+import { suggestQuestionId } from '../admin/contentLogic';
 
 const VOLUME_SCROLL_STEP = 320;
 
@@ -82,6 +86,11 @@ export const QuestionListScreen = () => {
     enabled: !!subjectId && selectedYear != null,
   });
   const [manageOpen, setManageOpen] = useState(false);
+  // Question and subject editing for admins (the server re-checks every grant).
+  const canAddQuestion = can(admin.tools, 'manage_content', 'create');
+  const canEditSubject = can(admin.tools, 'manage_catalog', 'update');
+  const [addQuestionOpen, setAddQuestionOpen] = useState(false);
+  const [editSubjectOpen, setEditSubjectOpen] = useState(false);
   const hasServerPaper = paperStatusQ.data?.hasOriginal ?? false;
   const showViewBtn = selectedYear != null && (hasPlaceholderPaper() || hasServerPaper);
   // False until the default year (from meta) has been decided, so the first
@@ -394,6 +403,34 @@ export const QuestionListScreen = () => {
                 </TouchableOpacity>
               </View>
             )}
+            {(canAddQuestion || canEditSubject) && (
+              <View style={[styles.paperBtnWrapper, { flexDirection: 'row', gap: 8 }]}>
+                {canAddQuestion && (
+                  <TouchableOpacity
+                    style={[styles.manageBtn, { flex: 1 }]}
+                    activeOpacity={0.7}
+                    onPress={() => setAddQuestionOpen(true)}
+                    accessibilityRole="button"
+                    accessibilityLabel="Add a question to this subject"
+                  >
+                    <Feather name="plus" size={14} color={COLORS.primary} />
+                    <Text style={styles.manageBtnText}>Add question</Text>
+                  </TouchableOpacity>
+                )}
+                {canEditSubject && (
+                  <TouchableOpacity
+                    style={[styles.manageBtn, { flex: 1 }]}
+                    activeOpacity={0.7}
+                    onPress={() => setEditSubjectOpen(true)}
+                    accessibilityRole="button"
+                    accessibilityLabel="Edit this subject"
+                  >
+                    <Feather name="edit-2" size={14} color={COLORS.primary} />
+                    <Text style={styles.manageBtnText}>Edit subject</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            )}
             {loading && questions.length > 0 ? (
               <View style={styles.headerLoaderWrapper}>
                 <WaveLoader color={COLORS.primary} dotSize={5} />
@@ -474,6 +511,33 @@ export const QuestionListScreen = () => {
           )}
         </View>
       </Modal>
+
+      <EditorModal visible={addQuestionOpen} onRequestClose={() => setAddQuestionOpen(false)}>
+        <ManageQuestionSheet
+          subjectId={subjectId}
+          subjectName={subjectName}
+          suggestedId={suggestQuestionId(questions.map((q) => q.questionId))}
+          suggestedYear={selectedYear}
+          onSaved={() => setAddQuestionOpen(false)}
+          onClose={() => setAddQuestionOpen(false)}
+        />
+      </EditorModal>
+      <EditorModal visible={editSubjectOpen} onRequestClose={() => setEditSubjectOpen(false)}>
+        <ManagePyqSubjectSheet
+          semesterId={semesterId}
+          subject={{
+            id: subjectId,
+            name: subjectName,
+            code: subjectCode,
+            questionCount: selectedYear || selectedChapter ? undefined : questionsQ.data?.total,
+          }}
+          onSaved={() => {
+            setEditSubjectOpen(false);
+            navigation.goBack();
+          }}
+          onClose={() => setEditSubjectOpen(false)}
+        />
+      </EditorModal>
 
       {/* Filter Bottom Sheet Modal */}
       <Modal

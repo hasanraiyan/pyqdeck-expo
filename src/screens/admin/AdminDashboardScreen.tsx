@@ -51,7 +51,7 @@ export const AdminDashboardScreen = () => {
   const { tools } = useAdminAccess();
   const route = useRoute<any>();
   // Deep-link from the syllabus/notes sheets (ASN-FR-31): open pre-filtered.
-  const initialTool = ['manage_syllabus', 'manage_notes'].includes(route.params?.tool)
+  const initialTool = ['manage_syllabus', 'manage_notes', 'manage_content', 'manage_catalog'].includes(route.params?.tool)
     ? (route.params.tool as string)
     : null;
   const [insights, setInsights] = useState<Record<string, any> | null>(null);
@@ -250,6 +250,16 @@ export const AdminDashboardScreen = () => {
               label="Notes"
               active={toolFilter === 'manage_notes'}
               onPress={() => pickFilter('manage_notes')}
+            />
+            <Chip
+              label="Questions"
+              active={toolFilter === 'manage_content'}
+              onPress={() => pickFilter('manage_content')}
+            />
+            <Chip
+              label="Subjects"
+              active={toolFilter === 'manage_catalog'}
+              onPress={() => pickFilter('manage_catalog')}
             />
           </View>
           {auditError && (

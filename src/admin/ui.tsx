@@ -291,7 +291,7 @@ export const AuditLink = ({
   label,
   onNavigate,
 }: {
-  tool: 'manage_syllabus' | 'manage_notes';
+  tool: 'manage_syllabus' | 'manage_notes' | 'manage_content' | 'manage_catalog';
   label: string;
   onNavigate: () => void;
 }) => {

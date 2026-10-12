@@ -68,6 +68,8 @@ export const STORAGE_REGISTRY: Entry[] = [
   { prefix: 'pyqdeck:progress:', category: 'user' },
   { prefix: 'syllabus_done_', category: 'user' },
   { prefix: 'pyqdeck:vote:', category: 'user' },
+  // An admin's unsaved editor text (src/admin/useDraft.ts): their own work, wiped on sign-out.
+  { prefix: 'pyqdeck:draft:', category: 'user' },
 
   // --- cache: wiped on sign-out --------------------------------------------
   { prefix: 'pyq_', category: 'cache' },

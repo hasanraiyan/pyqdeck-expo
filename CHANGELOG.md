@@ -2,6 +2,20 @@
 
 All notable changes to PYQDeck are listed here, newest first.
 
+## 1.11.4
+
+### Added (admins)
+- **Edit questions and solutions in the app.** Add a question to a subject, edit or delete it, and add, edit or delete its solution, all from the question screens. Past-paper subjects can be added, renamed and deleted too.
+- **Drafts are kept.** Text you are writing in the notes, question and solution editors is saved on the phone as you type, so a crash or a dropped connection no longer loses it. You are offered Restore or Discard the next time you open the editor.
+- The audit log can be filtered to question and subject changes.
+
+### Changed (admins)
+- **A new editor layout.** The topic, module, subject, notes, question and solution editors share one design: the Save and Delete buttons stay above the keyboard, Return moves to the next field, and closing with unsaved changes asks first.
+- The notes editor fills the screen, and the formatting buttons insert at the cursor (or wrap the selected text) instead of at the end.
+
+### Fixed
+- After an admin saves a change, it now shows up straight away instead of hours later. The server also clears the other server and the Cloudflare cache after every admin save, so students see the change within seconds.
+
 ## 1.10.0
 
 ### Added

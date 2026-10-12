@@ -449,6 +449,12 @@ export const adminSyllabus = (body: Record<string, unknown>) =>
   requestAdmin<Record<string, any>>('/syllabus', 'POST', body);
 export const adminNotes = (body: Record<string, unknown>) =>
   requestAdmin<Record<string, any>>('/notes', 'POST', body);
+// Past-paper catalog (semesters/subjects) and content (questions/solutions).
+// Same tools as the MCP's manage_catalog / manage_content.
+export const adminCatalog = (body: Record<string, unknown>) =>
+  requestAdmin<Record<string, any>>('/catalog', 'POST', body);
+export const adminContent = (body: Record<string, unknown>) =>
+  requestAdmin<Record<string, any>>('/content', 'POST', body);
 
 // -------------------------------------------------------------
 // ACCOUNT PROGRESS SYNC (/api/me, signed-in only)

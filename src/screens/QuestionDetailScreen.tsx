@@ -51,6 +51,11 @@ import { isAiEnabled } from '../config/features';
 import { openAskAi } from '../utils/askAi';
 import { userMessage } from '../utils/netError';
 import { useDialogLayout } from '../utils/dialog';
+import { useAdminAccess } from '../admin/useAdminAccess';
+import { can } from '../admin/adminLogic';
+import { EditorModal } from '../admin/EditorFrame';
+import { ManageQuestionSheet } from '../components/ManageQuestionSheet';
+import { ManageSolutionSheet } from '../components/ManageSolutionSheet';
 
 export const QuestionDetailScreen = () => {
   const insets = useSafeAreaInsets();
@@ -73,6 +78,12 @@ export const QuestionDetailScreen = () => {
     initialQuestion || null
   );
   const queryClient = useQueryClient();
+  // Admin editing (the server re-checks every grant; this only shows the buttons).
+  const admin = useAdminAccess();
+  const canEditQuestion = can(admin.tools, 'manage_content', 'update');
+  const canEditSolution = can(admin.tools, 'manage_content', 'update');
+  const [editQuestionOpen, setEditQuestionOpen] = useState(false);
+  const [editSolutionOpen, setEditSolutionOpen] = useState(false);
   // Fetched only after the user asks (see handleToggleSolution), or automatically
   // if navigated with autoOpenSolution (e.g. from "Solution Available" button).
   const [wantSolution, setWantSolution] = useState(Boolean(autoOpenSolution));
@@ -642,6 +653,35 @@ export const QuestionDetailScreen = () => {
             </View>
           </View>
 
+          {(canEditQuestion || canEditSolution) && (
+            <View style={{ flexDirection: 'row', gap: 8, marginBottom: 10 }}>
+              {canEditQuestion && (
+                <TouchableOpacity
+                  style={styles.adminEditBtn}
+                  activeOpacity={0.7}
+                  onPress={() => setEditQuestionOpen(true)}
+                  accessibilityLabel="Edit this question"
+                >
+                  <Feather name="edit-2" size={14} color={COLORS.primary} />
+                  <Text style={styles.adminEditText}>Edit question</Text>
+                </TouchableOpacity>
+              )}
+              {canEditSolution && (
+                <TouchableOpacity
+                  style={styles.adminEditBtn}
+                  activeOpacity={0.7}
+                  onPress={() => setEditSolutionOpen(true)}
+                  accessibilityLabel={question?.hasSolution || solution ? 'Edit the solution' : 'Add a solution'}
+                >
+                  <Feather name="edit-3" size={14} color={COLORS.primary} />
+                  <Text style={styles.adminEditText}>
+                    {question?.hasSolution || solution ? 'Edit solution' : 'Add solution'}
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          )}
+
           {/* Show / hide solution: its own full-width button below the card, not
               one more icon in the card's action row. */}
           {(question?.hasSolution || Boolean(solution) || loadingSolution) && (
@@ -1020,11 +1060,62 @@ export const QuestionDetailScreen = () => {
 
       <AdBanner />
       </View>
+
+      <EditorModal visible={editQuestionOpen} onRequestClose={() => setEditQuestionOpen(false)}>
+        <ManageQuestionSheet
+          subjectId={subjectId}
+          subjectName={subjectName}
+          questionId={questionId}
+          onSaved={() => {
+            setEditQuestionOpen(false);
+            // Deleted: nothing left to show. Edited: re-read the live row.
+            queryClient
+              .fetchQuery({ ...questionQuery(subjectId, questionId), staleTime: 0 })
+              .then((res) => {
+                if (res.questions?.[0]) setQuestion(res.questions[0]);
+              })
+              .catch(() => navigation.goBack());
+          }}
+          onClose={() => setEditQuestionOpen(false)}
+        />
+      </EditorModal>
+      <EditorModal visible={editSolutionOpen} onRequestClose={() => setEditSolutionOpen(false)}>
+        <ManageSolutionSheet
+          subjectId={subjectId}
+          questionId={questionId}
+          onSaved={() => {
+            setEditSolutionOpen(false);
+            setWantSolution(true);
+            setShowSolution(true);
+            void solutionQ.refetch();
+            void queryClient
+              .fetchQuery({ ...questionQuery(subjectId, questionId), staleTime: 0 })
+              .then((res) => {
+                if (res.questions?.[0]) setQuestion(res.questions[0]);
+              })
+              .catch(() => {});
+          }}
+          onClose={() => setEditSolutionOpen(false)}
+        />
+      </EditorModal>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
+  adminEditBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    minHeight: 44,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: COLORS.primaryBorder,
+    backgroundColor: COLORS.primaryLight,
+  },
+  adminEditText: { fontFamily: FONTS.bodySemi, fontSize: 13, color: COLORS.primary },
   container: {
     flex: 1,
     backgroundColor: COLORS.background,

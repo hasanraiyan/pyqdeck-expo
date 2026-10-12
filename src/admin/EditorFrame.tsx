@@ -305,6 +305,28 @@ export const ErrorBanner = ({ message }: { message: string | null }) =>
     </View>
   ) : null;
 
+/** "You have an unsaved draft from earlier" with Restore / Discard. */
+export const DraftBanner = ({
+  age,
+  onRestore,
+  onDiscard,
+}: {
+  age: string;
+  onRestore: () => void;
+  onDiscard: () => void;
+}) => (
+  <View style={s.draft}>
+    <Feather name="clock" size={15} color="#92400e" />
+    <Text style={s.draftText}>Unsaved draft from {age}.</Text>
+    <TouchableOpacity onPress={onRestore} hitSlop={8} accessibilityLabel="Restore draft">
+      <Text style={s.draftAction}>Restore</Text>
+    </TouchableOpacity>
+    <TouchableOpacity onPress={onDiscard} hitSlop={8} accessibilityLabel="Discard draft">
+      <Text style={[s.draftAction, { color: COLORS.textMuted }]}>Discard</Text>
+    </TouchableOpacity>
+  </View>
+);
+
 export const EditorNote = ({ children }: { children: React.ReactNode }) => (
   <Text style={s.hint}>{children}</Text>
 );
@@ -401,5 +423,18 @@ const s = StyleSheet.create({
     borderColor: '#fecaca',
     backgroundColor: '#fef2f2',
   },
+  draft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 12,
+    backgroundColor: '#fef3c7',
+    borderWidth: 1,
+    borderColor: '#fcd34d',
+  },
+  draftText: { flex: 1, fontFamily: FONTS.bodyMedium, fontSize: 13, color: '#92400e' },
+  draftAction: { fontFamily: FONTS.bodyBold, fontSize: 13, color: COLORS.primary },
   bannerText: { flex: 1, fontFamily: FONTS.bodySemi, fontSize: 13, color: DANGER },
 });
