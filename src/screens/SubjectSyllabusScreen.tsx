@@ -372,7 +372,7 @@ export const SubjectSyllabusScreen = () => {
   return (
     <View style={styles.container}>
       <ScrollView
-        contentContainerStyle={[frame, { paddingBottom: Math.max(insets.bottom, 16), paddingTop: 6 }]}
+        contentContainerStyle={[frame, { paddingBottom: Math.max(insets.bottom, 16), paddingTop: 0 }]}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -382,7 +382,7 @@ export const SubjectSyllabusScreen = () => {
         }
       >
         {/* Signed out: persistent, non-dismissible login prompt so ticks are saved. */}
-        <View style={{ paddingHorizontal: 16, paddingTop: 8 }}>
+        <View style={{ paddingHorizontal: 16 }}>
           <SyncStatusBar dismissible={false} />
         </View>
         {/* Live Syllabus Progress Meter */}
@@ -504,8 +504,9 @@ const styles = StyleSheet.create({
     paddingTop: 10,
     paddingBottom: 12,
     marginHorizontal: 16,
-    marginBottom: 14,
-    gap: 8,
+    marginTop: 8,
+    marginBottom: 10,
+    gap: 6,
   },
   progressHeaderRow: {
     flexDirection: 'row',

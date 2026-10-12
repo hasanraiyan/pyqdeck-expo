@@ -1,21 +1,21 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Keyboard, ScrollView, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, Keyboard, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { COLORS, FONTS } from '../theme/colors';
 import { adminContent } from '../api';
 import { userMessage } from '../utils/netError';
-import { AuditLink } from '../admin/ui';
-import { DraftBanner, EditorField, EditorFrame, ErrorBanner, Segmented } from '../admin/EditorFrame';
+import { DraftBanner, EditorField, EditorFrame, ErrorBanner, type MenuItem } from '../admin/EditorFrame';
 import { MarkdownEditor } from '../admin/MarkdownEditor';
 import { draftAge, useDraft } from '../admin/useDraft';
 import { validateQuestionFields } from '../admin/contentLogic';
 
 /**
- * Add a question to a subject, or edit/delete one. Two tabs so the keyboard
- * never fights a long form: Details (id, year, number, marks, chapter, type)
- * and Text (the question itself, with the same markdown tools and preview as
- * the notes editor). Editing opens on the stored text read straight from the
- * database, never a cached copy.
+ * Add a question to a subject, or edit/delete one. Same shell as the notes
+ * editor: the question text fills the screen, a strip of chips under the header
+ * summarises the details (tap it to edit id, year, number, marks, chapter, type),
+ * and Preview / Details / Delete live in the header's menu. Editing opens on
+ * the stored text read straight from the database, never a cached copy.
  */
 export const ManageQuestionSheet = ({
   subjectId,
@@ -37,7 +37,7 @@ export const ManageQuestionSheet = ({
 }) => {
   const editing = !!questionId;
   const [loading, setLoading] = useState(editing);
-  const [tab, setTab] = useState<'details' | 'text'>(editing ? 'text' : 'details');
+  const [mode, setMode] = useState<'details' | 'edit' | 'preview'>(editing ? 'edit' : 'details');
   const [qid, setQid] = useState(questionId ?? suggestedId ?? '');
   const [year, setYear] = useState(suggestedYear ? String(suggestedYear) : '');
   const [qNumber, setQNumber] = useState('');
@@ -133,7 +133,7 @@ export const ManageQuestionSheet = ({
       onSaved(editing ? questionId! : qid.trim());
     } catch (e: any) {
       setError(userMessage(e, 'Could not save the question. Your text is kept as a draft on this phone.'));
-      if (problems.any) setTab('details');
+      if (problems.details) setMode('details');
     } finally {
       setSaving(false);
     }
@@ -167,6 +167,31 @@ export const ManageQuestionSheet = ({
     );
   };
 
+  const menu: MenuItem[] = loading
+    ? []
+    : [
+        ...(mode === 'details'
+          ? [{ label: 'Question text', icon: 'edit-3' as const, onPress: () => setMode('edit') }]
+          : [
+              mode === 'edit'
+                ? { label: 'Preview', icon: 'eye' as const, onPress: () => { Keyboard.dismiss(); setMode('preview'); } }
+                : { label: 'Write', icon: 'edit-3' as const, onPress: () => setMode('edit') },
+              { label: 'Details', icon: 'sliders' as const, onPress: () => { Keyboard.dismiss(); setMode('details'); } },
+            ]),
+        ...(editing
+          ? [{ label: 'Delete question', icon: 'trash-2' as const, onPress: doDelete, disabled: busy, danger: true }]
+          : []),
+      ];
+
+  const chips = [
+    editing ? questionId! : qid.trim(),
+    year.trim(),
+    qNumber.trim() ? `Q${qNumber.trim()}` : '',
+    marks.trim() ? `${marks.trim()} marks` : '',
+    type.trim(),
+    chapter.trim(),
+  ].filter(Boolean);
+
   return (
     <EditorFrame
       kicker={editing ? 'Edit question' : 'Add question'}
@@ -177,15 +202,13 @@ export const ManageQuestionSheet = ({
       onClose={leave}
       scroll={false}
       primary={{
-        label: saving ? 'Saving…' : !editing ? 'Add question' : changed ? 'Save question' : 'No changes',
+        label: saving ? 'Saving…' : editing ? 'Save question' : 'Add question',
         onPress: () => void doSave(),
         disabled: !canSave,
         loading: saving,
         idle: editing && !changed && !busy && !loading,
       }}
-      secondary={
-        editing ? { label: 'Delete', onPress: doDelete, disabled: busy, loading: deleting, danger: true } : undefined
-      }
+      menu={menu}
     >
       {loading ? (
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 10 }}>
@@ -196,18 +219,6 @@ export const ManageQuestionSheet = ({
         </View>
       ) : (
         <>
-          <Segmented
-            value={tab}
-            onChange={(t) => {
-              Keyboard.dismiss();
-              setTab(t);
-            }}
-            options={[
-              { value: 'details', label: problems.details ? 'Details •' : 'Details' },
-              { value: 'text', label: problems.text ? 'Text •' : 'Text' },
-            ]}
-          />
-
           {draft.found ? (
             <DraftBanner
               age={draftAge(draft.found.savedAt)}
@@ -219,7 +230,51 @@ export const ManageQuestionSheet = ({
             />
           ) : null}
 
-          {tab === 'details' ? (
+          {mode !== 'details' ? (
+            <TouchableOpacity
+              onPress={() => {
+                Keyboard.dismiss();
+                setMode('details');
+              }}
+              activeOpacity={0.7}
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}
+              accessibilityLabel="Edit question details"
+            >
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                pointerEvents="none"
+                style={{ flex: 1 }}
+                contentContainerStyle={{ gap: 6, alignItems: 'center' }}
+              >
+                {chips.length ? (
+                  chips.map((c, i) => (
+                    <View
+                      key={`${c}-${i}`}
+                      style={{
+                        height: 30,
+                        paddingHorizontal: 12,
+                        borderRadius: 999,
+                        justifyContent: 'center',
+                        backgroundColor: COLORS.cardSecondary,
+                        borderWidth: 1,
+                        borderColor: problems.details ? '#fecaca' : COLORS.border,
+                      }}
+                    >
+                      <Text style={{ fontFamily: FONTS.bodySemi, fontSize: 12, color: COLORS.text }}>{c}</Text>
+                    </View>
+                  ))
+                ) : (
+                  <Text style={{ fontFamily: FONTS.bodySemi, fontSize: 12, color: COLORS.textMuted }}>
+                    Add question details
+                  </Text>
+                )}
+              </ScrollView>
+              <Feather name="chevron-right" size={18} color={problems.details ? '#b91c1c' : COLORS.textMuted} />
+            </TouchableOpacity>
+          ) : null}
+
+          {mode === 'details' ? (
             <ScrollView
               style={{ flex: 1 }}
               contentContainerStyle={{ gap: 16, paddingBottom: 24 }}
@@ -307,7 +362,7 @@ export const ManageQuestionSheet = ({
                     placeholder="short / long"
                     autoCapitalize="none"
                     returnKeyType="done"
-                    onSubmitEditing={() => setTab('text')}
+                    onSubmitEditing={() => setMode('edit')}
                   />
                 </View>
               </View>
@@ -325,7 +380,6 @@ export const ManageQuestionSheet = ({
                 onSubmitEditing={() => typeRef.current?.focus()}
               />
               <ErrorBanner message={error} />
-              <AuditLink tool="manage_content" label="View content changes" onNavigate={onClose} />
             </ScrollView>
           ) : (
             <>
@@ -337,6 +391,8 @@ export const ManageQuestionSheet = ({
                     setError(null);
                   }}
                   disabled={busy}
+                  mode={mode === 'preview' ? 'preview' : 'edit'}
+                  onModeChange={setMode}
                   placeholder="Write the question. Use $...$ for math."
                 />
               </View>

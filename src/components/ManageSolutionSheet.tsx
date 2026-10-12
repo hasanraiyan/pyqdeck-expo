@@ -4,8 +4,7 @@ import * as Haptics from 'expo-haptics';
 import { COLORS, FONTS } from '../theme/colors';
 import { ApiError, adminContent } from '../api';
 import { userMessage } from '../utils/netError';
-import { AuditLink } from '../admin/ui';
-import { DraftBanner, EditorFrame, ErrorBanner } from '../admin/EditorFrame';
+import { DraftBanner, EditorFrame, ErrorBanner, type MenuItem } from '../admin/EditorFrame';
 import { MarkdownEditor } from '../admin/MarkdownEditor';
 import { draftAge, useDraft } from '../admin/useDraft';
 
@@ -33,6 +32,7 @@ export const ManageSolutionSheet = ({
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [mode, setMode] = useState<'edit' | 'preview'>('edit');
   const draft = useDraft(`solution:${subjectId}:${questionId}`, text, original);
 
   useEffect(() => {
@@ -120,6 +120,17 @@ export const ManageSolutionSheet = ({
     );
   };
 
+  const menu: MenuItem[] = loading
+    ? []
+    : [
+        mode === 'edit'
+          ? { label: 'Preview', icon: 'eye' as const, onPress: () => { Keyboard.dismiss(); setMode('preview'); } }
+          : { label: 'Write', icon: 'edit-3' as const, onPress: () => setMode('edit') },
+        ...(exists
+          ? [{ label: 'Delete solution', icon: 'trash-2' as const, onPress: doDelete, disabled: busy, danger: true }]
+          : []),
+      ];
+
   return (
     <EditorFrame
       kicker={exists ? 'Edit solution' : 'Add solution'}
@@ -130,15 +141,13 @@ export const ManageSolutionSheet = ({
       onClose={leave}
       scroll={false}
       primary={{
-        label: saving ? 'Saving…' : !exists ? 'Add solution' : dirty ? 'Save solution' : 'No changes',
+        label: saving ? 'Saving…' : exists ? 'Save solution' : 'Add solution',
         onPress: () => void doSave(),
         disabled: !canSave,
         loading: saving,
         idle: exists && !dirty && !busy,
       }}
-      secondary={
-        exists ? { label: 'Delete', onPress: doDelete, disabled: busy, loading: deleting, danger: true } : undefined
-      }
+      menu={menu}
     >
       {loading ? (
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 10 }}>
@@ -166,13 +175,13 @@ export const ManageSolutionSheet = ({
               setError(null);
             }}
             disabled={busy}
+            mode={mode}
+            onModeChange={setMode}
             placeholder="Write the worked solution in markdown. Use $...$ for math."
           />
           <ErrorBanner message={error} />
-          <AuditLink tool="manage_content" label="View content changes" onNavigate={onClose} />
         </>
       )}
-      {loading ? null : null}
     </EditorFrame>
   );
 };
