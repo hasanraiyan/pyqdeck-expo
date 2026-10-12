@@ -5,6 +5,8 @@
   "dependencies": {
     "@clerk/expo": "^4.6.1",
     "@expo-google-fonts/inter": "^0.4.2",
+    "@expo-google-fonts/kalam": "^0.4.1",
+    "@expo-google-fonts/patrick-hand": "^0.4.1",
     "@expo-google-fonts/plus-jakarta-sans": "^0.4.2",
     "@expo/vector-icons": "^15.1.1",
     "@react-native-async-storage/async-storage": "2.2.0",

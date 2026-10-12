@@ -5,6 +5,7 @@ import {
   extractSvgTitle,
   parseSvgContent,
   RAW_SVG_REGEX,
+  sanitizeSvgForNative,
 } from './svgParser.ts';
 
 test('extractSvgDimensions extracts ratio from viewBox', () => {
@@ -52,4 +53,16 @@ Some text
 `;
   const matches = [...doc.matchAll(RAW_SVG_REGEX)];
   assert.equal(matches.length, 2);
+});
+
+test('sanitizeSvgForNative maps classes to fonts and decodes entities', () => {
+  const xml =
+    '<svg><style>@import url(x);</style><text class="cnx-hdr" x="1">DNS &amp; DDNS</text>' +
+    '<text class="cnx-body">a</text><marker orient="auto-start-reverse"/></svg>';
+  const out = sanitizeSvgForNative(xml);
+  assert.ok(out.includes('font-family="Kalam_700Bold"'));
+  assert.ok(out.includes('font-family="PatrickHand_400Regular"'));
+  assert.ok(out.includes('>DNS & DDNS<'));
+  assert.ok(!out.includes('<style'));
+  assert.ok(out.includes('orient="auto"'));
 });

@@ -69,10 +69,13 @@ export const MermaidViewer: React.FC<MermaidViewerProps> = ({
       position: absolute; top: 0; left: 0;
       width: 100vw; padding: 16px;
       transform-origin: 0 0;
-      /* No will-change: it makes Chromium rasterize once at 1x and stretch the
-         bitmap when zoomed, which is what made diagrams blurry. Without it the
-         SVG is re-rasterized crisply at the zoomed scale. */
     }
+    /* While fingers are down the stage is promoted to its own layer, so pinch/pan
+       only moves a cached bitmap (smooth). Expensive SVG filters (hand-drawn
+       wobble) are switched off for that time. On release the layer is dropped so
+       Chromium re-rasterizes crisply at the final scale, filters back on. */
+    #stage.moving { will-change: transform; }
+    #stage.moving [filter] { filter: none !important; }
     svg { text-rendering: geometricPrecision; shape-rendering: geometricPrecision; }
     #stage svg {
       display: block;
@@ -96,6 +99,15 @@ export const MermaidViewer: React.FC<MermaidViewerProps> = ({
       x = w <= vw() ? (vw() - w) / 2 : Math.min(0, Math.max(vw() - w, x));
       y = h <= vh() ? (vh() - h) / 2 : Math.min(0, Math.max(vh() - h, y));
     }
+    var settle = null;
+    function moving() {
+      clearTimeout(settle);
+      stage.classList.add('moving');
+    }
+    function settleSoon() {
+      clearTimeout(settle);
+      settle = setTimeout(function () { stage.classList.remove('moving'); }, 120);
+    }
     function apply() {
       clamp();
       stage.style.transform = 'translate(' + x + 'px,' + y + 'px) scale(' + s + ')';
@@ -110,6 +122,7 @@ export const MermaidViewer: React.FC<MermaidViewerProps> = ({
     function dist(t) { return Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY); }
     var last = null, startDist = 0, startScale = 1, lastTap = 0;
     document.addEventListener('touchstart', function (e) {
+      moving();
       if (e.touches.length === 2) {
         startDist = dist(e.touches); startScale = s; last = null;
       } else if (e.touches.length === 1) {
@@ -137,6 +150,7 @@ export const MermaidViewer: React.FC<MermaidViewerProps> = ({
     }, { passive: false });
     document.addEventListener('touchend', function (e) {
       last = e.touches.length === 1 ? { x: e.touches[0].clientX, y: e.touches[0].clientY } : null;
+      if (e.touches.length === 0) settleSoon();
     });
     window.addEventListener('load', apply);
     window.addEventListener('resize', apply);

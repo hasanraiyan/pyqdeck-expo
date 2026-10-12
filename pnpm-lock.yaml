@@ -19,6 +19,12 @@ importers:
       '@expo-google-fonts/inter':
         specifier: ^0.4.2
         version: 0.4.2
+      '@expo-google-fonts/kalam':
+        specifier: ^0.4.1
+        version: 0.4.1
+      '@expo-google-fonts/patrick-hand':
+        specifier: ^0.4.1
+        version: 0.4.1
       '@expo-google-fonts/plus-jakarta-sans':
         specifier: ^0.4.2
         version: 0.4.2
@@ -628,6 +634,12 @@ packages:
 
   '@expo-google-fonts/inter@0.4.2':
     resolution: {integrity: sha512-syfiImMaDmq7cFi0of+waE2M4uSCyd16zgyWxdPOY7fN2VBmSLKEzkfbZgeOjJq61kSqPBNNtXjggiQiSD6gMQ==}
+
+  '@expo-google-fonts/kalam@0.4.1':
+    resolution: {integrity: sha512-A5LZoojqb9OCzOI/2WDRofaIQGGzC5zzmKxqxCFIx1jSYOO8g7q+5fZdd+QfJ6pY6VLzO4j5xoJq0ptcHFpQSg==}
+
+  '@expo-google-fonts/patrick-hand@0.4.1':
+    resolution: {integrity: sha512-Z/gioyynhzrsF6Od8E2QKpQooHnEzUmfen9ohVT6uaeWAmQy3pkl9r7AGdJx9ersDSLUciCNFV442leHIieJqQ==}
 
   '@expo-google-fonts/plus-jakarta-sans@0.4.2':
     resolution: {integrity: sha512-6LYVmVGwjQvH+uzzWlVc9+oMj4lkNQ41aymVDjO+x8aFk8kCye20wOyLomYMZaMezA++Uf1mZRCw3W3Fy/hxEA==}
@@ -3186,28 +3198,24 @@ packages:
     engines: {node: '>= 12.0.0'}
     cpu: [arm64]
     os: [linux]
-    libc: [glibc]
 
   lightningcss-linux-arm64-musl@1.33.0:
     resolution: {integrity: sha512-yiO5ROMuYQgXbC60yjZU5CYSFZGKXL0HFATXt9mHJn1+zW55oCtMI9NfcVhYLMFDL7gV7oBPon/EmMMGg2OvtQ==}
     engines: {node: '>= 12.0.0'}
     cpu: [arm64]
     os: [linux]
-    libc: [musl]
 
   lightningcss-linux-x64-gnu@1.33.0:
     resolution: {integrity: sha512-ar+Ju7LmcN0Jo4FpL4hpFybwNG9/3A/Br5KW2n2jyODg3MEZXaDYADdemoNS+BDNfMgKvylJLj4S5tyRActuAg==}
     engines: {node: '>= 12.0.0'}
     cpu: [x64]
     os: [linux]
-    libc: [glibc]
 
   lightningcss-linux-x64-musl@1.33.0:
     resolution: {integrity: sha512-RYiYbkokw0trfKqqzfF55lginwEPrD3OJDfTuJzFs1MK6iFnDenaz1fqLLtX4ITG3OktJQXOeTaw1awrBAlZPw==}
     engines: {node: '>= 12.0.0'}
     cpu: [x64]
     os: [linux]
-    libc: [musl]
 
   lightningcss-win32-arm64-msvc@1.33.0:
     resolution: {integrity: sha512-1K+MPfLSFVpphzpdbfkhlWk6wBrTObBzS2T6db10PNOZgR9GoVsAWzwNyuhUYYbTp23j+4RrncfujZ4uAzXvwA==}
@@ -4989,6 +4997,10 @@ snapshots:
       - zod
 
   '@expo-google-fonts/inter@0.4.2': {}
+
+  '@expo-google-fonts/kalam@0.4.1': {}
+
+  '@expo-google-fonts/patrick-hand@0.4.1': {}
 
   '@expo-google-fonts/plus-jakarta-sans@0.4.2': {}
 
