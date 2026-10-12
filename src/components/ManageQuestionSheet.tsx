@@ -177,10 +177,11 @@ export const ManageQuestionSheet = ({
       onClose={leave}
       scroll={false}
       primary={{
-        label: editing ? 'Save question' : 'Add question',
+        label: saving ? 'Saving…' : !editing ? 'Add question' : changed ? 'Save question' : 'No changes',
         onPress: () => void doSave(),
         disabled: !canSave,
         loading: saving,
+        idle: editing && !changed && !busy && !loading,
       }}
       secondary={
         editing ? { label: 'Delete', onPress: doDelete, disabled: busy, loading: deleting, danger: true } : undefined

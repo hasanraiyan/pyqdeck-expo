@@ -1,7 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { Keyboard, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { COLORS, FONTS } from '../theme/colors';
-import { Segmented } from './EditorFrame';
+import { Segmented, useEditorKeyboardOpen } from './EditorFrame';
 import { NativeContentRenderer } from '../components/NativeContentRenderer';
 
 /**
@@ -14,12 +14,12 @@ import { NativeContentRenderer } from '../components/NativeContentRenderer';
 type Sel = { start: number; end: number };
 
 const TOOLS: { label: string; pre: string; post?: string; ph?: string; block?: boolean }[] = [
-  { label: 'Bold', pre: '**', post: '**', ph: 'text' },
+  { label: 'B', pre: '**', post: '**', ph: 'text' },
   { label: 'List', pre: '- ', block: true },
-  { label: 'Heading', pre: '## ', block: true },
-  { label: '$ math $', pre: '$', post: '$', ph: 'x^2' },
-  { label: '$$ block $$', pre: '$$\n', post: '\n$$', ph: 'E = mc^2', block: true },
-  { label: 'Mermaid', pre: '```mermaid\n', post: '\n```', ph: 'graph TD\n  A-->B', block: true },
+  { label: 'H', pre: '## ', block: true },
+  { label: 'Math', pre: '$', post: '$', ph: 'x^2' },
+  { label: 'Block', pre: '$$\n', post: '\n$$', ph: 'E = mc^2', block: true },
+  { label: 'Diagram', pre: '```mermaid\n', post: '\n```', ph: 'graph TD\n  A-->B', block: true },
 ];
 
 export const MarkdownEditor = ({
@@ -45,6 +45,7 @@ export const MarkdownEditor = ({
   const [forceSel, setForceSel] = useState<Sel | null>(null);
   const inputRef = useRef<TextInput>(null);
   const tools = extraTools ? [...TOOLS, ...extraTools] : TOOLS;
+  const keyboardOpen = useEditorKeyboardOpen();
 
   const apply = (tool: (typeof TOOLS)[number]) => {
     const { start, end } = sel;
@@ -60,20 +61,25 @@ export const MarkdownEditor = ({
 
   return (
     <View style={{ flex: 1, gap: 10 }}>
-      <Segmented
-        value={tab}
-        onChange={(t) => {
-          if (t === 'preview') Keyboard.dismiss();
-          setTab(t);
-        }}
-        options={[
-          { value: 'edit', label: 'Write' },
-          { value: 'preview', label: 'Preview' },
-        ]}
-      />
+      {/* While typing, the mode switch gives its row to the text. */}
+      {keyboardOpen && tab === 'edit' ? null : (
+        <Segmented
+          value={tab}
+          onChange={(t) => {
+            if (t === 'preview') Keyboard.dismiss();
+            else if (sel) setForceSel(sel);
+            setTab(t);
+          }}
+          options={[
+            { value: 'edit', label: 'Write' },
+            { value: 'preview', label: 'Preview' },
+          ]}
+        />
+      )}
 
-      {tab === 'edit' ? (
-        <View style={{ flex: 1, gap: 8 }}>
+      {/* The input stays mounted (just hidden) in Preview, so the cursor, the
+          selection and the scroll position are all still there when you come back. */}
+      <View style={[{ flex: 1, gap: 8 }, tab !== 'edit' && { display: 'none' }]}>
           <TextInput
             ref={inputRef}
             value={value}
@@ -104,15 +110,16 @@ export const MarkdownEditor = ({
                 key={tool.label}
                 onPress={() => apply(tool)}
                 disabled={disabled}
-                style={s.tool}
+                style={[s.tool, keyboardOpen && s.toolCompact]}
                 accessibilityLabel={`Insert ${tool.label}`}
               >
                 <Text style={s.toolText}>{tool.label}</Text>
               </TouchableOpacity>
             ))}
           </ScrollView>
-        </View>
-      ) : (
+      </View>
+
+      {tab === 'preview' ? (
         <ScrollView style={s.preview} contentContainerStyle={{ padding: 14, paddingBottom: 32 }}>
           {value.trim() ? (
             renderPreview ? (
@@ -124,7 +131,7 @@ export const MarkdownEditor = ({
             <Text style={s.empty}>Nothing to preview yet.</Text>
           )}
         </ScrollView>
-      )}
+      ) : null}
     </View>
   );
 };
@@ -146,7 +153,8 @@ const s = StyleSheet.create({
   },
   tool: {
     minHeight: 40,
-    paddingHorizontal: 14,
+    minWidth: 44,
+    paddingHorizontal: 12,
     borderRadius: 10,
     borderWidth: 1,
     borderColor: COLORS.border,
@@ -154,6 +162,7 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  toolCompact: { minHeight: 36 },
   toolText: { fontFamily: FONTS.bodySemi, fontSize: 13, color: COLORS.text },
   preview: {
     flex: 1,

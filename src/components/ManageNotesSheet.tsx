@@ -6,7 +6,7 @@ import { ApiError, adminNotes } from '../api';
 import { userMessage } from '../utils/netError';
 import { pickNotesWrite } from '../admin/syllabusLogic';
 import { AuditLink } from '../admin/ui';
-import { DraftBanner, EditorFrame, ErrorBanner } from '../admin/EditorFrame';
+import { DraftBanner, EditorFrame, ErrorBanner, useEditorKeyboardOpen } from '../admin/EditorFrame';
 import { MarkdownEditor, type EditorTool } from '../admin/MarkdownEditor';
 import { draftAge, useDraft } from '../admin/useDraft';
 import { FaqAccordion } from './FaqAccordion';
@@ -60,6 +60,7 @@ export const ManageNotesSheet = ({
   const [clearing, setClearing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const draft = useDraft(`notes:${subjectId}:${topicId}`, text, initialNotes);
+  const typing = useEditorKeyboardOpen();
 
   const busy = saving || clearing;
   const dirty = text !== initialNotes;
@@ -169,14 +170,20 @@ export const ManageNotesSheet = ({
       busy={busy}
       onClose={leave}
       scroll={false}
-      primary={{ label: 'Save notes', onPress: () => void doSave(), disabled: !canSave, loading: saving }}
+      primary={{
+        label: saving ? 'Saving…' : dirty ? 'Save notes' : 'No changes',
+        onPress: () => void doSave(),
+        disabled: !canSave,
+        loading: saving,
+        idle: !dirty && !busy,
+      }}
       secondary={
         initialNotes
           ? { label: 'Clear', onPress: doClear, disabled: busy, loading: clearing, danger: true }
           : undefined
       }
     >
-      {draft.found ? (
+      {draft.found && !typing ? (
         <DraftBanner
           age={draftAge(draft.found.savedAt)}
           onRestore={() => {
@@ -205,7 +212,7 @@ export const ManageNotesSheet = ({
           Notes are empty. Use Clear to remove them.
         </Text>
       ) : null}
-      <AuditLink tool="manage_notes" label="View notes changes" onNavigate={onClose} />
+      {typing ? null : <AuditLink tool="manage_notes" label="View notes changes" onNavigate={onClose} />}
     </EditorFrame>
   );
 };

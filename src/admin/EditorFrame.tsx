@@ -37,6 +37,10 @@ const DANGER = '#b91c1c';
 
 type Guard = () => void;
 const GuardCtx = createContext<React.MutableRefObject<Guard | null> | null>(null);
+const KeyboardCtx = createContext(false);
+
+/** True while the on-screen keyboard is up: editors drop their extra chrome to give the text room. */
+export const useEditorKeyboardOpen = () => useContext(KeyboardCtx);
 
 /** Full-screen modal host. Drop-in replacement for Modal + SafeAreaView + ScrollView. */
 export const EditorModal = ({
@@ -49,6 +53,7 @@ export const EditorModal = ({
   children: React.ReactNode;
 }) => {
   const guard = useRef<Guard | null>(null);
+  const keyboardOpen = useKeyboardOpen();
   return (
     <Modal
       visible={visible}
@@ -58,7 +63,9 @@ export const EditorModal = ({
     >
       <SafeAreaView style={s.safe} edges={['top', 'left', 'right']}>
         <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
-          <GuardCtx.Provider value={guard}>{children}</GuardCtx.Provider>
+          <KeyboardCtx.Provider value={keyboardOpen}>
+            <GuardCtx.Provider value={guard}>{children}</GuardCtx.Provider>
+          </KeyboardCtx.Provider>
         </KeyboardAvoidingView>
       </SafeAreaView>
     </Modal>
@@ -87,6 +94,8 @@ export interface FooterAction {
   onPress: () => void;
   disabled?: boolean;
   loading?: boolean;
+  /** Primary only: nothing to do right now (e.g. "No changes"). Drawn calm, not as a broken button. */
+  idle?: boolean;
 }
 
 export const EditorFrame = ({
@@ -117,7 +126,7 @@ export const EditorFrame = ({
   children: React.ReactNode;
 }) => {
   const insets = useSafeAreaInsets();
-  const keyboardOpen = useKeyboardOpen();
+  const keyboardOpen = useContext(KeyboardCtx);
   const guard = useContext(GuardCtx);
 
   const requestClose = () => {
@@ -146,7 +155,7 @@ export const EditorFrame = ({
 
   return (
     <View style={s.frame}>
-      <View style={s.header}>
+      <View style={[s.header, keyboardOpen && s.headerCompact]}>
         <TouchableOpacity
           onPress={requestClose}
           hitSlop={10}
@@ -156,11 +165,11 @@ export const EditorFrame = ({
           <Feather name="x" size={22} color={COLORS.text} />
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
-          <Text style={s.kicker}>{kicker.toUpperCase()}</Text>
+          {keyboardOpen ? null : <Text style={s.kicker}>{kicker.toUpperCase()}</Text>}
           <Text style={s.title} numberOfLines={1}>
             {title}
           </Text>
-          {subtitle ? (
+          {subtitle && !keyboardOpen ? (
             <Text style={s.subtitle} numberOfLines={1}>
               {subtitle}
             </Text>
@@ -188,12 +197,24 @@ export const EditorFrame = ({
         <View style={[s.body, { flex: 1 }]}>{children}</View>
       )}
 
-      <View style={[s.footer, { paddingBottom: keyboardOpen ? 10 : Math.max(insets.bottom, 10) }]}>
+      <View
+        style={[
+          s.footer,
+          keyboardOpen
+            ? { paddingTop: 6, paddingBottom: 6 }
+            : { paddingBottom: Math.max(insets.bottom, 10) },
+        ]}
+      >
         {secondary ? (
           <TouchableOpacity
             onPress={secondary.onPress}
             disabled={secondary.disabled || secondary.loading}
-            style={[s.btn, secondary.danger ? s.btnDanger : s.btnGhost, secondary.disabled && { opacity: 0.4 }]}
+            style={[
+              s.btn,
+              keyboardOpen && s.btnCompact,
+              secondary.danger ? s.btnDanger : s.btnGhost,
+              secondary.disabled && { opacity: 0.4 },
+            ]}
             accessibilityLabel={secondary.label}
           >
             {secondary.loading ? (
@@ -208,13 +229,21 @@ export const EditorFrame = ({
         <TouchableOpacity
           onPress={primary.onPress}
           disabled={primary.disabled || primary.loading}
-          style={[s.btn, s.btnPrimary, { flex: 1 }, primary.disabled && { opacity: 0.45 }]}
+          style={[
+            s.btn,
+            keyboardOpen && s.btnCompact,
+            primary.idle ? s.btnIdle : s.btnPrimary,
+            { flex: 1 },
+            primary.disabled && !primary.idle && { opacity: 0.45 },
+          ]}
           accessibilityLabel={primary.label}
         >
           {primary.loading ? (
             <ActivityIndicator color="#fff" />
           ) : (
-            <Text style={[s.btnText, { color: '#fff' }]}>{primary.label}</Text>
+            <Text style={[s.btnText, { color: primary.idle ? COLORS.textMuted : '#fff' }]}>
+              {primary.label}
+            </Text>
           )}
         </TouchableOpacity>
       </View>
@@ -378,6 +407,9 @@ const s = StyleSheet.create({
     justifyContent: 'center',
   },
   btnPrimary: { backgroundColor: COLORS.primary },
+  btnIdle: { backgroundColor: COLORS.cardSecondary, borderWidth: 1, borderColor: COLORS.border },
+  btnCompact: { minHeight: 42 },
+  headerCompact: { paddingVertical: 4 },
   btnGhost: { borderWidth: 1, borderColor: COLORS.border },
   btnDanger: { borderWidth: 1, borderColor: '#fecaca', backgroundColor: '#fef2f2' },
   btnText: { fontFamily: FONTS.bodySemi, fontSize: 15 },

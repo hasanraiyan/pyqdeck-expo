@@ -130,10 +130,11 @@ export const ManageSolutionSheet = ({
       onClose={leave}
       scroll={false}
       primary={{
-        label: exists ? 'Save solution' : 'Add solution',
+        label: saving ? 'Saving…' : !exists ? 'Add solution' : dirty ? 'Save solution' : 'No changes',
         onPress: () => void doSave(),
         disabled: !canSave,
         loading: saving,
+        idle: exists && !dirty && !busy,
       }}
       secondary={
         exists ? { label: 'Delete', onPress: doDelete, disabled: busy, loading: deleting, danger: true } : undefined
