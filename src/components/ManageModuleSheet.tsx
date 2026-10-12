@@ -1,14 +1,11 @@
-import React, { useState } from 'react';
-import { ActivityIndicator, Alert, Text, TextInput, TouchableOpacity, View, StyleSheet } from 'react-native';
-import { Feather } from '@expo/vector-icons';
-import { useQueryClient } from '@tanstack/react-query';
+import React, { useRef, useState } from 'react';
+import { Alert, TextInput } from 'react-native';
 import * as Haptics from 'expo-haptics';
-import { COLORS, FONTS } from '../theme/colors';
 import { adminSyllabus } from '../api';
-import { qk } from '../api/queryKeys';
 import { userMessage } from '../utils/netError';
 import { deleteConfirmText, validateModuleTitle } from '../admin/syllabusLogic';
 import { AuditLink } from '../admin/ui';
+import { EditorField, EditorFrame, EditorNote, ErrorBanner } from '../admin/EditorFrame';
 
 /**
  * Inline module add/rename/delete (ASN-FR-13/30). Opened from
@@ -32,7 +29,6 @@ export const ManageModuleSheet = ({
   onSaved: () => void;
   onClose: () => void;
 }) => {
-  const queryClient = useQueryClient();
   const editing = !!module;
   const [number, setNumber] = useState(String(module?.number ?? nextNumber));
   const [title, setTitle] = useState(module?.title ?? '');
@@ -40,6 +36,7 @@ export const ManageModuleSheet = ({
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const busy = saving || deleting;
+  const numberRef = useRef<TextInput>(null);
 
   const num = Number(number);
   const numErr = !Number.isInteger(num) || num < 1 || num > 32 ? 'Number must be 1–32.' : null;
@@ -71,7 +68,6 @@ export const ManageModuleSheet = ({
         });
       }
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
-      await queryClient.invalidateQueries({ queryKey: qk.syllabusSubject(subjectId) });
       onSaved();
     } catch (e: any) {
       setError(userMessage(e, 'Could not save the module.'));
@@ -101,8 +97,7 @@ export const ManageModuleSheet = ({
                 module: module!.id,
                 confirm: true,
               });
-              await queryClient.invalidateQueries({ queryKey: qk.syllabusSubject(subjectId) });
-              Alert.alert(
+                      Alert.alert(
                 'Module deleted',
                 'Students keep their own ticks on their phones, but the removed topics no longer count toward progress.',
                 [{ text: 'Done', onPress: onSaved }]
@@ -119,34 +114,22 @@ export const ManageModuleSheet = ({
   };
 
   return (
-    <View style={s.wrap}>
-      <View style={s.head}>
-        <View style={{ flex: 1 }}>
-          <Text style={s.kicker}>{editing ? 'EDIT MODULE' : 'ADD MODULE'}</Text>
-          <Text style={s.title} numberOfLines={2}>
-            {editing ? module!.title : 'New module'}
-          </Text>
-        </View>
-        <TouchableOpacity onPress={onClose} hitSlop={12} accessibilityLabel="Close module editor">
-          <Feather name="x" size={22} color={COLORS.textMuted} />
-        </TouchableOpacity>
-      </View>
-
-      <Text style={s.label}>Number</Text>
-      <TextInput
-        value={number}
-        onChangeText={(v) => {
-          setNumber(v.replace(/[^0-9]/g, ''));
-          setError(null);
-        }}
-        editable={!busy}
-        keyboardType="number-pad"
-        style={s.input}
-      />
-      {numErr ? <Text style={s.error}>{numErr}</Text> : null}
-
-      <Text style={s.label}>Title</Text>
-      <TextInput
+    <EditorFrame
+      kicker={editing ? 'Edit module' : 'Add module'}
+      title={editing ? module!.title : 'New module'}
+      dirty={editing ? dirty : title.trim().length > 0}
+      busy={busy}
+      onClose={onClose}
+      primary={{
+        label: editing ? 'Save' : 'Add module',
+        onPress: () => void doSave(),
+        disabled: !canSave,
+        loading: saving,
+      }}
+      secondary={editing ? { label: 'Delete', onPress: doDelete, disabled: busy, loading: deleting, danger: true } : undefined}
+    >
+      <EditorField
+        label="Title"
         value={title}
         onChangeText={(v) => {
           setTitle(v);
@@ -154,65 +137,32 @@ export const ManageModuleSheet = ({
         }}
         editable={!busy}
         placeholder="e.g. Network Layer"
-        placeholderTextColor={COLORS.textSubtle}
-        style={s.input}
         autoCapitalize="sentences"
+        autoFocus={!editing}
+        returnKeyType="next"
+        blurOnSubmit={false}
+        onSubmitEditing={() => numberRef.current?.focus()}
+        error={titleErr && title.length > 0 ? titleErr : null}
       />
-      {titleErr && title.length > 0 ? <Text style={s.error}>{titleErr}</Text> : null}
+      <EditorField
+        ref={numberRef}
+        label="Module number"
+        value={number}
+        onChangeText={(v) => {
+          setNumber(v.replace(/[^0-9]/g, ''));
+          setError(null);
+        }}
+        editable={!busy}
+        keyboardType="number-pad"
+        returnKeyType="done"
+        onSubmitEditing={() => void doSave()}
+        error={numErr}
+        hint="Order in the syllabus, 1 to 32."
+      />
 
-      {error ? <Text style={s.error}>{error}</Text> : null}
-
-      <View style={s.actions}>
-        {editing ? (
-          <TouchableOpacity
-            onPress={doDelete}
-            disabled={busy}
-            style={[s.btn, s.btnDangerGhost, busy && { opacity: 0.4 }]}
-            accessibilityLabel="Delete module"
-          >
-            {deleting ? <ActivityIndicator color="#b91c1c" /> : <Text style={[s.btnText, { color: '#b91c1c' }]}>Delete</Text>}
-          </TouchableOpacity>
-        ) : (
-          <View />
-        )}
-        <View style={{ flex: 1 }} />
-        <TouchableOpacity
-          onPress={() => void doSave()}
-          disabled={!canSave}
-          style={[s.btn, s.btnPrimary, !canSave && { opacity: 0.45 }]}
-          accessibilityLabel={editing ? 'Save module' : 'Add module'}
-        >
-          {saving ? <ActivityIndicator color="#fff" /> : <Text style={[s.btnText, { color: '#fff' }]}>{editing ? 'Save' : 'Add'}</Text>}
-        </TouchableOpacity>
-      </View>
-      <Text style={s.hint}>Offline edits are blocked — connect to save. Nothing is stored on this phone.</Text>
+      <ErrorBanner message={error} />
+      <EditorNote>Needs a connection to save. Nothing is stored on this phone.</EditorNote>
       <AuditLink tool="manage_syllabus" label="View syllabus changes" onNavigate={onClose} />
-    </View>
+    </EditorFrame>
   );
 };
-
-const s = StyleSheet.create({
-  wrap: { gap: 8, paddingBottom: 8 },
-  head: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
-  kicker: { fontFamily: FONTS.bodyBold, fontSize: 11, letterSpacing: 1.2, color: COLORS.primary },
-  title: { fontFamily: FONTS.displayBold, fontSize: 17, color: COLORS.text, marginTop: 2 },
-  label: { fontFamily: FONTS.bodyMedium, fontSize: 12, color: COLORS.textMuted, marginTop: 4 },
-  input: {
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontFamily: FONTS.body,
-    fontSize: 14,
-    color: COLORS.text,
-    backgroundColor: COLORS.background,
-  },
-  error: { fontFamily: FONTS.bodySemi, fontSize: 12, color: '#b91c1c' },
-  hint: { fontFamily: FONTS.body, fontSize: 11, color: COLORS.textSubtle },
-  actions: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 6 },
-  btn: { borderRadius: 12, paddingVertical: 12, paddingHorizontal: 18, alignItems: 'center', minWidth: 96 },
-  btnPrimary: { backgroundColor: COLORS.primary },
-  btnDangerGhost: { backgroundColor: 'transparent', borderWidth: 1, borderColor: '#fecaca' },
-  btnText: { fontFamily: FONTS.bodySemi, fontSize: 14 },
-});

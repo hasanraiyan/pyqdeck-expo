@@ -1,6 +1,5 @@
 import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Linking, Modal, type LayoutChangeEvent } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Linking, type LayoutChangeEvent } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
@@ -34,6 +33,7 @@ import { userMessage } from '../utils/netError';
 import { useAdminAccess } from '../admin/useAdminAccess';
 import { can } from '../admin/adminLogic';
 import { ManageNotesSheet } from '../components/ManageNotesSheet';
+import { EditorModal } from '../admin/EditorFrame';
 
 /** Same namespacing as SubjectSyllabusScreen's topicKey - must stay identical, the two screens read/write the same AsyncStorage key. */
 const topicKey = (moduleId: string, topicId: string) => `${moduleId}:${topicId}`;
@@ -468,9 +468,7 @@ export const TopicNotesScreen = () => {
       </View>
 
       {/* Admin notes editor: same screen, pencil-gated. No separate browser. */}
-      <Modal visible={editOpen} animationType="slide" onRequestClose={() => setEditOpen(false)}>
-        <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background }}>
-          <ScrollView contentContainerStyle={{ padding: 16 }} keyboardShouldPersistTaps="handled">
+      <EditorModal visible={editOpen} onRequestClose={() => setEditOpen(false)}>
             {subjectId && topic?.id && moduleId ? (
               <ManageNotesSheet
                 subjectId={subjectId}
@@ -485,9 +483,7 @@ export const TopicNotesScreen = () => {
                 onClose={() => setEditOpen(false)}
               />
             ) : null}
-          </ScrollView>
-        </SafeAreaView>
-      </Modal>
+          </EditorModal>
     </View>
   );
 };

@@ -9,9 +9,8 @@ import {
   Platform,
   UIManager,
   RefreshControl,
-  Modal,
 } from 'react-native';
-import { useSafeAreaInsets, SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRoute, useNavigation, useFocusEffect } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
@@ -29,6 +28,7 @@ import { useAdminAccess } from '../admin/useAdminAccess';
 import { can } from '../admin/adminLogic';
 import { ManageTopicSheet } from '../components/ManageTopicSheet';
 import { ManageModuleSheet } from '../components/ManageModuleSheet';
+import { EditorModal } from '../admin/EditorFrame';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -433,9 +433,7 @@ export const SubjectSyllabusScreen = () => {
       </ScrollView>
 
       {/* Admin sheets: same screen, pencil-gated. */}
-      <Modal visible={!!topicSheet} animationType="slide" onRequestClose={() => setTopicSheet(null)}>
-        <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background }}>
-          <ScrollView contentContainerStyle={{ padding: 16 }} keyboardShouldPersistTaps="handled">
+      <EditorModal visible={!!topicSheet} onRequestClose={() => setTopicSheet(null)}>
             {topicSheet && (
               <ManageTopicSheet
                 subjectId={subject.id}
@@ -450,12 +448,8 @@ export const SubjectSyllabusScreen = () => {
                 onClose={() => setTopicSheet(null)}
               />
             )}
-          </ScrollView>
-        </SafeAreaView>
-      </Modal>
-      <Modal visible={!!moduleSheet} animationType="slide" onRequestClose={() => setModuleSheet(null)}>
-        <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background }}>
-          <ScrollView contentContainerStyle={{ padding: 16 }} keyboardShouldPersistTaps="handled">
+          </EditorModal>
+      <EditorModal visible={!!moduleSheet} onRequestClose={() => setModuleSheet(null)}>
             {moduleSheet && (
               <ManageModuleSheet
                 subjectId={subject.id}
@@ -470,9 +464,7 @@ export const SubjectSyllabusScreen = () => {
                 onClose={() => setModuleSheet(null)}
               />
             )}
-          </ScrollView>
-        </SafeAreaView>
-      </Modal>
+          </EditorModal>
 
       {/* Floating toast notification on copy */}
       {copiedTopic && (

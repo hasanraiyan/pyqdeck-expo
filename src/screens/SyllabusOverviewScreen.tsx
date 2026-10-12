@@ -9,10 +9,9 @@ import {
   Platform,
   UIManager,
   RefreshControl,
-  Modal,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { useSafeAreaInsets, SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import * as Haptics from 'expo-haptics';
 import { COLORS, FONTS } from '../theme/colors';
@@ -28,6 +27,7 @@ import { useContainerStyle } from '../components/ScreenContainer';
 import { useAdminAccess } from '../admin/useAdminAccess';
 import { can } from '../admin/adminLogic';
 import { ManageSubjectSheet } from '../components/ManageSubjectSheet';
+import { EditorModal } from '../admin/EditorFrame';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -350,9 +350,7 @@ export const SyllabusOverviewScreen = () => {
         )}
       </ScrollView>
       {/* Admin sheet: same screen, pencil-gated. */}
-      <Modal visible={!!subjectSheet} animationType="slide" onRequestClose={() => setSubjectSheet(null)}>
-        <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background }}>
-          <ScrollView contentContainerStyle={{ padding: 16 }} keyboardShouldPersistTaps="handled">
+      <EditorModal visible={!!subjectSheet} onRequestClose={() => setSubjectSheet(null)}>
             {subjectSheet && (
               <ManageSubjectSheet
                 branchId={branchId}
@@ -365,9 +363,7 @@ export const SyllabusOverviewScreen = () => {
                 onClose={() => setSubjectSheet(null)}
               />
             )}
-          </ScrollView>
-        </SafeAreaView>
-      </Modal>
+          </EditorModal>
     </View>
   );
 };

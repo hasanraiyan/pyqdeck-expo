@@ -33,6 +33,8 @@ import {
 import { cloudinaryErrorMessage, overallProgress } from '../admin/directUpload';
 import { paperStatusPath } from './paperStatusUrl';
 import { buildCommitPages, newPagesOf, type Slot } from '../admin/paperEdit';
+import { invalidateAfterAdminWrite, withFresh } from './adminFresh';
+import { queryClient } from './queryClient';
 
 export class ApiError extends Error {
   status?: number;
@@ -96,7 +98,10 @@ async function request<T>(
   // The origin this attempt is sent to, kept so failover() can tell whether
   // selection has since moved elsewhere (see Backend.failover).
   const origin = await Backend.ready();
-  const url = `${origin.root}${mount}${path}`;
+  // Admins (and anyone who just saved an edit) skip every HTTP cache on public
+  // reads - see adminFresh.ts. Students keep the cached path.
+  const isPublicRead = mount === '/api/public' && (!init?.method || init.method === 'GET');
+  const url = `${origin.root}${mount}${isPublicRead ? withFresh(path) : path}`;
 
   try {
     const res = await fetchWithTimeout(url, init);
@@ -377,8 +382,8 @@ export const unlinkPushToken = (token: string) =>
 // The same tools as the admin MCP, authenticated with the normal session. The
 // server decides what the account may do; these are only the calls.
 
-const requestAdmin = async <T,>(path: string, method: string, body?: unknown): Promise<T> =>
-  request<T>(
+const requestAdmin = async <T,>(path: string, method: string, body?: unknown): Promise<T> => {
+  const result = await request<T>(
     path,
     {
       method,
@@ -388,6 +393,14 @@ const requestAdmin = async <T,>(path: string, method: string, body?: unknown): P
     false,
     '/api/admin-app'
   );
+  // Every successful write (anything but a GET) makes cached reads wrong, so
+  // drop them here once instead of in each editor. Users and notify are POSTs
+  // too but touch no cached content.
+  if (method !== 'GET' && !path.startsWith('/users') && !path.startsWith('/notify')) {
+    invalidateAfterAdminWrite(queryClient);
+  }
+  return result;
+};
 
 export interface AdminGrant {
   actions: '*' | string[];

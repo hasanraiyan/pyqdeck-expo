@@ -3,6 +3,7 @@ import { useAuth } from '@clerk/expo';
 import { ApiError, adminMe, type AdminMe } from '../api';
 import { isAuthEnabled } from '../config/features';
 import { registerWipeHook } from '../auth/wipeUserData';
+import { setAdminFreshReads } from '../api/adminFresh';
 import type { Tools } from './adminLogic';
 
 /**
@@ -15,6 +16,7 @@ import type { Tools } from './adminLogic';
 let cached: { userId: string; me: AdminMe | null } | null = null;
 registerWipeHook(() => {
   cached = null;
+  setAdminFreshReads(false);
 });
 
 export interface AdminAccess {
@@ -37,6 +39,7 @@ export function useAdminAccess(): AdminAccess {
       return;
     }
     if (cached?.userId === userId) {
+      setAdminFreshReads(!!cached.me);
       setState({ loading: false, me: cached.me });
       return;
     }
@@ -45,6 +48,7 @@ export function useAdminAccess(): AdminAccess {
     adminMe()
       .then((me) => {
         cached = { userId, me };
+        setAdminFreshReads(!!me);
         if (alive) setState({ loading: false, me });
       })
       .catch((e: ApiError) => {

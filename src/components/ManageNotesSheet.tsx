@@ -1,23 +1,21 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
-  ActivityIndicator,
   Alert,
+  Keyboard,
   ScrollView,
+  StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
-  StyleSheet,
 } from 'react-native';
-import { Feather } from '@expo/vector-icons';
-import { useQueryClient } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 import { COLORS, FONTS } from '../theme/colors';
 import { ApiError, adminNotes } from '../api';
-import { qk } from '../api/queryKeys';
 import { userMessage } from '../utils/netError';
 import { pickNotesWrite } from '../admin/syllabusLogic';
 import { AuditLink } from '../admin/ui';
+import { EditorFrame, ErrorBanner, Segmented } from '../admin/EditorFrame';
 import { NativeContentRenderer } from './NativeContentRenderer';
 import { FaqAccordion } from './FaqAccordion';
 import { extractFaqsFromNotes } from '../utils/faqParser';
@@ -28,7 +26,26 @@ import { extractFaqsFromNotes } from '../utils/faqParser';
  * no separate admin browser. Edit/Preview tabs share the student renderer, so
  * parity is guaranteed. Save picks update vs patch-append via pickNotesWrite;
  * Clear (delete-to-unset) is behind a confirm and keeps the topic.
+ *
+ * Layout: the writing area fills the screen and the formatting bar rides just
+ * above the keyboard. Snippets go in at the cursor (wrapping a selection), not
+ * at the end of the text.
  */
+
+type Sel = { start: number; end: number };
+
+// `caret` counts back from the end of the inserted text, so the cursor lands
+// inside the markers (between the $ $, in the "Q:" line, ...).
+const TOOLS: { label: string; pre: string; post?: string; ph?: string; block?: boolean }[] = [
+  { label: 'Bold', pre: '**', post: '**', ph: 'text' },
+  { label: 'List', pre: '- ', block: true },
+  { label: 'Heading', pre: '## ', block: true },
+  { label: '$ math $', pre: '$', post: '$', ph: 'x^2' },
+  { label: '$$ block $$', pre: '$$\n', post: '\n$$', ph: 'E = mc^2', block: true },
+  { label: 'Mermaid', pre: '```mermaid\n', post: '\n```', ph: 'graph TD\n  A-->B', block: true },
+  { label: 'FAQ', pre: '## Frequently Asked Questions\n\n### Q: ', post: '', block: true },
+];
+
 export const ManageNotesSheet = ({
   subjectId,
   moduleId,
@@ -46,23 +63,40 @@ export const ManageNotesSheet = ({
   onSaved: () => void;
   onClose: () => void;
 }) => {
-  const queryClient = useQueryClient();
   const [text, setText] = useState(initialNotes);
   const [tab, setTab] = useState<'edit' | 'preview'>('edit');
   const [saving, setSaving] = useState(false);
   const [clearing, setClearing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [sel, setSel] = useState<Sel>({ start: initialNotes.length, end: initialNotes.length });
+  // Set only for the render right after a toolbar insert, to move the caret;
+  // otherwise the input owns its selection.
+  const [forceSel, setForceSel] = useState<Sel | null>(null);
+  const inputRef = useRef<TextInput>(null);
 
   const busy = saving || clearing;
   const dirty = text !== initialNotes;
   const canSave = dirty && text.trim().length > 0 && !busy;
 
-  const insert = (snippet: string) => {
-    setText((t) => (t ? `${t}\n${snippet}` : snippet));
+  const apply = (tool: (typeof TOOLS)[number]) => {
+    const { start, end } = sel;
+    const selected = text.slice(start, end);
+    const inner = selected || tool.ph || '';
+    // Block snippets (lists, headings, code) start on their own line.
+    const lead = tool.block && start > 0 && text[start - 1] !== '\n' ? '\n' : '';
+    const insert = `${lead}${tool.pre}${inner}${tool.post ?? ''}`;
+    const next = text.slice(0, start) + insert + text.slice(end);
+    // Cursor: after the placeholder/selection, before the closing marker.
+    const caret = start + lead.length + tool.pre.length + inner.length;
+    setText(next);
+    setForceSel({ start: caret, end: caret });
+    setError(null);
+    requestAnimationFrame(() => inputRef.current?.focus());
   };
 
-  const doSave = async (overwrite = false) => {
-    if (!canSave && !overwrite) return;
+  const doSave = async () => {
+    if (!canSave) return;
+    Keyboard.dismiss();
     setSaving(true);
     setError(null);
     try {
@@ -113,9 +147,6 @@ export const ManageNotesSheet = ({
         await adminNotes({ action: 'update', subject: subjectId, module: moduleId, topic: topicId, notes: text });
       }
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
-      // Notes are uncached by design — invalidate so the reader refetches live.
-      await queryClient.invalidateQueries({ queryKey: qk.topicNotes(subjectId, topicId) });
-      await queryClient.invalidateQueries({ queryKey: qk.syllabusSubject(subjectId) });
       onSaved();
     } catch (e: any) {
       setError(userMessage(e, 'Could not save notes.'));
@@ -138,8 +169,6 @@ export const ManageNotesSheet = ({
             setError(null);
             try {
               await adminNotes({ action: 'delete', subject: subjectId, module: moduleId, topic: topicId });
-              await queryClient.invalidateQueries({ queryKey: qk.topicNotes(subjectId, topicId) });
-              await queryClient.invalidateQueries({ queryKey: qk.syllabusSubject(subjectId) });
               onSaved();
             } catch (e: any) {
               setError(userMessage(e, 'Could not clear notes.'));
@@ -155,55 +184,49 @@ export const ManageNotesSheet = ({
   const preview = extractFaqsFromNotes(text);
 
   return (
-    <View style={s.wrap}>
-      <View style={s.head}>
-        <View style={{ flex: 1 }}>
-          <Text style={s.kicker}>EDIT NOTES</Text>
-          <Text style={s.title} numberOfLines={2}>
-            {topicTitle}
-          </Text>
-        </View>
-        <TouchableOpacity onPress={onClose} hitSlop={12} accessibilityLabel="Close notes editor">
-          <Feather name="x" size={22} color={COLORS.textMuted} />
-        </TouchableOpacity>
-      </View>
-
-      <View style={s.tabs}>
-        {(['edit', 'preview'] as const).map((t) => (
-          <TouchableOpacity
-            key={t}
-            onPress={() => setTab(t)}
-            style={[s.tab, tab === t && s.tabActive]}
-            accessibilityRole="tab"
-          >
-            <Text style={[s.tabText, tab === t && s.tabTextActive]}>{t === 'edit' ? 'Edit' : 'Preview'}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
+    <EditorFrame
+      kicker="Edit notes"
+      title={topicTitle}
+      subtitle={`${text.length} chars · ${text.split('\n').length} lines`}
+      dirty={dirty}
+      busy={busy}
+      onClose={onClose}
+      scroll={false}
+      primary={{ label: 'Save notes', onPress: () => void doSave(), disabled: !canSave, loading: saving }}
+      secondary={
+        initialNotes
+          ? { label: 'Clear', onPress: doClear, disabled: busy, loading: clearing, danger: true }
+          : undefined
+      }
+    >
+      <Segmented
+        value={tab}
+        onChange={(t) => {
+          if (t === 'preview') Keyboard.dismiss();
+          setTab(t);
+        }}
+        options={[
+          { value: 'edit', label: 'Write' },
+          { value: 'preview', label: 'Preview' },
+        ]}
+      />
 
       {tab === 'edit' ? (
-        <>
-          <View style={s.toolbar}>
-            {[
-              { label: 'B', fn: () => insert('****') },
-              { label: 'List', fn: () => insert('\n- ') },
-              { label: '$math$', fn: () => insert('$  $') },
-              { label: '$$block$$', fn: () => insert('\n$$$$\n\n$$$$\n') },
-              { label: 'mermaid', fn: () => insert('\n```mermaid\ngraph TD\n  A-->B\n```\n') },
-              { label: 'FAQ', fn: () => insert('\n## Frequently Asked Questions\n\n### Q: \n\n') },
-            ].map((b) => (
-              <TouchableOpacity key={b.label} onPress={b.fn} style={s.tool} disabled={busy}>
-                <Text style={s.toolText}>{b.label}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+        <View style={{ flex: 1, gap: 8 }}>
           <TextInput
+            ref={inputRef}
             value={text}
             onChangeText={(v) => {
               setText(v);
               setError(null);
             }}
+            selection={forceSel ?? undefined}
+            onSelectionChange={(e) => {
+              setSel(e.nativeEvent.selection);
+              if (forceSel) setForceSel(null);
+            }}
             multiline
+            scrollEnabled
             editable={!busy}
             placeholder="Write markdown — LaTeX $...$, Mermaid blocks, FAQ at the bottom."
             placeholderTextColor={COLORS.textSubtle}
@@ -211,99 +234,79 @@ export const ManageNotesSheet = ({
             textAlignVertical="top"
             autoCapitalize="sentences"
           />
-          <Text style={s.count}>
-            {text.length} chars · {text.split('\n').length} lines
-            {text.trim().length === 0 ? ' · empty — use Clear to remove' : ''}
-          </Text>
-        </>
+          <ScrollView
+            horizontal
+            keyboardShouldPersistTaps="always"
+            showsHorizontalScrollIndicator={false}
+            style={s.toolbar}
+            contentContainerStyle={{ gap: 8, paddingRight: 8 }}
+          >
+            {TOOLS.map((tool) => (
+              <TouchableOpacity
+                key={tool.label}
+                onPress={() => apply(tool)}
+                disabled={busy}
+                style={s.tool}
+                accessibilityLabel={`Insert ${tool.label}`}
+              >
+                <Text style={s.toolText}>{tool.label}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
       ) : (
-        <ScrollView style={s.preview} contentContainerStyle={{ paddingBottom: 24 }}>
+        <ScrollView style={s.preview} contentContainerStyle={{ padding: 14, paddingBottom: 32 }}>
           {text.trim() ? (
             <>
               <NativeContentRenderer content={preview.notesBody} fontSize={15} />
               {preview.faqs.length > 0 && <FaqAccordion items={preview.faqs} />}
             </>
           ) : (
-            <Text style={s.count}>Nothing to preview.</Text>
+            <Text style={s.empty}>Nothing to preview yet.</Text>
           )}
         </ScrollView>
       )}
 
-      {error ? <Text style={s.error}>{error}</Text> : null}
-      {!busy && !dirty ? <Text style={s.count}>No changes.</Text> : null}
-
-      <View style={s.actions}>
-        <TouchableOpacity
-          onPress={doClear}
-          disabled={busy || !initialNotes}
-          style={[s.btn, s.btnGhost, (busy || !initialNotes) && { opacity: 0.4 }]}
-          accessibilityLabel="Clear notes"
-        >
-          <Text style={[s.btnText, { color: COLORS.textMuted }]}>Clear</Text>
-        </TouchableOpacity>
-        <View style={{ flex: 1 }} />
-        <TouchableOpacity
-          onPress={() => doSave()}
-          disabled={!canSave}
-          style={[s.btn, s.btnPrimary, !canSave && { opacity: 0.45 }]}
-          accessibilityLabel="Save notes"
-        >
-          {saving ? <ActivityIndicator color="#fff" /> : <Text style={[s.btnText, { color: '#fff' }]}>Save</Text>}
-        </TouchableOpacity>
-      </View>
-      <Text style={s.hint}>Offline edits are blocked — connect to save. Nothing is stored on this phone.</Text>
+      <ErrorBanner message={error} />
+      {text.trim().length === 0 && initialNotes ? (
+        <Text style={s.empty}>Notes are empty. Use Clear to remove them.</Text>
+      ) : null}
       <AuditLink tool="manage_notes" label="View notes changes" onNavigate={onClose} />
-    </View>
+    </EditorFrame>
   );
 };
 
 const s = StyleSheet.create({
-  wrap: { gap: 10, paddingBottom: 8 },
-  head: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
-  kicker: { fontFamily: FONTS.bodyBold, fontSize: 11, letterSpacing: 1.2, color: COLORS.primary },
-  title: { fontFamily: FONTS.displayBold, fontSize: 17, color: COLORS.text, marginTop: 2 },
-  tabs: { flexDirection: 'row', gap: 8 },
-  tab: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    backgroundColor: COLORS.card,
-  },
-  tabActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
-  tabText: { fontFamily: FONTS.bodyMedium, fontSize: 13, color: COLORS.text },
-  tabTextActive: { color: '#fff' },
-  toolbar: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  tool: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    backgroundColor: COLORS.cardSecondary,
-  },
-  toolText: { fontFamily: FONTS.bodySemi, fontSize: 11, color: COLORS.text },
   input: {
-    minHeight: 220,
-    maxHeight: 360,
+    flex: 1,
     borderWidth: 1,
     borderColor: COLORS.border,
     borderRadius: 12,
-    padding: 12,
+    padding: 14,
     fontFamily: FONTS.body,
-    fontSize: 14,
-    lineHeight: 20,
+    fontSize: 15,
+    lineHeight: 22,
     color: COLORS.text,
-    backgroundColor: COLORS.background,
+    backgroundColor: COLORS.card,
   },
-  preview: { maxHeight: 380, borderWidth: 1, borderColor: COLORS.border, borderRadius: 12, padding: 12 },
-  count: { fontFamily: FONTS.body, fontSize: 11, color: COLORS.textMuted },
-  error: { fontFamily: FONTS.bodySemi, fontSize: 12, color: '#b91c1c' },
-  actions: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 2 },
-  btn: { borderRadius: 12, paddingVertical: 12, paddingHorizontal: 18, alignItems: 'center', minWidth: 96 },
-  btnPrimary: { backgroundColor: COLORS.primary },
-  btnGhost: { backgroundColor: 'transparent', borderWidth: 1, borderColor: COLORS.border },
-  btnText: { fontFamily: FONTS.bodySemi, fontSize: 14 },
-  hint: { fontFamily: FONTS.body, fontSize: 11, color: COLORS.textSubtle },
+  toolbar: { flexGrow: 0 },
+  tool: {
+    minHeight: 40,
+    paddingHorizontal: 14,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.cardSecondary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  toolText: { fontFamily: FONTS.bodySemi, fontSize: 13, color: COLORS.text },
+  preview: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 12,
+    backgroundColor: COLORS.card,
+  },
+  empty: { fontFamily: FONTS.body, fontSize: 12, color: COLORS.textMuted },
 });
