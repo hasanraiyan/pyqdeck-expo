@@ -2,7 +2,7 @@
 
 All notable changes to PYQDeck are listed here, newest first.
 
-## 1.11.4
+## 1.12.0
 
 ### Added (admins)
 - **Edit questions and solutions in the app.** Add a question to a subject, edit or delete it, and add, edit or delete its solution, all from the question screens. Past-paper subjects can be added, renamed and deleted too.
