@@ -6,7 +6,7 @@ import { COLORS, FONTS } from '../theme/colors';
 import { adminContent } from '../api';
 import { userMessage } from '../utils/netError';
 import { DraftBanner, EditorField, EditorFrame, ErrorBanner, type MenuItem } from '../admin/EditorFrame';
-import { MarkdownEditor } from '../admin/MarkdownEditor';
+import { MarkdownEditor, modeMenuItems, type EditorMode } from '../admin/MarkdownEditor';
 import { draftAge, useDraft } from '../admin/useDraft';
 import { validateQuestionFields } from '../admin/contentLogic';
 
@@ -37,7 +37,7 @@ export const ManageQuestionSheet = ({
 }) => {
   const editing = !!questionId;
   const [loading, setLoading] = useState(editing);
-  const [mode, setMode] = useState<'details' | 'edit' | 'preview'>(editing ? 'edit' : 'details');
+  const [mode, setMode] = useState<'details' | EditorMode>(editing ? 'live' : 'details');
   const [qid, setQid] = useState(questionId ?? suggestedId ?? '');
   const [year, setYear] = useState(suggestedYear ? String(suggestedYear) : '');
   const [qNumber, setQNumber] = useState('');
@@ -171,11 +171,9 @@ export const ManageQuestionSheet = ({
     ? []
     : [
         ...(mode === 'details'
-          ? [{ label: 'Question text', icon: 'edit-3' as const, onPress: () => setMode('edit') }]
+          ? [{ label: 'Question text', icon: 'edit-3' as const, onPress: () => setMode('live') }]
           : [
-              mode === 'edit'
-                ? { label: 'Preview', icon: 'eye' as const, onPress: () => { Keyboard.dismiss(); setMode('preview'); } }
-                : { label: 'Write', icon: 'edit-3' as const, onPress: () => setMode('edit') },
+              ...modeMenuItems(mode, setMode),
               { label: 'Details', icon: 'sliders' as const, onPress: () => { Keyboard.dismiss(); setMode('details'); } },
             ]),
         ...(editing
@@ -362,7 +360,7 @@ export const ManageQuestionSheet = ({
                     placeholder="short / long"
                     autoCapitalize="none"
                     returnKeyType="done"
-                    onSubmitEditing={() => setMode('edit')}
+                    onSubmitEditing={() => setMode('live')}
                   />
                 </View>
               </View>
@@ -391,7 +389,7 @@ export const ManageQuestionSheet = ({
                     setError(null);
                   }}
                   disabled={busy}
-                  mode={mode === 'preview' ? 'preview' : 'edit'}
+                  mode={mode}
                   onModeChange={setMode}
                   placeholder="Write the question. Use $...$ for math."
                 />

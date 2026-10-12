@@ -5,7 +5,7 @@ import { COLORS, FONTS } from '../theme/colors';
 import { ApiError, adminContent } from '../api';
 import { userMessage } from '../utils/netError';
 import { DraftBanner, EditorFrame, ErrorBanner, type MenuItem } from '../admin/EditorFrame';
-import { MarkdownEditor } from '../admin/MarkdownEditor';
+import { MarkdownEditor, modeMenuItems, type EditorMode } from '../admin/MarkdownEditor';
 import { draftAge, useDraft } from '../admin/useDraft';
 
 /**
@@ -32,7 +32,7 @@ export const ManageSolutionSheet = ({
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [mode, setMode] = useState<'edit' | 'preview'>('edit');
+  const [mode, setMode] = useState<EditorMode>('live');
   const draft = useDraft(`solution:${subjectId}:${questionId}`, text, original);
 
   useEffect(() => {
@@ -123,9 +123,7 @@ export const ManageSolutionSheet = ({
   const menu: MenuItem[] = loading
     ? []
     : [
-        mode === 'edit'
-          ? { label: 'Preview', icon: 'eye' as const, onPress: () => { Keyboard.dismiss(); setMode('preview'); } }
-          : { label: 'Write', icon: 'edit-3' as const, onPress: () => setMode('edit') },
+        ...modeMenuItems(mode, setMode),
         ...(exists
           ? [{ label: 'Delete solution', icon: 'trash-2' as const, onPress: doDelete, disabled: busy, danger: true }]
           : []),

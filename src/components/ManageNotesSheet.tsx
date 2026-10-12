@@ -6,7 +6,7 @@ import { ApiError, adminNotes } from '../api';
 import { userMessage } from '../utils/netError';
 import { pickNotesWrite } from '../admin/syllabusLogic';
 import { DraftBanner, EditorFrame, ErrorBanner, useEditorKeyboardOpen } from '../admin/EditorFrame';
-import { MarkdownEditor, type EditorTool } from '../admin/MarkdownEditor';
+import { MarkdownEditor, modeMenuItems, type EditorMode, type EditorTool } from '../admin/MarkdownEditor';
 import { draftAge, useDraft } from '../admin/useDraft';
 import { FaqAccordion } from './FaqAccordion';
 import { NativeContentRenderer } from './NativeContentRenderer';
@@ -58,7 +58,7 @@ export const ManageNotesSheet = ({
   const [saving, setSaving] = useState(false);
   const [clearing, setClearing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [mode, setMode] = useState<'edit' | 'preview'>('edit');
+  const [mode, setMode] = useState<EditorMode>('live');
   const draft = useDraft(`notes:${subjectId}:${topicId}`, text, initialNotes);
   const typing = useEditorKeyboardOpen();
 
@@ -178,9 +178,7 @@ export const ManageNotesSheet = ({
         idle: !dirty && !busy,
       }}
       menu={[
-        mode === 'edit'
-          ? { label: 'Preview', icon: 'eye', onPress: () => { Keyboard.dismiss(); setMode('preview'); } }
-          : { label: 'Write', icon: 'edit-3', onPress: () => setMode('edit') },
+        ...modeMenuItems(mode, setMode),
         ...(initialNotes
           ? [{ label: 'Clear notes', icon: 'trash-2' as const, onPress: doClear, disabled: busy, danger: true }]
           : []),

@@ -1,16 +1,41 @@
 import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Keyboard, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { COLORS, FONTS } from '../theme/colors';
-import { Segmented, useEditorKeyboardOpen } from './EditorFrame';
+import { Segmented, useEditorKeyboardOpen, type MenuItem } from './EditorFrame';
+import { LiveEditor, type LiveEditorHandle } from './LiveEditor';
+import { insertTool } from './markdownEdit';
 import { NativeContentRenderer } from '../components/NativeContentRenderer';
 
 /**
- * Markdown writing area shared by the notes, question and solution editors:
- * a borderless page to write on, and one floating toolbar that rides above the
- * keyboard (undo / redo, then icon buttons for the formatting). Snippets are
- * inserted at the cursor (and wrap a selection) instead of being appended.
+ * Markdown writing area shared by the notes, question and solution editors, in
+ * three modes: Live (the text shown as students see it, tap a block to edit it),
+ * Source (the whole markdown in one input) and Preview (read only). One toolbar
+ * rides above the keyboard (undo / redo, then icon buttons for the formatting).
+ * Snippets are inserted at the cursor (and wrap a selection) instead of being appended.
  */
+
+export type EditorMode = 'live' | 'edit' | 'preview';
+
+const MODE_ITEMS: Record<EditorMode, { label: string; icon: React.ComponentProps<typeof Feather>['name'] }> = {
+  live: { label: 'Live edit', icon: 'layers' },
+  edit: { label: 'Markdown source', icon: 'code' },
+  preview: { label: 'Preview', icon: 'eye' },
+};
+
+/** Menu entries for switching to every mode except the current one. */
+export function modeMenuItems(current: EditorMode, setMode: (m: EditorMode) => void): MenuItem[] {
+  return (['live', 'edit', 'preview'] as EditorMode[])
+    .filter((m) => m !== current)
+    .map((m) => ({
+      label: MODE_ITEMS[m].label,
+      icon: MODE_ITEMS[m].icon,
+      onPress: () => {
+        if (m === 'preview') Keyboard.dismiss();
+        setMode(m);
+      },
+    }));
+}
 
 type Sel = { start: number; end: number };
 type IconName = React.ComponentProps<typeof MaterialCommunityIcons>['name'];
@@ -55,6 +80,7 @@ export const MarkdownEditor = ({
   placeholder = 'Write markdown. LaTeX with $...$, Mermaid in code blocks.',
   extraTools,
   renderPreview,
+  renderBlock,
   mode,
   onModeChange,
 }: {
@@ -66,16 +92,18 @@ export const MarkdownEditor = ({
   extraTools?: Tool[];
   /** Defaults to the student renderer on the raw text. */
   renderPreview?: (text: string) => React.ReactNode;
-  /** Controlled Write/Preview mode: the host then owns the switch (e.g. in its menu) and the built-in one is hidden. */
-  mode?: 'edit' | 'preview';
-  onModeChange?: (m: 'edit' | 'preview') => void;
+  /** How one block looks in Live mode (defaults to the student renderer). */
+  renderBlock?: (text: string) => React.ReactNode;
+  /** Controlled mode: the host then owns the switch (e.g. in its menu) and the built-in one is hidden. */
+  mode?: EditorMode;
+  onModeChange?: (m: EditorMode) => void;
 }) => {
-  const [innerTab, setInnerTab] = useState<'edit' | 'preview'>('edit');
+  const [innerTab, setInnerTab] = useState<EditorMode>('live');
   const controlled = mode !== undefined && !!onModeChange;
   const tab = controlled ? mode : innerTab;
   const onModeChangeRef = useRef(onModeChange);
   onModeChangeRef.current = onModeChange;
-  const setTab = useCallback((m: 'edit' | 'preview') => {
+  const setTab = useCallback((m: EditorMode) => {
     if (onModeChangeRef.current) onModeChangeRef.current(m);
     else setInnerTab(m);
   }, []);
@@ -90,6 +118,9 @@ export const MarkdownEditor = ({
   // Set only for the render right after a toolbar insert, to move the caret.
   const [forceSel, setForceSel] = useState<Sel | null>(null);
   const inputRef = useRef<TextInput>(null);
+  const liveRef = useRef<LiveEditorHandle>(null);
+  const modeRef = useRef<EditorMode>(tab);
+  modeRef.current = tab;
   // Coming back from Preview: the caret returns to where it was.
   const mounted = useRef(false);
   useEffect(() => {
@@ -160,15 +191,15 @@ export const MarkdownEditor = ({
   }, []);
 
   const apply = useCallback((tool: Tool) => {
-    const value = valueRef.current;
-    const { start, end } = selRef.current;
-    const inner = value.slice(start, end) || tool.ph || '';
-    // Block snippets (lists, headings, code) start on their own line.
-    const lead = tool.block && start > 0 && value[start - 1] !== '\n' ? '\n' : '';
-    const insert = `${lead}${tool.pre}${inner}${tool.post ?? ''}`;
-    const caret = start + lead.length + tool.pre.length + inner.length;
-    commit(value.slice(0, start) + insert + value.slice(end), true);
-    setForceSel({ start: caret, end: caret });
+    if (modeRef.current === 'live') {
+      // One undo step per snippet, like in Source mode.
+      lastSnap.current = 0;
+      liveRef.current?.apply(tool);
+      return;
+    }
+    const r = insertTool(valueRef.current, selRef.current, tool);
+    commit(r.text, true);
+    setForceSel({ start: r.caret, end: r.caret });
     requestAnimationFrame(() => inputRef.current?.focus());
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -186,58 +217,69 @@ export const MarkdownEditor = ({
   return (
     <View style={{ flex: 1, gap: 10 }}>
       {/* While typing, the mode switch gives its row to the text. */}
-      {controlled || (keyboardOpen && tab === 'edit') ? null : (
+      {controlled || (keyboardOpen && tab !== 'preview') ? null : (
         <Segmented
           value={tab}
-          onChange={(t) => {
-            if (t === 'preview') showPreview();
-            else {
-              setForceSel({ ...selRef.current });
-              setTab(t);
-            }
+          onChange={(m) => {
+            if (m === 'preview') showPreview();
+            else setTab(m);
           }}
           options={[
-            { value: 'edit', label: 'Write' },
+            { value: 'live', label: 'Live' },
+            { value: 'edit', label: 'Source' },
             { value: 'preview', label: 'Preview' },
           ]}
         />
       )}
 
-      {/* The input stays mounted (just hidden) in Preview, so the cursor, the
-          selection and the scroll position are all still there when you come back. */}
-      <View style={[{ flex: 1, gap: 8 }, tab !== 'edit' && { display: 'none' }]}>
-        <TextInput
-          ref={inputRef}
-          value={value}
-          onChangeText={commit}
-          selection={forceSel ?? undefined}
-          onSelectionChange={(e) => {
-            selRef.current = e.nativeEvent.selection;
-            if (forceSel) setForceSel(null);
-          }}
-          multiline
-          scrollEnabled
-          editable={!disabled}
-          placeholder={placeholder}
-          placeholderTextColor={COLORS.textSubtle}
-          style={s.input}
-          textAlignVertical="top"
-          autoCapitalize="sentences"
-        />
+      {tab !== 'preview' ? (
+        <View style={{ flex: 1, gap: 8 }}>
+          {/* Only the active editor is mounted, so a hidden multi-thousand-character
+              input never has to re-lay-out on every keystroke. */}
+          {tab === 'live' ? (
+            <LiveEditor
+              ref={liveRef}
+              value={value}
+              onChange={commit}
+              disabled={disabled}
+              placeholder={placeholder}
+              renderBlock={renderBlock}
+            />
+          ) : (
+            <TextInput
+              ref={inputRef}
+              value={value}
+              onChangeText={commit}
+              selection={forceSel ?? undefined}
+              onSelectionChange={(e) => {
+                selRef.current = e.nativeEvent.selection;
+                if (forceSel) setForceSel(null);
+              }}
+              multiline
+              scrollEnabled
+              editable={!disabled}
+              placeholder={placeholder}
+              placeholderTextColor={COLORS.textSubtle}
+              style={s.input}
+              textAlignVertical="top"
+              autoCapitalize="sentences"
+            />
+          )}
 
-        {keyboardOpen ? (
-        <Toolbar
-          groups={groups}
-          canUndo={hist.undo}
-          canRedo={hist.redo}
-          disabled={!!disabled}
-          onUndo={undo}
-          onRedo={redo}
-          onApply={apply}
-          onPreview={showPreview}
-        />
-        ) : null}
-      </View>
+          {keyboardOpen ? (
+            <Toolbar
+              groups={groups}
+              canUndo={hist.undo}
+              canRedo={hist.redo}
+              disabled={!!disabled}
+              onUndo={undo}
+              onRedo={redo}
+              onApply={apply}
+              onPreview={showPreview}
+            />
+          ) : null}
+        </View>
+      ) : null}
 
       {tab === 'preview' ? (
         <ScrollView style={s.preview} contentContainerStyle={{ padding: 14, paddingBottom: 32 }}>
