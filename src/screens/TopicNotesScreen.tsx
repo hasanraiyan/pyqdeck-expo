@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Linking, type LayoutChangeEvent } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Linking, Modal, type LayoutChangeEvent } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
@@ -31,6 +31,9 @@ import { useResponsive } from '../utils/responsive';
 
 import { recordRecentNote } from '../utils/recentStudy';
 import { userMessage } from '../utils/netError';
+import { useAdminAccess } from '../admin/useAdminAccess';
+import { can } from '../admin/adminLogic';
+import { ManageNotesSheet } from '../components/ManageNotesSheet';
 
 /** Same namespacing as SubjectSyllabusScreen's topicKey - must stay identical, the two screens read/write the same AsyncStorage key. */
 const topicKey = (moduleId: string, topicId: string) => `${moduleId}:${topicId}`;
@@ -98,6 +101,12 @@ export const TopicNotesScreen = () => {
     : undefined;
   const [resolvingTopic, setResolvingTopic] = useState(Boolean(paramTopicId));
   const [topicNotFound, setTopicNotFound] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const admin = useAdminAccess();
+  // Server re-checks the grant on every call; this only decides whether the
+  // pencil is shown (same pattern as ManagePaperSheet on the question list).
+  const canEditNotes =
+    can(admin.tools, 'manage_notes', 'update') || can(admin.tools, 'manage_notes', '*');
   const scrollRef = useRef<ScrollView>(null);
 
   // Resolves a bare deep-link topic id into the full params every other entry
@@ -231,18 +240,31 @@ export const TopicNotesScreen = () => {
     if (!topic?.title) return;
     navigation.setOptions({
       headerRight: () => (
-        <TouchableOpacity
-          onPress={openYouTubeSearch}
-          activeOpacity={0.7}
-          style={{ padding: 8, marginRight: -4 }}
-          accessibilityLabel={`Search YouTube for ${topic.title}`}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-        >
-          <Feather name="youtube" size={20} color="#e02424" />
-        </TouchableOpacity>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          {canEditNotes && subjectId && topic?.id && moduleId ? (
+            <TouchableOpacity
+              onPress={() => setEditOpen(true)}
+              activeOpacity={0.7}
+              style={{ padding: 8 }}
+              accessibilityLabel={`Edit notes for ${topic.title}`}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Feather name="edit-3" size={19} color={COLORS.primary} />
+            </TouchableOpacity>
+          ) : null}
+          <TouchableOpacity
+            onPress={openYouTubeSearch}
+            activeOpacity={0.7}
+            style={{ padding: 8, marginRight: -4 }}
+            accessibilityLabel={`Search YouTube for ${topic.title}`}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Feather name="youtube" size={20} color="#e02424" />
+          </TouchableOpacity>
+        </View>
       ),
     });
-  }, [navigation, topic?.title, subjectName]);
+  }, [navigation, topic?.title, subjectName, canEditNotes, subjectId, topic?.id, moduleId]);
 
   // Once the notes arrive: remember them as recently read.
   const fetchedNotes = notesQ.data?.notes;
@@ -444,6 +466,28 @@ export const TopicNotesScreen = () => {
 
         <AdBanner />
       </View>
+
+      {/* Admin notes editor: same screen, pencil-gated. No separate browser. */}
+      <Modal visible={editOpen} animationType="slide" onRequestClose={() => setEditOpen(false)}>
+        <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background }}>
+          <ScrollView contentContainerStyle={{ padding: 16 }} keyboardShouldPersistTaps="handled">
+            {subjectId && topic?.id && moduleId ? (
+              <ManageNotesSheet
+                subjectId={subjectId}
+                moduleId={moduleId ?? ''}
+                topicId={topic.id}
+                topicTitle={topic.title}
+                initialNotes={notes ?? ''}
+                onSaved={() => {
+                  setEditOpen(false);
+                  void notesQ.refetch();
+                }}
+                onClose={() => setEditOpen(false)}
+              />
+            ) : null}
+          </ScrollView>
+        </SafeAreaView>
+      </Modal>
     </View>
   );
 };

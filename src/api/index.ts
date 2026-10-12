@@ -426,6 +426,13 @@ export const adminAiUsage = (feature: 'overview' | 'chat', days = 7) =>
   requestAdmin<Record<string, any>>(`/ai-overview/usage?feature=${feature}&days=${days}`, 'GET');
 export const adminNotify =(body: Record<string, unknown>) =>
   requestAdmin<Record<string, any>>('/notify', 'POST', body);
+// Syllabus & notes (docs/SRS-admin-syllabus-notes-app.md Phase 1). Same guard
+// as the MCP: grants incl. branch scope, audit, error map. 404 = server
+// predates this — the app hides the section (deploy order: server first).
+export const adminSyllabus = (body: Record<string, unknown>) =>
+  requestAdmin<Record<string, any>>('/syllabus', 'POST', body);
+export const adminNotes = (body: Record<string, unknown>) =>
+  requestAdmin<Record<string, any>>('/notes', 'POST', body);
 
 // -------------------------------------------------------------
 // ACCOUNT PROGRESS SYNC (/api/me, signed-in only)

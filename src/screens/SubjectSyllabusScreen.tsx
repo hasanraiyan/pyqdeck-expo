@@ -9,8 +9,9 @@ import {
   Platform,
   UIManager,
   RefreshControl,
+  Modal,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSafeAreaInsets, SafeAreaView } from 'react-native-safe-area-context';
 import { useRoute, useNavigation, useFocusEffect } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
@@ -24,6 +25,10 @@ import { CircleLoader } from '../components/CircleLoader';
 import { userMessage } from '../utils/netError';
 import { useContainerStyle } from '../components/ScreenContainer';
 import { SyncStatusBar } from '../components/SyncStatusBar';
+import { useAdminAccess } from '../admin/useAdminAccess';
+import { can } from '../admin/adminLogic';
+import { ManageTopicSheet } from '../components/ManageTopicSheet';
+import { ManageModuleSheet } from '../components/ManageModuleSheet';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -71,6 +76,13 @@ export const SubjectSyllabusScreen = () => {
   const [open, setOpen] = useState<Set<string>>(new Set());
   const [copiedTopic, setCopiedTopic] = useState<string | null>(null);
   const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Admin inline editing (SRS-admin-syllabus-notes-app.md): same screen
+  // students read on. The server re-checks every grant; these only gate UI.
+  const admin = useAdminAccess();
+  const canAddTree = can(admin.tools, 'manage_syllabus', 'create') || can(admin.tools, 'manage_syllabus', '*');
+  const canEditTree = can(admin.tools, 'manage_syllabus', 'update') || can(admin.tools, 'manage_syllabus', '*');
+  const [topicSheet, setTopicSheet] = useState<{ module: SyllabusModule; topic: Topic | null } | null>(null);
+  const [moduleSheet, setModuleSheet] = useState<{ module: SyllabusModule | null } | null>(null);
 
   const handleCopyTopic = useCallback(async (topicTitle: string) => {
     try {
@@ -242,6 +254,17 @@ export const SubjectSyllabusScreen = () => {
           {allDone && (
             <Feather name="check-circle" size={18} color={COLORS.secondary} style={{ marginRight: 4 }} />
           )}
+          {canEditTree && (
+            <TouchableOpacity
+              onPress={() => setModuleSheet({ module: m })}
+              hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
+              style={{ padding: 6 }}
+              accessibilityLabel={`Edit ${m.title}`}
+              accessibilityHint="Rename or delete this module"
+            >
+              <Feather name="edit-3" size={15} color={COLORS.primary} />
+            </TouchableOpacity>
+          )}
           <Feather
             name={expanded ? 'chevron-up' : 'chevron-down'}
             size={18}
@@ -309,10 +332,32 @@ export const SubjectSyllabusScreen = () => {
                       />
                     </TouchableOpacity>
                   )}
+                  {canEditTree && (
+                    <TouchableOpacity
+                      style={[styles.actionBtn, isDone && styles.actionBtnDone]}
+                      onPress={() => setTopicSheet({ module: m, topic: t })}
+                      activeOpacity={0.7}
+                      accessibilityLabel={`Edit topic ${t.title}`}
+                      hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
+                    >
+                      <Feather name="edit-3" size={15} color={COLORS.primary} />
+                    </TouchableOpacity>
+                  )}
                 </View>
               </View>
             );
           })}
+          {canAddTree && (
+            <TouchableOpacity
+              onPress={() => setTopicSheet({ module: m, topic: null })}
+              activeOpacity={0.7}
+              style={styles.addRow}
+              accessibilityLabel={`Add topic to ${m.title}`}
+            >
+              <Feather name="plus" size={14} color={COLORS.primary} />
+              <Text style={styles.addRowText}>Add topic</Text>
+            </TouchableOpacity>
+          )}
       </View>
     );
   };
@@ -374,7 +419,60 @@ export const SubjectSyllabusScreen = () => {
         ) : (
           subject.modules.map(renderModule)
         )}
+        {canAddTree && (
+          <TouchableOpacity
+            onPress={() => setModuleSheet({ module: null })}
+            activeOpacity={0.7}
+            style={styles.addModuleBtn}
+            accessibilityLabel="Add module"
+          >
+            <Feather name="plus" size={15} color={COLORS.primary} />
+            <Text style={styles.addRowText}>Add module</Text>
+          </TouchableOpacity>
+        )}
       </ScrollView>
+
+      {/* Admin sheets: same screen, pencil-gated. */}
+      <Modal visible={!!topicSheet} animationType="slide" onRequestClose={() => setTopicSheet(null)}>
+        <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background }}>
+          <ScrollView contentContainerStyle={{ padding: 16 }} keyboardShouldPersistTaps="handled">
+            {topicSheet && (
+              <ManageTopicSheet
+                subjectId={subject.id}
+                moduleId={topicSheet.module.id}
+                moduleTitle={topicSheet.module.title}
+                topic={topicSheet.topic}
+                linkCount={topicCounts?.[topicSheet.topic?.id ?? ''] ?? 0}
+                onSaved={() => {
+                  setTopicSheet(null);
+                  void subjectQ.refetch();
+                }}
+                onClose={() => setTopicSheet(null)}
+              />
+            )}
+          </ScrollView>
+        </SafeAreaView>
+      </Modal>
+      <Modal visible={!!moduleSheet} animationType="slide" onRequestClose={() => setModuleSheet(null)}>
+        <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background }}>
+          <ScrollView contentContainerStyle={{ padding: 16 }} keyboardShouldPersistTaps="handled">
+            {moduleSheet && (
+              <ManageModuleSheet
+                subjectId={subject.id}
+                module={moduleSheet.module}
+                topicCount={moduleSheet.module?.topics.length ?? 0}
+                notesCount={moduleSheet.module?.topics.filter((t) => t.hasNotes).length ?? 0}
+                nextNumber={(subject.modules.reduce((n, m) => Math.max(n, m.number), 0) || 0) + 1}
+                onSaved={() => {
+                  setModuleSheet(null);
+                  void subjectQ.refetch();
+                }}
+                onClose={() => setModuleSheet(null)}
+              />
+            )}
+          </ScrollView>
+        </SafeAreaView>
+      </Modal>
 
       {/* Floating toast notification on copy */}
       {copiedTopic && (
@@ -530,6 +628,31 @@ const styles = StyleSheet.create({
   bubbleOn: { borderColor: COLORS.secondary, backgroundColor: COLORS.secondary },
   topicText: { flex: 1, fontFamily: FONTS.body, fontSize: 13.5, lineHeight: 19, color: COLORS.text },
   topicTextDone: { color: COLORS.textSubtle },
+  addRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderColor: COLORS.border,
+  },
+  addRowText: { fontFamily: FONTS.bodySemi, fontSize: 13, color: COLORS.primary },
+  addModuleBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    marginHorizontal: 16,
+    marginTop: 2,
+    marginBottom: 8,
+    paddingVertical: 13,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: COLORS.primary,
+    backgroundColor: COLORS.card,
+  },
   bar: { height: 4, borderRadius: 2, backgroundColor: COLORS.borderLight, overflow: 'hidden' },
   barFill: { height: '100%', backgroundColor: COLORS.secondary },
   topicRowCopied: {

@@ -9,9 +9,10 @@ import {
   Platform,
   UIManager,
   RefreshControl,
+  Modal,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSafeAreaInsets, SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import * as Haptics from 'expo-haptics';
 import { COLORS, FONTS } from '../theme/colors';
@@ -24,6 +25,9 @@ import { ScreenError, ScreenEmpty } from '../components/ScreenState';
 import { CircleLoader } from '../components/CircleLoader';
 import { userMessage } from '../utils/netError';
 import { useContainerStyle } from '../components/ScreenContainer';
+import { useAdminAccess } from '../admin/useAdminAccess';
+import { can } from '../admin/adminLogic';
+import { ManageSubjectSheet } from '../components/ManageSubjectSheet';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -56,6 +60,11 @@ export const SyllabusOverviewScreen = () => {
     semesterQ.isError && !semesterQ.data ? userMessage(semesterQ.error, 'Could not load this semester.') : null;
   const [refreshing, setRefreshing] = useState(false);
   const [counts, setCounts] = useState<Record<string, number>>({});
+  const [subjectSheet, setSubjectSheet] = useState<{ subject: SyllabusSubjectSummary | null } | null>(null);
+  // Admin inline editing: same screen students browse. Server re-checks grants.
+  const admin = useAdminAccess();
+  const canAddSubject = can(admin.tools, 'manage_syllabus', 'create') || can(admin.tools, 'manage_syllabus', '*');
+  const canEditSubject = can(admin.tools, 'manage_syllabus', 'update') || can(admin.tools, 'manage_syllabus', '*');
   // Closed on arrival: the credit table is a term-planning reference, checked
   // once or twice a semester, while the subject list underneath is what the
   // screen is actually for. The total stays on the collapsed header so the one
@@ -121,13 +130,28 @@ export const SyllabusOverviewScreen = () => {
 
   // Subjects as cards rather than a table: the name gets the full row, and the
   // progress bar spans the card so completion is readable at a glance.
+  // Admins get a pencil per card + a New button per section (inline editing,
+  // no separate browser). Students see no change.
   const renderSection = (title: string, rows: SyllabusSubjectSummary[], unit: string) => {
-    if (rows.length === 0) return null;
+    if (rows.length === 0 && !canAddSubject) return null;
     return (
       <View key={title} style={styles.section}>
         <View style={styles.sectionHead}>
           <Text style={styles.sectionTitle}>{title}</Text>
-          <Text style={styles.sectionCount}>{rows.length}</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <Text style={styles.sectionCount}>{rows.length}</Text>
+            {canAddSubject && (
+              <TouchableOpacity
+                onPress={() => setSubjectSheet({ subject: null })}
+                hitSlop={8}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}
+                accessibilityLabel={`Add subject to ${title}`}
+              >
+                <Feather name="plus" size={14} color={COLORS.primary} />
+                <Text style={{ fontFamily: FONTS.bodySemi, fontSize: 12, color: COLORS.primary }}>New</Text>
+              </TouchableOpacity>
+            )}
+          </View>
         </View>
         <View style={styles.cardList}>
           {rows.map((s) => {
@@ -143,14 +167,29 @@ export const SyllabusOverviewScreen = () => {
               >
                 <View style={styles.cardTop}>
                   {s.code ? <Text style={styles.codePill}>{s.code}</Text> : <View />}
-                  {finished ? (
-                    <View style={styles.doneTag}>
-                      <Feather name="check" size={11} color={COLORS.secondary} />
-                      <Text style={styles.doneTagText}>Done</Text>
-                    </View>
-                  ) : (
-                    <Feather name="chevron-right" size={16} color={COLORS.textSubtle} />
-                  )}
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    {canEditSubject && (
+                      <TouchableOpacity
+                        onPress={(e: any) => {
+                          e?.stopPropagation?.();
+                          setSubjectSheet({ subject: s });
+                        }}
+                        hitSlop={8}
+                        style={{ padding: 4 }}
+                        accessibilityLabel={`Edit ${s.name}`}
+                      >
+                        <Feather name="edit-3" size={14} color={COLORS.primary} />
+                      </TouchableOpacity>
+                    )}
+                    {finished ? (
+                      <View style={styles.doneTag}>
+                        <Feather name="check" size={11} color={COLORS.secondary} />
+                        <Text style={styles.doneTagText}>Done</Text>
+                      </View>
+                    ) : (
+                      <Feather name="chevron-right" size={16} color={COLORS.textSubtle} />
+                    )}
+                  </View>
                 </View>
                 <Text style={styles.cardName}>{s.name}</Text>
                 <Text style={styles.cardMeta}>
@@ -288,7 +327,20 @@ export const SyllabusOverviewScreen = () => {
         {semester.subjects.length > 0 && renderSummary()}
 
         {semester.subjects.length === 0 ? (
-          <ScreenEmpty message="No syllabus for this semester yet." />
+          <>
+            <ScreenEmpty message="No syllabus for this semester yet." />
+            {canAddSubject && (
+              <TouchableOpacity
+                onPress={() => setSubjectSheet({ subject: null })}
+                activeOpacity={0.7}
+                style={{ alignSelf: 'center', flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 12, padding: 12 }}
+                accessibilityLabel="Add first subject"
+              >
+                <Feather name="plus" size={15} color={COLORS.primary} />
+                <Text style={{ fontFamily: FONTS.bodySemi, fontSize: 14, color: COLORS.primary }}>Add first subject</Text>
+              </TouchableOpacity>
+            )}
+          </>
         ) : (
           <>
             {renderSection('Theory', theory, 'topics')}
@@ -297,6 +349,25 @@ export const SyllabusOverviewScreen = () => {
           </>
         )}
       </ScrollView>
+      {/* Admin sheet: same screen, pencil-gated. */}
+      <Modal visible={!!subjectSheet} animationType="slide" onRequestClose={() => setSubjectSheet(null)}>
+        <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background }}>
+          <ScrollView contentContainerStyle={{ padding: 16 }} keyboardShouldPersistTaps="handled">
+            {subjectSheet && (
+              <ManageSubjectSheet
+                branchId={branchId}
+                semester={semesterNumber}
+                subject={subjectSheet.subject}
+                onSaved={() => {
+                  setSubjectSheet(null);
+                  void semesterQ.refetch();
+                }}
+                onClose={() => setSubjectSheet(null)}
+              />
+            )}
+          </ScrollView>
+        </SafeAreaView>
+      </Modal>
     </View>
   );
 };
