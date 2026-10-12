@@ -16,7 +16,7 @@ import { COLORS, FONTS } from '../theme/colors';
 import { useQueryClient } from '@tanstack/react-query';
 import { useSyllabusBranches, useSyllabusSemesters, syllabusSemesterQuery } from '../api/queries';
 import { Branch, BranchSemesters } from '../types/syllabus';
-import { getDoneCounts, subscribeProgress } from '../db/syllabusProgress';
+import { getDoneCounts, subscribeProgressFor } from '../db/syllabusProgress';
 import { requestSyncOnStudyOpen } from '../db/progressSync';
 import { subscribeSettingsApplied } from '../db/settingsPending';
 import { SyncStatusBar } from '../components/SyncStatusBar';
@@ -99,8 +99,9 @@ export const SemesterSelectScreen = () => {
     useCallback(() => {
       let alive = true;
       if (!data) return;
+      const subjectIds = data.semesters.flatMap((s) => s.subjectIds);
       const load = () =>
-        getDoneCounts(data.semesters.flatMap((s) => s.subjectIds)).then((counts) => {
+        getDoneCounts(subjectIds).then((counts) => {
           if (!alive) return;
           const next: Record<number, { done: number; total: number }> = {};
           for (const s of data.semesters) {
@@ -114,7 +115,7 @@ export const SemesterSelectScreen = () => {
       void load();
       // Opening the Study tab is one of the sync triggers (at most once a minute).
       requestSyncOnStudyOpen();
-      const unsubscribe = subscribeProgress(() => void load());
+      const unsubscribe = subscribeProgressFor(subjectIds, () => void load());
       return () => {
         alive = false;
         unsubscribe();

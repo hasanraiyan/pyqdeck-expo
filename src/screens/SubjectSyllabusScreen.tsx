@@ -18,7 +18,7 @@ import * as Haptics from 'expo-haptics';
 import { COLORS, FONTS } from '../theme/colors';
 import { useSyllabusSubject, useTopicQuestionCounts } from '../api/queries';
 import { SyllabusModule, SyllabusSubject, Topic } from '../types/syllabus';
-import { adoptRenamedSubject, getDoneTopicsIn, setTopicDone, subscribeProgress } from '../db/syllabusProgress';
+import { adoptRenamedSubject, getDoneTopicsIn, setTopicDone, subscribeProgressFor } from '../db/syllabusProgress';
 import { ScreenError, ScreenEmpty } from '../components/ScreenState';
 import { CircleLoader } from '../components/CircleLoader';
 import { userMessage } from '../utils/netError';
@@ -115,7 +115,7 @@ export const SubjectSyllabusScreen = () => {
       const load = () => void getDoneTopicsIn(subject.id, validKeys).then(setDone);
       void adoptRenamedSubject(subject.id, validKeys).then(load);
       load();
-      return subscribeProgress(load);
+      return subscribeProgressFor([subject.id], load);
     }, [subject])
   );
 

@@ -36,8 +36,12 @@ export interface EventMap {
   // --- facts about the student's data ---
   /** A topic was ticked or un-ticked on this phone. Triggers a sync. */
   'progress.changed': { subjectId: string };
-  /** Stored progress changed for any reason (tick, pull, rename, wipe). Screens re-read. */
-  'progress.updated': void;
+  /**
+   * Stored progress changed (tick, pull, rename, wipe). Screens re-read. `subjectIds`
+   * lists the subjects that changed, merged over a short burst; null means "treat
+   * everything as changed" (wipe, rename).
+   */
+  'progress.updated': { subjectIds: string[] | null };
   /** An account setting was changed on this phone. Triggers a sync. */
   'setting.changed': { name: string };
   /** Jump Back In changed on this phone. Triggers a sync (debounced). */

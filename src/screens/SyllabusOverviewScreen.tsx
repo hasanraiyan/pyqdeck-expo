@@ -17,7 +17,7 @@ import * as Haptics from 'expo-haptics';
 import { COLORS, FONTS } from '../theme/colors';
 import { useSyllabusSemester } from '../api/queries';
 import { BranchSemester, SyllabusSubjectSummary } from '../types/syllabus';
-import { getDoneCounts, subscribeProgress } from '../db/syllabusProgress';
+import { getDoneCounts, subscribeProgressFor } from '../db/syllabusProgress';
 import { SyncStatusBar } from '../components/SyncStatusBar';
 import { recordContentOpenedAndMaybeShowInterstitial } from '../utils/ads';
 import { ScreenError, ScreenEmpty } from '../components/ScreenState';
@@ -73,12 +73,13 @@ export const SyllabusOverviewScreen = () => {
     useCallback(() => {
       let alive = true;
       if (!data) return;
+      const ids = data.subjects.map((s) => s.id);
       const load = () =>
-        getDoneCounts(data.subjects.map((s) => s.id)).then((c) => {
+        getDoneCounts(ids).then((c) => {
           if (alive) setCounts(c);
         });
       void load();
-      const unsubscribe = subscribeProgress(() => void load());
+      const unsubscribe = subscribeProgressFor(ids, () => void load());
       return () => {
         alive = false;
         unsubscribe();

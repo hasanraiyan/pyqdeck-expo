@@ -6,9 +6,10 @@
 // Deliberately client-side for now: at this traffic level a gateway or
 // Cloudflare load balancer is more infrastructure than the app needs, and
 // this whole file can be deleted the day that changes - nothing outside
-// src/api/index.ts imports it.
+// src/api/index.ts (and the dev banner) imports it.
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { emit, on } from '../events/bus';
 
 export type OriginId = 'ec2' | 'render';
 
@@ -54,12 +55,10 @@ let active: Origin = RENDER;
 // src/components/BackendDebugBanner.tsx). null = normal auto-selection.
 let pinned: OriginId | null = null;
 
-// Lets the debug banner re-render when selection changes. Empty in release
-// builds - nothing subscribes outside __DEV__.
-const listeners = new Set<() => void>();
-
+// Lets the debug banner re-render when selection changes. Nothing listens in
+// release builds - nothing subscribes outside __DEV__.
 function notify(): void {
-  listeners.forEach((fn) => fn());
+  emit('backend.changed');
 }
 
 // The last origin that proved healthy, remembered across launches so the very
@@ -246,10 +245,7 @@ export function listOrigins(): ReadonlyArray<{ id: OriginId; label: string }> {
 // Subscribe to selection changes so the banner re-renders when auto-selection
 // resolves or a failover switches origins. Returns an unsubscribe function.
 export function subscribe(fn: () => void): () => void {
-  listeners.add(fn);
-  return () => {
-    listeners.delete(fn);
-  };
+  return on('backend.changed', () => fn());
 }
 
 // Pin to one origin (or pass null to hand control back to auto-selection).

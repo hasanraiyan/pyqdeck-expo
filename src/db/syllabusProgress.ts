@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Crypto from 'expo-crypto';
 import { emit, on } from '../events/bus';
+import { ChangeBatcher } from '../events/changeBatcher';
 import {
   applyRemote,
   enqueue,
@@ -46,7 +47,27 @@ function exclusive<T>(fn: () => Promise<T>): Promise<T> {
 export function subscribeProgress(fn: () => void): () => void {
   return on('progress.updated', () => fn());
 }
-const notify = () => emit('progress.updated');
+
+/**
+ * Like subscribeProgress, but only for changes that touch one of `subjectIds`
+ * (or a change that cannot say which, such as a wipe). A screen showing one
+ * subject no longer re-reads storage because another subject was ticked.
+ */
+export function subscribeProgressFor(subjectIds: Iterable<string>, fn: () => void): () => void {
+  const wanted = new Set(subjectIds);
+  return on('progress.updated', ({ subjectIds: changed }) => {
+    if (changed === null || changed.some((id) => wanted.has(id))) fn();
+  });
+}
+
+// Changes are announced once per frame, not once per write (see ChangeBatcher).
+const batcher = new ChangeBatcher({
+  setTimeout: (fn, ms) => setTimeout(fn, ms),
+  flush: (subjectIds) => emit('progress.updated', { subjectIds }),
+});
+
+/** `subjectIds` omitted = the change cannot say which subjects (wipe, rename). */
+const notify = (subjectIds?: readonly string[]): void => batcher.note(subjectIds);
 
 // --- low-level read/write --------------------------------------------------
 
@@ -230,7 +251,7 @@ export function setTopicDone(
       });
       await AsyncStorage.setItem(OUTBOX_KEY, JSON.stringify(outbox));
     }
-    notify();
+    notify([subjectId]);
     // A fact for the sync coordinator (which decides when to send); not a command.
     emit('progress.changed', { subjectId });
   }).catch(() => {});
@@ -270,7 +291,7 @@ export function adoptRenamedSubject(subjectId: string, validKeys: Set<string>): 
         touched = true;
       }
       if (touched) await AsyncStorage.setItem(OUTBOX_KEY, JSON.stringify(outbox));
-      notify();
+      notify(); // records moved between subjects: everything may differ
       return true;
     }
     return false;
@@ -303,15 +324,17 @@ export function applyPulledItems(items: RemoteItem[]): Promise<boolean> {
       bySubject.set(item.subject, list);
     }
     let anyChanged = false;
+    const changedIds: string[] = [];
     for (const [subjectId, list] of bySubject) {
       const current = await readRecords(subjectId);
       const { records, changed } = applyRemote(current, list, pendingBySubject.get(subjectId));
       if (changed) {
         await writeRecords(subjectId, records);
         anyChanged = true;
+        changedIds.push(subjectId);
       }
     }
-    if (anyChanged) notify();
+    if (anyChanged) notify(changedIds);
     return anyChanged;
   });
 }

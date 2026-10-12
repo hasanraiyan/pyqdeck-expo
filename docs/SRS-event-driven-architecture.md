@@ -330,7 +330,7 @@ Tests: server 663 passing (all existing plus 46 new); app 162 passing; `tsc --no
 - **`auth.changed` event** Not added. `configureSyncSession` stays a direct call; there is no consumer that needs an event.
 - **`api/backend.ts`** Left as it was. It is self-contained by design and its subscriber is dev-only.
 - **Version headers on web** Not sent, to avoid a CORS preflight on every GET in the web preview. The server accepts them either way.
-- **UI-FR (payload-carrying progress events)** Deferred to the next release, as agreed.
+- **UI-FR (payload-carrying progress events)** Done after the first release: `progress.updated` carries the changed subject ids (merged per 16 ms frame by `ChangeBatcher`), screens use `subscribeProgressFor`, and `api/backend.ts` now uses the bus too.
 
 ### 10.3 Before shipping
 
