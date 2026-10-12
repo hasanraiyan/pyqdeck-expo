@@ -12,8 +12,11 @@ import {
   type RefreshControlProps,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
 import { COLORS, FONTS } from '../theme/colors';
+import { useAdminAccess } from './useAdminAccess';
+import { can } from './adminLogic';
 
 // Shared pieces for the admin screens. One visual language everywhere: a page
 // header, titled sections, stat tiles, status pills, and the same empty, loading
@@ -277,6 +280,38 @@ export const ToggleRow = ({
 export const Hint = ({ children }: { children: React.ReactNode }) => (
   <Text style={s.hint}>{children}</Text>
 );
+
+/**
+ * Footer link for the syllabus/notes edit sheets (ASN-FR-31): opens the
+ * Dashboard audit log pre-filtered to this tool. Shown only to accounts that
+ * may read the audit log; the Dashboard hides its audit section otherwise.
+ */
+export const AuditLink = ({
+  tool,
+  label,
+  onNavigate,
+}: {
+  tool: 'manage_syllabus' | 'manage_notes';
+  label: string;
+  onNavigate: () => void;
+}) => {
+  const navigation = useNavigation<any>();
+  const { tools } = useAdminAccess();
+  if (!can(tools, 'audit_log')) return null;
+  return (
+    <TouchableOpacity
+      onPress={() => {
+        onNavigate();
+        navigation.navigate('AdminDashboard', { tool });
+      }}
+      style={{ flexDirection: 'row', alignItems: 'center', gap: 5, alignSelf: 'flex-start', paddingVertical: 4 }}
+      accessibilityLabel={label}
+    >
+      <Feather name="shield" size={13} color={COLORS.primary} />
+      <Text style={{ fontFamily: FONTS.bodySemi, fontSize: 12, color: COLORS.primary }}>{label}</Text>
+    </TouchableOpacity>
+  );
+};
 
 /** A notice box: warning (amber), danger (red) or info (neutral). */
 export const Notice = ({

@@ -227,4 +227,6 @@ Phases 2 and 3 can overlap after Phase 1. Ship browse + subject fix flow first; 
 |---|---|---|
 | 1.0 (draft) | 2026-10-12 | Initial draft; extends `SRS-admin-in-app.md` (which scoped syllabus/notes out) to cover them in-app |
 | 1.0 (approved) | 2026-10-12 | Approved by owner |
+| 1.1 | 2026-10-12 | Owner pivot: no separate admin browser — editing is inline on the existing Study screens (§4.2); branch moves stay MCP-only |
+| 1.2 | 2026-10-12 | Phase 4 polish shipped: audit tool filter + deep-link from sheets (ASN-FR-31), PYQ subject picker in place of free text (ASN-FR-12), orphan-progress notice after deletes |
 

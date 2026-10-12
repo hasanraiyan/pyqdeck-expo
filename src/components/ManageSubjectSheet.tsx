@@ -1,13 +1,14 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Text, TextInput, TouchableOpacity, View, StyleSheet } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useQueryClient } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 import { COLORS, FONTS } from '../theme/colors';
-import { adminSyllabus } from '../api';
+import { adminSyllabus, searchSubjects } from '../api';
 import { qk } from '../api/queryKeys';
 import { userMessage } from '../utils/netError';
 import { suggestSlug } from '../admin/syllabusLogic';
+import { AuditLink } from '../admin/ui';
 
 /**
  * Inline subject add/rename/delete (ASN-FR-12/30). Opened from
@@ -37,10 +38,41 @@ export const ManageSubjectSheet = ({
   const [code, setCode] = useState(subject?.code ?? '');
   const [kind, setKind] = useState<'theory' | 'lab'>(subject?.kind ?? 'theory');
   const [pyq, setPyq] = useState(subject?.pyqSubjectId ?? '');
+  const [pyqName, setPyqName] = useState<string | null>(null);
+  const [pyqQuery, setPyqQuery] = useState('');
+  const [pyqResults, setPyqResults] = useState<{ id: string; name: string; code: string }[]>([]);
+  const [pyqSearching, setPyqSearching] = useState(false);
+  const [pyqErr, setPyqErr] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const busy = saving || deleting;
+  const pyqTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Searchable PYQ picker (Phase 4 polish): debounced, min 2 chars, pick from
+  // the archive instead of typing a slug blind. Empty = no link.
+  useEffect(() => {
+    if (pyqTimer.current) clearTimeout(pyqTimer.current);
+    const q = pyqQuery.trim();
+    if (q.length < 2) {
+      setPyqResults([]);
+      setPyqSearching(false);
+      return;
+    }
+    setPyqSearching(true);
+    pyqTimer.current = setTimeout(() => {
+      searchSubjects(q, 8)
+        .then((r) => {
+          setPyqResults((r.subjects ?? []).map((s) => ({ id: s.id, name: s.name, code: s.code })));
+          setPyqErr(null);
+        })
+        .catch((e: any) => setPyqErr(userMessage(e, 'Search failed.')))
+        .finally(() => setPyqSearching(false));
+    }, 300);
+    return () => {
+      if (pyqTimer.current) clearTimeout(pyqTimer.current);
+    };
+  }, [pyqQuery]);
 
   const effSlug = slugTouched && slug.trim() ? slug.trim() : suggestSlug(name);
   const nameErr = !name.trim() ? 'Add a subject name.' : name.trim().length > 120 ? 'At most 120 characters.' : null;
@@ -110,7 +142,11 @@ export const ManageSubjectSheet = ({
               await adminSyllabus({ action: 'delete', level: 'subject', subject: subject!.id, confirm: true });
               await queryClient.invalidateQueries({ queryKey: qk.syllabusSemester(branchId, semester) });
               await queryClient.invalidateQueries({ queryKey: qk.syllabusSemesters(branchId) });
-              onSaved();
+              Alert.alert(
+                'Subject deleted',
+                'Students keep their own ticks on their phones, but the removed topics no longer count toward progress.',
+                [{ text: 'Done', onPress: onSaved }]
+              );
             } catch (e: any) {
               setError(userMessage(e, 'Could not delete the subject.'));
             } finally {
@@ -197,20 +233,72 @@ export const ManageSubjectSheet = ({
           </TouchableOpacity>
         ))}
       </View>
-      <Text style={s.label}>PYQ subject id (optional — links past papers)</Text>
-      <TextInput
-        value={pyq}
-        onChangeText={(v) => {
-          setPyq(v.trim());
-          setError(null);
-        }}
-        editable={!busy}
-        placeholder="e.g. sem6_computer_networks (empty = none)"
-        placeholderTextColor={COLORS.textSubtle}
-        style={s.input}
-        autoCapitalize="none"
-        autoCorrect={false}
-      />
+      <Text style={s.label}>Past papers (optional — links this subject to its PYQ archive)</Text>
+      {pyq ? (
+        <View style={s.pyqSel}>
+          <View style={{ flex: 1 }}>
+            <Text style={s.pyqSelName} numberOfLines={1}>
+              {pyqName ?? pyq}
+            </Text>
+            {pyqName && <Text style={s.pyqSelId} numberOfLines={1}>{pyq}</Text>}
+          </View>
+          <TouchableOpacity
+            onPress={() => {
+              setPyq('');
+              setPyqName(null);
+              setError(null);
+            }}
+            disabled={busy}
+            hitSlop={10}
+            accessibilityLabel="Remove past-paper link"
+          >
+            <Feather name="x-circle" size={18} color={COLORS.textMuted} />
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <>
+          <TextInput
+            value={pyqQuery}
+            onChangeText={(v) => {
+              setPyqQuery(v);
+              setPyqErr(null);
+            }}
+            editable={!busy}
+            placeholder="Search past-paper subjects… (min 2 chars)"
+            placeholderTextColor={COLORS.textSubtle}
+            style={s.input}
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
+          {pyqSearching && <ActivityIndicator color={COLORS.primary} style={{ marginTop: 6 }} />}
+          {pyqErr ? <Text style={s.error}>{pyqErr}</Text> : null}
+          {pyqResults
+            .filter((r) => r.id !== pyq)
+            .map((r) => (
+              <TouchableOpacity
+                key={r.id}
+                onPress={() => {
+                  setPyq(r.id);
+                  setPyqName(r.name);
+                  setPyqQuery('');
+                  setPyqResults([]);
+                  setError(null);
+                }}
+                disabled={busy}
+                style={s.pyqOpt}
+                accessibilityLabel={`Link past papers from ${r.name}`}
+              >
+                <View style={{ flex: 1 }}>
+                  <Text style={s.pyqOptName} numberOfLines={1}>{r.name}</Text>
+                  <Text style={s.pyqOptId} numberOfLines={1}>
+                    {[r.code, r.id].filter(Boolean).join(' · ')}
+                  </Text>
+                </View>
+                <Feather name="link" size={15} color={COLORS.primary} />
+              </TouchableOpacity>
+            ))}
+        </>
+      )}
       {!editing && <Text style={s.hint}>Branch moves stay in the MCP admin (decision D2).</Text>}
 
       {nameErr && name.length > 0 ? <Text style={s.error}>{nameErr}</Text> : null}
@@ -240,6 +328,7 @@ export const ManageSubjectSheet = ({
         </TouchableOpacity>
       </View>
       <Text style={s.hint}>Offline edits are blocked — connect to save. Nothing is stored on this phone.</Text>
+      <AuditLink tool="manage_syllabus" label="View syllabus changes" onNavigate={onClose} />
     </View>
   );
 };
@@ -273,6 +362,32 @@ const s = StyleSheet.create({
   },
   kindActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
   kindText: { fontFamily: FONTS.bodySemi, fontSize: 13, color: COLORS.text },
+  pyqSel: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    borderWidth: 1,
+    borderColor: COLORS.primaryBorder,
+    backgroundColor: COLORS.primaryLight,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  pyqSelName: { fontFamily: FONTS.bodySemi, fontSize: 14, color: COLORS.text },
+  pyqSelId: { fontFamily: FONTS.body, fontSize: 11, color: COLORS.textMuted, marginTop: 1 },
+  pyqOpt: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.card,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+  },
+  pyqOptName: { fontFamily: FONTS.bodySemi, fontSize: 13, color: COLORS.text },
+  pyqOptId: { fontFamily: FONTS.body, fontSize: 11, color: COLORS.textSubtle, marginTop: 1 },
   error: { fontFamily: FONTS.bodySemi, fontSize: 12, color: '#b91c1c' },
   hint: { fontFamily: FONTS.body, fontSize: 11, color: COLORS.textSubtle },
   actions: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 6 },

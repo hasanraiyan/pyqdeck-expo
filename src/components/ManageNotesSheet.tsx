@@ -17,6 +17,7 @@ import { ApiError, adminNotes } from '../api';
 import { qk } from '../api/queryKeys';
 import { userMessage } from '../utils/netError';
 import { pickNotesWrite } from '../admin/syllabusLogic';
+import { AuditLink } from '../admin/ui';
 import { NativeContentRenderer } from './NativeContentRenderer';
 import { FaqAccordion } from './FaqAccordion';
 import { extractFaqsFromNotes } from '../utils/faqParser';
@@ -251,6 +252,7 @@ export const ManageNotesSheet = ({
         </TouchableOpacity>
       </View>
       <Text style={s.hint}>Offline edits are blocked — connect to save. Nothing is stored on this phone.</Text>
+      <AuditLink tool="manage_notes" label="View notes changes" onNavigate={onClose} />
     </View>
   );
 };

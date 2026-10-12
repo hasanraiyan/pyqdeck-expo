@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { RefreshControl, Text, View } from 'react-native';
+import { useRoute } from '@react-navigation/native';
 import { adminAudit, adminInsights } from '../../api';
 import { COLORS, FONTS } from '../../theme/colors';
 import { userMessage } from '../../utils/netError';
@@ -8,6 +9,8 @@ import { can } from '../../admin/adminLogic';
 import {
   AdminScroll,
   Btn,
+  Card,
+  Chip,
   EmptyState,
   Fact,
   formatWhen,
@@ -20,7 +23,6 @@ import {
   Section,
   StatTile,
   TileGrid,
-  Card,
 } from '../../admin/ui';
 
 type Entry = Awaited<ReturnType<typeof adminAudit>>['entries'][number];
@@ -47,8 +49,14 @@ const pct = (part: unknown, whole: unknown) => {
 /** Headline numbers, sync health, and the recent admin actions. */
 export const AdminDashboardScreen = () => {
   const { tools } = useAdminAccess();
+  const route = useRoute<any>();
+  // Deep-link from the syllabus/notes sheets (ASN-FR-31): open pre-filtered.
+  const initialTool = ['manage_syllabus', 'manage_notes'].includes(route.params?.tool)
+    ? (route.params.tool as string)
+    : null;
   const [insights, setInsights] = useState<Record<string, any> | null>(null);
   const [audit, setAudit] = useState<Entry[]>([]);
+  const [toolFilter, setToolFilter] = useState<string | null>(initialTool);
   const [more, setMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [auditError, setAuditError] = useState<string | null>(null);
@@ -59,33 +67,47 @@ export const AdminDashboardScreen = () => {
   const canInsights = can(tools, 'app_insights');
   const canAudit = can(tools, 'audit_log');
 
-  const load = useCallback(async () => {
-    setError(null);
-    setAuditError(null);
-    const [ins, aud] = await Promise.allSettled([
-      canInsights ? adminInsights() : Promise.resolve(null),
-      canAudit ? adminAudit({ limit: PAGE }) : Promise.resolve(null),
-    ]);
-    if (ins.status === 'fulfilled') setInsights(ins.value);
-    else setError(userMessage(ins.reason, 'Could not load the numbers.'));
-    if (aud.status === 'fulfilled' && aud.value) {
-      setAudit(aud.value.entries);
-      setMore(aud.value.count >= PAGE);
-    } else if (aud.status === 'rejected') {
-      setAuditError(userMessage(aud.reason, 'Could not load the audit log.'));
-    }
-    setLoading(false);
-    setRefreshing(false);
-  }, [canInsights, canAudit]);
+  const load = useCallback(
+    async (tool: string | null = toolFilter) => {
+      setError(null);
+      setAuditError(null);
+      const [ins, aud] = await Promise.allSettled([
+        canInsights ? adminInsights() : Promise.resolve(null),
+        canAudit ? adminAudit({ limit: PAGE, ...(tool ? { tool } : {}) }) : Promise.resolve(null),
+      ]);
+      if (ins.status === 'fulfilled') setInsights(ins.value);
+      else setError(userMessage(ins.reason, 'Could not load the numbers.'));
+      if (aud.status === 'fulfilled' && aud.value) {
+        setAudit(aud.value.entries);
+        setMore(aud.value.count >= PAGE);
+      } else if (aud.status === 'rejected') {
+        setAuditError(userMessage(aud.reason, 'Could not load the audit log.'));
+      }
+      setLoading(false);
+      setRefreshing(false);
+    },
+    [canInsights, canAudit, toolFilter]
+  );
 
   useEffect(() => {
     void load();
   }, [load]);
 
+  const pickFilter = (tool: string | null) => {
+    setToolFilter(tool);
+    setAudit([]);
+    setLoading(true);
+    void load(tool);
+  };
+
   const loadMore = async () => {
     setLoadingMore(true);
     try {
-      const next = await adminAudit({ limit: PAGE, offset: audit.length });
+      const next = await adminAudit({
+        limit: PAGE,
+        offset: audit.length,
+        ...(toolFilter ? { tool: toolFilter } : {}),
+      });
       setAudit((cur) => [...cur, ...next.entries]);
       setMore(next.count >= PAGE);
     } catch (e) {
@@ -217,6 +239,19 @@ export const AdminDashboardScreen = () => {
 
       {canAudit && (
         <Section title="Recent admin actions">
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+            <Chip label="All" active={toolFilter === null} onPress={() => pickFilter(null)} />
+            <Chip
+              label="Syllabus"
+              active={toolFilter === 'manage_syllabus'}
+              onPress={() => pickFilter('manage_syllabus')}
+            />
+            <Chip
+              label="Notes"
+              active={toolFilter === 'manage_notes'}
+              onPress={() => pickFilter('manage_notes')}
+            />
+          </View>
           {auditError && (
             <Notice tone="danger" onRetry={() => void load()}>
               {auditError}

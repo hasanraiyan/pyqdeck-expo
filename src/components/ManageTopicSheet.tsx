@@ -8,6 +8,7 @@ import { adminSyllabus } from '../api';
 import { qk } from '../api/queryKeys';
 import { userMessage } from '../utils/netError';
 import { deleteConfirmText, parseTopicTitles, validateTopicTitle } from '../admin/syllabusLogic';
+import { AuditLink } from '../admin/ui';
 
 /**
  * Inline topic add/rename/delete (ASN-FR-14/30). Opened from
@@ -120,7 +121,11 @@ export const ManageTopicSheet = ({
                 confirm: true,
               });
               await invalidate();
-              onSaved();
+              Alert.alert(
+                'Topic deleted',
+                "Students keep their own ticks on their phones, but this topic no longer counts toward progress. Its PYQ links are orphaned.",
+                [{ text: 'Done', onPress: onSaved }]
+              );
             } catch (e: any) {
               setError(userMessage(e, 'Could not delete the topic.'));
             } finally {
@@ -220,6 +225,7 @@ export const ManageTopicSheet = ({
         </TouchableOpacity>
       </View>
       <Text style={s.hint}>Offline edits are blocked — connect to save. Nothing is stored on this phone.</Text>
+      <AuditLink tool="manage_syllabus" label="View syllabus changes" onNavigate={onClose} />
     </View>
   );
 };

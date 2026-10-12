@@ -401,7 +401,7 @@ export interface AdminMe {
 
 export const adminMe = () => requestAdmin<AdminMe>('/me', 'GET');
 export const adminInsights = () => requestAdmin<Record<string, any>>('/insights', 'GET');
-export const adminAudit = (p: { limit?: number; offset?: number } = {}) =>
+export const adminAudit = (p: { limit?: number; offset?: number; tool?: string } = {}) =>
   requestAdmin<{
     count: number;
     entries: {
@@ -413,7 +413,10 @@ export const adminAudit = (p: { limit?: number; offset?: number } = {}) =>
       outcome: 'ok' | 'error';
       detail?: string;
     }[];
-  }>(`/audit?limit=${p.limit ?? 30}&offset=${p.offset ?? 0}`, 'GET');
+  }>(
+    `/audit?limit=${p.limit ?? 30}&offset=${p.offset ?? 0}${p.tool ? `&tool=${encodeURIComponent(p.tool)}` : ''}`,
+    'GET'
+  );
 export const adminUsers = (body: Record<string, unknown>) =>
   requestAdmin<Record<string, any>>('/users', 'POST', body);
 export const adminGetConfig = () => requestAdmin<Record<string, any>>('/config', 'GET');

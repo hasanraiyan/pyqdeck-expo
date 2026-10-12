@@ -8,6 +8,7 @@ import { adminSyllabus } from '../api';
 import { qk } from '../api/queryKeys';
 import { userMessage } from '../utils/netError';
 import { deleteConfirmText, validateModuleTitle } from '../admin/syllabusLogic';
+import { AuditLink } from '../admin/ui';
 
 /**
  * Inline module add/rename/delete (ASN-FR-13/30). Opened from
@@ -101,7 +102,11 @@ export const ManageModuleSheet = ({
                 confirm: true,
               });
               await queryClient.invalidateQueries({ queryKey: qk.syllabusSubject(subjectId) });
-              onSaved();
+              Alert.alert(
+                'Module deleted',
+                'Students keep their own ticks on their phones, but the removed topics no longer count toward progress.',
+                [{ text: 'Done', onPress: onSaved }]
+              );
             } catch (e: any) {
               setError(userMessage(e, 'Could not delete the module.'));
             } finally {
@@ -181,6 +186,7 @@ export const ManageModuleSheet = ({
         </TouchableOpacity>
       </View>
       <Text style={s.hint}>Offline edits are blocked — connect to save. Nothing is stored on this phone.</Text>
+      <AuditLink tool="manage_syllabus" label="View syllabus changes" onNavigate={onClose} />
     </View>
   );
 };
