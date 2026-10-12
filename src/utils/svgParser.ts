@@ -54,16 +54,47 @@ export function extractSvgTitle(xml: string): string | undefined {
   return match && match[1] ? match[1].trim() : undefined;
 }
 
+// Notes SVGs style text through CSS classes plus a Google Fonts @import, neither
+// of which react-native-svg's SvgXml understands. Map each class to the font
+// registered in App.tsx (one family per weight, Android ignores fontWeight).
+const NATIVE_TEXT_CLASSES: Record<string, string> = {
+  'cnx-hdr': 'font-family="Kalam_700Bold" fill="#1E293B"',
+  'cnx-body': 'font-family="PatrickHand_400Regular" fill="#1E293B"',
+  'cnx-code': 'font-family="monospace" font-weight="700" fill="#334155"',
+};
+
+const XML_ENTITIES: Record<string, string> = {
+  '&amp;': '&',
+  '&lt;': '<',
+  '&gt;': '>',
+  '&quot;': '"',
+  '&apos;': "'",
+  '&#39;': "'",
+};
+
 /**
  * react-native-svg's Android MarkerView does Double.parseDouble() on `orient`,
  * so `auto-start-reverse` throws NumberFormatException and kills the app.
  * Only numeric angles and `auto` are safe natively.
+ *
+ * Also makes text render like the WebView: class-based fonts become attributes
+ * and entities in text nodes are decoded (the native parser shows `&amp;` raw).
  */
 export function sanitizeSvgForNative(xml: string): string {
-  return xml.replace(
-    /(\borient\s*=\s*)(["'])\s*auto-start-reverse\s*\2/gi,
-    '$1$2auto$2'
-  );
+  return xml
+    .replace(/(\borient\s*=\s*)(["'])\s*auto-start-reverse\s*\2/gi, '$1$2auto$2')
+    .replace(/<style\b[\s\S]*?<\/style>/gi, '')
+    .replace(/\sclass\s*=\s*(["'])([^"']*)\1/g, (match, _q, names: string) => {
+      const attrs = names
+        .split(/\s+/)
+        .map((n) => NATIVE_TEXT_CLASSES[n])
+        .filter(Boolean)
+        .join(' ');
+      return attrs ? ' ' + attrs : match;
+    })
+    .replace(/>([^<>]*&[^<>]*)</g, (_m, text: string) =>
+      '>' + text.replace(/&(?:amp|lt|gt|quot|apos|#39);/g, (e) => XML_ENTITIES[e]) + '<'
+    );
 }
 
 /**

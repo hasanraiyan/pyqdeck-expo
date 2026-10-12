@@ -16,6 +16,8 @@ import {
 import { Feather } from '@expo/vector-icons';
 import { useFonts } from 'expo-font';
 import { PlusJakartaSans_700Bold, PlusJakartaSans_800ExtraBold } from '@expo-google-fonts/plus-jakarta-sans';
+import { Kalam_700Bold } from '@expo-google-fonts/kalam';
+import { PatrickHand_400Regular } from '@expo-google-fonts/patrick-hand';
 import { Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold } from '@expo-google-fonts/inter';
 import { ClerkProvider, useAuth } from '@clerk/expo';
 import { tokenCache } from '@clerk/expo/token-cache';
@@ -493,6 +495,9 @@ function AppContent() {
     Inter_500Medium,
     Inter_600SemiBold,
     Inter_700Bold,
+    // Handwritten faces used by the notes SVG diagrams (see sanitizeSvgForNative).
+    Kalam_700Bold,
+    PatrickHand_400Regular,
   });
 
   useEffect(() => {
