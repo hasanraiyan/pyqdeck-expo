@@ -5,7 +5,6 @@ import { COLORS, FONTS } from '../theme/colors';
 import { ApiError, adminNotes } from '../api';
 import { userMessage } from '../utils/netError';
 import { pickNotesWrite } from '../admin/syllabusLogic';
-import { AuditLink } from '../admin/ui';
 import { DraftBanner, EditorFrame, ErrorBanner, useEditorKeyboardOpen } from '../admin/EditorFrame';
 import { MarkdownEditor, type EditorTool } from '../admin/MarkdownEditor';
 import { draftAge, useDraft } from '../admin/useDraft';
@@ -25,7 +24,7 @@ import { extractFaqsFromNotes } from '../utils/faqParser';
  */
 
 const FAQ_TOOL: EditorTool[] = [
-  { label: 'FAQ', pre: '## Frequently Asked Questions\n\n### Q: ', post: '', block: true },
+  { label: 'FAQ', icon: 'help-circle-outline', pre: '## Frequently Asked Questions\n\n### Q: ', post: '', block: true },
 ];
 
 const renderNotesPreview = (text: string) => {
@@ -165,7 +164,7 @@ export const ManageNotesSheet = ({
     <EditorFrame
       kicker="Edit notes"
       title={topicTitle}
-      subtitle={`${text.length} chars · ${text.split('\n').length} lines`}
+      subtitle={typing ? undefined : `${text.length} chars · ${text.split('\n').length} lines`}
       dirty={dirty}
       busy={busy}
       onClose={leave}
@@ -212,7 +211,6 @@ export const ManageNotesSheet = ({
           Notes are empty. Use Clear to remove them.
         </Text>
       ) : null}
-      {typing ? null : <AuditLink tool="manage_notes" label="View notes changes" onNavigate={onClose} />}
     </EditorFrame>
   );
 };

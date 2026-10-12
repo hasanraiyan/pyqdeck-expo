@@ -129,6 +129,8 @@ export const EditorFrame = ({
   const keyboardOpen = useContext(KeyboardCtx);
   const guard = useContext(GuardCtx);
 
+  const fillBody = !scroll;
+
   const requestClose = () => {
     if (busy) return;
     if (!dirty) {
@@ -175,7 +177,23 @@ export const EditorFrame = ({
             </Text>
           ) : null}
         </View>
-        {dirty ? (
+        {fillBody && keyboardOpen ? (
+          // Typing in a full-height editor: Save moves up here so the footer's row goes to the text.
+          <TouchableOpacity
+            onPress={primary.onPress}
+            disabled={primary.disabled || primary.loading}
+            style={[s.headerSave, primary.idle ? s.btnIdle : s.btnPrimary, primary.disabled && !primary.idle && { opacity: 0.45 }]}
+            accessibilityLabel={primary.label}
+          >
+            {primary.loading ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <Text style={[s.headerSaveText, { color: primary.idle ? COLORS.textMuted : '#fff' }]}>
+                {primary.idle ? 'Saved' : 'Save'}
+              </Text>
+            )}
+          </TouchableOpacity>
+        ) : dirty ? (
           <View style={s.dirtyPill}>
             <View style={s.dirtyDot} />
             <Text style={s.dirtyText}>Unsaved</Text>
@@ -197,6 +215,7 @@ export const EditorFrame = ({
         <View style={[s.body, { flex: 1 }]}>{children}</View>
       )}
 
+      {fillBody && keyboardOpen ? null : (
       <View
         style={[
           s.footer,
@@ -247,6 +266,7 @@ export const EditorFrame = ({
           )}
         </TouchableOpacity>
       </View>
+      )}
     </View>
   );
 };
@@ -386,6 +406,15 @@ const s = StyleSheet.create({
     borderRadius: 999,
     backgroundColor: '#fef3c7',
   },
+  headerSave: {
+    minWidth: 64,
+    height: 34,
+    paddingHorizontal: 14,
+    borderRadius: 999,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerSaveText: { fontFamily: FONTS.bodySemi, fontSize: 13 },
   dirtyDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#d97706' },
   dirtyText: { fontFamily: FONTS.bodySemi, fontSize: 11, color: '#92400e' },
   body: { padding: 16, gap: 16 },
