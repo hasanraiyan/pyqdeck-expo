@@ -1,0 +1,38 @@
+name: Tests
+
+# Runs on every push and pull request, so a change that breaks the unit tests
+# (including the server-answer fixtures in src/db/serverContract.test.ts) or the
+# types is caught before a release is ever started. release.yml runs the same
+# tests again before it builds.
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  test:
+    name: Unit tests and types
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Unit tests
+        run: pnpm test
+
+      - name: Type check
+        run: pnpm exec tsc --noEmit
