@@ -34,6 +34,16 @@ const countsLine = (obj: Record<string, number> | undefined) => {
   return entries.map(([k, v]) => `${k}: ${num(v)}`).join('  ·  ');
 };
 
+const versionTotal = (versions: Record<string, number> | undefined) =>
+  Object.values(versions ?? {}).reduce((a, b) => a + b, 0);
+
+const pct = (part: unknown, whole: unknown) => {
+  const p = Number(part);
+  const w = Number(whole);
+  if (!Number.isFinite(p) || !Number.isFinite(w) || w <= 0) return '-';
+  return `${Math.round((p / w) * 100)}%`;
+};
+
 /** Headline numbers, sync health, and the recent admin actions. */
 export const AdminDashboardScreen = () => {
   const { tools } = useAdminAccess();
@@ -91,6 +101,7 @@ export const AdminDashboardScreen = () => {
   const sy = insights?.sync;
   const dv = insights?.devices;
   const ops = insights?.ops;
+  const traffic = insights?.traffic;
   const reports = (insights?.openReports?.solutions ?? 0) + (insights?.openReports?.notes ?? 0);
 
   return (
@@ -138,6 +149,50 @@ export const AdminDashboardScreen = () => {
             </Card>
           </Section>
 
+          {traffic && (
+            <>
+              <Section title="Sync traffic, last 7 days">
+                <TileGrid>
+                  <StatTile label="Sync requests" value={num(traffic.totals?.requests)} hint="both servers" />
+                  <StatTile
+                    label="Answered from a shared result"
+                    value={num(traffic.totals?.coalescedRequests)}
+                    hint={pct(traffic.totals?.coalescedRequests, traffic.totals?.requests)}
+                  />
+                  <StatTile label="Rejected changes" value={num(traffic.totals?.opsRejected)} tone={traffic.totals?.opsRejected > 0 ? 'danger' : 'neutral'} />
+                  <StatTile label="Nudges folded together" value={num(traffic.totals?.nudgesSuppressed)} />
+                </TileGrid>
+                {(traffic.perDay ?? []).length > 0 && (
+                  <Card>
+                    {(traffic.perDay as any[]).map((d) => (
+                      <Fact key={d.day} label={d.day} value={`${num(d.requests)} requests`} />
+                    ))}
+                  </Card>
+                )}
+              </Section>
+
+              <Section title="App versions calling">
+                <Card>
+                  {Object.keys(traffic.clientVersions ?? {}).length === 0 ? (
+                    <Hint>No requests recorded yet.</Hint>
+                  ) : (
+                    Object.entries(traffic.clientVersions as Record<string, number>).map(([version, n]) => (
+                      <Fact
+                        key={version}
+                        label={version === 'legacy' ? 'Older builds (no version)' : version}
+                        value={`${num(n)} (${pct(n, versionTotal(traffic.clientVersions))})`}
+                      />
+                    ))
+                  )}
+                  <Hint>
+                    Builds before 1.11 do not report a version. When this share is small, it is safe to ask people to
+                    update.
+                  </Hint>
+                </Card>
+              </Section>
+            </>
+          )}
+
           <Section title="Devices and votes">
             <TileGrid>
               <StatTile label="Registered devices" value={num(dv?.registered)} hint={`${num(dv?.linkedToAccount)} linked to an account`} />
@@ -152,6 +207,8 @@ export const AdminDashboardScreen = () => {
               <Fact label="Sync requests" value={num(ops?.requests)} />
               <Fact label="Applied / superseded / rejected" value={`${num(ops?.opsApplied)} / ${num(ops?.opsSuperseded)} / ${num(ops?.opsRejected)}`} />
               <Fact label="Section errors" value={num(ops?.sectionErrors)} />
+              <Fact label="Answered from a shared result" value={num(ops?.coalescedRequests)} />
+              <Fact label="Nudges folded together" value={num(ops?.nudgesSuppressed)} />
               <Hint>Counted since this server last restarted. The other server keeps its own count.</Hint>
             </Card>
           </Section>

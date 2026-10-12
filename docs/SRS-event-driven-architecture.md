@@ -337,3 +337,9 @@ Tests: server 663 passing (all existing plus 46 new); app 162 passing; `tsc --no
 1. Deploy the server to both origins (they start on the latest code together).
 2. Check `getSyncMetrics()`: `byClientVersion` should show `legacy` for installed apps, and `coalescedRequests` should rise.
 3. Build the app through the GitHub Actions workflow, and run the two-phone checklist (`CHECKLIST-account-sync-device-test.md`).
+
+### 10.4 Follow-up: visible metrics and server tuning
+
+- **Shared daily traffic record.** Both origins add their counters once a minute (and on shutdown) to one document per UTC day (`SyncMetricDay`, kept 90 days, counts only). `app_insights` and the in-app Admin Dashboard now show sync requests for 7 days across both servers, requests answered from a shared result, nudges folded together, and requests per app version (`legacy` = builds before version reporting).
+- **Server-side tuning, not sent to apps:** `tuning { nudgeWindowMs 5000-300000 (default 30000), coalesceMs 0-10000 (default 2000, 0 = off) }`, editable through `manage_app_config`. Read by the sync route and the nudge handler through the 5 s config cache.
+- **Not done on purpose:** a Mongo-backed cache for sharing repeated pulls across origins. Looking a result up in Mongo costs about what the pull itself costs, so it would save nothing.
