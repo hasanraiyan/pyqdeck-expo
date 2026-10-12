@@ -89,6 +89,14 @@ function useKeyboardOpen(): boolean {
   return open;
 }
 
+export interface MenuItem {
+  label: string;
+  icon: React.ComponentProps<typeof Feather>['name'];
+  onPress: () => void;
+  disabled?: boolean;
+  danger?: boolean;
+}
+
 export interface FooterAction {
   label: string;
   onPress: () => void;
@@ -107,6 +115,7 @@ export const EditorFrame = ({
   onClose,
   primary,
   secondary,
+  menu,
   scroll = true,
   children,
 }: {
@@ -121,6 +130,8 @@ export const EditorFrame = ({
   primary: FooterAction;
   /** Left of the primary button; styled as destructive when `danger`. */
   secondary?: FooterAction & { danger?: boolean };
+  /** Full-height editors (scroll=false) have no footer: these go in the header's overflow menu. */
+  menu?: MenuItem[];
   /** false = the body fills the space itself (the notes editor); true = it scrolls. */
   scroll?: boolean;
   children: React.ReactNode;
@@ -130,6 +141,7 @@ export const EditorFrame = ({
   const guard = useContext(GuardCtx);
 
   const fillBody = !scroll;
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const requestClose = () => {
     if (busy) return;
@@ -167,7 +179,7 @@ export const EditorFrame = ({
           <Feather name="x" size={22} color={COLORS.text} />
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
-          {keyboardOpen ? null : <Text style={s.kicker}>{kicker.toUpperCase()}</Text>}
+          {keyboardOpen || fillBody ? null : <Text style={s.kicker}>{kicker.toUpperCase()}</Text>}
           <Text style={s.title} numberOfLines={1}>
             {title}
           </Text>
@@ -177,22 +189,38 @@ export const EditorFrame = ({
             </Text>
           ) : null}
         </View>
-        {fillBody && keyboardOpen ? (
-          // Typing in a full-height editor: Save moves up here so the footer's row goes to the text.
-          <TouchableOpacity
-            onPress={primary.onPress}
-            disabled={primary.disabled || primary.loading}
-            style={[s.headerSave, primary.idle ? s.btnIdle : s.btnPrimary, primary.disabled && !primary.idle && { opacity: 0.45 }]}
-            accessibilityLabel={primary.label}
-          >
-            {primary.loading ? (
-              <ActivityIndicator size="small" color="#fff" />
-            ) : (
-              <Text style={[s.headerSaveText, { color: primary.idle ? COLORS.textMuted : '#fff' }]}>
-                {primary.idle ? 'Saved' : 'Save'}
-              </Text>
-            )}
-          </TouchableOpacity>
+        {fillBody ? (
+          // Full-height editors have no footer: Save appears here once there is
+          // something to save, and the rest (Clear...) lives in the overflow menu.
+          <>
+            {dirty || primary.loading ? (
+              <TouchableOpacity
+                onPress={primary.onPress}
+                disabled={primary.disabled || primary.loading}
+                style={[s.headerSave, s.btnPrimary, primary.disabled && { opacity: 0.45 }]}
+                accessibilityLabel={primary.label}
+              >
+                {primary.loading ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Text style={[s.headerSaveText, { color: '#fff' }]}>Save</Text>
+                )}
+              </TouchableOpacity>
+            ) : null}
+            {menu?.length ? (
+              <TouchableOpacity
+                onPress={() => {
+                  Keyboard.dismiss();
+                  setMenuOpen(true);
+                }}
+                hitSlop={8}
+                style={s.closeBtn}
+                accessibilityLabel="More actions"
+              >
+                <Feather name="more-vertical" size={22} color={COLORS.text} />
+              </TouchableOpacity>
+            ) : null}
+          </>
         ) : dirty ? (
           <View style={s.dirtyPill}>
             <View style={s.dirtyDot} />
@@ -212,10 +240,12 @@ export const EditorFrame = ({
           {children}
         </ScrollView>
       ) : (
-        <View style={[s.body, { flex: 1 }]}>{children}</View>
+        <View style={[s.body, { flex: 1 }, !keyboardOpen && { paddingBottom: Math.max(insets.bottom, 12) }]}>
+          {children}
+        </View>
       )}
 
-      {fillBody && keyboardOpen ? null : (
+      {fillBody ? null : (
       <View
         style={[
           s.footer,
@@ -267,6 +297,29 @@ export const EditorFrame = ({
         </TouchableOpacity>
       </View>
       )}
+      {fillBody && menu?.length ? (
+        <Modal visible={menuOpen} transparent animationType="fade" onRequestClose={() => setMenuOpen(false)}>
+          <TouchableOpacity style={s.menuScrim} activeOpacity={1} onPress={() => setMenuOpen(false)}>
+            <View style={[s.menu, { marginTop: insets.top + 52 }]}>
+              {menu.map((item) => (
+                <TouchableOpacity
+                  key={item.label}
+                  style={s.menuItem}
+                  disabled={item.disabled}
+                  onPress={() => {
+                    setMenuOpen(false);
+                    item.onPress();
+                  }}
+                  accessibilityLabel={item.label}
+                >
+                  <Feather name={item.icon} size={18} color={item.danger ? DANGER : COLORS.text} />
+                  <Text style={[s.menuText, item.danger && { color: DANGER }]}>{item.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </TouchableOpacity>
+        </Modal>
+      ) : null}
     </View>
   );
 };
@@ -414,6 +467,21 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  menuScrim: { flex: 1, alignItems: 'flex-end', paddingHorizontal: 12 },
+  menu: {
+    minWidth: 180,
+    borderRadius: 12,
+    backgroundColor: COLORS.card,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: COLORS.border,
+    elevation: 6,
+    shadowColor: '#000',
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+  },
+  menuItem: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 16, paddingVertical: 14 },
+  menuText: { fontFamily: FONTS.bodySemi, fontSize: 15, color: COLORS.text },
   headerSaveText: { fontFamily: FONTS.bodySemi, fontSize: 13 },
   dirtyDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#d97706' },
   dirtyText: { fontFamily: FONTS.bodySemi, fontSize: 11, color: '#92400e' },

@@ -58,6 +58,7 @@ export const ManageNotesSheet = ({
   const [saving, setSaving] = useState(false);
   const [clearing, setClearing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [mode, setMode] = useState<'edit' | 'preview'>('edit');
   const draft = useDraft(`notes:${subjectId}:${topicId}`, text, initialNotes);
   const typing = useEditorKeyboardOpen();
 
@@ -170,17 +171,20 @@ export const ManageNotesSheet = ({
       onClose={leave}
       scroll={false}
       primary={{
-        label: saving ? 'Saving…' : dirty ? 'Save notes' : 'No changes',
+        label: saving ? 'Saving…' : 'Save notes',
         onPress: () => void doSave(),
         disabled: !canSave,
         loading: saving,
         idle: !dirty && !busy,
       }}
-      secondary={
-        initialNotes
-          ? { label: 'Clear', onPress: doClear, disabled: busy, loading: clearing, danger: true }
-          : undefined
-      }
+      menu={[
+        mode === 'edit'
+          ? { label: 'Preview', icon: 'eye', onPress: () => { Keyboard.dismiss(); setMode('preview'); } }
+          : { label: 'Write', icon: 'edit-3', onPress: () => setMode('edit') },
+        ...(initialNotes
+          ? [{ label: 'Clear notes', icon: 'trash-2' as const, onPress: doClear, disabled: busy, danger: true }]
+          : []),
+      ]}
     >
       {draft.found && !typing ? (
         <DraftBanner
@@ -200,6 +204,8 @@ export const ManageNotesSheet = ({
           setError(null);
         }}
         disabled={busy}
+        mode={mode}
+        onModeChange={setMode}
         placeholder="Write markdown — LaTeX $...$, Mermaid blocks, FAQ at the bottom."
         extraTools={FAQ_TOOL}
         renderPreview={renderNotesPreview}

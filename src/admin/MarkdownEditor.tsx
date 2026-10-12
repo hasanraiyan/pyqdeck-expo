@@ -1,4 +1,4 @@
-import React, { memo, useCallback, useMemo, useRef, useState } from 'react';
+import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Keyboard, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { COLORS, FONTS } from '../theme/colors';
@@ -55,6 +55,8 @@ export const MarkdownEditor = ({
   placeholder = 'Write markdown. LaTeX with $...$, Mermaid in code blocks.',
   extraTools,
   renderPreview,
+  mode,
+  onModeChange,
 }: {
   value: string;
   onChange: (v: string) => void;
@@ -64,8 +66,19 @@ export const MarkdownEditor = ({
   extraTools?: Tool[];
   /** Defaults to the student renderer on the raw text. */
   renderPreview?: (text: string) => React.ReactNode;
+  /** Controlled Write/Preview mode: the host then owns the switch (e.g. in its menu) and the built-in one is hidden. */
+  mode?: 'edit' | 'preview';
+  onModeChange?: (m: 'edit' | 'preview') => void;
 }) => {
-  const [tab, setTab] = useState<'edit' | 'preview'>('edit');
+  const [innerTab, setInnerTab] = useState<'edit' | 'preview'>('edit');
+  const controlled = mode !== undefined && !!onModeChange;
+  const tab = controlled ? mode : innerTab;
+  const onModeChangeRef = useRef(onModeChange);
+  onModeChangeRef.current = onModeChange;
+  const setTab = useCallback((m: 'edit' | 'preview') => {
+    if (onModeChangeRef.current) onModeChangeRef.current(m);
+    else setInnerTab(m);
+  }, []);
   // Selection and the latest value live in refs: reading them must never cost a
   // render, and the toolbar callbacks below stay identity-stable so the bar
   // (a dozen icons) is not re-rendered on every keystroke.
@@ -77,6 +90,10 @@ export const MarkdownEditor = ({
   // Set only for the render right after a toolbar insert, to move the caret.
   const [forceSel, setForceSel] = useState<Sel | null>(null);
   const inputRef = useRef<TextInput>(null);
+  // Coming back from Preview: the caret returns to where it was.
+  useEffect(() => {
+    if (tab === 'edit') setForceSel({ ...selRef.current });
+  }, [tab]);
   const keyboardOpen = useEditorKeyboardOpen();
 
   const past = useRef<string[]>([]);
@@ -163,7 +180,7 @@ export const MarkdownEditor = ({
   return (
     <View style={{ flex: 1, gap: 10 }}>
       {/* While typing, the mode switch gives its row to the text. */}
-      {keyboardOpen && tab === 'edit' ? null : (
+      {controlled || (keyboardOpen && tab === 'edit') ? null : (
         <Segmented
           value={tab}
           onChange={(t) => {
@@ -202,6 +219,7 @@ export const MarkdownEditor = ({
           autoCapitalize="sentences"
         />
 
+        {keyboardOpen ? (
         <Toolbar
           groups={groups}
           canUndo={hist.undo}
@@ -212,6 +230,7 @@ export const MarkdownEditor = ({
           onApply={apply}
           onPreview={showPreview}
         />
+        ) : null}
       </View>
 
       {tab === 'preview' ? (
