@@ -165,7 +165,7 @@ export const ManageNotesSheet = ({
     <EditorFrame
       kicker="Edit notes"
       title={topicTitle}
-      subtitle={typing ? undefined : `${text.length} chars · ${text.split('\n').length} lines`}
+      subtitle={`${text.length} chars · ${text.split('\n').length} lines`}
       dirty={dirty}
       busy={busy}
       onClose={leave}

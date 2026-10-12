@@ -169,7 +169,7 @@ export const EditorFrame = ({
 
   return (
     <View style={s.frame}>
-      <View style={[s.header, keyboardOpen && s.headerCompact]}>
+      <View style={[s.header, keyboardOpen && !fillBody && s.headerCompact]}>
         <TouchableOpacity
           onPress={requestClose}
           hitSlop={10}
@@ -183,7 +183,7 @@ export const EditorFrame = ({
           <Text style={s.title} numberOfLines={1}>
             {title}
           </Text>
-          {subtitle && !keyboardOpen ? (
+          {subtitle && (fillBody || !keyboardOpen) ? (
             <Text style={s.subtitle} numberOfLines={1}>
               {subtitle}
             </Text>
@@ -434,7 +434,8 @@ export const EditorNote = ({ children }: { children: React.ReactNode }) => (
 );
 
 const s = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: COLORS.background },
+  // The top inset (status bar) is painted card-white so it reads as one piece with the header.
+  safe: { flex: 1, backgroundColor: COLORS.card },
   frame: { flex: 1, backgroundColor: COLORS.background },
   header: {
     flexDirection: 'row',
