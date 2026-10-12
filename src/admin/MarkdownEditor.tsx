@@ -82,7 +82,7 @@ export const MarkdownEditor = ({
   // Selection and the latest value live in refs: reading them must never cost a
   // render, and the toolbar callbacks below stay identity-stable so the bar
   // (a dozen icons) is not re-rendered on every keystroke.
-  const selRef = useRef<Sel>({ start: value.length, end: value.length });
+  const selRef = useRef<Sel>({ start: 0, end: 0 });
   const valueRef = useRef(value);
   valueRef.current = value;
   const onChangeRef = useRef(onChange);
@@ -91,7 +91,13 @@ export const MarkdownEditor = ({
   const [forceSel, setForceSel] = useState<Sel | null>(null);
   const inputRef = useRef<TextInput>(null);
   // Coming back from Preview: the caret returns to where it was.
+  const mounted = useRef(false);
   useEffect(() => {
+    // Not on first open: the text starts at the top with the caret at 0, instead of jumping to the end.
+    if (!mounted.current) {
+      mounted.current = true;
+      return;
+    }
     if (tab === 'edit') setForceSel({ ...selRef.current });
   }, [tab]);
   const keyboardOpen = useEditorKeyboardOpen();
@@ -338,6 +344,7 @@ const s = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 6,
     paddingTop: 4,
+    paddingBottom: 24,
     fontFamily: FONTS.body,
     fontSize: 16,
     lineHeight: 26,
