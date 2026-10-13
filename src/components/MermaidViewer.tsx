@@ -232,12 +232,16 @@ export const MermaidViewer: React.FC<MermaidViewerProps> = ({
         var clone = svg.cloneNode(true);
         clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
         clone.setAttribute('xmlns:xlink', 'http://www.w3.org/1999/xlink');
-        clone.setAttribute('width', w);
-        clone.setAttribute('height', h);
         clone.style.cssText = '';
         // The diagram is vector, so scale it up to a large fixed size (long side
         // 4096 px, area capped) instead of its small on-screen size: sharp text.
         var k = Math.min(4096 / Math.max(w, h), Math.sqrt(16000000 / (w * h)));
+        // Give the SVG itself the big size (with a viewBox so it scales), so the
+        // browser draws it large from the start instead of stretching a small bitmap.
+        if (!clone.getAttribute('viewBox')) clone.setAttribute('viewBox', '0 0 ' + w + ' ' + h);
+        clone.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+        clone.setAttribute('width', Math.round(w * k));
+        clone.setAttribute('height', Math.round(h * k));
         var canvas = document.createElement('canvas');
         canvas.width = Math.round(w * k); canvas.height = Math.round(h * k);
         var ctx = canvas.getContext('2d');
