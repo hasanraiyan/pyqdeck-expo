@@ -6,10 +6,14 @@ import {
   TouchableOpacity,
   StyleSheet,
   StatusBar,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { WebView } from './WebViewCompat';
+import { WebView, WebViewMessageEvent } from './WebViewCompat';
 import * as Clipboard from 'expo-clipboard';
+import * as FileSystem from 'expo-file-system/legacy';
+import * as Sharing from 'expo-sharing';
 import * as Haptics from 'expo-haptics';
 import { Feather } from '@expo/vector-icons';
 import { COLORS, FONTS } from '../theme/colors';
@@ -33,12 +37,53 @@ export const MermaidViewer: React.FC<MermaidViewerProps> = ({
 }) => {
   const insets = useSafeAreaInsets();
   const [copied, setCopied] = React.useState(false);
+  const [sharing, setSharing] = React.useState(false);
+  const webRef = React.useRef<any>(null);
 
   const handleCopy = async () => {
     await Clipboard.setStringAsync(code);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  // Asks the page to draw its diagram onto a canvas; the PNG comes back in onMessage.
+  const handleShare = () => {
+    if (sharing) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setSharing(true);
+    webRef.current?.injectJavaScript('window.__exportPng && window.__exportPng(); true;');
+    // Never leave the button stuck if the page does not answer.
+    setTimeout(() => setSharing(false), 15000);
+  };
+
+  const handleMessage = async (event: WebViewMessageEvent) => {
+    let msg: { type?: string; data?: string } | null = null;
+    try {
+      msg = JSON.parse(event.nativeEvent.data);
+    } catch {
+      return;
+    }
+    if (msg?.type === 'png-error') {
+      setSharing(false);
+      Alert.alert('Could not share', 'This diagram could not be turned into an image.');
+      return;
+    }
+    if (msg?.type !== 'png' || !msg.data) return;
+    try {
+      const safeName = (title || 'diagram').replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '').slice(0, 40) || 'diagram';
+      const uri = `${FileSystem.cacheDirectory}${safeName}-${Date.now()}.png`;
+      await FileSystem.writeAsStringAsync(uri, msg.data, { encoding: FileSystem.EncodingType.Base64 });
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(uri, { mimeType: 'image/png', dialogTitle: title || 'Diagram' });
+      } else {
+        Alert.alert('Sharing not available', 'This device cannot share files.');
+      }
+    } catch {
+      Alert.alert('Could not share', 'Something went wrong while sharing the image.');
+    } finally {
+      setSharing(false);
+    }
   };
 
   // Pure HTML rendering the pre-rendered SVG with pinch-to-zoom and pan enabled
@@ -152,6 +197,35 @@ export const MermaidViewer: React.FC<MermaidViewerProps> = ({
       last = e.touches.length === 1 ? { x: e.touches[0].clientX, y: e.touches[0].clientY } : null;
       if (e.touches.length === 0) settleSoon();
     });
+    window.__exportPng = function () {
+      try {
+        var svg = stage.querySelector('svg');
+        var vb = svg.viewBox && svg.viewBox.baseVal;
+        var w = vb && vb.width ? vb.width : parseFloat(svg.getAttribute('width')) || svg.getBoundingClientRect().width / s;
+        var h = vb && vb.height ? vb.height : parseFloat(svg.getAttribute('height')) || svg.getBoundingClientRect().height / s;
+        var clone = svg.cloneNode(true);
+        clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+        clone.setAttribute('xmlns:xlink', 'http://www.w3.org/1999/xlink');
+        clone.setAttribute('width', w);
+        clone.setAttribute('height', h);
+        clone.style.cssText = '';
+        var k = Math.min(3, 4096 / Math.max(w, h));
+        var canvas = document.createElement('canvas');
+        canvas.width = Math.round(w * k); canvas.height = Math.round(h * k);
+        var ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+        var img = new Image();
+        img.onload = function () {
+          try {
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            var url = canvas.toDataURL('image/png');
+            window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'png', data: url.split(',')[1] }));
+          } catch (e) { window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'png-error' })); }
+        };
+        img.onerror = function () { window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'png-error' })); };
+        img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(new XMLSerializer().serializeToString(clone));
+      } catch (e) { window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'png-error' })); }
+    };
     window.addEventListener('load', apply);
     window.addEventListener('resize', apply);
     apply();
@@ -196,6 +270,19 @@ export const MermaidViewer: React.FC<MermaidViewerProps> = ({
 
             <TouchableOpacity
               style={styles.headerBtn}
+              onPress={handleShare}
+              accessibilityLabel="Share diagram as image"
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              {sharing ? (
+                <ActivityIndicator size="small" color={COLORS.textMuted} />
+              ) : (
+                <Feather name="share-2" size={18} color={COLORS.textMuted} />
+              )}
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.headerBtn}
               onPress={handleCopy}
               accessibilityLabel="Copy diagram source"
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
@@ -212,6 +299,8 @@ export const MermaidViewer: React.FC<MermaidViewerProps> = ({
         {/* Fullscreen WebView area with bottom inset */}
         <View style={[styles.webViewWrapper, { paddingBottom: insets.bottom }]}>
           <WebView
+            ref={webRef}
+            onMessage={handleMessage}
             originWhitelist={['*']}
             source={{ html: htmlContent }}
             style={styles.webView}

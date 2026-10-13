@@ -2,6 +2,11 @@
 
 All notable changes to PYQDeck are listed here, newest first.
 
+## 1.12.4
+
+### Added
+- **Share a diagram as a picture.** Open any diagram or flowchart in the zoom view and tap the new share button at the top. The diagram is turned into an image that you can send to friends or save from the share menu.
+
 ## 1.12.3
 
 ### Changed
