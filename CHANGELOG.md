@@ -2,6 +2,11 @@
 
 All notable changes to PYQDeck are listed here, newest first.
 
+## 1.12.5
+
+### Changed
+- **Shared diagram pictures are sharper.** A diagram from a note is now saved as a large, clear picture on a white page, with the same handwriting fonts you see in the note, so the text is easy to read.
+
 ## 1.12.4
 
 ### Added
