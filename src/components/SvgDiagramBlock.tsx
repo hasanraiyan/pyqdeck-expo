@@ -76,7 +76,7 @@ export const SvgDiagramBlock: React.FC<SvgDiagramBlockProps> = React.memo(
       () =>
         exporting
           ? nativeXml.replace(
-              /(<svg[^>]*>)/i,
+              /(<svg\b[^>]*>)/i,
               '$1<rect x="-20000" y="-20000" width="40000" height="40000" fill="#FFFFFF"/>'
             )
           : '',
