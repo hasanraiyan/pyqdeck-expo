@@ -89,6 +89,34 @@ find "$base" -type f -printf '%s %P\n' | sort -rn | head -25 |
 echo '```'
 echo
 
+# --- res/ and dex detail ---------------------------------------------------------
+if [ -d "$base/res" ]; then
+  echo "### res/ by folder (uncompressed)"
+  echo
+  echo '```'
+  du -b --max-depth=1 "$base/res" | sort -rn | grep -v "$base/res$" | head -12 |
+    awk '{ n=$2; sub(".*/res/","",n); printf "%8.2f MB  %s\n", $1 / 1048576, n }'
+  echo '```'
+  echo
+fi
+
+echo "### dex by package (R8 output, approx. method count)"
+echo
+APKANALYZER="$(command -v apkanalyzer || ls "${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/nonexistent}}"/cmdline-tools/*/bin/apkanalyzer 2>/dev/null | head -n 1 || true)"
+if [ -n "$APKANALYZER" ]; then
+  bt build-apks --bundle="$AAB" --output="$WORK/uni.apks" --mode=universal --overwrite >/dev/null
+  unzip -q -o "$WORK/uni.apks" universal.apk -d "$WORK"
+  MAP="$(ls android/app/build/outputs/mapping/release/mapping.txt 2>/dev/null || true)"
+  # packages: P/C/M/F  state  #defined  refs  size ; keep depth-3 package rows
+  "$APKANALYZER" dex packages ${MAP:+--proguard-mappings "$MAP"} --defined-only "$WORK/universal.apk" 2>/dev/null |
+    awk -F'\t' '$1 == "P" { n = split($6, a, "."); if (n <= 3) print $3 "\t" $6 }' |
+    sort -rn | head -25 |
+    awk -F'\t' '{ printf "%8d methods  %s\n", $1, $2 }' | sed '1i ```' | sed '$a ```'
+else
+  echo "_apkanalyzer not found; skipped._"
+fi
+echo
+
 # --- Known heavy dependencies --------------------------------------------------
 echo "### Heavy dependency check"
 echo
