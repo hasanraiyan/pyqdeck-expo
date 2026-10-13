@@ -223,7 +223,7 @@ export const MermaidViewer: React.FC<MermaidViewerProps> = ({
                 {title || 'DIAGRAM VIEWER'}
               </Text>
               <Text style={styles.headerSubtitle} numberOfLines={1}>
-                {subtitle || 'Pinch or double-tap to zoom'}
+                {subtitle || 'Pinch, double-tap or use +/− to zoom'}
               </Text>
             </View>
 

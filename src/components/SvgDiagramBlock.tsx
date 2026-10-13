@@ -121,7 +121,7 @@ export const SvgDiagramBlock: React.FC<SvgDiagramBlockProps> = React.memo(
             code={xml}
             svg={xml}
             title={displayTitle}
-            subtitle="Pinch or double-tap to zoom"
+            subtitle="Pinch, double-tap or use +/− to zoom"
             onClose={() => setViewerOpen(false)}
           />
         )}
