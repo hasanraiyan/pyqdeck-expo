@@ -1,27 +1,3 @@
-// @ts-ignore - mathjax-full internal imports
-import { mathjax } from 'mathjax-full/js/mathjax.js';
-// @ts-ignore
-import { TeX } from 'mathjax-full/js/input/tex.js';
-// @ts-ignore
-import { SVG } from 'mathjax-full/js/output/svg.js';
-// @ts-ignore
-import { liteAdaptor } from 'mathjax-full/js/adaptors/liteAdaptor.js';
-// @ts-ignore
-import { RegisterHTMLHandler } from 'mathjax-full/js/handlers/html.js';
-
-// Import only essential math packages to minimize JS bundle size (avoids heavy chemistry/physics/buss trees)
-import 'mathjax-full/js/input/tex/ams/AmsConfiguration.js';
-import 'mathjax-full/js/input/tex/amscd/AmsCdConfiguration.js';
-import 'mathjax-full/js/input/tex/newcommand/NewcommandConfiguration.js';
-import 'mathjax-full/js/input/tex/mathtools/MathtoolsConfiguration.js';
-import 'mathjax-full/js/input/tex/boldsymbol/BoldsymbolConfiguration.js';
-import 'mathjax-full/js/input/tex/cases/CasesConfiguration.js';
-import 'mathjax-full/js/input/tex/color/ColorConfiguration.js';
-import 'mathjax-full/js/input/tex/extpfeil/ExtpfeilConfiguration.js';
-import 'mathjax-full/js/input/tex/noerrors/NoErrorsConfiguration.js';
-import 'mathjax-full/js/input/tex/noundefined/NoUndefinedConfiguration.js';
-import 'mathjax-full/js/input/tex/unicode/UnicodeConfiguration.js';
-
 const MATH_PACKAGES = [
   'base',
   'ams',
@@ -56,6 +32,28 @@ let mathDocument: any = null;
 
 function ensureInitialized() {
   if (adaptor && mathDocument) return;
+
+  // mathjax-full is ~2.3 MB of source, so it is required here on first use
+  // instead of imported at the top, which would run all of it at app launch.
+  // Only the essential packages are pulled in (no chemistry/physics/bussproofs).
+  /* eslint-disable @typescript-eslint/no-require-imports */
+  const { mathjax } = require('mathjax-full/js/mathjax.js');
+  const { TeX } = require('mathjax-full/js/input/tex.js');
+  const { SVG } = require('mathjax-full/js/output/svg.js');
+  const { liteAdaptor } = require('mathjax-full/js/adaptors/liteAdaptor.js');
+  const { RegisterHTMLHandler } = require('mathjax-full/js/handlers/html.js');
+  require('mathjax-full/js/input/tex/ams/AmsConfiguration.js');
+  require('mathjax-full/js/input/tex/amscd/AmsCdConfiguration.js');
+  require('mathjax-full/js/input/tex/newcommand/NewcommandConfiguration.js');
+  require('mathjax-full/js/input/tex/mathtools/MathtoolsConfiguration.js');
+  require('mathjax-full/js/input/tex/boldsymbol/BoldsymbolConfiguration.js');
+  require('mathjax-full/js/input/tex/cases/CasesConfiguration.js');
+  require('mathjax-full/js/input/tex/color/ColorConfiguration.js');
+  require('mathjax-full/js/input/tex/extpfeil/ExtpfeilConfiguration.js');
+  require('mathjax-full/js/input/tex/noerrors/NoErrorsConfiguration.js');
+  require('mathjax-full/js/input/tex/noundefined/NoUndefinedConfiguration.js');
+  require('mathjax-full/js/input/tex/unicode/UnicodeConfiguration.js');
+  /* eslint-enable @typescript-eslint/no-require-imports */
 
   adaptor = liteAdaptor();
   RegisterHTMLHandler(adaptor);
