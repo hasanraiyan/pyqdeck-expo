@@ -185,6 +185,24 @@ jobs:
         # build goes no further. See scripts/manifestPermissions.mjs.
         run: node scripts/check-manifest-permissions.mjs
 
+      - name: 📊 Analyze AAB size
+        # Per-device Play download estimate + what the bytes are made of, in the
+        # run summary. Informational: never blocks a release.
+        if: github.event.inputs.build_type != 'apk'
+        continue-on-error: true
+        run: |
+          chmod +x scripts/analyze-aab.sh
+          scripts/analyze-aab.sh android/app/build/outputs/bundle/release/app-release.aab \
+            | tee aab-analysis.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: 📤 Upload AAB analysis report
+        if: github.event.inputs.build_type != 'apk' && hashFiles('aab-analysis.md') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: pyqdeck-v${{ github.run_number }}-aab-analysis
+          path: aab-analysis.md
+          retention-days: 14
+
       - name: 📤 Upload Release APK
         if: github.event.inputs.build_type != 'aab'
         uses: actions/upload-artifact@v4
