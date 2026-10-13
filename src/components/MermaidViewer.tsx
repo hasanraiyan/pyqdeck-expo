@@ -7,6 +7,8 @@ import {
   StyleSheet,
   StatusBar,
   Alert,
+  Animated,
+  Easing,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { WebView, WebViewMessageEvent } from './WebViewCompat';
@@ -18,11 +20,11 @@ import { Feather } from '@expo/vector-icons';
 import { COLORS, FONTS } from '../theme/colors';
 
 const SHARE_STEPS = [
-  'Getting the diagram ready',
-  'Drawing the image',
-  'Making it sharp',
-  'Saving the picture',
-  'Opening share menu',
+  'Getting your diagram ready…',
+  'Drawing it on a clean page…',
+  'Making the text sharp…',
+  'Saving the picture…',
+  'Opening the share menu…',
 ];
 
 export interface MermaidViewerProps {
@@ -47,6 +49,15 @@ export const MermaidViewer: React.FC<MermaidViewerProps> = ({
   // 0 = idle, 1..SHARE_STEPS.length = the step the export is on.
   const [shareStep, setShareStep] = React.useState(0);
   const sharing = shareStep > 0;
+  const barFill = React.useRef(new Animated.Value(0)).current;
+  React.useEffect(() => {
+    Animated.timing(barFill, {
+      toValue: shareStep / SHARE_STEPS.length,
+      duration: shareStep === 0 ? 0 : 450,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: false,
+    }).start();
+  }, [shareStep, barFill]);
   const webRef = React.useRef<any>(null);
 
   const handleCopy = async () => {
@@ -319,20 +330,29 @@ export const MermaidViewer: React.FC<MermaidViewerProps> = ({
         <View style={[styles.webViewWrapper, { paddingBottom: insets.bottom }]}>
           {sharing && (
             <View style={styles.progressCard} pointerEvents="none">
-              <Text style={styles.progressText}>
-                Step {shareStep} of {SHARE_STEPS.length} · {SHARE_STEPS[shareStep - 1]}
-              </Text>
+              <View style={styles.progressRow}>
+                <View style={styles.progressIcon}>
+                  <Feather name="image" size={18} color={COLORS.secondary} />
+                </View>
+                <View style={styles.progressTextWrap}>
+                  <Text style={styles.progressTitle}>Creating your picture</Text>
+                  <Text style={styles.progressText} numberOfLines={1}>
+                    {SHARE_STEPS[shareStep - 1]}
+                  </Text>
+                </View>
+              </View>
               <View style={styles.progressTrack}>
-                {SHARE_STEPS.map((label, i) => (
-                  <View
-                    key={label}
-                    style={[
-                      styles.progressSeg,
-                      i < shareStep - 1 && styles.progressSegDone,
-                      i === shareStep - 1 && styles.progressSegActive,
-                    ]}
-                  />
-                ))}
+                <Animated.View
+                  style={[
+                    styles.progressFill,
+                    {
+                      width: barFill.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: ['0%', '100%'],
+                      }),
+                    },
+                  ]}
+                />
               </View>
             </View>
           )}
@@ -402,40 +422,60 @@ const styles = StyleSheet.create({
   },
   progressCard: {
     position: 'absolute',
-    top: 10,
+    top: 12,
     left: 16,
     right: 16,
     zIndex: 10,
-    elevation: 6,
+    elevation: 8,
     backgroundColor: COLORS.card,
-    borderRadius: 12,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: COLORS.border,
     paddingHorizontal: 14,
-    paddingVertical: 10,
-    gap: 8,
+    paddingTop: 12,
+    paddingBottom: 14,
+    gap: 12,
+    shadowColor: '#000',
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+  },
+  progressRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  progressIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.background,
+  },
+  progressTextWrap: {
+    flex: 1,
+  },
+  progressTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: COLORS.text,
   },
   progressText: {
     fontSize: 12,
-    fontWeight: '600',
-    color: COLORS.text,
+    color: COLORS.textMuted,
+    marginTop: 2,
   },
   progressTrack: {
-    flexDirection: 'row',
-    gap: 4,
-  },
-  progressSeg: {
-    flex: 1,
     height: 6,
     borderRadius: 3,
     backgroundColor: COLORS.border,
+    overflow: 'hidden',
   },
-  progressSegDone: {
+  progressFill: {
+    height: '100%',
+    borderRadius: 3,
     backgroundColor: COLORS.secondary,
-  },
-  progressSegActive: {
-    backgroundColor: COLORS.secondary,
-    opacity: 0.55,
   },
   webView: {
     flex: 1,
