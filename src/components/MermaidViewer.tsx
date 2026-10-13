@@ -15,6 +15,8 @@ import { WebView, WebViewMessageEvent } from './WebViewCompat';
 import * as Clipboard from 'expo-clipboard';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
+import { usePreventScreenCapture } from '../utils/screenCapture';
+import { useAdminAccess } from '../admin/useAdminAccess';
 import * as Haptics from 'expo-haptics';
 import { Feather } from '@expo/vector-icons';
 import { COLORS, FONTS } from '../theme/colors';
@@ -39,6 +41,12 @@ export interface MermaidViewerProps {
   exportPng?: () => Promise<string>;
 }
 
+// Blocks screenshots and screen recordings for as long as it is on screen.
+const BlockScreenshots: React.FC = () => {
+  usePreventScreenCapture('diagram-viewer');
+  return null;
+};
+
 export const MermaidViewer: React.FC<MermaidViewerProps> = ({
   visible,
   code,
@@ -49,6 +57,8 @@ export const MermaidViewer: React.FC<MermaidViewerProps> = ({
   exportPng,
 }) => {
   const insets = useSafeAreaInsets();
+  // Only admins can turn a diagram into a picture and share it.
+  const { isAdmin } = useAdminAccess();
   const [copied, setCopied] = React.useState(false);
   // 0 = idle, 1..SHARE_STEPS.length = the step the export is on.
   const [shareStep, setShareStep] = React.useState(0);
@@ -302,6 +312,7 @@ export const MermaidViewer: React.FC<MermaidViewerProps> = ({
       statusBarTranslucent
       onRequestClose={onClose}
     >
+      <BlockScreenshots />
       <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
       <View style={styles.container}>
         {/* Top safe-area header with consistent styling */}
@@ -325,6 +336,7 @@ export const MermaidViewer: React.FC<MermaidViewerProps> = ({
               </Text>
             </View>
 
+            {isAdmin && (
             <TouchableOpacity
               style={styles.headerBtn}
               onPress={handleShare}
@@ -337,6 +349,7 @@ export const MermaidViewer: React.FC<MermaidViewerProps> = ({
                 color={sharing ? COLORS.border : COLORS.textMuted}
               />
             </TouchableOpacity>
+            )}
 
             <TouchableOpacity
               style={styles.headerBtn}

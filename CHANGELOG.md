@@ -6,6 +6,8 @@ All notable changes to PYQDeck are listed here, newest first.
 
 ### Changed
 - **Shared diagram pictures are sharper.** A diagram from a note is now saved as a large, clear picture on a white page, with the same handwriting fonts you see in the note, so the text is easy to read.
+- **Sharing a diagram picture is for admins only.** Other students no longer see the share button.
+- **Screenshots are blocked in the diagram zoom view.**
 
 ## 1.12.4
 
