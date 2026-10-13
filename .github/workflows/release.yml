@@ -72,22 +72,24 @@ jobs:
           mkdir -p ~/.gradle
           echo "org.gradle.jvmargs=-Xmx6g -XX:MaxMetaspaceSize=1g -XX:+UseParallelGC" >> ~/.gradle/gradle.properties
 
-      - name: 🔢 Bump Android versionCode (release builds only)
+      - name: 🔢 Bump Android versionCode (Play publishes only)
         id: version
         env:
           BUILD_TYPE: ${{ github.event.inputs.build_type }}
+          PLAY_TRACK: ${{ github.event.inputs.play_track }}
         run: |
           # versionCode lives in app.json (git is the source of truth), not the
           # CI run number -- run_number kept climbing on every test-only apk
           # dispatch too, so real Play Store releases ended up with huge gaps
           # between their versionCodes even though most builds never shipped.
-          # A plain 'apk' dispatch is for local/device testing only (Play
-          # doesn't see it and doesn't care about its versionCode), so it
-          # reuses the current committed value instead of consuming a new one.
-          if [ "$BUILD_TYPE" = "apk" ]; then
-            export IS_RELEASE=false
-          else
+          # Only a run that actually publishes to Google Play (an AAB plus a
+          # play_track other than 'none') consumes a new versionCode. Every
+          # other run (apk, aab/both without publishing) is for testing or
+          # size analysis and reuses the current committed value.
+          if [ "$BUILD_TYPE" != "apk" ] && [ "$PLAY_TRACK" != "none" ]; then
             export IS_RELEASE=true
+          else
+            export IS_RELEASE=false
           fi
           node -e "
             const fs = require('fs');
