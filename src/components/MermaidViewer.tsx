@@ -7,7 +7,6 @@ import {
   StyleSheet,
   StatusBar,
   Alert,
-  ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { WebView, WebViewMessageEvent } from './WebViewCompat';
@@ -17,6 +16,14 @@ import * as Sharing from 'expo-sharing';
 import * as Haptics from 'expo-haptics';
 import { Feather } from '@expo/vector-icons';
 import { COLORS, FONTS } from '../theme/colors';
+
+const SHARE_STEPS = [
+  'Getting the diagram ready',
+  'Drawing the image',
+  'Making it sharp',
+  'Saving the picture',
+  'Opening share menu',
+];
 
 export interface MermaidViewerProps {
   visible: boolean;
@@ -37,7 +44,9 @@ export const MermaidViewer: React.FC<MermaidViewerProps> = ({
 }) => {
   const insets = useSafeAreaInsets();
   const [copied, setCopied] = React.useState(false);
-  const [sharing, setSharing] = React.useState(false);
+  // 0 = idle, 1..SHARE_STEPS.length = the step the export is on.
+  const [shareStep, setShareStep] = React.useState(0);
+  const sharing = shareStep > 0;
   const webRef = React.useRef<any>(null);
 
   const handleCopy = async () => {
@@ -51,10 +60,10 @@ export const MermaidViewer: React.FC<MermaidViewerProps> = ({
   const handleShare = () => {
     if (sharing) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setSharing(true);
+    setShareStep(1);
     webRef.current?.injectJavaScript('window.__exportPng && window.__exportPng(); true;');
     // Never leave the button stuck if the page does not answer.
-    setTimeout(() => setSharing(false), 15000);
+    setTimeout(() => setShareStep(0), 20000);
   };
 
   const handleMessage = async (event: WebViewMessageEvent) => {
@@ -64,16 +73,22 @@ export const MermaidViewer: React.FC<MermaidViewerProps> = ({
     } catch {
       return;
     }
+    if (msg?.type === 'progress') {
+      setShareStep((cur) => (cur > 0 ? Math.max(cur, msg?.data === 'encoding' ? 3 : 2) : cur));
+      return;
+    }
     if (msg?.type === 'png-error') {
-      setSharing(false);
+      setShareStep(0);
       Alert.alert('Could not share', 'This diagram could not be turned into an image.');
       return;
     }
     if (msg?.type !== 'png' || !msg.data) return;
     try {
+      setShareStep(4);
       const safeName = (title || 'diagram').replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '').slice(0, 40) || 'diagram';
       const uri = `${FileSystem.cacheDirectory}${safeName}-${Date.now()}.png`;
       await FileSystem.writeAsStringAsync(uri, msg.data, { encoding: FileSystem.EncodingType.Base64 });
+      setShareStep(5);
       if (await Sharing.isAvailableAsync()) {
         await Sharing.shareAsync(uri, { mimeType: 'image/png', dialogTitle: title || 'Diagram' });
       } else {
@@ -82,7 +97,7 @@ export const MermaidViewer: React.FC<MermaidViewerProps> = ({
     } catch {
       Alert.alert('Could not share', 'Something went wrong while sharing the image.');
     } finally {
-      setSharing(false);
+      setShareStep(0);
     }
   };
 
@@ -219,7 +234,9 @@ export const MermaidViewer: React.FC<MermaidViewerProps> = ({
         var img = new Image();
         img.onload = function () {
           try {
+            window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'progress', data: 'drawing' }));
             ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'progress', data: 'encoding' }));
             var url = canvas.toDataURL('image/png');
             window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'png', data: url.split(',')[1] }));
           } catch (e) { window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'png-error' })); }
@@ -276,11 +293,11 @@ export const MermaidViewer: React.FC<MermaidViewerProps> = ({
               accessibilityLabel="Share diagram as image"
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
-              {sharing ? (
-                <ActivityIndicator size="small" color={COLORS.textMuted} />
-              ) : (
-                <Feather name="share-2" size={18} color={COLORS.textMuted} />
-              )}
+              <Feather
+                name="share-2"
+                size={18}
+                color={sharing ? COLORS.border : COLORS.textMuted}
+              />
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -300,6 +317,25 @@ export const MermaidViewer: React.FC<MermaidViewerProps> = ({
 
         {/* Fullscreen WebView area with bottom inset */}
         <View style={[styles.webViewWrapper, { paddingBottom: insets.bottom }]}>
+          {sharing && (
+            <View style={styles.progressCard} pointerEvents="none">
+              <Text style={styles.progressText}>
+                Step {shareStep} of {SHARE_STEPS.length} · {SHARE_STEPS[shareStep - 1]}
+              </Text>
+              <View style={styles.progressTrack}>
+                {SHARE_STEPS.map((label, i) => (
+                  <View
+                    key={label}
+                    style={[
+                      styles.progressSeg,
+                      i < shareStep - 1 && styles.progressSegDone,
+                      i === shareStep - 1 && styles.progressSegActive,
+                    ]}
+                  />
+                ))}
+              </View>
+            </View>
+          )}
           <WebView
             ref={webRef}
             onMessage={handleMessage}
@@ -363,6 +399,43 @@ const styles = StyleSheet.create({
   webViewWrapper: {
     flex: 1,
     backgroundColor: COLORS.background,
+  },
+  progressCard: {
+    position: 'absolute',
+    top: 10,
+    left: 16,
+    right: 16,
+    zIndex: 10,
+    elevation: 6,
+    backgroundColor: COLORS.card,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    gap: 8,
+  },
+  progressText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: COLORS.text,
+  },
+  progressTrack: {
+    flexDirection: 'row',
+    gap: 4,
+  },
+  progressSeg: {
+    flex: 1,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: COLORS.border,
+  },
+  progressSegDone: {
+    backgroundColor: COLORS.secondary,
+  },
+  progressSegActive: {
+    backgroundColor: COLORS.secondary,
+    opacity: 0.55,
   },
   webView: {
     flex: 1,
