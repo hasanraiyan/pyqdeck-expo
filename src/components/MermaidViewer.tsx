@@ -76,6 +76,17 @@ export const MermaidViewer: React.FC<MermaidViewerProps> = ({
        Chromium re-rasterizes crisply at the final scale, filters back on. */
     #stage.moving { will-change: transform; }
     #stage.moving [filter] { filter: none !important; }
+    #zoomctl {
+      position: fixed; right: 12px; bottom: 16px; z-index: 10;
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    #zoomctl button {
+      width: 44px; height: 44px; border-radius: 22px; border: 1px solid ${COLORS.border};
+      background: ${COLORS.card}; color: ${COLORS.text};
+      font: 600 22px/1 sans-serif; padding: 0; opacity: 0.92;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.18);
+    }
+    #zoomctl button:active { opacity: 1; background: ${COLORS.border}; }
     svg { text-rendering: geometricPrecision; shape-rendering: geometricPrecision; }
     #stage svg {
       display: block;
@@ -87,6 +98,11 @@ export const MermaidViewer: React.FC<MermaidViewerProps> = ({
 </head>
 <body>
   <div id="stage">${safeSvg}</div>
+  <div id="zoomctl">
+    <button type="button" id="zin" aria-label="Zoom in">+</button>
+    <button type="button" id="zout" aria-label="Zoom out">&minus;</button>
+    <button type="button" id="zreset" aria-label="Reset zoom" style="font-size:15px">1x</button>
+  </div>
   <script>
   (function () {
     var stage = document.getElementById('stage');
@@ -136,7 +152,7 @@ export const MermaidViewer: React.FC<MermaidViewerProps> = ({
       }
     }, { passive: false });
     document.addEventListener('touchmove', function (e) {
-      e.preventDefault();
+      e.preventDefault(); // also keeps taps on the zoom buttons from scrolling
       if (e.touches.length === 2) {
         var cx = (e.touches[0].clientX + e.touches[1].clientX) / 2;
         var cy = (e.touches[0].clientY + e.touches[1].clientY) / 2;
@@ -152,6 +168,23 @@ export const MermaidViewer: React.FC<MermaidViewerProps> = ({
       last = e.touches.length === 1 ? { x: e.touches[0].clientX, y: e.touches[0].clientY } : null;
       if (e.touches.length === 0) settleSoon();
     });
+    // Manual zoom buttons: step around the screen centre. Touches on them must not
+    // reach the document gesture handlers (pan / double-tap zoom).
+    function step(f) {
+      moving();
+      zoomAt(vw() / 2, vh() / 2, s * f);
+      settleSoon();
+    }
+    function bind(id, fn) {
+      var el = document.getElementById(id);
+      ['touchstart', 'touchmove', 'touchend'].forEach(function (t) {
+        el.addEventListener(t, function (e) { e.stopPropagation(); }, { passive: true });
+      });
+      el.addEventListener('click', fn);
+    }
+    bind('zin', function () { step(1.5); });
+    bind('zout', function () { step(1 / 1.5); });
+    bind('zreset', function () { moving(); s = 1; x = 0; y = 0; apply(); settleSoon(); });
     window.addEventListener('load', apply);
     window.addEventListener('resize', apply);
     apply();
