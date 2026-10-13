@@ -2,6 +2,18 @@
 
 All notable changes to PYQDeck are listed here, newest first.
 
+## 1.12.5
+
+### Changed
+- **Shared diagram pictures are sharper.** A diagram from a note is now saved as a large, clear picture on a white page, with the same handwriting fonts you see in the note, so the text is easy to read.
+- **Sharing a diagram picture is for admins only.** Other students no longer see the share button.
+- **Screenshots are blocked in the diagram zoom view.**
+
+## 1.12.4
+
+### Added
+- **Share a diagram as a picture.** Open any diagram or flowchart in the zoom view and tap the new share button at the top. The diagram is turned into an image that you can send to friends or save from the share menu. While it is being made, a progress bar with a short message shows what is happening.
+
 ## 1.12.3
 
 ### Changed
