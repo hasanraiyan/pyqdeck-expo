@@ -5,6 +5,7 @@ import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import * as WebBrowser from 'expo-web-browser';
 import { NativeContentRenderer } from '../components/NativeContentRenderer';
+import { prefetchTopicNotes } from '../api/prefetchNotes';
 import { FaqAccordion } from '../components/FaqAccordion';
 import { extractFaqsFromNotes } from '../utils/faqParser';
 import { COLORS, FONTS } from '../theme/colors';
@@ -358,6 +359,13 @@ export const TopicNotesScreen = () => {
     localNotesList && currentIndex >= 0 && currentIndex < localNotesList.length - 1
       ? localNotesList[currentIndex + 1]
       : null;
+
+  // Once this note is on screen, quietly load the next topic's note, so Next
+  // opens instantly instead of waiting on the network.
+  useEffect(() => {
+    if (loading || !notes) return;
+    prefetchTopicNotes(subjectId, [nextEntry?.id]);
+  }, [loading, notes, subjectId, nextEntry?.id]);
 
   const goToTopic = (entry: NotesListEntry) => {
     scrollRef.current?.scrollTo({ y: 0, animated: false });

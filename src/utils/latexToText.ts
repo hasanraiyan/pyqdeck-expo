@@ -1,4 +1,13 @@
-import katex from 'katex';
+// katex is ~0.6 MB, so it is required on first use instead of imported at launch.
+let katexModule: any = null;
+function getKatex() {
+  if (!katexModule) {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const mod = require('katex');
+    katexModule = mod.default ?? mod;
+  }
+  return katexModule;
+}
 
 const SUPERSCRIPTS: Record<string, string> = {
   '0': '⁰', '1': '¹', '2': '²', '3': '³', '4': '⁴',
@@ -40,7 +49,7 @@ export function latexToUnicode(latex: string): string {
 
   try {
     // KaTeX parses LaTeX into standard MathML
-    const mathml = katex.renderToString(trimmed, {
+    const mathml: string = getKatex().renderToString(trimmed, {
       output: 'mathml',
       throwOnError: false,
     });

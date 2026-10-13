@@ -1,13 +1,24 @@
 import React, { useState, useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, StyleProp, ViewStyle } from 'react-native';
-// @ts-ignore
-import CodeHighlighter from 'react-native-code-highlighter';
-// @ts-ignore
-import { github } from 'react-syntax-highlighter/dist/esm/styles/hljs';
 import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
 import { Feather } from '@expo/vector-icons';
 import { COLORS, FONTS } from '../theme/colors';
+
+// highlight.js + refractor + every theme is ~2.7 MB of source, so it is required
+// the first time a code block is drawn instead of imported at app launch.
+let highlighter: { CodeHighlighter: any; github: any } | null = null;
+function getHighlighter() {
+  if (!highlighter) {
+    /* eslint-disable @typescript-eslint/no-require-imports */
+    highlighter = {
+      CodeHighlighter: require('react-native-code-highlighter').default,
+      github: require('react-syntax-highlighter/dist/esm/styles/hljs').github,
+    };
+    /* eslint-enable @typescript-eslint/no-require-imports */
+  }
+  return highlighter;
+}
 
 export interface NativeCodeBlockProps {
   code: string;
@@ -163,23 +174,33 @@ export const NativeCodeBlock: React.FC<NativeCodeBlockProps> = React.memo(
             </View>
           </ScrollView>
         ) : (
-          <CodeHighlighter
-            hljsStyle={github}
+          <HighlightedCode
+            code={code}
             language={cleanLang === 'code' ? 'text' : cleanLang}
-            textStyle={styles.codeText}
-            scrollViewProps={{
-              horizontal: true,
-              showsHorizontalScrollIndicator: false,
-              contentContainerStyle: styles.scrollContent,
-            }}
-          >
-            {code.trimEnd()}
-          </CodeHighlighter>
+          />
         )}
       </View>
     );
   }
 );
+
+const HighlightedCode: React.FC<{ code: string; language: string }> = ({ code, language }) => {
+  const { CodeHighlighter, github } = getHighlighter();
+  return (
+    <CodeHighlighter
+      hljsStyle={github}
+      language={language}
+      textStyle={styles.codeText}
+      scrollViewProps={{
+        horizontal: true,
+        showsHorizontalScrollIndicator: false,
+        contentContainerStyle: styles.scrollContent,
+      }}
+    >
+      {code.trimEnd()}
+    </CodeHighlighter>
+  );
+};
 
 const styles = StyleSheet.create({
   container: {
