@@ -7,6 +7,7 @@ import {
   ViewStyle,
   Animated,
   Easing,
+  PixelRatio,
 } from 'react-native';
 import { SvgXml } from 'react-native-svg';
 import * as Haptics from 'expo-haptics';
@@ -66,6 +67,48 @@ export const SvgDiagramBlock: React.FC<SvgDiagramBlockProps> = React.memo(
 
     const nativeXml = useMemo(() => sanitizeSvgForNative(xml), [xml]);
 
+    // Sharing as a picture: the same native drawing the note shows (so the
+    // handwriting fonts are right), drawn once more at ~3000 px wide on a white page.
+    const [exporting, setExporting] = useState(false);
+    const exportRef = useRef<any>(null);
+    const exportLaidOut = useRef<(() => void) | null>(null);
+    const exportXml = useMemo(
+      () =>
+        exporting
+          ? nativeXml.replace(
+              /(<svg[^>]*>)/i,
+              '$1<rect x="-20000" y="-20000" width="40000" height="40000" fill="#FFFFFF"/>'
+            )
+          : '',
+      [exporting, nativeXml]
+    );
+    const exportWidthDp = 3000 / PixelRatio.get();
+    const exportPng = () =>
+      new Promise<string>((resolve, reject) => {
+        const timeout = setTimeout(() => {
+          setExporting(false);
+          reject(new Error('export timeout'));
+        }, 20000);
+        exportLaidOut.current = () => {
+          // Give the native view a moment to draw its first frame.
+          setTimeout(() => {
+            const node = exportRef.current;
+            if (!node?.toDataURL) {
+              clearTimeout(timeout);
+              setExporting(false);
+              reject(new Error('no svg ref'));
+              return;
+            }
+            node.toDataURL((b64: string) => {
+              clearTimeout(timeout);
+              setExporting(false);
+              resolve(b64);
+            });
+          }, 250);
+        };
+        setExporting(true);
+      });
+
     useEffect(() => {
       if (!drawn) return;
       Animated.timing(reveal, {
@@ -114,12 +157,38 @@ export const SvgDiagramBlock: React.FC<SvgDiagramBlockProps> = React.memo(
           </View>
         </TouchableOpacity>
 
+        {exporting && (
+          <View
+            pointerEvents="none"
+            onLayout={() => {
+              exportLaidOut.current?.();
+              exportLaidOut.current = null;
+            }}
+            style={{
+              position: 'absolute',
+              left: 0,
+              top: 0,
+              width: exportWidthDp,
+              height: exportWidthDp / computedRatio,
+              opacity: 0,
+            }}
+          >
+            {React.createElement(SvgXml as any, {
+              ref: exportRef,
+              xml: exportXml,
+              width: '100%',
+              height: '100%',
+            })}
+          </View>
+        )}
+
         {/* Fullscreen Interactive Zoom/Pan Modal */}
         {viewerOpen && (
           <MermaidViewer
             visible={viewerOpen}
             code={xml}
             svg={xml}
+            exportPng={exportPng}
             title={displayTitle}
             subtitle="Pinch or double-tap to zoom"
             onClose={() => setViewerOpen(false)}

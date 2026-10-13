@@ -34,6 +34,9 @@ export interface MermaidViewerProps {
   title?: string;
   subtitle?: string;
   onClose: () => void;
+  // When given, the share button gets its PNG (base64) from here instead of
+  // drawing the SVG inside the web page. Used by note SVGs, which are drawn natively.
+  exportPng?: () => Promise<string>;
 }
 
 export const MermaidViewer: React.FC<MermaidViewerProps> = ({
@@ -43,6 +46,7 @@ export const MermaidViewer: React.FC<MermaidViewerProps> = ({
   title,
   subtitle,
   onClose,
+  exportPng,
 }) => {
   const insets = useSafeAreaInsets();
   const [copied, setCopied] = React.useState(false);
@@ -72,6 +76,21 @@ export const MermaidViewer: React.FC<MermaidViewerProps> = ({
     if (sharing) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setShareStep(1);
+    if (exportPng) {
+      setTimeout(() => setShareStep(0), 30000);
+      setTimeout(async () => {
+        try {
+          setShareStep(2);
+          const b64 = await exportPng();
+          setShareStep(3);
+          await saveAndShare(b64);
+        } catch {
+          setShareStep(0);
+          Alert.alert('Could not share', 'This diagram could not be turned into an image.');
+        }
+      }, 60);
+      return;
+    }
     webRef.current?.injectJavaScript('window.__exportPng && window.__exportPng(); true;');
     // Never leave the button stuck if the page does not answer.
     setTimeout(() => setShareStep(0), 20000);
@@ -94,11 +113,15 @@ export const MermaidViewer: React.FC<MermaidViewerProps> = ({
       return;
     }
     if (msg?.type !== 'png' || !msg.data) return;
+    await saveAndShare(msg.data);
+  };
+
+  const saveAndShare = async (base64: string) => {
     try {
       setShareStep(4);
       const safeName = (title || 'diagram').replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '').slice(0, 40) || 'diagram';
       const uri = `${FileSystem.cacheDirectory}${safeName}-${Date.now()}.png`;
-      await FileSystem.writeAsStringAsync(uri, msg.data, { encoding: FileSystem.EncodingType.Base64 });
+      await FileSystem.writeAsStringAsync(uri, base64, { encoding: FileSystem.EncodingType.Base64 });
       setShareStep(5);
       if (await Sharing.isAvailableAsync()) {
         await Sharing.shareAsync(uri, { mimeType: 'image/png', dialogTitle: title || 'Diagram' });
