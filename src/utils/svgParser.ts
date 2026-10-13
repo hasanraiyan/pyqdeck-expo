@@ -73,6 +73,33 @@ const XML_ENTITIES: Record<string, string> = {
 };
 
 /**
+ * The notes' hand-drawn "wobble" (feTurbulence + feDisplacementMap) is applied
+ * to dozens of elements. react-native-svg renders every filtered element into
+ * its own offscreen bitmap and runs the effect per pixel on the CPU, which
+ * freezes the UI for seconds and blanks the screen on large diagrams. It is
+ * purely cosmetic, so drop those filters (and their references) natively.
+ */
+function stripHeavyFilters(xml: string): string {
+  const heavyIds: string[] = [];
+  const withoutDefs = xml.replace(
+    /<filter\b[^>]*?\bid\s*=\s*(["'])([^"']+)\1[^>]*>[\s\S]*?<\/filter>/gi,
+    (match, _q, id: string) => {
+      if (!/<feTurbulence\b|<feDisplacementMap\b/i.test(match)) return match;
+      heavyIds.push(id);
+      return '';
+    }
+  );
+  if (heavyIds.length === 0) return xml;
+  return heavyIds.reduce((out, id) => {
+    const escaped = id.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return out.replace(
+      new RegExp(`\\sfilter\\s*=\\s*(["'])url\\(\\s*#${escaped}\\s*\\)\\1`, 'g'),
+      ''
+    );
+  }, withoutDefs);
+}
+
+/**
  * react-native-svg's Android MarkerView does Double.parseDouble() on `orient`,
  * so `auto-start-reverse` throws NumberFormatException and kills the app.
  * Only numeric angles and `auto` are safe natively.
@@ -81,7 +108,7 @@ const XML_ENTITIES: Record<string, string> = {
  * and entities in text nodes are decoded (the native parser shows `&amp;` raw).
  */
 export function sanitizeSvgForNative(xml: string): string {
-  return xml
+  return stripHeavyFilters(xml)
     .replace(/(\borient\s*=\s*)(["'])\s*auto-start-reverse\s*\2/gi, '$1$2auto$2')
     .replace(/<style\b[\s\S]*?<\/style>/gi, '')
     .replace(/\sclass\s*=\s*(["'])([^"']*)\1/g, (match, _q, names: string) => {

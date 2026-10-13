@@ -55,6 +55,18 @@ Some text
   assert.equal(matches.length, 2);
 });
 
+test('sanitizeSvgForNative drops turbulence filters but keeps cheap ones', () => {
+  const xml =
+    "<svg><defs><filter id='w'><feTurbulence type='fractalNoise'/><feDisplacementMap in='SourceGraphic'/></filter>" +
+    "<filter id='s'><feDropShadow dx='1'/></filter></defs>" +
+    "<rect filter='url(#w)'/><rect filter=\"url(#s)\"/></svg>";
+  const out = sanitizeSvgForNative(xml);
+  assert.ok(!out.includes('feTurbulence'));
+  assert.ok(!out.includes('url(#w)'));
+  assert.ok(out.includes('<filter id=\'s\'>'));
+  assert.ok(out.includes('url(#s)'));
+});
+
 test('sanitizeSvgForNative maps classes to fonts and decodes entities', () => {
   const xml =
     '<svg><style>@import url(x);</style><text class="cnx-hdr" x="1">DNS &amp; DDNS</text>' +
