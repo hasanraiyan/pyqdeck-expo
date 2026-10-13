@@ -16,6 +16,7 @@ import { MermaidViewer } from './MermaidViewer';
 import { DevDiagramTag } from './DevDiagramTag';
 import { ContentErrorBoundary } from './ContentErrorBoundary';
 import { enqueueHeavy } from '../utils/heavyQueue';
+import { loadNoteFonts } from '../utils/noteFonts';
 import { DiagramPlaceholder } from './DiagramPlaceholder';
 
 export interface SvgDiagramBlockProps {
@@ -40,11 +41,16 @@ export const SvgDiagramBlock: React.FC<SvgDiagramBlockProps> = React.memo(
       () =>
         enqueueHeavy(
           () =>
-            new Promise<void>((resolve) => {
-              setDrawn(true);
-              // The draw commits (and blocks) before this timer fires.
-              setTimeout(resolve, 16);
-            })
+            // Wait for the diagram's handwritten fonts (usually already loaded)
+            // so the text is drawn in them, not in a fallback.
+            loadNoteFonts().then(
+              () =>
+                new Promise<void>((resolve) => {
+                  setDrawn(true);
+                  // The draw commits (and blocks) before this timer fires.
+                  setTimeout(resolve, 16);
+                })
+            )
         ),
       []
     );

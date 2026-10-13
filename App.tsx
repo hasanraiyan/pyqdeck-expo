@@ -1,6 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Alert, InteractionManager, Platform, View } from 'react-native';
-import { startupMark } from './src/utils/startupLog';
 import { StatusBar } from 'expo-status-bar';
 import {
   NavigationContainer,
@@ -17,8 +16,7 @@ import {
 import { Feather } from '@expo/vector-icons';
 import { useFonts } from 'expo-font';
 import { PlusJakartaSans_700Bold, PlusJakartaSans_800ExtraBold } from '@expo-google-fonts/plus-jakarta-sans';
-import { Kalam_700Bold } from '@expo-google-fonts/kalam';
-import { PatrickHand_400Regular } from '@expo-google-fonts/patrick-hand';
+import { loadNoteFonts } from './src/utils/noteFonts';
 import { Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold } from '@expo-google-fonts/inter';
 import { ClerkProvider, useAuth } from '@clerk/expo';
 import { tokenCache } from '@clerk/expo/token-cache';
@@ -51,16 +49,8 @@ import { QuestionListScreen } from './src/screens/QuestionListScreen';
 import { QuestionDetailScreen } from './src/screens/QuestionDetailScreen';
 import { SearchScreen } from './src/screens/SearchScreen';
 import { SettingsScreen } from './src/screens/SettingsScreen';
-import { MermaidDemoScreen } from './src/screens/MermaidDemoScreen';
-import { PlaceholderLabScreen } from './src/screens/PlaceholderLabScreen';
 import { SignInScreen } from './src/screens/SignInScreen';
 import { ManageAccountScreen } from './src/screens/ManageAccountScreen';
-import { AdminHomeScreen } from './src/screens/admin/AdminHomeScreen';
-import { AdminDashboardScreen } from './src/screens/admin/AdminDashboardScreen';
-import { AdminNotifyScreen } from './src/screens/admin/AdminNotifyScreen';
-import { AdminUsersScreen } from './src/screens/admin/AdminUsersScreen';
-import { AdminConfigScreen } from './src/screens/admin/AdminConfigScreen';
-import { AdminAiScreen } from './src/screens/admin/AdminAiScreen';
 import { SemesterSelectScreen } from './src/screens/SemesterSelectScreen';
 import { SyllabusOverviewScreen } from './src/screens/SyllabusOverviewScreen';
 import { SubjectSyllabusScreen } from './src/screens/SubjectSyllabusScreen';
@@ -244,21 +234,23 @@ function renderSharedScreens(StackNav: typeof Stack, syllabusTitle = 'Syllabus')
       />
       <StackNav.Screen
         name="MermaidDemo"
-        component={MermaidDemoScreen}
+        getComponent={() => require('./src/screens/MermaidDemoScreen').MermaidDemoScreen}
         options={{ title: 'Diagram Preview' }}
       />
       <StackNav.Screen
         name="PlaceholderLab"
-        component={PlaceholderLabScreen}
+        getComponent={() => require('./src/screens/PlaceholderLabScreen').PlaceholderLabScreen}
         options={{ title: 'Loading animations' }}
       />
-      {/* Admin tools: reachable only from Settings, and only for admin accounts. */}
-      <StackNav.Screen name="AdminHome" component={AdminHomeScreen} options={{ title: 'Admin tools' }} />
-      <StackNav.Screen name="AdminDashboard" component={AdminDashboardScreen} options={{ title: 'Dashboard' }} />
-      <StackNav.Screen name="AdminNotify" component={AdminNotifyScreen} options={{ title: 'Send notification' }} />
-      <StackNav.Screen name="AdminUsers" component={AdminUsersScreen} options={{ title: 'User support' }} />
-      <StackNav.Screen name="AdminConfig" component={AdminConfigScreen} options={{ title: 'App config' }} />
-      <StackNav.Screen name="AdminAi" component={AdminAiScreen} options={{ title: 'AI features' }} />
+      {/* Admin tools: reachable only from Settings, and only for admin accounts.
+          getComponent loads each screen's code the first time it is opened, so
+          students never pay for it at launch. */}
+      <StackNav.Screen name="AdminHome" getComponent={() => require('./src/screens/admin/AdminHomeScreen').AdminHomeScreen} options={{ title: 'Admin tools' }} />
+      <StackNav.Screen name="AdminDashboard" getComponent={() => require('./src/screens/admin/AdminDashboardScreen').AdminDashboardScreen} options={{ title: 'Dashboard' }} />
+      <StackNav.Screen name="AdminNotify" getComponent={() => require('./src/screens/admin/AdminNotifyScreen').AdminNotifyScreen} options={{ title: 'Send notification' }} />
+      <StackNav.Screen name="AdminUsers" getComponent={() => require('./src/screens/admin/AdminUsersScreen').AdminUsersScreen} options={{ title: 'User support' }} />
+      <StackNav.Screen name="AdminConfig" getComponent={() => require('./src/screens/admin/AdminConfigScreen').AdminConfigScreen} options={{ title: 'App config' }} />
+      <StackNav.Screen name="AdminAi" getComponent={() => require('./src/screens/admin/AdminAiScreen').AdminAiScreen} options={{ title: 'AI features' }} />
     </>
   );
 }
@@ -490,11 +482,6 @@ export default Sentry.wrap(function App() {
 });
 
 function AppContent() {
-  const startupLoggedRef = useRef(false);
-  if (!startupLoggedRef.current) {
-    startupLoggedRef.current = true;
-    startupMark('AppContent first render');
-  }
   const lastScreenRef = useRef<string | undefined>(undefined);
   const insets = useSafeAreaInsets();
   // null = still reading AsyncStorage (prevents white flash or wrong screen)
@@ -507,17 +494,16 @@ function AppContent() {
     Inter_500Medium,
     Inter_600SemiBold,
     Inter_700Bold,
-    // Handwritten faces used by the notes SVG diagrams (see sanitizeSvgForNative).
-    Kalam_700Bold,
-    PatrickHand_400Regular,
   });
 
+  // The handwritten diagram fonts are not needed for the first screen: load them
+  // once the app is up (see src/utils/noteFonts.ts) instead of holding the first
+  // render for them.
   useEffect(() => {
-    if (fontsLoaded || fontError) startupMark(`fonts ready (${fontError ? 'error' : 'ok'})`);
+    if (!fontsLoaded && !fontError) return;
+    const task = InteractionManager.runAfterInteractions(() => void loadNoteFonts());
+    return () => task.cancel();
   }, [fontsLoaded, fontError]);
-  useEffect(() => {
-    if (onboarded !== null) startupMark(`onboarding flag read (onboarded=${onboarded})`);
-  }, [onboarded]);
 
   useEffect(() => {
     void migrateToQueryCache();
@@ -669,14 +655,11 @@ function AppContent() {
   // Fonts are held back with it so the hero never flashes in the system font.
   if (onboarded === null || (!fontsLoaded && !fontError)) return null;
 
-  startupMark('first real render (navigator tree)');
   const tree = (
     <NavigationContainer
       ref={navigationRef}
       linking={linking}
       onReady={() => {
-        startupMark('navigation ready (first screen mounted)');
-        InteractionManager.runAfterInteractions(() => startupMark('interactions settled (app idle)'));
         lastScreenRef.current = navigationRef.getCurrentRoute()?.name;
         if (lastScreenRef.current) logScreenView(lastScreenRef.current);
         handleColdStartNotification();

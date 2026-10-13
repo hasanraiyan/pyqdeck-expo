@@ -2,6 +2,12 @@
 
 All notable changes to PYQDeck are listed here, newest first.
 
+## 1.12.3
+
+### Changed
+- **The next note opens straight away.** While you read a note, the next topic's note loads quietly in the background, so tapping Next no longer waits for a download.
+- **The app has less to load when it opens.** The tools that draw formulas and colour code in notes now load only when a note needs them, instead of every time the app starts. The same goes for the admin screens, and the first screen no longer waits for the two handwriting fonts used by note diagrams.
+
 ## 1.12.2
 
 ### Changed
