@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Alert, Platform, View } from 'react-native';
+import { Alert, InteractionManager, Platform, View } from 'react-native';
+import { startupMark } from './src/utils/startupLog';
 import { StatusBar } from 'expo-status-bar';
 import {
   NavigationContainer,
@@ -489,6 +490,11 @@ export default Sentry.wrap(function App() {
 });
 
 function AppContent() {
+  const startupLoggedRef = useRef(false);
+  if (!startupLoggedRef.current) {
+    startupLoggedRef.current = true;
+    startupMark('AppContent first render');
+  }
   const lastScreenRef = useRef<string | undefined>(undefined);
   const insets = useSafeAreaInsets();
   // null = still reading AsyncStorage (prevents white flash or wrong screen)
@@ -505,6 +511,13 @@ function AppContent() {
     Kalam_700Bold,
     PatrickHand_400Regular,
   });
+
+  useEffect(() => {
+    if (fontsLoaded || fontError) startupMark(`fonts ready (${fontError ? 'error' : 'ok'})`);
+  }, [fontsLoaded, fontError]);
+  useEffect(() => {
+    if (onboarded !== null) startupMark(`onboarding flag read (onboarded=${onboarded})`);
+  }, [onboarded]);
 
   useEffect(() => {
     void migrateToQueryCache();
@@ -656,11 +669,14 @@ function AppContent() {
   // Fonts are held back with it so the hero never flashes in the system font.
   if (onboarded === null || (!fontsLoaded && !fontError)) return null;
 
+  startupMark('first real render (navigator tree)');
   const tree = (
     <NavigationContainer
       ref={navigationRef}
       linking={linking}
       onReady={() => {
+        startupMark('navigation ready (first screen mounted)');
+        InteractionManager.runAfterInteractions(() => startupMark('interactions settled (app idle)'));
         lastScreenRef.current = navigationRef.getCurrentRoute()?.name;
         if (lastScreenRef.current) logScreenView(lastScreenRef.current);
         handleColdStartNotification();
