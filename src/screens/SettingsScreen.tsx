@@ -504,6 +504,17 @@ export const SettingsScreen = ({ navigation }: any) => {
                   } catch {}
                   navigation.navigate('MermaidDemo');
                 }}
+              />
+              <SettingsRow
+                icon="loader"
+                label="Loading animations"
+                subtitle="Compare the diagram loading placeholders"
+                onPress={() => {
+                  try {
+                    Haptics.selectionAsync();
+                  } catch {}
+                  navigation.navigate('PlaceholderLab');
+                }}
                 last
               />
             </View>

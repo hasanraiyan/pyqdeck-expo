@@ -419,7 +419,7 @@ export const TopicNotesScreen = () => {
           <CircleLoader color={COLORS.primary} dotSize={6} size={40} />
         ) : notes ? (
           <View style={styles.notesBody}>
-            <NativeContentRenderer content={notesBody} fontSize={16} />
+            <NativeContentRenderer content={notesBody} fontSize={16} progressive />
             {faqs.length > 0 && <FaqAccordion items={faqs} />}
             {subjectId && (
               <NoteFeedbackBar

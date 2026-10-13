@@ -65,7 +65,9 @@ const NATIVE_TEXT_CLASSES: Record<string, string> = {
 
 const XML_ENTITIES: Record<string, string> = {
   '&amp;': '&',
-  '&lt;': '<',
+  // A literal '<' inside a text node makes react-native-svg's XML parser throw
+  // ("Expected >"), so use the visually identical small-form sign instead.
+  '&lt;': '﹤',
   '&gt;': '>',
   '&quot;': '"',
   '&apos;': "'",

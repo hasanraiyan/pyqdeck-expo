@@ -1,10 +1,12 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
   View,
   StyleSheet,
   TouchableOpacity,
   StyleProp,
   ViewStyle,
+  Animated,
+  Easing,
 } from 'react-native';
 import { SvgXml } from 'react-native-svg';
 import * as Haptics from 'expo-haptics';
@@ -13,6 +15,8 @@ import { extractSvgDimensions, extractSvgTitle, sanitizeSvgForNative } from '../
 import { MermaidViewer } from './MermaidViewer';
 import { DevDiagramTag } from './DevDiagramTag';
 import { ContentErrorBoundary } from './ContentErrorBoundary';
+import { enqueueHeavy } from '../utils/heavyQueue';
+import { DiagramPlaceholder } from './DiagramPlaceholder';
 
 export interface SvgDiagramBlockProps {
   xml: string;
@@ -24,6 +28,26 @@ export interface SvgDiagramBlockProps {
 export const SvgDiagramBlock: React.FC<SvgDiagramBlockProps> = React.memo(
   ({ xml, title, aspectRatio: explicitRatio, style }) => {
     const [viewerOpen, setViewerOpen] = useState(false);
+    // Drawing a big SVG blocks the JS thread, so it waits its turn in the heavy
+    // queue (after the text, one diagram at a time) behind a same-size placeholder.
+    const [drawn, setDrawn] = useState(false);
+    // 0 = placeholder only, 1 = diagram fully faded in (runs on the native side,
+    // so it keeps animating even while the JS thread is busy drawing).
+    const reveal = useRef(new Animated.Value(0)).current;
+    const [placeholderGone, setPlaceholderGone] = useState(false);
+
+    useEffect(
+      () =>
+        enqueueHeavy(
+          () =>
+            new Promise<void>((resolve) => {
+              setDrawn(true);
+              // The draw commits (and blocks) before this timer fires.
+              setTimeout(resolve, 16);
+            })
+        ),
+      []
+    );
 
     const { computedRatio, displayTitle } = useMemo(() => {
       const { aspectRatio } = extractSvgDimensions(xml);
@@ -35,6 +59,16 @@ export const SvgDiagramBlock: React.FC<SvgDiagramBlockProps> = React.memo(
     }, [xml, title, explicitRatio]);
 
     const nativeXml = useMemo(() => sanitizeSvgForNative(xml), [xml]);
+
+    useEffect(() => {
+      if (!drawn) return;
+      Animated.timing(reveal, {
+        toValue: 1,
+        duration: 600,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }).start(() => setPlaceholderGone(true));
+    }, [drawn, reveal]);
 
     const handleOpenViewer = () => {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -54,7 +88,22 @@ export const SvgDiagramBlock: React.FC<SvgDiagramBlockProps> = React.memo(
         >
           <View style={[styles.canvas, { aspectRatio: computedRatio }]}>
             <ContentErrorBoundary fallbackText={xml}>
-              <SvgXml xml={nativeXml} width="100%" height="100%" />
+              {!placeholderGone && <DiagramPlaceholder fade={reveal} />}
+              {drawn && (
+                <Animated.View
+                  style={[
+                    StyleSheet.absoluteFill,
+                    {
+                      opacity: reveal,
+                      transform: [
+                        { scale: reveal.interpolate({ inputRange: [0, 1], outputRange: [0.97, 1] }) },
+                      ],
+                    },
+                  ]}
+                >
+                  <SvgXml xml={nativeXml} width="100%" height="100%" />
+                </Animated.View>
+              )}
             </ContentErrorBoundary>
           </View>
         </TouchableOpacity>

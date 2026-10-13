@@ -11,7 +11,8 @@ import { WebView, WebViewMessageEvent } from './WebViewCompat';
 import * as Haptics from 'expo-haptics';
 import { Feather } from '@expo/vector-icons';
 import { COLORS, FONTS, RADIUS } from '../theme/colors';
-import { CircleLoader } from './CircleLoader';
+import { DiagramPlaceholder } from './DiagramPlaceholder';
+import { enqueueHeavy } from '../utils/heavyQueue';
 import { NativeCodeBlock } from './NativeCodeBlock';
 import { MermaidViewer } from './MermaidViewer';
 import { DevDiagramTag } from './DevDiagramTag';
@@ -128,7 +129,15 @@ export const MermaidBlock: React.FC<MermaidBlockProps> = React.memo(({ code }) =
     setLoading(true);
     setRenderError(null);
 
-    renderMermaid(code)
+    let cancelQueued: () => void = () => {};
+    const rendered = new Promise<RenderResult>((resolve, reject) => {
+      cancelQueued = enqueueHeavy(() => {
+        const p = renderMermaid(code);
+        p.then(resolve, reject);
+        return p.catch(() => undefined);
+      });
+    });
+    rendered
       .then((res: RenderResult) => {
         if (mounted) {
           setSvg(res.svg);
@@ -147,6 +156,7 @@ export const MermaidBlock: React.FC<MermaidBlockProps> = React.memo(({ code }) =
 
     return () => {
       mounted = false;
+      cancelQueued();
     };
   }, [code, cached, containerWidth]);
 
@@ -256,8 +266,7 @@ export const MermaidBlock: React.FC<MermaidBlockProps> = React.memo(({ code }) =
       >
         {loading && (
           <View style={styles.loaderWrap}>
-            <CircleLoader color={COLORS.primary} dotSize={5} size={28} />
-            <Text style={styles.loadingText}>Rendering diagram…</Text>
+            <DiagramPlaceholder bg={COLORS.background} />
           </View>
         )}
 

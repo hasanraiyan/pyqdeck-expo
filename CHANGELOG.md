@@ -2,6 +2,16 @@
 
 All notable changes to PYQDeck are listed here, newest first.
 
+## 1.12.2
+
+### Changed
+- **Study notes open much more smoothly.** The text now appears from the top in small pieces, then the diagrams and formulas are drawn one at a time, top to bottom. Before, the whole screen could freeze or turn white for a few seconds on long notes with big diagrams.
+- **A new loading animation for diagrams.** While a diagram or flowchart is getting ready, you see a grid of softly twinkling dots instead of a spinner, and the diagram fades in when it is done.
+
+### Fixed
+- Big hand-drawn diagrams in the notes (the ones with a wobbly pen effect) no longer slow the phone to a crawl. They now draw with clean straight lines.
+- Some diagrams, like the Wireless LANs one, did not show at all because of a "less than" sign in their text. They show now.
+
 ## 1.12.0
 
 ### Added (admins)

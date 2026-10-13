@@ -67,6 +67,12 @@ test('sanitizeSvgForNative drops turbulence filters but keeps cheap ones', () =>
   assert.ok(out.includes('url(#s)'));
 });
 
+test('sanitizeSvgForNative never leaves a raw < inside text nodes', () => {
+  const out = sanitizeSvgForNative('<svg><text x="1">SIFS &lt; PIFS &lt; DIFS &amp; more</text></svg>');
+  assert.ok(!/>[^<]*<[^/!?a-zA-Z][^<]*</.test(out));
+  assert.ok(out.includes('>SIFS ﹤ PIFS ﹤ DIFS & more<'));
+});
+
 test('sanitizeSvgForNative maps classes to fonts and decodes entities', () => {
   const xml =
     '<svg><style>@import url(x);</style><text class="cnx-hdr" x="1">DNS &amp; DDNS</text>' +

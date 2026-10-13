@@ -51,6 +51,7 @@ import { QuestionDetailScreen } from './src/screens/QuestionDetailScreen';
 import { SearchScreen } from './src/screens/SearchScreen';
 import { SettingsScreen } from './src/screens/SettingsScreen';
 import { MermaidDemoScreen } from './src/screens/MermaidDemoScreen';
+import { PlaceholderLabScreen } from './src/screens/PlaceholderLabScreen';
 import { SignInScreen } from './src/screens/SignInScreen';
 import { ManageAccountScreen } from './src/screens/ManageAccountScreen';
 import { AdminHomeScreen } from './src/screens/admin/AdminHomeScreen';
@@ -244,6 +245,11 @@ function renderSharedScreens(StackNav: typeof Stack, syllabusTitle = 'Syllabus')
         name="MermaidDemo"
         component={MermaidDemoScreen}
         options={{ title: 'Diagram Preview' }}
+      />
+      <StackNav.Screen
+        name="PlaceholderLab"
+        component={PlaceholderLabScreen}
+        options={{ title: 'Loading animations' }}
       />
       {/* Admin tools: reachable only from Settings, and only for admin accounts. */}
       <StackNav.Screen name="AdminHome" component={AdminHomeScreen} options={{ title: 'Admin tools' }} />
