@@ -209,7 +209,9 @@ export const MermaidViewer: React.FC<MermaidViewerProps> = ({
         clone.setAttribute('width', w);
         clone.setAttribute('height', h);
         clone.style.cssText = '';
-        var k = Math.min(3, 4096 / Math.max(w, h));
+        // The diagram is vector, so scale it up to a large fixed size (long side
+        // 4096 px, area capped) instead of its small on-screen size: sharp text.
+        var k = Math.min(4096 / Math.max(w, h), Math.sqrt(16000000 / (w * h)));
         var canvas = document.createElement('canvas');
         canvas.width = Math.round(w * k); canvas.height = Math.round(h * k);
         var ctx = canvas.getContext('2d');
