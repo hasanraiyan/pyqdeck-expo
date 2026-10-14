@@ -1,2 +1,0 @@
-patchedDependencies:
-  '@react-native-ml-kit/text-recognition': patches/@react-native-ml-kit__text-recognition.patch

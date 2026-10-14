@@ -37,7 +37,6 @@ import { CircleLoader } from '../components/CircleLoader';
 import { rf, verticalScale, useResponsive } from '../utils/responsive';
 import { normalizeQuery, consumeSearchToken, shouldDebounceTap, applyServerRetryAfter, isLowText } from '../utils/searchGuard';
 import { ScreenContainer } from '../components/ScreenContainer';
-import { scanTextFromImage, ScanSource } from '../utils/scanText';
 import { HighlightedText } from '../components/HighlightedText';
 
 const RECENT_SEARCHES_KEY = 'pyq_recent_searches';
@@ -350,7 +349,6 @@ export const SearchScreen = () => {
   // requests (each fetcher forwards React Query's signal).
   const submitQuery = (normalized: string, scanned = false) => {
     setValidationError(null);
-    setScanHint(null);
     setActiveTab('all');
     // Re-submitting the same text: React Query sees no key change, and the
     // search options disable retries, so a failed search would just sit in its
@@ -410,9 +408,7 @@ export const SearchScreen = () => {
   };
 
   const handleClear = () => {
-    setScanHint(null);
     setQuery('');
-    setScanImageUri(null);
     setSubmitted(null);
     setActiveTab('all');
     setValidationError(null);
@@ -429,58 +425,11 @@ export const SearchScreen = () => {
     }
     if (!allowSearch(norm.query)) return;
 
-    setScanImageUri(null);
     setQuery(norm.query);
     submitQuery(norm.query);
   };
 
-  // Scan a question from a photo: pick/capture, crop, read the text on-device,
-  // then search it through the same validation + rate-limit path as typing.
-  const [scanning, setScanning] = useState(false);
-  // While set, the bar shows this photo instead of the OCR text. Tapping it
-  // reveals the text for fixing misreads; clearing drops both.
-  const [scanImageUri, setScanImageUri] = useState<string | null>(null);
-  const [scanHint, setScanHint] = useState<string | null>(null);
   const searchInputRef = useRef<TextInput>(null);
-  const runScan = async (source: ScanSource) => {
-    setScanning(true);
-    setValidationError(null);
-    setScanHint(null);
-    const res = await scanTextFromImage(source);
-    setScanning(false);
-    // Outcome only (ok | cancelled | denied | empty | error): never the image or
-    // the recognised text, which can be personal.
-    logEvent('scan_search', { source, result: res.status });
-    if (res.status === 'ok') {
-      const norm = normalizeQuery(res.text);
-      setQuery(res.text);
-      setScanImageUri(res.uri);
-      if (!norm.ok) {
-        setValidationError(norm.error);
-        return;
-      }
-      if (!allowSearch(norm.query)) return;
-      setQuery(norm.query);
-      submitQuery(norm.query, true);
-      // Searched anyway; just nudge toward a better crop when little was read.
-      if (isLowText(res.text)) setScanHint('Only a little text was read. Crop closer to the question for better results.');
-    } else if (res.status === 'denied') {
-      setValidationError('Camera permission is needed to scan a question.');
-    } else if (res.status === 'empty') {
-      setValidationError('No text found in that image. Try cropping closer to the text.');
-    } else if (res.status === 'error') {
-      setValidationError('Could not read that image. Please try again.');
-    }
-  };
-
-  const handleScanPress = () => {
-    if (cooldownSec > 0 || scanning) return;
-    Alert.alert('Scan a question', 'Take a photo or choose an image, crop to the text, and we will search it.', [
-      { text: 'Camera', onPress: () => void runScan('camera') },
-      { text: 'Gallery', onPress: () => void runScan('gallery') },
-      { text: 'Cancel', style: 'cancel' },
-    ]);
-  };
 
   const clearRecentSearches = () => {
     setRecentSearches([]);
@@ -505,7 +454,6 @@ export const SearchScreen = () => {
     }
     if (!allowSearch(norm.query)) return;
     deepLinkQueryRef.current = initQ;
-    setScanImageUri(null);
     setQuery(norm.query);
     submitQuery(norm.query);
     // allowSearch/submitQuery are read from this render's closure on purpose:
@@ -679,27 +627,6 @@ export const SearchScreen = () => {
                 color={query.trim().length > 0 || inputFocused ? COLORS.primary : COLORS.textMuted}
               />
             </TouchableOpacity>
-            {scanImageUri ? (
-              <TouchableOpacity
-                style={styles.scanChip}
-                activeOpacity={0.7}
-                accessibilityLabel="Scanned question. Tap to edit the text"
-                onPress={() => {
-                  setScanImageUri(null);
-                  setTimeout(() => searchInputRef.current?.focus(), 50);
-                }}
-              >
-                <Image source={{ uri: scanImageUri }} style={styles.scanThumb} contentFit="cover" />
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.scanChipTitle} numberOfLines={1}>
-                    Scanned question
-                  </Text>
-                  <Text style={styles.scanChipHint} numberOfLines={1}>
-                    Tap to edit text
-                  </Text>
-                </View>
-              </TouchableOpacity>
-            ) : null}
             <TextInput
               ref={searchInputRef}
               placeholder={cooldownSec > 0 ? `Cooldown ${cooldownSec}s...` : 'Search subjects, questions, or topics...'}
@@ -721,27 +648,8 @@ export const SearchScreen = () => {
               blurOnSubmit={true}
               enablesReturnKeyAutomatically={true}
               autoCorrect={false}
-              style={[
-                styles.searchInput,
-                isInputDisabled && { opacity: 0.6 },
-                scanImageUri ? { display: 'none' } : null,
-              ]}
+              style={[styles.searchInput, isInputDisabled && { opacity: 0.6 }]}
             />
-            {query.length === 0 && cooldownSec === 0 && (
-              <TouchableOpacity
-                onPress={handleScanPress}
-                disabled={scanning}
-                accessibilityLabel="Scan a question from a photo"
-                style={styles.clearBtn}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              >
-                {scanning ? (
-                  <ActivityIndicator size="small" color={COLORS.primary} />
-                ) : (
-                  <Feather name="camera" size={18} color={COLORS.textMuted} />
-                )}
-              </TouchableOpacity>
-            )}
             {query.length > 0 && cooldownSec === 0 && (
               <TouchableOpacity onPress={handleClear} style={styles.clearBtn} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
                 <Feather name="x" size={15} color={COLORS.textMuted} />
@@ -764,12 +672,6 @@ export const SearchScreen = () => {
             <View style={styles.validationRow}>
               <Feather name="alert-circle" size={12} color="#DC2626" style={{ marginRight: 6 }} />
               <Text style={styles.validationText}>{validationError}</Text>
-            </View>
-          )}
-          {scanHint && !validationError && (
-            <View style={styles.validationRow}>
-              <Feather name="info" size={12} color={COLORS.textMuted} style={{ marginRight: 6 }} />
-              <Text style={styles.cooldownText}>{scanHint}</Text>
             </View>
           )}
           {cooldownSec > 0 && !validationError && (
