@@ -20,6 +20,8 @@ import {
   SyllabusSubject,
 } from '../types/syllabus';
 import { Platform } from 'react-native';
+import * as FileSystem from 'expo-file-system';
+import { FileSystemUploadType } from 'expo-file-system/legacy';
 import Constants from 'expo-constants';
 import * as Backend from './backend';
 import { authHeader, getAuthToken } from '../auth/token';
@@ -1129,53 +1131,60 @@ export const submitPaperContribution = async (params: {
     const f = params.files[i];
     const presigned = presignedList[i];
     const isPdf = f.type.includes('pdf') || f.name.toLowerCase().endsWith('.pdf');
-    const mime = isPdf ? 'application/pdf' : f.type || 'image/jpeg';
     const cleanName = f.name || (isPdf ? `paper_${i + 1}.pdf` : `photo_${i + 1}.jpg`);
 
-    const result = await new Promise<{ ufsUrl?: string; url?: string }>((resolve, reject) => {
-      const xhr = new XMLHttpRequest();
-      xhr.open('PUT', presigned.url);
-      xhr.timeout = 120000; // 2 minutes per file
+    let result: { ufsUrl?: string; url?: string } = {};
 
-      const formData = new FormData();
-      formData.append('file', {
-        uri: Platform.OS === 'android' ? f.uri : f.uri.replace('file://', ''),
-        name: cleanName,
-        type: mime,
-      } as any);
+    if (Platform.OS === 'web') {
+      result = await new Promise<{ ufsUrl?: string; url?: string }>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open('PUT', presigned.url);
+        xhr.timeout = 120000;
+        const formData = new FormData();
+        formData.append('file', {
+          uri: f.uri,
+          name: cleanName,
+          type: isPdf ? 'application/pdf' : f.type || 'image/jpeg',
+        } as any);
 
-      if (xhr.upload) {
-        xhr.upload.onprogress = (e) => {
-          if (e.lengthComputable && e.total > 0) {
-            progressPerFile[i] = (e.loaded / e.total) * 100;
-            updateOverallProgress();
+        xhr.onload = () => {
+          let body: any = {};
+          try {
+            body = JSON.parse(xhr.responseText || '{}');
+          } catch {}
+          if (xhr.status >= 200 && xhr.status < 300) {
+            resolve(body);
+          } else {
+            reject(new ApiError(`Upload of "${cleanName}" failed (HTTP ${xhr.status}).`, xhr.status));
           }
         };
-      }
+        xhr.onerror = () => reject(new ApiError(MESSAGES.unreachable, undefined, undefined, 'unreachable'));
+        xhr.ontimeout = () => reject(new ApiError(MESSAGES.timeout, undefined, undefined, 'timeout'));
+        xhr.send(formData as any);
+      });
+    } else {
+      // Native iOS & Android: FileSystem.uploadAsync natively handles native filesystem streams,
+      // avoiding any React Native XHR FormData multipart boundary or stream corruption issues.
+      const res = await FileSystem.uploadAsync(presigned.url, f.uri, {
+        httpMethod: 'PUT',
+        uploadType: FileSystemUploadType.MULTIPART,
+        fieldName: 'file',
+        mimeType: isPdf ? 'application/pdf' : f.type || 'image/jpeg',
+      });
 
-      xhr.onload = () => {
-        let body: any = {};
+      if (res.status >= 200 && res.status < 300) {
         try {
-          body = JSON.parse(xhr.responseText || '{}');
+          result = JSON.parse(res.body || '{}');
         } catch {
-          body = {};
+          result = {};
         }
+      } else {
+        throw new ApiError(`Upload of "${cleanName}" failed (HTTP ${res.status}).`, res.status);
+      }
+    }
 
-        if (xhr.status >= 200 && xhr.status < 300) {
-          progressPerFile[i] = 100;
-          updateOverallProgress();
-          resolve(body);
-          return;
-        }
-
-        reject(new ApiError(`Upload of "${cleanName}" failed (HTTP ${xhr.status}).`, xhr.status));
-      };
-
-      xhr.onerror = () => reject(new ApiError(MESSAGES.unreachable, undefined, undefined, 'unreachable'));
-      xhr.ontimeout = () => reject(new ApiError(MESSAGES.timeout, undefined, undefined, 'timeout'));
-
-      xhr.send(formData as any);
-    });
+    progressPerFile[i] = 100;
+    updateOverallProgress();
 
     const fileUrl = result.ufsUrl || result.url || `https://ufs.sh/f/${presigned.key}`;
     uploadedAssets.push({
