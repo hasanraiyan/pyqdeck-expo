@@ -22,6 +22,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import * as Haptics from 'expo-haptics';
 import { COLORS, FONTS, RADIUS, SHADOWS } from '../theme/colors';
 import { useDialogLayout } from '../utils/dialog';
+import { submitPaperContribution } from '../api';
 
 export interface SelectedFileItem {
   id: string;
@@ -164,8 +165,8 @@ export const UploadPaperModal: React.FC<UploadPaperModalProps> = ({
     setFiles((prev) => prev.filter((f) => f.id !== id));
   };
 
-  // Mock Upload Simulation (Fields are optional, only paper file is required)
-  const handleUpload = () => {
+  // Real upload to POST /api/contributions/submit
+  const handleUpload = async () => {
     if (files.length === 0) {
       Alert.alert('No Paper Attached', 'Please take photos or select a PDF of the question paper.');
       return;
@@ -173,15 +174,36 @@ export const UploadPaperModal: React.FC<UploadPaperModalProps> = ({
 
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setUploadStatus('uploading');
-    setUploadProgress(20);
+    setUploadProgress(15);
 
-    setTimeout(() => setUploadProgress(55), 350);
-    setTimeout(() => setUploadProgress(88), 750);
-    setTimeout(() => {
+    try {
+      // Map SelectedFileItem → { uri, name, type } for the API
+      const apiFiles = files.map((f) => ({
+        uri: f.uri,
+        name: f.name,
+        type: f.type === 'pdf' ? 'application/pdf' : 'image/jpeg',
+      }));
+
+      setUploadProgress(35);
+
+      await submitPaperContribution({
+        files: apiFiles,
+        subjectName: subjectName.trim() || undefined,
+        year: year.trim() || undefined,
+      });
+
       setUploadProgress(100);
       setUploadStatus('success');
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    }, 1100);
+    } catch (err: any) {
+      setUploadStatus('idle');
+      setUploadProgress(0);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert(
+        'Upload Failed',
+        err?.message || 'Something went wrong. Please check your connection and try again.'
+      );
+    }
   };
 
   const handleReset = () => {

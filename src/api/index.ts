@@ -1020,3 +1020,90 @@ export const getAiOverviewStatus = async (signal?: AbortSignal): Promise<boolean
 // Cloudflare caches public GETs for an hour and every miss is billed.
 export const getAiOverview = (query: string, limit?: number, signal?: AbortSignal) =>
   postApi<AiOverview>('/search/ai-overview', { query, ...(limit ? { limit } : {}) }, signal);
+
+// -------------------------------------------------------------
+// STUDENT PAPER CONTRIBUTIONS
+// -------------------------------------------------------------
+
+export interface ContributionFile {
+  url: string;
+  name: string;
+  size: number;
+  storageId: string;
+  resourceType: 'raw' | 'image';
+}
+
+export interface PaperContribution {
+  _id: string;
+  subjectName: string;
+  year?: number;
+  fileType: 'pdf' | 'images';
+  files: ContributionFile[];
+  status: 'received' | 'reviewed' | 'approved' | 'rejected';
+  isAnonymous: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SubmitContributionResult {
+  success: boolean;
+  submissionId: string;
+  message: string;
+  submission: PaperContribution;
+}
+
+/**
+ * Upload student exam paper contribution.
+ * Works for both anonymous guests and signed-in users.
+ * Uses multipart/form-data — does NOT JSON.stringify.
+ */
+export const submitPaperContribution = async (params: {
+  files: Array<{ uri: string; name: string; type: string }>;
+  subjectName?: string;
+  year?: string;
+}): Promise<SubmitContributionResult> => {
+  const origin = await Backend.ready();
+  const url = `${origin.root}/api/contributions/submit`;
+
+  const formData = new FormData();
+  if (params.subjectName?.trim()) {
+    formData.append('subjectName', params.subjectName.trim());
+  }
+  if (params.year?.trim()) {
+    formData.append('year', params.year.trim());
+  }
+  for (const file of params.files) {
+    formData.append('files', {
+      uri: file.uri,
+      name: file.name,
+      type: file.type,
+    } as any);
+  }
+
+  // Optionally attach auth token if signed in (server accepts both)
+  const auth = await authHeader();
+  const res = await fetchWithTimeout(url, {
+    method: 'POST',
+    headers: { ...auth },
+    body: formData,
+  });
+
+  if (!res.ok) {
+    const errData = await res.json().catch(() => ({}));
+    throw new ApiError(
+      errData.message || 'Failed to submit paper. Please try again.',
+      res.status,
+      undefined,
+      kindForStatus(res.status)
+    );
+  }
+
+  return res.json();
+};
+
+/**
+ * Get the signed-in student's own contribution history.
+ * Returns [] when signed out.
+ */
+export const getMyContributions = (): Promise<PaperContribution[]> =>
+  requestMe<PaperContribution[]>('/contributions', 'GET');
