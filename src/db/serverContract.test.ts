@@ -67,7 +67,13 @@ test('the app-config answer parses; unknown fields are dropped, syncHints are re
     minAppVersion: '',
     recommendedAppVersion: '1.11.0',
     banner: { message: '', level: 'info', id: '' },
-    flags: { syncEnabled: true, settingsSyncEnabled: true, nudgesEnabled: true, adsEnabled: true },
+    flags: {
+      syncEnabled: true,
+      settingsSyncEnabled: true,
+      nudgesEnabled: true,
+      adsEnabled: true,
+      paperUploadEnabled: true,
+    },
     syncHints: { minRoundGapMs: 5000, mergeWindowMs: 400 },
   });
   assert.equal(config.recommendedAppVersion, '1.11.0');

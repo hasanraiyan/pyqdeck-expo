@@ -27,6 +27,7 @@ import * as Haptics from 'expo-haptics';
 import { COLORS, FONTS, RADIUS, SHADOWS } from '../theme/colors';
 import { useDialogLayout } from '../utils/dialog';
 import { submitPaperContribution } from '../api';
+import { useAppConfig } from '../config/useAppConfig';
 import ConfettiCannon from 'react-native-confetti-cannon';
 
 export interface SelectedFileItem {
@@ -53,6 +54,8 @@ export const UploadPaperModal: React.FC<UploadPaperModalProps> = ({
   const insets = useSafeAreaInsets();
   const dlg = useDialogLayout();
   const { width: screenW, height: screenH } = useWindowDimensions();
+  const { flags } = useAppConfig();
+  const isPaused = flags.paperUploadEnabled === false;
 
   const [subjectName, setSubjectName] = useState(initialSubjectName);
   const [year, setYear] = useState(initialYear ? String(initialYear) : '');
@@ -196,6 +199,11 @@ export const UploadPaperModal: React.FC<UploadPaperModalProps> = ({
 
   // Real upload to POST /api/contributions/submit
   const handleUpload = async () => {
+    if (isPaused) {
+      Alert.alert('Contributions Paused', 'Paper contributions are currently paused by an administrator.');
+      return;
+    }
+
     if (files.length === 0) {
       Alert.alert('No Paper Attached', 'Please take photos or select a PDF of the question paper.');
       return;

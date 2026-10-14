@@ -47,7 +47,9 @@ test('sanitizeAppConfig falls back to defaults on any garbage', () => {
   assert.equal(c.flags.nudgesEnabled, true); // wrong type: default, not "off"
   assert.equal(c.flags.settingsSyncEnabled, true);
   assert.equal(c.flags.adsEnabled, true);
+  assert.equal(c.flags.paperUploadEnabled, true);
   assert.equal(sanitizeAppConfig({ flags: { adsEnabled: false } }).flags.adsEnabled, false);
+  assert.equal(sanitizeAppConfig({ flags: { paperUploadEnabled: false } }).flags.paperUploadEnabled, false);
 });
 
 test('a very long banner is cut to 200 characters', () => {

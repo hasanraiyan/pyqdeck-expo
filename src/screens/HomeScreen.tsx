@@ -35,6 +35,7 @@ import {
 } from '../utils/recentStudy';
 import { prefetchSubject } from '../api/prefetch';
 import { UploadPaperModal } from '../components/UploadPaperModal';
+import { useAppConfig } from '../config/useAppConfig';
 
 export const HomeScreen = () => {
   const insets = useSafeAreaInsets();
@@ -42,6 +43,7 @@ export const HomeScreen = () => {
   const { isSignedIn } = useAuth();
   const { user } = useUser();
   const { width, bp, wideMaxWidth, hPadding } = useResponsive();
+  const { flags } = useAppConfig();
   const [uploadModalVisible, setUploadModalVisible] = useState(false);
 
   // Laptop and up gets a real two-column hero: the pitch on the left, the
@@ -514,8 +516,8 @@ export const HomeScreen = () => {
             )}
           </View>
 
-          {/* Quick Action: Upload Exam Paper (hidden while loading) */}
-          {!loading && (
+          {/* Quick Action: Upload Exam Paper (hidden while loading or when disabled remotely) */}
+          {!loading && flags.paperUploadEnabled !== false && (
             <TouchableOpacity
               style={styles.uploadCtaCard}
               activeOpacity={0.7}

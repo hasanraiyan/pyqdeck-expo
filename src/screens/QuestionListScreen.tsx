@@ -49,6 +49,7 @@ import { ManagePyqSubjectSheet } from '../components/ManagePyqSubjectSheet';
 import { EditorModal } from '../admin/EditorFrame';
 import { suggestQuestionId } from '../admin/contentLogic';
 import { UploadPaperModal } from '../components/UploadPaperModal';
+import { useAppConfig } from '../config/useAppConfig';
 
 const VOLUME_SCROLL_STEP = 320;
 
@@ -59,6 +60,7 @@ export const QuestionListScreen = () => {
   const { readMaxWidth, bp } = useResponsive();
   const showFilterText = bp({ phone: false, tablet: true });
   const dlg = useDialogLayout();
+  const { flags } = useAppConfig();
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
   const { guard } = useRequireAuth();
   const queryClient = useQueryClient();
@@ -389,7 +391,7 @@ export const QuestionListScreen = () => {
                 </TouchableOpacity>
               </View>
             )}
-            {!loading && selectedYear != null && (
+            {!loading && selectedYear != null && flags.paperUploadEnabled !== false && (
               <View style={styles.paperBtnWrapper}>
                 <TouchableOpacity
                   style={styles.manageBtn}
