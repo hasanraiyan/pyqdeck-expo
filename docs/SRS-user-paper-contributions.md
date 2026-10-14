@@ -35,13 +35,14 @@ In scope:
   - Guest prompt in Settings: *"Sign in to track your contributed papers"*.
 - **Backend & Storage (`server`)**:
   - Dedicated object storage (UploadThing / S3-compatible storage) for quarantined user-uploaded raw files (PDFs and image sets).
-  - MongoDB `PaperSubmission` schema with contributor identity tracking, review statuses, and file URLs.
+  - MongoDB `PaperSubmission` schema with contributor identity tracking and file URLs.
   - Client contribution submission endpoint (`POST /api/contributions/submit`) and personal history endpoint (`GET /api/me/contributions`).
-- **Admin Review & Ingestion**:
+- **Admin Inspection & Download**:
   - Admin inspection list (`GET /api/admin/contributions`) allowing direct viewing and downloading of submitted PDFs or images.
-  - One-tap approval (converting/promoting to official `PaperAsset`) or rejection.
+  - Ability for admins to delete or dismiss processed/unneeded submissions.
 
 Out of scope for this initial revision:
+- Automatic conversion or promotion into `PaperAsset` (admins download and curate papers manually).
 - On-device optical character recognition (OCR) or automatic question transcription into typed database questions.
 - User-to-user public comment threads on submissions.
 - Complex gamification or karma token exchanges.
@@ -51,11 +52,9 @@ Out of scope for this initial revision:
 | Term | Meaning |
 |---|---|
 | Contributor | Any student who submits an exam question paper (guest or signed-in). |
-| Paper Submission | An unverified user-uploaded paper record containing raw PDF or image URLs, stored in staging. |
+| Paper Submission | A user-uploaded paper record containing raw PDF or image URLs, stored in staging. |
 | Object Storage | Isolated file storage (UploadThing / S3 / R2) storing raw incoming user files. |
-| Pending | Submission status awaiting admin review. |
-| Approved | Submission verified and promoted to official study material in PyQdeck. |
-| Rejected | Submission discarded due to unreadable scans, irrelevant content, or duplicate data. |
+| Received | Submission successfully stored and available for admin download. |
 
 ---
 
@@ -69,7 +68,7 @@ The User Contribution system opens a frictionless intake funnel:
 1. **Intake**: Any student can upload camera photos, gallery pictures, or a PDF with minimal required friction (fields are optional; file attachment is mandatory).
 2. **Quarantine & Storage**: Raw student files land in dedicated object storage (UploadThing / S3), completely isolated from production paper assets.
 3. **Personal Transparency**: Signed-in students see their submissions real-time in a "Your Contributions" panel inside the Settings screen.
-4. **Moderation**: Administrators view and download incoming submissions to verify legibility and correctness before approving them.
+4. **Admin Inspection**: Administrators directly view and download incoming submissions to use/check whenever needed.
 
 ```mermaid
 flowchart TD
@@ -85,23 +84,22 @@ flowchart TD
 
     subgraph Backend Server
         SVR --> SUB[(MongoDB: PaperSubmission)]
-        SUB -->|Admin Review| ADM[GET /api/admin/contributions]
+        SUB -->|Admin Inspection| ADM[GET /api/admin/contributions]
     end
 
     subgraph Admin Action
-        ADM -->|Download / Inspect PDF or Images| DEC{Decision}
-        DEC -->|Approve| LIVE[(Promote to PaperAsset / Live)]
-        DEC -->|Reject| REJ[Mark Rejected with Reason]
+        ADM -->|Direct View / Download| DLD[Admin views or downloads PDF / Photos]
+        ADM -->|Delete / Dismiss| DEL[Admin cleans up unwanted entries]
     end
 ```
 
 ### 2.2 User Classes and Permissions
 
-| Class | Upload Capability | Contribution Tracking | Moderation |
+| Class | Upload Capability | Contribution Tracking | Admin Action |
 |---|---|---|---|
 | **Anonymous Guest** | Yes (no login barrier). | No (sees nudge to sign in to save history). | None |
 | **Signed-in Student** | Yes (tied to Clerk user ID). | Full ("Your Contributions" panel in Settings). | None |
-| **Administrator** | Yes. | Full. | View, download, approve, reject all submissions. |
+| **Administrator** | Yes. | Full. | View, download, delete submissions. |
 
 ---
 
@@ -128,28 +126,27 @@ flowchart TD
 |---|---|---|
 | `FR-CONTRIB-11` | M | When a user is signed in, `SettingsScreen.tsx` SHALL render a **"Your Contributions"** row featuring an icon (`upload-cloud`), count badge (if submissions exist), and navigation arrow. |
 | `FR-CONTRIB-12` | M | Tapping the row SHALL navigate to `MyContributionsScreen`, fetching the student's submission history via `GET /api/me/contributions`. |
-| `FR-CONTRIB-13` | M | `MyContributionsScreen` SHALL render each contribution card with: Subject Title, Exam Year, Submission Date, File Type summary (e.g., *"PDF document"* or *"4 scanned pages"*), and a clear Status Badge: `Pending Review` (amber/neutral), `Approved & Live` (success green), or `Rejected` (subtle red). |
+| `FR-CONTRIB-13` | M | `MyContributionsScreen` SHALL render each contribution card with: Subject Title, Exam Year, Submission Date, File Type summary (e.g., *"PDF document"* or *"4 scanned pages"*), and a status pill indicating *"Uploaded"*. |
 | `FR-CONTRIB-14` | M | If the user has made zero submissions, `MyContributionsScreen` SHALL show a welcoming empty state encouraging them to contribute exam papers with a direct "Upload Paper" button. |
-| `FR-CONTRIB-15` | S | `MyContributionsScreen` SHALL support pull-to-refresh (`RefreshControl`) to refetch submission statuses. |
+| `FR-CONTRIB-15` | S | `MyContributionsScreen` SHALL support pull-to-refresh (`RefreshControl`) to refetch submission history. |
 | `FR-CONTRIB-16` | M | When a user is signed out, the "Your Contributions" settings row SHALL render a subtle sign-in prompt (e.g. *"Sign in to track paper contributions"*), navigating to the sign-in sheet on press. |
 
 ### 3.3 Backend API & Storage (`server`)
 
 | ID | Priority | Requirement |
 |---|---|---|
-| `FR-CONTRIB-17` | M | The backend SHALL store submissions in a dedicated MongoDB collection `PaperSubmission`: `contributorClerkId` (sparse string), `contributorEmail` (string), `isAnonymous` (boolean), `subjectName` (string), `year` (number), `fileType` (`pdf` or `images`), `fileUrls` (array of strings), `status` (`pending`, `approved`, `rejected`), `rejectionReason` (string), timestamps. |
-| `FR-CONTRIB-18` | M | Raw user-uploaded files SHALL be stored in dedicated object storage (UploadThing / S3 / R2), keeping user uploads quarantined from production assets until approved. |
+| `FR-CONTRIB-17` | M | The backend SHALL store submissions in a dedicated MongoDB collection `PaperSubmission`: `contributorClerkId` (sparse string), `contributorEmail` (string), `isAnonymous` (boolean), `subjectName` (string), `year` (number), `fileType` (`pdf` or `images`), `fileUrls` (array of strings), timestamps. |
+| `FR-CONTRIB-18` | M | Raw user-uploaded files SHALL be stored in dedicated object storage (UploadThing / S3 / R2), keeping user uploads isolated from production assets. |
 | `FR-CONTRIB-19` | M | The backend SHALL provide `POST /api/contributions/submit`: open to both anonymous requests and authenticated requests (associating Clerk user ID if present). |
 | `FR-CONTRIB-20` | M | The backend SHALL provide `GET /api/me/contributions`: protected by `requireSignIn`, returning only the authenticated user's submissions sorted by `createdAt: -1`. |
-| `FR-CONTRIB-21` | M | The backend SHALL provide admin routes under `adminAppRoutes.js`: `GET /admin/contributions` (list pending/all submissions) and `POST /admin/contributions/:id/review` (`action: 'approve' | 'reject'`). |
+| `FR-CONTRIB-21` | M | The backend SHALL provide admin routes under `adminAppRoutes.js`: `GET /admin/contributions` (list all submissions) and `DELETE /admin/contributions/:id` (delete/dismiss submission). |
 
-### 3.4 Admin Review & Ingestion
+### 3.4 Admin Inspection & Download
 
 | ID | Priority | Requirement |
 |---|---|---|
 | `FR-CONTRIB-22` | M | Administrators SHALL be able to view and download submitted PDFs or full-resolution images directly from the admin dashboard or in-app admin tools. |
-| `FR-CONTRIB-23` | M | When an admin approves a submission: the backend SHALL generate an official [`PaperAsset`](file:///D:/projects/pyqdeck/server/server/models/PaperAsset.js) record for the given subject and year, setting `hasOriginal: true` for all students. |
-| `FR-CONTRIB-24` | M | When an admin rejects a submission: the backend SHALL record the status as `rejected` and retain the record for contributor audit history. |
+| `FR-CONTRIB-23` | M | Administrators SHALL be able to delete or dismiss submissions from the list once downloaded or handled. |
 
 ---
 
@@ -159,7 +156,7 @@ flowchart TD
 |---|---|---|
 | `NFR-CONTRIB-1` | Performance | Opening the upload bottom sheet SHALL be instantaneous with zero lag or frame drops. |
 | `NFR-CONTRIB-2` | Resiliency | If a file upload network error occurs, the user's entered form values (Subject and Year) SHALL be preserved so they do not need to retype them. |
-| `NFR-CONTRIB-3` | Storage Safety | Quarantined files must never overwrite existing production papers until explicit admin approval. |
+| `NFR-CONTRIB-3` | Storage Safety | User uploads must remain isolated in dedicated object storage without mutating production papers. |
 | `NFR-CONTRIB-4` | Compatibility | Bottom sheet MUST adapt responsively: full-width sheet on mobile phones and centered modal dialog on tablets/desktops (`useDialogLayout`). |
 
 ---
@@ -172,4 +169,4 @@ flowchart TD
 | `FR-CONTRIB-9` - `FR-CONTRIB-10` | `pyqdeck-expo` | [`HomeScreen.tsx`](file:///D:/projects/pyqdeck/pyqdeck-expo/src/screens/HomeScreen.tsx), [`QuestionListScreen.tsx`](file:///D:/projects/pyqdeck/pyqdeck-expo/src/screens/QuestionListScreen.tsx) |
 | `FR-CONTRIB-11` - `FR-CONTRIB-16` | `pyqdeck-expo` | `SettingsScreen.tsx`, `MyContributionsScreen.tsx` |
 | `FR-CONTRIB-17` - `FR-CONTRIB-20` | `server` | `server/models/PaperSubmission.js`, `server/routes/contributionRoutes.js` |
-| `FR-CONTRIB-21` - `FR-CONTRIB-24` | `server` + `pyqdeck-expo` | `server/routes/adminAppRoutes.js`, `AdminContributionsScreen.tsx` |
+| `FR-CONTRIB-21` - `FR-CONTRIB-23` | `server` + `pyqdeck-expo` | `server/routes/adminAppRoutes.js`, `AdminContributionsScreen.tsx` |
