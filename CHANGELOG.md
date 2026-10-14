@@ -2,6 +2,15 @@
 
 All notable changes to PYQDeck are listed here, newest first.
 
+## 1.13.1
+
+### Added (admins)
+- **Paper Submissions admin panel.** Admins can now view all student-contributed question papers, inspect and download uploaded PDFs/images, review or approve contributions, and clean up rejected papers directly from the in-app Admin tools.
+
+### Changed
+- **Automatic photo compression.** Uploaded paper photos are automatically resized and compressed on the device before transmission to ensure lightning-fast uploads without mobile data bloat.
+- **Privacy protection.** Student contribution histories hide direct bucket storage URLs.
+
 ## 1.13.0
 
 ### Added
