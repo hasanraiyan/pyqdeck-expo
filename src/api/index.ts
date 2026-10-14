@@ -1144,8 +1144,8 @@ export const submitPaperContribution = async (params: {
             realSize = info.size;
           }
         }
-      } catch (e) {
-        console.warn(`[UploadContribution] Could not measure size for ${f.uri}:`, e);
+      } catch {
+        // Fallback below handles missing size gracefully
       }
     }
 
@@ -1225,7 +1225,6 @@ export const submitPaperContribution = async (params: {
     const isPdf = mime === 'application/pdf';
     const cleanName = f.name;
 
-    console.log(`[UploadContribution] Starting upload ${i + 1}/${totalFiles}: "${cleanName}" (${mime}, ${f.size} bytes) via ${Platform.OS}`);
     let result: { ufsUrl?: string; url?: string } = {};
 
     if (Platform.OS === 'web') {
@@ -1234,7 +1233,6 @@ export const submitPaperContribution = async (params: {
       const rawBlob = await fetch(f.uri).then((r) => r.blob());
       // Ensure the Blob has the matching MIME type
       const typedBlob = rawBlob.type ? rawBlob : new Blob([rawBlob], { type: mime });
-      console.log(`[UploadContribution Web] Converted blob size: ${typedBlob.size}, type: ${typedBlob.type}`);
 
       result = await new Promise<{ ufsUrl?: string; url?: string }>((resolve, reject) => {
         const xhr = new XMLHttpRequest();
@@ -1257,7 +1255,6 @@ export const submitPaperContribution = async (params: {
           try {
             body = JSON.parse(xhr.responseText || '{}');
           } catch {}
-          console.log(`[UploadContribution Web] Status ${xhr.status}, Response:`, xhr.responseText);
           if (xhr.status >= 200 && xhr.status < 300) {
             resolve(body);
           } else {
@@ -1265,8 +1262,7 @@ export const submitPaperContribution = async (params: {
             reject(new ApiError(`Upload of "${cleanName}" failed: ${serverMsg}`, xhr.status));
           }
         };
-        xhr.onerror = (e) => {
-          console.warn('[UploadContribution Web] XHR error:', e);
+        xhr.onerror = () => {
           reject(new ApiError(MESSAGES.unreachable, undefined, undefined, 'unreachable'));
         };
         xhr.ontimeout = () => reject(new ApiError(MESSAGES.timeout, undefined, undefined, 'timeout'));
@@ -1275,14 +1271,12 @@ export const submitPaperContribution = async (params: {
     } else {
       // Native iOS & Android: FileSystem.uploadAsync natively handles native filesystem streams,
       // avoiding any React Native XHR FormData multipart boundary or stream corruption issues.
-      console.log(`[UploadContribution Native] Starting uploadAsync for ${f.uri}`);
       const res = await FileSystem.uploadAsync(presigned.url, f.uri, {
         httpMethod: 'PUT',
         uploadType: FileSystemUploadType.MULTIPART,
         fieldName: 'file',
         mimeType: mime,
       });
-      console.log(`[UploadContribution Native] Status ${res.status}, body:`, res.body);
 
       if (res.status >= 200 && res.status < 300) {
         try {

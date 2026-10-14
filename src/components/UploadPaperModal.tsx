@@ -123,7 +123,6 @@ export const UploadPaperModal: React.FC<UploadPaperModalProps> = ({
           type: 'image',
           size: asset.fileSize,
         };
-        console.log('[UploadPaper] Picked camera asset:', { uri: asset.uri, name: newItem.name, size: asset.fileSize });
         setFiles((prev) => [...prev, newItem]);
       }
     } catch (e: any) {
@@ -255,9 +254,8 @@ export const UploadPaperModal: React.FC<UploadPaperModalProps> = ({
             if (info.exists && typeof info.size === 'number') {
               targetSize = info.size;
             }
-            console.log(`[UploadPaper] Compressed image ${f.name} -> ${targetSize} bytes`);
-          } catch (compErr) {
-            console.warn('[UploadPaper] Auto-compression fallback:', compErr);
+          } catch {
+            // Fallback silently to original uncompressed image if manipulation encounters an issue
           }
         }
 
