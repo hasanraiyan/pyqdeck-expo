@@ -1071,13 +1071,23 @@ export const submitPaperContribution = async (params: {
   const origin = await Backend.ready();
   const token = await getAuthToken();
 
+  const detectMimeType = (file: { name?: string; type?: string }) => {
+    const n = (file.name || '').toLowerCase();
+    const t = (file.type || '').toLowerCase();
+    if (t.includes('pdf') || n.endsWith('.pdf')) return 'application/pdf';
+    if (t.includes('png') || n.endsWith('.png')) return 'image/png';
+    if (t.includes('webp') || n.endsWith('.webp')) return 'image/webp';
+    if (t.includes('heic') || n.endsWith('.heic')) return 'image/heic';
+    return 'image/jpeg';
+  };
+
   // 1. Request presigned upload URLs from our server
   const presignUrl = `${origin.root}/api/uploadthing?slug=examPaperUploader&actionType=upload`;
   const presignPayload = {
     files: params.files.map((f, i) => ({
       name: f.name || `paper_${i + 1}`,
       size: f.size || 1024 * 50,
-      type: f.type.includes('pdf') || f.name.toLowerCase().endsWith('.pdf') ? 'application/pdf' : 'image/jpeg',
+      type: detectMimeType(f),
     })),
   };
 
@@ -1130,22 +1140,32 @@ export const submitPaperContribution = async (params: {
   for (let i = 0; i < totalFiles; i++) {
     const f = params.files[i];
     const presigned = presignedList[i];
-    const isPdf = f.type.includes('pdf') || f.name.toLowerCase().endsWith('.pdf');
+    const mime = detectMimeType(f);
+    const isPdf = mime === 'application/pdf';
     const cleanName = f.name || (isPdf ? `paper_${i + 1}.pdf` : `photo_${i + 1}.jpg`);
 
     let result: { ufsUrl?: string; url?: string } = {};
 
     if (Platform.OS === 'web') {
+      // In web browsers, fetch the local object/blob URL into a real Blob
+      // React Native's `{ uri }` object cannot be parsed by standard web browsers in FormData.append()
+      const blob = await fetch(f.uri).then((r) => r.blob());
+
       result = await new Promise<{ ufsUrl?: string; url?: string }>((resolve, reject) => {
         const xhr = new XMLHttpRequest();
         xhr.open('PUT', presigned.url);
         xhr.timeout = 120000;
         const formData = new FormData();
-        formData.append('file', {
-          uri: f.uri,
-          name: cleanName,
-          type: isPdf ? 'application/pdf' : f.type || 'image/jpeg',
-        } as any);
+        formData.append('file', blob, cleanName);
+
+        if (xhr.upload) {
+          xhr.upload.onprogress = (e) => {
+            if (e.lengthComputable && e.total > 0) {
+              progressPerFile[i] = (e.loaded / e.total) * 100;
+              updateOverallProgress();
+            }
+          };
+        }
 
         xhr.onload = () => {
           let body: any = {};
@@ -1169,7 +1189,7 @@ export const submitPaperContribution = async (params: {
         httpMethod: 'PUT',
         uploadType: FileSystemUploadType.MULTIPART,
         fieldName: 'file',
-        mimeType: isPdf ? 'application/pdf' : f.type || 'image/jpeg',
+        mimeType: mime,
       });
 
       if (res.status >= 200 && res.status < 300) {
