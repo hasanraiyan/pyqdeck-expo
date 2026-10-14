@@ -38,6 +38,7 @@ import { rf, verticalScale, useResponsive } from '../utils/responsive';
 import { normalizeQuery, consumeSearchToken, shouldDebounceTap, applyServerRetryAfter, isLowText } from '../utils/searchGuard';
 import { ScreenContainer } from '../components/ScreenContainer';
 import { scanTextFromImage, ScanSource } from '../utils/scanText';
+import { isTextRecognitionAvailable } from '../../modules/pyq-text-recognition';
 import { HighlightedText } from '../components/HighlightedText';
 
 const RECENT_SEARCHES_KEY = 'pyq_recent_searches';
@@ -468,6 +469,8 @@ export const SearchScreen = () => {
       setValidationError('Camera permission is needed to scan a question.');
     } else if (res.status === 'empty') {
       setValidationError('No text found in that image. Try cropping closer to the text.');
+    } else if (res.status === 'unavailable') {
+      setValidationError('The text reader is still downloading. Connect to the internet and try again in a minute.');
     } else if (res.status === 'error') {
       setValidationError('Could not read that image. Please try again.');
     }
@@ -727,7 +730,7 @@ export const SearchScreen = () => {
                 scanImageUri ? { display: 'none' } : null,
               ]}
             />
-            {query.length === 0 && cooldownSec === 0 && (
+            {isTextRecognitionAvailable && query.length === 0 && cooldownSec === 0 && (
               <TouchableOpacity
                 onPress={handleScanPress}
                 disabled={scanning}
