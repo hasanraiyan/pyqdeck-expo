@@ -34,6 +34,7 @@ import {
   subscribeRecents,
 } from '../utils/recentStudy';
 import { prefetchSubject } from '../api/prefetch';
+import { UploadPaperModal } from '../components/UploadPaperModal';
 
 export const HomeScreen = () => {
   const insets = useSafeAreaInsets();
@@ -41,6 +42,7 @@ export const HomeScreen = () => {
   const { isSignedIn } = useAuth();
   const { user } = useUser();
   const { width, bp, wideMaxWidth, hPadding } = useResponsive();
+  const [uploadModalVisible, setUploadModalVisible] = useState(false);
 
   // Laptop and up gets a real two-column hero: the pitch on the left, the
   // search box and stats stacked on the right. Below that there isn't enough
@@ -512,6 +514,33 @@ export const HomeScreen = () => {
             )}
           </View>
 
+          {/* Quick Action: Upload Exam Paper (hidden while loading) */}
+          {!loading && (
+            <TouchableOpacity
+              style={styles.uploadCtaCard}
+              activeOpacity={0.7}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                setUploadModalVisible(true);
+              }}
+              accessibilityRole="button"
+              accessibilityLabel="Upload or contribute exam paper"
+            >
+              <View style={styles.uploadCtaIconWrap}>
+                <Feather name="upload-cloud" size={20} color={COLORS.primary} />
+              </View>
+              <View style={styles.uploadCtaContent}>
+                <Text style={styles.uploadCtaTitle}>Upload Exam Paper</Text>
+                <Text style={styles.uploadCtaDesc}>
+                  Help your classmates by sharing question paper photos or PDF
+                </Text>
+              </View>
+              <View style={styles.uploadCtaArrow}>
+                <Feather name="chevron-right" size={18} color={COLORS.textSubtle} />
+              </View>
+            </TouchableOpacity>
+          )}
+
           {/* Browse All Subjects CTA Card (hidden while loading) */}
           {!loading && (
             <View style={[styles.allSubjectsCta, ctaRow && styles.allSubjectsCtaRow]}>
@@ -533,6 +562,11 @@ export const HomeScreen = () => {
           )}
         </ScreenContainer>
       </ScrollView>
+
+      <UploadPaperModal
+        visible={uploadModalVisible}
+        onClose={() => setUploadModalVisible(false)}
+      />
     </View>
   );
 };
@@ -862,7 +896,7 @@ const styles = StyleSheet.create({
     color: COLORS.textMuted,
   },
   allSubjectsCta: {
-    marginTop: 24,
+    marginTop: 10,
     backgroundColor: COLORS.card,
     borderWidth: 1,
     borderColor: COLORS.border,
@@ -917,6 +951,45 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.bodyMedium,
     fontSize: rf(13),
     color: COLORS.text,
+  },
+  uploadCtaCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.card,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 8,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    marginTop: 20,
+    marginBottom: 4,
+    gap: 14,
+  },
+  uploadCtaIconWrap: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: COLORS.primaryLight,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  uploadCtaContent: {
+    flex: 1,
+  },
+  uploadCtaTitle: {
+    fontSize: rf(14),
+    fontFamily: FONTS.displayBold,
+    color: COLORS.text,
+    marginBottom: 2,
+  },
+  uploadCtaDesc: {
+    fontSize: rf(12),
+    fontFamily: FONTS.body,
+    color: COLORS.textMuted,
+    lineHeight: rf(16),
+  },
+  uploadCtaArrow: {
+    paddingLeft: 4,
   },
 });
 
