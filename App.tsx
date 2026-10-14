@@ -51,6 +51,7 @@ import { SearchScreen } from './src/screens/SearchScreen';
 import { SettingsScreen } from './src/screens/SettingsScreen';
 import { SignInScreen } from './src/screens/SignInScreen';
 import { ManageAccountScreen } from './src/screens/ManageAccountScreen';
+import { MyContributionsScreen } from './src/screens/MyContributionsScreen';
 import { SemesterSelectScreen } from './src/screens/SemesterSelectScreen';
 import { SyllabusOverviewScreen } from './src/screens/SyllabusOverviewScreen';
 import { SubjectSyllabusScreen } from './src/screens/SubjectSyllabusScreen';
@@ -249,6 +250,7 @@ function renderSharedScreens(StackNav: typeof Stack, syllabusTitle = 'Syllabus')
       <StackNav.Screen name="AdminDashboard" getComponent={() => require('./src/screens/admin/AdminDashboardScreen').AdminDashboardScreen} options={{ title: 'Dashboard' }} />
       <StackNav.Screen name="AdminNotify" getComponent={() => require('./src/screens/admin/AdminNotifyScreen').AdminNotifyScreen} options={{ title: 'Send notification' }} />
       <StackNav.Screen name="AdminUsers" getComponent={() => require('./src/screens/admin/AdminUsersScreen').AdminUsersScreen} options={{ title: 'User support' }} />
+      <StackNav.Screen name="AdminContributions" getComponent={() => require('./src/screens/admin/AdminContributionsScreen').AdminContributionsScreen} options={{ title: 'Paper Submissions' }} />
       <StackNav.Screen name="AdminConfig" getComponent={() => require('./src/screens/admin/AdminConfigScreen').AdminConfigScreen} options={{ title: 'App config' }} />
       <StackNav.Screen name="AdminAi" getComponent={() => require('./src/screens/admin/AdminAiScreen').AdminAiScreen} options={{ title: 'AI features' }} />
     </>
@@ -693,6 +695,11 @@ function AppContent() {
             <RootStack.Screen
               name="ManageAccount"
               component={ManageAccountScreen}
+              options={{ presentation: 'fullScreenModal' }}
+            />
+            <RootStack.Screen
+              name="MyContributions"
+              component={MyContributionsScreen}
               options={{ presentation: 'fullScreenModal' }}
             />
             <RootStack.Screen

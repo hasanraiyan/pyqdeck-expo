@@ -49,6 +49,13 @@ export const AdminHomeScreen = ({ navigation }: any) => {
       to: 'AdminUsers',
     },
     {
+      show: can(tools, 'manage_papers', 'read') || can(tools, 'manage_papers'),
+      icon: 'file-text' as Icon,
+      label: 'Paper submissions',
+      subtitle: 'Review student contributed exam papers and download files',
+      to: 'AdminContributions',
+    },
+    {
       show: can(tools, 'manage_app_config', 'read'),
       icon: 'sliders' as Icon,
       label: 'App config',

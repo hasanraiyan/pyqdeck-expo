@@ -2,6 +2,15 @@
 
 All notable changes to PYQDeck are listed here, newest first.
 
+## 1.13.0
+
+### Added
+- **Upload exam question papers.** Students can now contribute past university exam papers directly from the app. Tap the upload button to take camera photos, pick images from your gallery, or attach a PDF.
+- **Your Contributions screen.** View your submitted exam papers, track review status, and inspect attached paper files under Settings > Your contributions.
+
+### Changed
+- **Direct, fast paper uploads.** Papers upload directly to secure cloud storage with real-time percentage progress, avoiding heavy server memory loads and network dropouts.
+
 ## 1.12.5
 
 ### Changed

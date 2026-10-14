@@ -20,6 +20,8 @@ import {
   SyllabusSubject,
 } from '../types/syllabus';
 import { Platform } from 'react-native';
+import * as FileSystem from 'expo-file-system/legacy';
+import { FileSystemUploadType } from 'expo-file-system/legacy';
 import Constants from 'expo-constants';
 import * as Backend from './backend';
 import { authHeader, getAuthToken } from '../auth/token';
@@ -455,6 +457,47 @@ export const adminCatalog = (body: Record<string, unknown>) =>
   requestAdmin<Record<string, any>>('/catalog', 'POST', body);
 export const adminContent = (body: Record<string, unknown>) =>
   requestAdmin<Record<string, any>>('/content', 'POST', body);
+
+// Admin inspection & moderation of student exam paper contributions
+export interface AdminContributionsResponse {
+  submissions: Array<{
+    _id: string;
+    subjectName: string;
+    year?: number;
+    fileType: 'pdf' | 'images';
+    files: Array<{
+      url: string;
+      name: string;
+      size: number;
+      storageId: string;
+      resourceType: 'raw' | 'image';
+    }>;
+    status: 'received' | 'reviewed' | 'approved' | 'rejected';
+    adminNotes?: string;
+    contributorEmail?: string;
+    isAnonymous: boolean;
+    createdAt: string;
+  }>;
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+export const adminListContributions = (p: { limit?: number; offset?: number } = {}) =>
+  requestAdmin<AdminContributionsResponse>(
+    `/contributions?limit=${p.limit ?? 50}&offset=${p.offset ?? 0}`,
+    'GET'
+  );
+
+export const adminDeleteContribution = (id: string) =>
+  requestAdmin<{ success: boolean; deletedId: string }>(`/contributions/${encodeURIComponent(id)}`, 'DELETE');
+
+export const adminUpdateContributionStatus = (
+  id: string,
+  status: 'received' | 'reviewed' | 'approved' | 'rejected',
+  adminNotes?: string
+) =>
+  requestAdmin<any>(`/contributions/${encodeURIComponent(id)}`, 'PATCH', { status, adminNotes });
 
 // -------------------------------------------------------------
 // ACCOUNT PROGRESS SYNC (/api/me, signed-in only)
@@ -1020,3 +1063,293 @@ export const getAiOverviewStatus = async (signal?: AbortSignal): Promise<boolean
 // Cloudflare caches public GETs for an hour and every miss is billed.
 export const getAiOverview = (query: string, limit?: number, signal?: AbortSignal) =>
   postApi<AiOverview>('/search/ai-overview', { query, ...(limit ? { limit } : {}) }, signal);
+
+// -------------------------------------------------------------
+// STUDENT PAPER CONTRIBUTIONS
+// -------------------------------------------------------------
+
+export interface ContributionFile {
+  url: string;
+  name: string;
+  size: number;
+  storageId: string;
+  resourceType: 'raw' | 'image';
+}
+
+export interface PaperContribution {
+  _id: string;
+  subjectName: string;
+  year?: number;
+  fileType: 'pdf' | 'images';
+  files: ContributionFile[];
+  status: 'received' | 'reviewed' | 'approved' | 'rejected';
+  isAnonymous: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SubmitContributionResult {
+  success: boolean;
+  submissionId: string;
+  message: string;
+  submission: PaperContribution;
+}
+
+/**
+ * Upload student exam paper contribution directly to UploadThing storage.
+ * Architecture matches Cloudinary direct upload:
+ *   1. Requests presigned upload URLs from our server (/api/uploadthing?slug=examPaperUploader)
+ *      NO API tokens or secrets are ever exposed in the client!
+ *   2. Directly uploads file binary to UploadThing ingest servers via PUT with real progress.
+ *   3. Commits the record and metadata to /api/contributions/commit.
+ */
+export const submitPaperContribution = async (params: {
+  files: Array<{ uri: string; name: string; type: string; size?: number }>;
+  subjectName?: string;
+  year?: string;
+  onProgress?: (percent: number) => void;
+}): Promise<SubmitContributionResult> => {
+  const origin = await Backend.ready();
+  const token = await getAuthToken();
+
+  const detectMimeType = (file: { name?: string; type?: string }) => {
+    const n = (file.name || '').toLowerCase();
+    const t = (file.type || '').toLowerCase();
+    if (t.includes('pdf') || n.endsWith('.pdf')) return 'application/pdf';
+    if (t.includes('png') || n.endsWith('.png')) return 'image/png';
+    if (t.includes('webp') || n.endsWith('.webp')) return 'image/webp';
+    if (t.includes('heic') || n.endsWith('.heic')) return 'image/heic';
+    return 'image/jpeg';
+  };
+
+  // 1. Resolve exact file sizes and URIs before requesting presigned slots
+  // UploadThing's ingest server cryptographically checks that the uploaded file size
+  // is <= x-ut-file-size in the signed URL. If size is missing or understated, UploadThing returns 413 "Upload too large".
+  const preparedFiles: Array<{ uri: string; name: string; type: string; size: number }> = [];
+  for (let i = 0; i < params.files.length; i++) {
+    const f = params.files[i];
+    let realSize = f.size || 0;
+    const mime = detectMimeType(f);
+    const isPdf = mime === 'application/pdf';
+    const cleanName = f.name || (isPdf ? `paper_${i + 1}.pdf` : `photo_${i + 1}.jpg`);
+
+    if (realSize <= 0) {
+      try {
+        if (Platform.OS === 'web') {
+          const blob = await fetch(f.uri).then((r) => r.blob());
+          realSize = blob.size;
+        } else {
+          const info = await FileSystem.getInfoAsync(f.uri);
+          if (info.exists && typeof info.size === 'number') {
+            realSize = info.size;
+          }
+        }
+      } catch (e) {
+        console.warn(`[UploadContribution] Could not measure size for ${f.uri}:`, e);
+      }
+    }
+
+    // Safety fallback: ensure at least a generous size estimate if filesystem doesn't report it
+    if (!realSize || realSize <= 0) {
+      realSize = 10 * 1024 * 1024; // 10MB safe ceiling
+    }
+
+    preparedFiles.push({
+      uri: f.uri,
+      name: cleanName,
+      type: mime,
+      size: realSize,
+    });
+  }
+
+  // Request presigned upload URLs from our server
+  const presignUrl = `${origin.root}/api/uploadthing?slug=examPaperUploader&actionType=upload`;
+  const presignPayload = {
+    files: preparedFiles.map((f) => ({
+      name: f.name,
+      size: f.size,
+      type: f.type,
+    })),
+  };
+
+  const presignHeaders: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+  if (token) {
+    presignHeaders['Authorization'] = `Bearer ${token}`;
+  }
+
+  const presignRes = await fetchWithTimeout(presignUrl, {
+    method: 'POST',
+    headers: presignHeaders,
+    body: JSON.stringify(presignPayload),
+  });
+
+  if (!presignRes.ok) {
+    const errBody = await presignRes.json().catch(() => ({}));
+    throw new ApiError(
+      errBody?.message || 'Could not initiate upload session.',
+      presignRes.status,
+      undefined,
+      kindForStatus(presignRes.status)
+    );
+  }
+
+  const presignedList: Array<{ url: string; key: string; name: string }> = await presignRes.json();
+  if (!Array.isArray(presignedList) || presignedList.length === 0) {
+    throw new ApiError('No upload slots granted by the server.', 500, undefined, 'server');
+  }
+
+  // 2. Upload each file directly to UploadThing storage ingest servers via PUT FormData
+  const totalFiles = params.files.length;
+  const progressPerFile = new Array(totalFiles).fill(0);
+
+  const updateOverallProgress = () => {
+    if (!params.onProgress) return;
+    const totalPct = progressPerFile.reduce((acc, curr) => acc + curr, 0) / totalFiles;
+    params.onProgress(Math.min(95, Math.round(totalPct)));
+  };
+
+  const uploadedAssets: Array<{
+    url: string;
+    name: string;
+    size: number;
+    storageId: string;
+    resourceType: 'raw' | 'image';
+  }> = [];
+
+  for (let i = 0; i < totalFiles; i++) {
+    const f = preparedFiles[i];
+    const presigned = presignedList[i];
+    const mime = f.type;
+    const isPdf = mime === 'application/pdf';
+    const cleanName = f.name;
+
+    console.log(`[UploadContribution] Starting upload ${i + 1}/${totalFiles}: "${cleanName}" (${mime}, ${f.size} bytes) via ${Platform.OS}`);
+    let result: { ufsUrl?: string; url?: string } = {};
+
+    if (Platform.OS === 'web') {
+      // In web browsers, fetch the local object/blob URL into a real Blob
+      // React Native's `{ uri }` object cannot be parsed by standard web browsers in FormData.append()
+      const rawBlob = await fetch(f.uri).then((r) => r.blob());
+      // Ensure the Blob has the matching MIME type
+      const typedBlob = rawBlob.type ? rawBlob : new Blob([rawBlob], { type: mime });
+      console.log(`[UploadContribution Web] Converted blob size: ${typedBlob.size}, type: ${typedBlob.type}`);
+
+      result = await new Promise<{ ufsUrl?: string; url?: string }>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open('PUT', presigned.url);
+        xhr.timeout = 120000;
+        const formData = new FormData();
+        formData.append('file', typedBlob, cleanName);
+
+        if (xhr.upload) {
+          xhr.upload.onprogress = (e) => {
+            if (e.lengthComputable && e.total > 0) {
+              progressPerFile[i] = (e.loaded / e.total) * 100;
+              updateOverallProgress();
+            }
+          };
+        }
+
+        xhr.onload = () => {
+          let body: any = {};
+          try {
+            body = JSON.parse(xhr.responseText || '{}');
+          } catch {}
+          console.log(`[UploadContribution Web] Status ${xhr.status}, Response:`, xhr.responseText);
+          if (xhr.status >= 200 && xhr.status < 300) {
+            resolve(body);
+          } else {
+            const serverMsg = body?.error || body?.message || `HTTP ${xhr.status}`;
+            reject(new ApiError(`Upload of "${cleanName}" failed: ${serverMsg}`, xhr.status));
+          }
+        };
+        xhr.onerror = (e) => {
+          console.warn('[UploadContribution Web] XHR error:', e);
+          reject(new ApiError(MESSAGES.unreachable, undefined, undefined, 'unreachable'));
+        };
+        xhr.ontimeout = () => reject(new ApiError(MESSAGES.timeout, undefined, undefined, 'timeout'));
+        xhr.send(formData as any);
+      });
+    } else {
+      // Native iOS & Android: FileSystem.uploadAsync natively handles native filesystem streams,
+      // avoiding any React Native XHR FormData multipart boundary or stream corruption issues.
+      console.log(`[UploadContribution Native] Starting uploadAsync for ${f.uri}`);
+      const res = await FileSystem.uploadAsync(presigned.url, f.uri, {
+        httpMethod: 'PUT',
+        uploadType: FileSystemUploadType.MULTIPART,
+        fieldName: 'file',
+        mimeType: mime,
+      });
+      console.log(`[UploadContribution Native] Status ${res.status}, body:`, res.body);
+
+      if (res.status >= 200 && res.status < 300) {
+        try {
+          result = JSON.parse(res.body || '{}');
+        } catch {
+          result = {};
+        }
+      } else {
+        let errDesc = `HTTP ${res.status}`;
+        try {
+          const parsed = JSON.parse(res.body);
+          if (parsed.error || parsed.message) errDesc = parsed.error || parsed.message;
+        } catch {}
+        throw new ApiError(`Upload of "${cleanName}" failed: ${errDesc}`, res.status);
+      }
+    }
+
+    progressPerFile[i] = 100;
+    updateOverallProgress();
+
+    const fileUrl = result.ufsUrl || result.url || `https://ufs.sh/f/${presigned.key}`;
+    uploadedAssets.push({
+      url: fileUrl,
+      name: cleanName,
+      size: f.size || 0,
+      storageId: presigned.key,
+      resourceType: isPdf ? 'raw' : 'image',
+    });
+  }
+
+  // 3. Finalize: Commit the uploaded metadata to our server
+  params.onProgress?.(98);
+  const commitUrl = `${origin.root}/api/contributions/commit`;
+  const commitHeaders: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+  if (token) {
+    commitHeaders['Authorization'] = `Bearer ${token}`;
+  }
+
+  const commitRes = await fetchWithTimeout(commitUrl, {
+    method: 'POST',
+    headers: commitHeaders,
+    body: JSON.stringify({
+      subjectName: params.subjectName,
+      year: params.year,
+      files: uploadedAssets,
+    }),
+  });
+
+  if (!commitRes.ok) {
+    const errBody = await commitRes.json().catch(() => ({}));
+    throw new ApiError(
+      errBody?.message || 'Failed to save submission.',
+      commitRes.status,
+      undefined,
+      kindForStatus(commitRes.status)
+    );
+  }
+
+  params.onProgress?.(100);
+  return commitRes.json();
+};
+
+/**
+ * Get the signed-in student's own contribution history.
+ * Returns [] when signed out.
+ */
+export const getMyContributions = (): Promise<PaperContribution[]> =>
+  requestMe<PaperContribution[]>('/contributions', 'GET');

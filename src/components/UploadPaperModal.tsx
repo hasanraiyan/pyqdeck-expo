@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
+  Animated,
   View,
   Text,
   Modal,
@@ -13,15 +14,20 @@ import {
   Platform,
   KeyboardAvoidingView,
   Keyboard,
+  useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { Feather } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
+import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
+import * as FileSystem from 'expo-file-system/legacy';
 import * as Haptics from 'expo-haptics';
 import { COLORS, FONTS, RADIUS, SHADOWS } from '../theme/colors';
 import { useDialogLayout } from '../utils/dialog';
+import { submitPaperContribution } from '../api';
+import ConfettiCannon from 'react-native-confetti-cannon';
 
 export interface SelectedFileItem {
   id: string;
@@ -46,6 +52,7 @@ export const UploadPaperModal: React.FC<UploadPaperModalProps> = ({
 }) => {
   const insets = useSafeAreaInsets();
   const dlg = useDialogLayout();
+  const { width: screenW, height: screenH } = useWindowDimensions();
 
   const [subjectName, setSubjectName] = useState(initialSubjectName);
   const [year, setYear] = useState(initialYear ? String(initialYear) : '');
@@ -67,6 +74,15 @@ export const UploadPaperModal: React.FC<UploadPaperModalProps> = ({
       hide.remove();
     };
   }, []);
+
+  // Check badge pops in when the upload succeeds
+  const successScale = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    if (uploadStatus === 'success') {
+      successScale.setValue(0);
+      Animated.spring(successScale, { toValue: 1, friction: 4, tension: 120, useNativeDriver: true }).start();
+    }
+  }, [uploadStatus, successScale]);
 
   // Sync initial values when sheet opens
   useEffect(() => {
@@ -93,13 +109,18 @@ export const UploadPaperModal: React.FC<UploadPaperModalProps> = ({
       });
       if (!result.canceled && result.assets && result.assets.length > 0) {
         const asset = result.assets[0];
+        let ext = 'jpg';
+        if (asset.mimeType?.includes('png') || asset.uri.toLowerCase().endsWith('.png')) ext = 'png';
+        else if (asset.mimeType?.includes('webp') || asset.uri.toLowerCase().endsWith('.webp')) ext = 'webp';
+
         const newItem: SelectedFileItem = {
           id: `cam-${Date.now()}-${Math.random()}`,
           uri: asset.uri,
-          name: asset.fileName || `Page-${files.length + 1}.jpg`,
+          name: asset.fileName || `Page-${files.length + 1}.${ext}`,
           type: 'image',
           size: asset.fileSize,
         };
+        console.log('[UploadPaper] Picked camera asset:', { uri: asset.uri, name: newItem.name, size: asset.fileSize });
         setFiles((prev) => [...prev, newItem]);
       }
     } catch (e: any) {
@@ -121,13 +142,22 @@ export const UploadPaperModal: React.FC<UploadPaperModalProps> = ({
         quality: 0.85,
       });
       if (!result.canceled && result.assets) {
-        const newItems: SelectedFileItem[] = result.assets.map((asset, i) => ({
-          id: `gal-${Date.now()}-${i}-${Math.random()}`,
-          uri: asset.uri,
-          name: asset.fileName || `Page-${files.length + i + 1}.jpg`,
-          type: 'image',
-          size: asset.fileSize,
-        }));
+        const newItems: SelectedFileItem[] = result.assets.map((asset, i) => {
+          // Detect extension from asset.mimeType or asset.uri
+          let ext = 'jpg';
+          if (asset.mimeType?.includes('png') || asset.uri.toLowerCase().endsWith('.png')) ext = 'png';
+          else if (asset.mimeType?.includes('webp') || asset.uri.toLowerCase().endsWith('.webp')) ext = 'webp';
+          else if (asset.mimeType?.includes('pdf') || asset.uri.toLowerCase().endsWith('.pdf')) ext = 'pdf';
+
+          const defaultName = `Page-${files.length + i + 1}.${ext}`;
+          return {
+            id: `gal-${Date.now()}-${i}-${Math.random()}`,
+            uri: asset.uri,
+            name: asset.fileName || defaultName,
+            type: ext === 'pdf' ? 'pdf' : 'image',
+            size: asset.fileSize,
+          };
+        });
         setFiles((prev) => [...prev, ...newItems]);
       }
     } catch (e: any) {
@@ -164,8 +194,8 @@ export const UploadPaperModal: React.FC<UploadPaperModalProps> = ({
     setFiles((prev) => prev.filter((f) => f.id !== id));
   };
 
-  // Mock Upload Simulation (Fields are optional, only paper file is required)
-  const handleUpload = () => {
+  // Real upload to POST /api/contributions/submit
+  const handleUpload = async () => {
     if (files.length === 0) {
       Alert.alert('No Paper Attached', 'Please take photos or select a PDF of the question paper.');
       return;
@@ -173,15 +203,85 @@ export const UploadPaperModal: React.FC<UploadPaperModalProps> = ({
 
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setUploadStatus('uploading');
-    setUploadProgress(20);
+    setUploadProgress(5);
 
-    setTimeout(() => setUploadProgress(55), 350);
-    setTimeout(() => setUploadProgress(88), 750);
-    setTimeout(() => {
+    try {
+      // Auto-compress / shrink image pages to standard high-res bounds (max 2600px edge, 85% JPEG)
+      // to keep upload sizes snappy and prevent phone camera 50MP bloat
+      const preparedList: Array<{ uri: string; name: string; type: string; size?: number }> = [];
+      for (let idx = 0; idx < files.length; idx++) {
+        const f = files[idx];
+        const isPdf = f.type === 'pdf' || f.name.toLowerCase().endsWith('.pdf');
+        let mime = 'image/jpeg';
+        if (isPdf) mime = 'application/pdf';
+        else if (f.name.toLowerCase().endsWith('.png')) mime = 'image/png';
+        else if (f.name.toLowerCase().endsWith('.webp')) mime = 'image/webp';
+        else if (f.name.toLowerCase().endsWith('.heic')) mime = 'image/heic';
+
+        let targetUri = f.uri;
+        let targetSize = f.size;
+        let targetName = f.name || (isPdf ? `paper_${idx + 1}.pdf` : `page_${idx + 1}.jpg`);
+
+        if (!isPdf && Platform.OS !== 'web') {
+          try {
+            // Compress and resize large phone photos down to max 2600px
+            const probe = await ImageManipulator.manipulate(f.uri).renderAsync();
+            const maxEdge = 2600;
+            const longEdge = Math.max(probe.width, probe.height);
+            const resizeAction = longEdge > maxEdge
+              ? [probe.width >= probe.height ? { resize: { width: maxEdge } } : { resize: { height: maxEdge } }]
+              : [];
+
+            const manip = ImageManipulator.manipulate(f.uri);
+            if (resizeAction.length > 0) {
+              if ('width' in resizeAction[0].resize) manip.resize({ width: maxEdge });
+              else manip.resize({ height: maxEdge });
+            }
+            const ref = await manip.renderAsync();
+            const out = await ref.saveAsync({ format: SaveFormat.JPEG, compress: 0.85 });
+            targetUri = out.uri;
+            mime = 'image/jpeg';
+            targetName = targetName.replace(/\.[^.]+$/, '.jpg');
+
+            const info = await FileSystem.getInfoAsync(targetUri);
+            if (info.exists && typeof info.size === 'number') {
+              targetSize = info.size;
+            }
+            console.log(`[UploadPaper] Compressed image ${f.name} -> ${targetSize} bytes`);
+          } catch (compErr) {
+            console.warn('[UploadPaper] Auto-compression fallback:', compErr);
+          }
+        }
+
+        preparedList.push({
+          uri: targetUri,
+          name: targetName,
+          type: mime,
+          size: targetSize,
+        });
+      }
+
+      await submitPaperContribution({
+        files: preparedList,
+        subjectName: subjectName.trim() || undefined,
+        year: year.trim() || undefined,
+        onProgress: (pct) => {
+          setUploadProgress(pct);
+        },
+      });
+
       setUploadProgress(100);
       setUploadStatus('success');
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    }, 1100);
+    } catch (err: any) {
+      setUploadStatus('idle');
+      setUploadProgress(0);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert(
+        'Upload Failed',
+        err?.message || 'Something went wrong while submitting. Please check your network and try again.'
+      );
+    }
   };
 
   const handleReset = () => {
@@ -264,9 +364,9 @@ export const UploadPaperModal: React.FC<UploadPaperModalProps> = ({
             {uploadStatus === 'success' ? (
               /* Success View */
               <View style={styles.successContainer}>
-                <View style={styles.successIconCircle}>
+                <Animated.View style={[styles.successIconCircle, { transform: [{ scale: successScale }] }]}>
                   <Feather name="check" size={30} color="#ffffff" />
-                </View>
+                </Animated.View>
                 <Text style={styles.successTitle}>Paper Uploaded!</Text>
                 <Text style={styles.successDesc}>
                   Thank you for contributing{' '}
@@ -469,6 +569,16 @@ export const UploadPaperModal: React.FC<UploadPaperModalProps> = ({
               </ScrollView>
             )}
           </View>
+
+          {uploadStatus === 'success' && (
+            <ConfettiCannon
+              count={160}
+              origin={{ x: screenW / 2, y: screenH * 0.62 }}
+              explosionSpeed={420}
+              fallSpeed={2800}
+              fadeOut
+            />
+          )}
         </View>
       </KeyboardAvoidingView>
     </Modal>
