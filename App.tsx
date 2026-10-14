@@ -250,6 +250,7 @@ function renderSharedScreens(StackNav: typeof Stack, syllabusTitle = 'Syllabus')
       <StackNav.Screen name="AdminDashboard" getComponent={() => require('./src/screens/admin/AdminDashboardScreen').AdminDashboardScreen} options={{ title: 'Dashboard' }} />
       <StackNav.Screen name="AdminNotify" getComponent={() => require('./src/screens/admin/AdminNotifyScreen').AdminNotifyScreen} options={{ title: 'Send notification' }} />
       <StackNav.Screen name="AdminUsers" getComponent={() => require('./src/screens/admin/AdminUsersScreen').AdminUsersScreen} options={{ title: 'User support' }} />
+      <StackNav.Screen name="AdminContributions" getComponent={() => require('./src/screens/admin/AdminContributionsScreen').AdminContributionsScreen} options={{ title: 'Paper Submissions' }} />
       <StackNav.Screen name="AdminConfig" getComponent={() => require('./src/screens/admin/AdminConfigScreen').AdminConfigScreen} options={{ title: 'App config' }} />
       <StackNav.Screen name="AdminAi" getComponent={() => require('./src/screens/admin/AdminAiScreen').AdminAiScreen} options={{ title: 'AI features' }} />
     </>

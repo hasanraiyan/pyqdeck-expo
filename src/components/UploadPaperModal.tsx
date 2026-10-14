@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
+  Animated,
   View,
   Text,
   Modal,
@@ -13,6 +14,7 @@ import {
   Platform,
   KeyboardAvoidingView,
   Keyboard,
+  useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
@@ -25,6 +27,7 @@ import * as Haptics from 'expo-haptics';
 import { COLORS, FONTS, RADIUS, SHADOWS } from '../theme/colors';
 import { useDialogLayout } from '../utils/dialog';
 import { submitPaperContribution } from '../api';
+import ConfettiCannon from 'react-native-confetti-cannon';
 
 export interface SelectedFileItem {
   id: string;
@@ -49,6 +52,7 @@ export const UploadPaperModal: React.FC<UploadPaperModalProps> = ({
 }) => {
   const insets = useSafeAreaInsets();
   const dlg = useDialogLayout();
+  const { width: screenW, height: screenH } = useWindowDimensions();
 
   const [subjectName, setSubjectName] = useState(initialSubjectName);
   const [year, setYear] = useState(initialYear ? String(initialYear) : '');
@@ -70,6 +74,15 @@ export const UploadPaperModal: React.FC<UploadPaperModalProps> = ({
       hide.remove();
     };
   }, []);
+
+  // Check badge pops in when the upload succeeds
+  const successScale = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    if (uploadStatus === 'success') {
+      successScale.setValue(0);
+      Animated.spring(successScale, { toValue: 1, friction: 4, tension: 120, useNativeDriver: true }).start();
+    }
+  }, [uploadStatus, successScale]);
 
   // Sync initial values when sheet opens
   useEffect(() => {
@@ -351,9 +364,9 @@ export const UploadPaperModal: React.FC<UploadPaperModalProps> = ({
             {uploadStatus === 'success' ? (
               /* Success View */
               <View style={styles.successContainer}>
-                <View style={styles.successIconCircle}>
+                <Animated.View style={[styles.successIconCircle, { transform: [{ scale: successScale }] }]}>
                   <Feather name="check" size={30} color="#ffffff" />
-                </View>
+                </Animated.View>
                 <Text style={styles.successTitle}>Paper Uploaded!</Text>
                 <Text style={styles.successDesc}>
                   Thank you for contributing{' '}
@@ -556,6 +569,16 @@ export const UploadPaperModal: React.FC<UploadPaperModalProps> = ({
               </ScrollView>
             )}
           </View>
+
+          {uploadStatus === 'success' && (
+            <ConfettiCannon
+              count={160}
+              origin={{ x: screenW / 2, y: screenH * 0.62 }}
+              explosionSpeed={420}
+              fallSpeed={2800}
+              fadeOut
+            />
+          )}
         </View>
       </KeyboardAvoidingView>
     </Modal>

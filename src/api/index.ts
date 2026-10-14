@@ -458,6 +458,47 @@ export const adminCatalog = (body: Record<string, unknown>) =>
 export const adminContent = (body: Record<string, unknown>) =>
   requestAdmin<Record<string, any>>('/content', 'POST', body);
 
+// Admin inspection & moderation of student exam paper contributions
+export interface AdminContributionsResponse {
+  submissions: Array<{
+    _id: string;
+    subjectName: string;
+    year?: number;
+    fileType: 'pdf' | 'images';
+    files: Array<{
+      url: string;
+      name: string;
+      size: number;
+      storageId: string;
+      resourceType: 'raw' | 'image';
+    }>;
+    status: 'received' | 'reviewed' | 'approved' | 'rejected';
+    adminNotes?: string;
+    contributorEmail?: string;
+    isAnonymous: boolean;
+    createdAt: string;
+  }>;
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+export const adminListContributions = (p: { limit?: number; offset?: number } = {}) =>
+  requestAdmin<AdminContributionsResponse>(
+    `/contributions?limit=${p.limit ?? 50}&offset=${p.offset ?? 0}`,
+    'GET'
+  );
+
+export const adminDeleteContribution = (id: string) =>
+  requestAdmin<{ success: boolean; deletedId: string }>(`/contributions/${encodeURIComponent(id)}`, 'DELETE');
+
+export const adminUpdateContributionStatus = (
+  id: string,
+  status: 'received' | 'reviewed' | 'approved' | 'rejected',
+  adminNotes?: string
+) =>
+  requestAdmin<any>(`/contributions/${encodeURIComponent(id)}`, 'PATCH', { status, adminNotes });
+
 // -------------------------------------------------------------
 // ACCOUNT PROGRESS SYNC (/api/me, signed-in only)
 // -------------------------------------------------------------
