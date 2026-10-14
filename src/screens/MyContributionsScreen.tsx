@@ -7,7 +7,6 @@ import {
   ActivityIndicator,
   TouchableOpacity,
   RefreshControl,
-  Linking,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
@@ -32,10 +31,6 @@ function ContributionCard({ item }: { item: PaperContribution }) {
     month: 'short',
     year: 'numeric',
   });
-
-  const handleOpenFile = (url: string) => {
-    Linking.openURL(url).catch(() => {});
-  };
 
   return (
     <View style={styles.card}>
@@ -64,20 +59,21 @@ function ContributionCard({ item }: { item: PaperContribution }) {
         </View>
       </View>
 
-      {/* File links */}
+      {/* File list (names only, no clickable storage URLs) */}
       {item.files.map((f, i) => (
-        <TouchableOpacity
-          key={f.storageId}
+        <View
+          key={f.storageId || `${i}-${f.name}`}
           style={styles.fileRow}
-          onPress={() => handleOpenFile(f.url)}
-          activeOpacity={0.7}
         >
-          <Feather name="link" size={13} color={COLORS.primary} />
+          <Feather
+            name={f.resourceType === 'raw' || f.name.toLowerCase().endsWith('.pdf') ? 'file-text' : 'image'}
+            size={13}
+            color={COLORS.textMuted}
+          />
           <Text style={styles.fileName} numberOfLines={1}>
             {f.name}
           </Text>
-          <Feather name="external-link" size={12} color={COLORS.textSubtle} />
-        </TouchableOpacity>
+        </View>
       ))}
     </View>
   );
