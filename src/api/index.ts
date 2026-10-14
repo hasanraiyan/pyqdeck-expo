@@ -1053,101 +1053,172 @@ export interface SubmitContributionResult {
 }
 
 /**
- * Upload student exam paper contribution.
- * Works for both anonymous guests and signed-in users.
- * Uses XMLHttpRequest for solid React Native Android/iOS multipart/form-data support and real progress tracking.
+ * Upload student exam paper contribution directly to UploadThing storage.
+ * Architecture matches Cloudinary direct upload:
+ *   1. Requests presigned upload URLs from our server (/api/uploadthing?slug=examPaperUploader)
+ *      NO API tokens or secrets are ever exposed in the client!
+ *   2. Directly uploads file binary to UploadThing ingest servers via PUT with real progress.
+ *   3. Commits the record and metadata to /api/contributions/commit.
  */
 export const submitPaperContribution = async (params: {
-  files: Array<{ uri: string; name: string; type: string }>;
+  files: Array<{ uri: string; name: string; type: string; size?: number }>;
   subjectName?: string;
   year?: string;
   onProgress?: (percent: number) => void;
 }): Promise<SubmitContributionResult> => {
   const origin = await Backend.ready();
   const token = await getAuthToken();
-  const url = `${origin.root}/api/contributions/submit`;
 
-  return new Promise<SubmitContributionResult>((resolve, reject) => {
-    const xhr = new XMLHttpRequest();
-    xhr.open('POST', url);
-    xhr.timeout = 60000; // 60s timeout for large uploads
+  // 1. Request presigned upload URLs from our server
+  const presignUrl = `${origin.root}/api/uploadthing?slug=examPaperUploader&actionType=upload`;
+  const presignPayload = {
+    files: params.files.map((f, i) => ({
+      name: f.name || `paper_${i + 1}`,
+      size: f.size || 1024 * 50,
+      type: f.type.includes('pdf') || f.name.toLowerCase().endsWith('.pdf') ? 'application/pdf' : 'image/jpeg',
+    })),
+  };
 
-    if (token) {
-      xhr.setRequestHeader('Authorization', `Bearer ${token}`);
-    }
+  const presignHeaders: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+  if (token) {
+    presignHeaders['Authorization'] = `Bearer ${token}`;
+  }
 
-    // Advisory version headers
-    if (Platform.OS !== 'web') {
-      const version = Constants.expoConfig?.version;
-      const build = Constants.expoConfig?.android?.versionCode;
-      if (version) xhr.setRequestHeader('X-App-Version', version);
-      if (build) xhr.setRequestHeader('X-App-Build', String(build));
-    }
+  const presignRes = await fetchWithTimeout(presignUrl, {
+    method: 'POST',
+    headers: presignHeaders,
+    body: JSON.stringify(presignPayload),
+  });
 
-    const formData = new FormData();
-    if (params.subjectName?.trim()) {
-      formData.append('subjectName', params.subjectName.trim());
-    }
-    if (params.year?.trim()) {
-      formData.append('year', params.year.trim());
-    }
+  if (!presignRes.ok) {
+    const errBody = await presignRes.json().catch(() => ({}));
+    throw new ApiError(
+      errBody?.message || 'Could not initiate upload session.',
+      presignRes.status,
+      undefined,
+      kindForStatus(presignRes.status)
+    );
+  }
 
-    for (let i = 0; i < params.files.length; i++) {
-      const f = params.files[i];
-      const isPdf = f.type.includes('pdf') || f.name.toLowerCase().endsWith('.pdf');
-      const cleanName = f.name || (isPdf ? `paper_${i + 1}.pdf` : `photo_${i + 1}.jpg`);
-      const mime = isPdf ? 'application/pdf' : f.type || 'image/jpeg';
+  const presignedList: Array<{ url: string; key: string; name: string }> = await presignRes.json();
+  if (!Array.isArray(presignedList) || presignedList.length === 0) {
+    throw new ApiError('No upload slots granted by the server.', 500, undefined, 'server');
+  }
 
-      formData.append('files', {
+  // 2. Upload each file directly to UploadThing storage ingest servers via PUT FormData
+  const totalFiles = params.files.length;
+  const progressPerFile = new Array(totalFiles).fill(0);
+
+  const updateOverallProgress = () => {
+    if (!params.onProgress) return;
+    const totalPct = progressPerFile.reduce((acc, curr) => acc + curr, 0) / totalFiles;
+    params.onProgress(Math.min(95, Math.round(totalPct)));
+  };
+
+  const uploadedAssets: Array<{
+    url: string;
+    name: string;
+    size: number;
+    storageId: string;
+    resourceType: 'raw' | 'image';
+  }> = [];
+
+  for (let i = 0; i < totalFiles; i++) {
+    const f = params.files[i];
+    const presigned = presignedList[i];
+    const isPdf = f.type.includes('pdf') || f.name.toLowerCase().endsWith('.pdf');
+    const mime = isPdf ? 'application/pdf' : f.type || 'image/jpeg';
+    const cleanName = f.name || (isPdf ? `paper_${i + 1}.pdf` : `photo_${i + 1}.jpg`);
+
+    const result = await new Promise<{ ufsUrl?: string; url?: string }>((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open('PUT', presigned.url);
+      xhr.timeout = 120000; // 2 minutes per file
+
+      const formData = new FormData();
+      formData.append('file', {
         uri: Platform.OS === 'android' ? f.uri : f.uri.replace('file://', ''),
         name: cleanName,
         type: mime,
       } as any);
-    }
 
-    if (xhr.upload && params.onProgress) {
-      xhr.upload.onprogress = (e) => {
-        if (e.lengthComputable && e.total > 0) {
-          const pct = Math.min(98, Math.round((e.loaded / e.total) * 100));
-          params.onProgress?.(pct);
+      if (xhr.upload) {
+        xhr.upload.onprogress = (e) => {
+          if (e.lengthComputable && e.total > 0) {
+            progressPerFile[i] = (e.loaded / e.total) * 100;
+            updateOverallProgress();
+          }
+        };
+      }
+
+      xhr.onload = () => {
+        let body: any = {};
+        try {
+          body = JSON.parse(xhr.responseText || '{}');
+        } catch {
+          body = {};
         }
+
+        if (xhr.status >= 200 && xhr.status < 300) {
+          progressPerFile[i] = 100;
+          updateOverallProgress();
+          resolve(body);
+          return;
+        }
+
+        reject(new ApiError(`Upload of "${cleanName}" failed (HTTP ${xhr.status}).`, xhr.status));
       };
-    }
 
-    xhr.onload = () => {
-      let body: any = {};
-      try {
-        body = JSON.parse(xhr.responseText || '{}');
-      } catch {
-        body = {};
-      }
+      xhr.onerror = () => reject(new ApiError(MESSAGES.unreachable, undefined, undefined, 'unreachable'));
+      xhr.ontimeout = () => reject(new ApiError(MESSAGES.timeout, undefined, undefined, 'timeout'));
 
-      if (xhr.status >= 200 && xhr.status < 300) {
-        resolve(body as SubmitContributionResult);
-        return;
-      }
+      xhr.send(formData as any);
+    });
 
-      const kind = kindForStatus(xhr.status);
-      const err = new ApiError(
-        body?.message || MESSAGES[kind] || 'Failed to submit paper.',
-        xhr.status,
-        undefined,
-        kind
-      );
-      if (typeof body?.code === 'string') err.code = body.code;
-      reject(err);
-    };
+    const fileUrl = result.ufsUrl || result.url || `https://ufs.sh/f/${presigned.key}`;
+    uploadedAssets.push({
+      url: fileUrl,
+      name: cleanName,
+      size: f.size || 0,
+      storageId: presigned.key,
+      resourceType: isPdf ? 'raw' : 'image',
+    });
+  }
 
-    xhr.onerror = () => {
-      reject(new ApiError(MESSAGES.unreachable, undefined, undefined, 'unreachable'));
-    };
+  // 3. Finalize: Commit the uploaded metadata to our server
+  params.onProgress?.(98);
+  const commitUrl = `${origin.root}/api/contributions/commit`;
+  const commitHeaders: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+  if (token) {
+    commitHeaders['Authorization'] = `Bearer ${token}`;
+  }
 
-    xhr.ontimeout = () => {
-      reject(new ApiError(MESSAGES.timeout, undefined, undefined, 'timeout'));
-    };
-
-    xhr.send(formData as any);
+  const commitRes = await fetchWithTimeout(commitUrl, {
+    method: 'POST',
+    headers: commitHeaders,
+    body: JSON.stringify({
+      subjectName: params.subjectName,
+      year: params.year,
+      files: uploadedAssets,
+    }),
   });
+
+  if (!commitRes.ok) {
+    const errBody = await commitRes.json().catch(() => ({}));
+    throw new ApiError(
+      errBody?.message || 'Failed to save submission.',
+      commitRes.status,
+      undefined,
+      kindForStatus(commitRes.status)
+    );
+  }
+
+  params.onProgress?.(100);
+  return commitRes.json();
 };
 
 /**

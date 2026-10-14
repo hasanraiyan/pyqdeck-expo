@@ -177,13 +177,14 @@ export const UploadPaperModal: React.FC<UploadPaperModalProps> = ({
     setUploadProgress(5);
 
     try {
-      // Map SelectedFileItem → { uri, name, type } for the API
+      // Map SelectedFileItem → { uri, name, type, size } for the API
       const apiFiles = files.map((f, idx) => {
         const isPdf = f.type === 'pdf' || f.name.toLowerCase().endsWith('.pdf');
         return {
           uri: f.uri,
           name: f.name || (isPdf ? `paper_${idx + 1}.pdf` : `page_${idx + 1}.jpg`),
           type: isPdf ? 'application/pdf' : 'image/jpeg',
+          size: f.size,
         };
       });
 
