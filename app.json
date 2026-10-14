@@ -2,7 +2,7 @@
   "expo": {
     "name": "PyQdeck",
     "slug": "pyqdeck",
-    "version": "1.13.1",
+    "version": "1.13.2",
     "orientation": "default",
     "icon": "./assets/app-icon.png",
     "userInterfaceStyle": "light",
@@ -18,7 +18,7 @@
     },
     "android": {
       "package": "app.hasanraiyan.pyqdeck",
-      "versionCode": 98,
+      "versionCode": 99,
       "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "backgroundColor": "#faf7f4",

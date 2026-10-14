@@ -2,6 +2,12 @@
 
 All notable changes to PYQDeck are listed here, newest first.
 
+## 1.13.2
+
+### Changed
+- **Paper upload performance & reliability.** Fine-tuned automatic photo compression and exact file size bounds for mobile devices.
+- **Contributions management.** Status updates and moderation improvements in the Admin tools.
+
 ## 1.13.1
 
 ### Added (admins)
