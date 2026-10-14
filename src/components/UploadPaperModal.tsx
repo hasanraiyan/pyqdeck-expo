@@ -411,6 +411,16 @@ export const UploadPaperModal: React.FC<UploadPaperModalProps> = ({
                 keyboardShouldPersistTaps="handled"
                 bounces={false}
               >
+                {/* Paused Banner */}
+                {isPaused && (
+                  <View style={styles.pausedBanner}>
+                    <Feather name="pause-circle" size={16} color="#d97706" />
+                    <Text style={styles.pausedBannerText}>
+                      Paper contributions are temporarily paused by an administrator.
+                    </Text>
+                  </View>
+                )}
+
                 {/* Field 1: Exam Year (Numeric TextInput, Optional) */}
                 <View style={styles.inputGroup}>
                   <View style={styles.labelRow}>
@@ -427,7 +437,7 @@ export const UploadPaperModal: React.FC<UploadPaperModalProps> = ({
                       placeholderTextColor={COLORS.textSubtle}
                       keyboardType="number-pad"
                       maxLength={4}
-                      editable={uploadStatus !== 'uploading'}
+                      editable={!isPaused && uploadStatus !== 'uploading'}
                     />
                   </View>
                 </View>
@@ -446,7 +456,7 @@ export const UploadPaperModal: React.FC<UploadPaperModalProps> = ({
                       onChangeText={setSubjectName}
                       placeholder="e.g. Computer Networks, Microprocessors"
                       placeholderTextColor={COLORS.textSubtle}
-                      editable={uploadStatus !== 'uploading'}
+                      editable={!isPaused && uploadStatus !== 'uploading'}
                       autoCapitalize="words"
                     />
                   </View>
@@ -460,39 +470,39 @@ export const UploadPaperModal: React.FC<UploadPaperModalProps> = ({
                   </View>
                   <View style={styles.attachCardRow}>
                     <TouchableOpacity
-                      style={styles.attachCard}
+                      style={[styles.attachCard, isPaused && styles.attachCardDisabled]}
                       activeOpacity={0.7}
                       onPress={handlePickCamera}
-                      disabled={uploadStatus === 'uploading'}
+                      disabled={isPaused || uploadStatus === 'uploading'}
                     >
                       <View style={styles.attachCardIconCircle}>
-                        <Feather name="camera" size={18} color={COLORS.primary} />
+                        <Feather name="camera" size={18} color={isPaused ? COLORS.textMuted : COLORS.primary} />
                       </View>
                       <Text style={styles.attachCardTitle}>Camera</Text>
                       <Text style={styles.attachCardSub}>Take photo</Text>
                     </TouchableOpacity>
 
                     <TouchableOpacity
-                      style={styles.attachCard}
+                      style={[styles.attachCard, isPaused && styles.attachCardDisabled]}
                       activeOpacity={0.7}
                       onPress={handlePickGallery}
-                      disabled={uploadStatus === 'uploading'}
+                      disabled={isPaused || uploadStatus === 'uploading'}
                     >
                       <View style={styles.attachCardIconCircle}>
-                        <Feather name="image" size={18} color={COLORS.primary} />
+                        <Feather name="image" size={18} color={isPaused ? COLORS.textMuted : COLORS.primary} />
                       </View>
                       <Text style={styles.attachCardTitle}>Gallery</Text>
                       <Text style={styles.attachCardSub}>Pick images</Text>
                     </TouchableOpacity>
 
                     <TouchableOpacity
-                      style={styles.attachCard}
+                      style={[styles.attachCard, isPaused && styles.attachCardDisabled]}
                       activeOpacity={0.7}
                       onPress={handlePickPdf}
-                      disabled={uploadStatus === 'uploading'}
+                      disabled={isPaused || uploadStatus === 'uploading'}
                     >
                       <View style={styles.attachCardIconCircle}>
-                        <Feather name="file-text" size={18} color={COLORS.primary} />
+                        <Feather name="file-text" size={18} color={isPaused ? COLORS.textMuted : COLORS.primary} />
                       </View>
                       <Text style={styles.attachCardTitle}>PDF File</Text>
                       <Text style={styles.attachCardSub}>Select PDF</Text>
@@ -558,18 +568,20 @@ export const UploadPaperModal: React.FC<UploadPaperModalProps> = ({
                   <TouchableOpacity
                     style={[
                       styles.submitBtn,
-                      (uploadStatus === 'uploading' || files.length === 0) && styles.submitBtnDisabled,
+                      (isPaused || uploadStatus === 'uploading' || files.length === 0) && styles.submitBtnDisabled,
                     ]}
                     activeOpacity={0.8}
                     onPress={handleUpload}
-                    disabled={uploadStatus === 'uploading' || files.length === 0}
+                    disabled={isPaused || uploadStatus === 'uploading' || files.length === 0}
                   >
                     {uploadStatus === 'uploading' ? (
                       <ActivityIndicator color="#ffffff" size="small" />
                     ) : (
                       <>
-                        <Feather name="upload" size={16} color="#ffffff" />
-                        <Text style={styles.submitBtnText}>Submit Paper</Text>
+                        <Feather name={isPaused ? 'pause-circle' : 'upload'} size={16} color="#ffffff" />
+                        <Text style={styles.submitBtnText}>
+                          {isPaused ? 'Contributions Paused' : 'Submit Paper'}
+                        </Text>
                       </>
                     )}
                   </TouchableOpacity>
@@ -732,6 +744,28 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.lg,
     paddingVertical: 14,
     paddingHorizontal: 6,
+  },
+  attachCardDisabled: {
+    opacity: 0.5,
+  },
+  pausedBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#fffbeb',
+    borderColor: '#fde68a',
+    borderWidth: 1,
+    borderRadius: RADIUS.md,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 16,
+  },
+  pausedBannerText: {
+    flex: 1,
+    fontFamily: FONTS.bodyMedium,
+    fontSize: 12,
+    color: '#92400e',
+    lineHeight: 16,
   },
   attachCardIconCircle: {
     width: 36,
