@@ -1055,50 +1055,99 @@ export interface SubmitContributionResult {
 /**
  * Upload student exam paper contribution.
  * Works for both anonymous guests and signed-in users.
- * Uses multipart/form-data — does NOT JSON.stringify.
+ * Uses XMLHttpRequest for solid React Native Android/iOS multipart/form-data support and real progress tracking.
  */
 export const submitPaperContribution = async (params: {
   files: Array<{ uri: string; name: string; type: string }>;
   subjectName?: string;
   year?: string;
+  onProgress?: (percent: number) => void;
 }): Promise<SubmitContributionResult> => {
   const origin = await Backend.ready();
+  const token = await getAuthToken();
   const url = `${origin.root}/api/contributions/submit`;
 
-  const formData = new FormData();
-  if (params.subjectName?.trim()) {
-    formData.append('subjectName', params.subjectName.trim());
-  }
-  if (params.year?.trim()) {
-    formData.append('year', params.year.trim());
-  }
-  for (const file of params.files) {
-    formData.append('files', {
-      uri: file.uri,
-      name: file.name,
-      type: file.type,
-    } as any);
-  }
+  return new Promise<SubmitContributionResult>((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', url);
+    xhr.timeout = 60000; // 60s timeout for large uploads
 
-  // Optionally attach auth token if signed in (server accepts both)
-  const auth = await authHeader();
-  const res = await fetchWithTimeout(url, {
-    method: 'POST',
-    headers: { ...auth },
-    body: formData,
+    if (token) {
+      xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+    }
+
+    // Advisory version headers
+    if (Platform.OS !== 'web') {
+      const version = Constants.expoConfig?.version;
+      const build = Constants.expoConfig?.android?.versionCode;
+      if (version) xhr.setRequestHeader('X-App-Version', version);
+      if (build) xhr.setRequestHeader('X-App-Build', String(build));
+    }
+
+    const formData = new FormData();
+    if (params.subjectName?.trim()) {
+      formData.append('subjectName', params.subjectName.trim());
+    }
+    if (params.year?.trim()) {
+      formData.append('year', params.year.trim());
+    }
+
+    for (let i = 0; i < params.files.length; i++) {
+      const f = params.files[i];
+      const isPdf = f.type.includes('pdf') || f.name.toLowerCase().endsWith('.pdf');
+      const cleanName = f.name || (isPdf ? `paper_${i + 1}.pdf` : `photo_${i + 1}.jpg`);
+      const mime = isPdf ? 'application/pdf' : f.type || 'image/jpeg';
+
+      formData.append('files', {
+        uri: Platform.OS === 'android' ? f.uri : f.uri.replace('file://', ''),
+        name: cleanName,
+        type: mime,
+      } as any);
+    }
+
+    if (xhr.upload && params.onProgress) {
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable && e.total > 0) {
+          const pct = Math.min(98, Math.round((e.loaded / e.total) * 100));
+          params.onProgress?.(pct);
+        }
+      };
+    }
+
+    xhr.onload = () => {
+      let body: any = {};
+      try {
+        body = JSON.parse(xhr.responseText || '{}');
+      } catch {
+        body = {};
+      }
+
+      if (xhr.status >= 200 && xhr.status < 300) {
+        resolve(body as SubmitContributionResult);
+        return;
+      }
+
+      const kind = kindForStatus(xhr.status);
+      const err = new ApiError(
+        body?.message || MESSAGES[kind] || 'Failed to submit paper.',
+        xhr.status,
+        undefined,
+        kind
+      );
+      if (typeof body?.code === 'string') err.code = body.code;
+      reject(err);
+    };
+
+    xhr.onerror = () => {
+      reject(new ApiError(MESSAGES.unreachable, undefined, undefined, 'unreachable'));
+    };
+
+    xhr.ontimeout = () => {
+      reject(new ApiError(MESSAGES.timeout, undefined, undefined, 'timeout'));
+    };
+
+    xhr.send(formData as any);
   });
-
-  if (!res.ok) {
-    const errData = await res.json().catch(() => ({}));
-    throw new ApiError(
-      errData.message || 'Failed to submit paper. Please try again.',
-      res.status,
-      undefined,
-      kindForStatus(res.status)
-    );
-  }
-
-  return res.json();
 };
 
 /**

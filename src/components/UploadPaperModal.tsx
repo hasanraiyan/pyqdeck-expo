@@ -174,22 +174,26 @@ export const UploadPaperModal: React.FC<UploadPaperModalProps> = ({
 
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setUploadStatus('uploading');
-    setUploadProgress(15);
+    setUploadProgress(5);
 
     try {
       // Map SelectedFileItem → { uri, name, type } for the API
-      const apiFiles = files.map((f) => ({
-        uri: f.uri,
-        name: f.name,
-        type: f.type === 'pdf' ? 'application/pdf' : 'image/jpeg',
-      }));
-
-      setUploadProgress(35);
+      const apiFiles = files.map((f, idx) => {
+        const isPdf = f.type === 'pdf' || f.name.toLowerCase().endsWith('.pdf');
+        return {
+          uri: f.uri,
+          name: f.name || (isPdf ? `paper_${idx + 1}.pdf` : `page_${idx + 1}.jpg`),
+          type: isPdf ? 'application/pdf' : 'image/jpeg',
+        };
+      });
 
       await submitPaperContribution({
         files: apiFiles,
         subjectName: subjectName.trim() || undefined,
         year: year.trim() || undefined,
+        onProgress: (pct) => {
+          setUploadProgress(pct);
+        },
       });
 
       setUploadProgress(100);
@@ -201,7 +205,7 @@ export const UploadPaperModal: React.FC<UploadPaperModalProps> = ({
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert(
         'Upload Failed',
-        err?.message || 'Something went wrong. Please check your connection and try again.'
+        err?.message || 'Something went wrong while submitting. Please check your network and try again.'
       );
     }
   };
