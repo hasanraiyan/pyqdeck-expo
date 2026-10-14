@@ -51,6 +51,7 @@ import { SearchScreen } from './src/screens/SearchScreen';
 import { SettingsScreen } from './src/screens/SettingsScreen';
 import { SignInScreen } from './src/screens/SignInScreen';
 import { ManageAccountScreen } from './src/screens/ManageAccountScreen';
+import { MyContributionsScreen } from './src/screens/MyContributionsScreen';
 import { SemesterSelectScreen } from './src/screens/SemesterSelectScreen';
 import { SyllabusOverviewScreen } from './src/screens/SyllabusOverviewScreen';
 import { SubjectSyllabusScreen } from './src/screens/SubjectSyllabusScreen';
@@ -693,6 +694,11 @@ function AppContent() {
             <RootStack.Screen
               name="ManageAccount"
               component={ManageAccountScreen}
+              options={{ presentation: 'fullScreenModal' }}
+            />
+            <RootStack.Screen
+              name="MyContributions"
+              component={MyContributionsScreen}
               options={{ presentation: 'fullScreenModal' }}
             />
             <RootStack.Screen

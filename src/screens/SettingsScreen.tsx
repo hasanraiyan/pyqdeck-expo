@@ -280,6 +280,12 @@ export const SettingsScreen = ({ navigation }: any) => {
                     onPress={() => void syncNow()}
                     disabled={syncStatus.state === 'syncing'}
                   />
+                  <SettingsRow
+                    icon="upload-cloud"
+                    label="Your contributions"
+                    subtitle="Exam papers you've uploaded for your batch"
+                    onPress={() => navigation.navigate('MyContributions')}
+                  />
                   {admin.isAdmin && (
                     <SettingsRow
                       icon="shield"
