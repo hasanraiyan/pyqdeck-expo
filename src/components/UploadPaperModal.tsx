@@ -94,13 +94,18 @@ export const UploadPaperModal: React.FC<UploadPaperModalProps> = ({
       });
       if (!result.canceled && result.assets && result.assets.length > 0) {
         const asset = result.assets[0];
+        let ext = 'jpg';
+        if (asset.mimeType?.includes('png') || asset.uri.toLowerCase().endsWith('.png')) ext = 'png';
+        else if (asset.mimeType?.includes('webp') || asset.uri.toLowerCase().endsWith('.webp')) ext = 'webp';
+
         const newItem: SelectedFileItem = {
           id: `cam-${Date.now()}-${Math.random()}`,
           uri: asset.uri,
-          name: asset.fileName || `Page-${files.length + 1}.jpg`,
+          name: asset.fileName || `Page-${files.length + 1}.${ext}`,
           type: 'image',
           size: asset.fileSize,
         };
+        console.log('[UploadPaper] Picked camera asset:', { uri: asset.uri, name: newItem.name, size: asset.fileSize });
         setFiles((prev) => [...prev, newItem]);
       }
     } catch (e: any) {
