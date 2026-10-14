@@ -20,7 +20,7 @@ import {
   SyllabusSubject,
 } from '../types/syllabus';
 import { Platform } from 'react-native';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import { FileSystemUploadType } from 'expo-file-system/legacy';
 import Constants from 'expo-constants';
 import * as Backend from './backend';
