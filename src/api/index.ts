@@ -1149,14 +1149,16 @@ export const submitPaperContribution = async (params: {
     if (Platform.OS === 'web') {
       // In web browsers, fetch the local object/blob URL into a real Blob
       // React Native's `{ uri }` object cannot be parsed by standard web browsers in FormData.append()
-      const blob = await fetch(f.uri).then((r) => r.blob());
+      const rawBlob = await fetch(f.uri).then((r) => r.blob());
+      // Ensure the Blob has the matching MIME type
+      const typedBlob = rawBlob.type ? rawBlob : new Blob([rawBlob], { type: mime });
 
       result = await new Promise<{ ufsUrl?: string; url?: string }>((resolve, reject) => {
         const xhr = new XMLHttpRequest();
         xhr.open('PUT', presigned.url);
         xhr.timeout = 120000;
         const formData = new FormData();
-        formData.append('file', blob, cleanName);
+        formData.append('file', typedBlob, cleanName);
 
         if (xhr.upload) {
           xhr.upload.onprogress = (e) => {

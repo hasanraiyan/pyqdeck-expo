@@ -122,13 +122,22 @@ export const UploadPaperModal: React.FC<UploadPaperModalProps> = ({
         quality: 0.85,
       });
       if (!result.canceled && result.assets) {
-        const newItems: SelectedFileItem[] = result.assets.map((asset, i) => ({
-          id: `gal-${Date.now()}-${i}-${Math.random()}`,
-          uri: asset.uri,
-          name: asset.fileName || `Page-${files.length + i + 1}.jpg`,
-          type: 'image',
-          size: asset.fileSize,
-        }));
+        const newItems: SelectedFileItem[] = result.assets.map((asset, i) => {
+          // Detect extension from asset.mimeType or asset.uri
+          let ext = 'jpg';
+          if (asset.mimeType?.includes('png') || asset.uri.toLowerCase().endsWith('.png')) ext = 'png';
+          else if (asset.mimeType?.includes('webp') || asset.uri.toLowerCase().endsWith('.webp')) ext = 'webp';
+          else if (asset.mimeType?.includes('pdf') || asset.uri.toLowerCase().endsWith('.pdf')) ext = 'pdf';
+
+          const defaultName = `Page-${files.length + i + 1}.${ext}`;
+          return {
+            id: `gal-${Date.now()}-${i}-${Math.random()}`,
+            uri: asset.uri,
+            name: asset.fileName || defaultName,
+            type: ext === 'pdf' ? 'pdf' : 'image',
+            size: asset.fileSize,
+          };
+        });
         setFiles((prev) => [...prev, ...newItems]);
       }
     } catch (e: any) {
@@ -180,10 +189,16 @@ export const UploadPaperModal: React.FC<UploadPaperModalProps> = ({
       // Map SelectedFileItem → { uri, name, type, size } for the API
       const apiFiles = files.map((f, idx) => {
         const isPdf = f.type === 'pdf' || f.name.toLowerCase().endsWith('.pdf');
+        let mime = 'image/jpeg';
+        if (isPdf) mime = 'application/pdf';
+        else if (f.name.toLowerCase().endsWith('.png')) mime = 'image/png';
+        else if (f.name.toLowerCase().endsWith('.webp')) mime = 'image/webp';
+        else if (f.name.toLowerCase().endsWith('.heic')) mime = 'image/heic';
+
         return {
           uri: f.uri,
           name: f.name || (isPdf ? `paper_${idx + 1}.pdf` : `page_${idx + 1}.jpg`),
-          type: isPdf ? 'application/pdf' : 'image/jpeg',
+          type: mime,
           size: f.size,
         };
       });
