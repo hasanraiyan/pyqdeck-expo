@@ -1081,13 +1081,53 @@ export const submitPaperContribution = async (params: {
     return 'image/jpeg';
   };
 
-  // 1. Request presigned upload URLs from our server
+  // 1. Resolve exact file sizes and URIs before requesting presigned slots
+  // UploadThing's ingest server cryptographically checks that the uploaded file size
+  // is <= x-ut-file-size in the signed URL. If size is missing or understated, UploadThing returns 413 "Upload too large".
+  const preparedFiles: Array<{ uri: string; name: string; type: string; size: number }> = [];
+  for (let i = 0; i < params.files.length; i++) {
+    const f = params.files[i];
+    let realSize = f.size || 0;
+    const mime = detectMimeType(f);
+    const isPdf = mime === 'application/pdf';
+    const cleanName = f.name || (isPdf ? `paper_${i + 1}.pdf` : `photo_${i + 1}.jpg`);
+
+    if (realSize <= 0) {
+      try {
+        if (Platform.OS === 'web') {
+          const blob = await fetch(f.uri).then((r) => r.blob());
+          realSize = blob.size;
+        } else {
+          const info = await FileSystem.getInfoAsync(f.uri);
+          if (info.exists && typeof info.size === 'number') {
+            realSize = info.size;
+          }
+        }
+      } catch (e) {
+        console.warn(`[UploadContribution] Could not measure size for ${f.uri}:`, e);
+      }
+    }
+
+    // Safety fallback: ensure at least a generous size estimate if filesystem doesn't report it
+    if (!realSize || realSize <= 0) {
+      realSize = 10 * 1024 * 1024; // 10MB safe ceiling
+    }
+
+    preparedFiles.push({
+      uri: f.uri,
+      name: cleanName,
+      type: mime,
+      size: realSize,
+    });
+  }
+
+  // Request presigned upload URLs from our server
   const presignUrl = `${origin.root}/api/uploadthing?slug=examPaperUploader&actionType=upload`;
   const presignPayload = {
-    files: params.files.map((f, i) => ({
-      name: f.name || `paper_${i + 1}`,
-      size: f.size || 1024 * 50,
-      type: detectMimeType(f),
+    files: preparedFiles.map((f) => ({
+      name: f.name,
+      size: f.size,
+      type: f.type,
     })),
   };
 
@@ -1138,11 +1178,11 @@ export const submitPaperContribution = async (params: {
   }> = [];
 
   for (let i = 0; i < totalFiles; i++) {
-    const f = params.files[i];
+    const f = preparedFiles[i];
     const presigned = presignedList[i];
-    const mime = detectMimeType(f);
+    const mime = f.type;
     const isPdf = mime === 'application/pdf';
-    const cleanName = f.name || (isPdf ? `paper_${i + 1}.pdf` : `photo_${i + 1}.jpg`);
+    const cleanName = f.name;
 
     console.log(`[UploadContribution] Starting upload ${i + 1}/${totalFiles}: "${cleanName}" (${mime}, ${f.size} bytes) via ${Platform.OS}`);
     let result: { ufsUrl?: string; url?: string } = {};

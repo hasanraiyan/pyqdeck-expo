@@ -19,6 +19,8 @@ import { Image } from 'expo-image';
 import { Feather } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
+import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
+import * as FileSystem from 'expo-file-system/legacy';
 import * as Haptics from 'expo-haptics';
 import { COLORS, FONTS, RADIUS, SHADOWS } from '../theme/colors';
 import { useDialogLayout } from '../utils/dialog';
@@ -191,8 +193,11 @@ export const UploadPaperModal: React.FC<UploadPaperModalProps> = ({
     setUploadProgress(5);
 
     try {
-      // Map SelectedFileItem → { uri, name, type, size } for the API
-      const apiFiles = files.map((f, idx) => {
+      // Auto-compress / shrink image pages to standard high-res bounds (max 2600px edge, 85% JPEG)
+      // to keep upload sizes snappy and prevent phone camera 50MP bloat
+      const preparedList: Array<{ uri: string; name: string; type: string; size?: number }> = [];
+      for (let idx = 0; idx < files.length; idx++) {
+        const f = files[idx];
         const isPdf = f.type === 'pdf' || f.name.toLowerCase().endsWith('.pdf');
         let mime = 'image/jpeg';
         if (isPdf) mime = 'application/pdf';
@@ -200,16 +205,51 @@ export const UploadPaperModal: React.FC<UploadPaperModalProps> = ({
         else if (f.name.toLowerCase().endsWith('.webp')) mime = 'image/webp';
         else if (f.name.toLowerCase().endsWith('.heic')) mime = 'image/heic';
 
-        return {
-          uri: f.uri,
-          name: f.name || (isPdf ? `paper_${idx + 1}.pdf` : `page_${idx + 1}.jpg`),
+        let targetUri = f.uri;
+        let targetSize = f.size;
+        let targetName = f.name || (isPdf ? `paper_${idx + 1}.pdf` : `page_${idx + 1}.jpg`);
+
+        if (!isPdf && Platform.OS !== 'web') {
+          try {
+            // Compress and resize large phone photos down to max 2600px
+            const probe = await ImageManipulator.manipulate(f.uri).renderAsync();
+            const maxEdge = 2600;
+            const longEdge = Math.max(probe.width, probe.height);
+            const resizeAction = longEdge > maxEdge
+              ? [probe.width >= probe.height ? { resize: { width: maxEdge } } : { resize: { height: maxEdge } }]
+              : [];
+
+            const manip = ImageManipulator.manipulate(f.uri);
+            if (resizeAction.length > 0) {
+              if ('width' in resizeAction[0].resize) manip.resize({ width: maxEdge });
+              else manip.resize({ height: maxEdge });
+            }
+            const ref = await manip.renderAsync();
+            const out = await ref.saveAsync({ format: SaveFormat.JPEG, compress: 0.85 });
+            targetUri = out.uri;
+            mime = 'image/jpeg';
+            targetName = targetName.replace(/\.[^.]+$/, '.jpg');
+
+            const info = await FileSystem.getInfoAsync(targetUri);
+            if (info.exists && typeof info.size === 'number') {
+              targetSize = info.size;
+            }
+            console.log(`[UploadPaper] Compressed image ${f.name} -> ${targetSize} bytes`);
+          } catch (compErr) {
+            console.warn('[UploadPaper] Auto-compression fallback:', compErr);
+          }
+        }
+
+        preparedList.push({
+          uri: targetUri,
+          name: targetName,
           type: mime,
-          size: f.size,
-        };
-      });
+          size: targetSize,
+        });
+      }
 
       await submitPaperContribution({
-        files: apiFiles,
+        files: preparedList,
         subjectName: subjectName.trim() || undefined,
         year: year.trim() || undefined,
         onProgress: (pct) => {
