@@ -193,6 +193,13 @@ export const AdminConfigScreen = () => {
             onChange={(v) => set('nudgesEnabled', v)}
           />
           <ToggleRow
+            label="Student paper uploads"
+            hint="Off hides paper upload CTA on Home and Question screens, and pauses contribution API endpoints."
+            value={draft.paperUploadEnabled}
+            disabled={!canEdit}
+            onChange={(v) => set('paperUploadEnabled', v)}
+          />
+          <ToggleRow
             label="Paid ads"
             hint="Off hides AdMob banners and interstitials for everyone, including signed-out devices."
             value={draft.adsEnabled}
@@ -200,6 +207,7 @@ export const AdminConfigScreen = () => {
             onChange={(v) => set('adsEnabled', v)}
           />
           {!draft.syncEnabled && <Pill label="Sync is paused for everyone" tone="danger" icon="pause-circle" />}
+          {!draft.paperUploadEnabled && <Pill label="Paper contributions are paused" tone="warn" icon="pause-circle" />}
           {!draft.adsEnabled && <Pill label="Ads are hidden for everyone" tone="warn" icon="eye-off" />}
         </Card>
       </Section>

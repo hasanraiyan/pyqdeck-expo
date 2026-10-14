@@ -83,6 +83,7 @@ test('configWarnings flags changes that block students, including this phone', (
   assert.match(below[0], /older than 1\.4\.0/);
   assert.equal(configWarnings(cfg, { ...cfg, syncEnabled: false }, '1.5.0').length, 1);
   assert.match(configWarnings(cfg, { ...cfg, adsEnabled: false }, '1.5.0')[0], /ads will hide/);
+  assert.match(configWarnings(cfg, { ...cfg, paperUploadEnabled: false }, '1.5.0')[0], /paper uploads and contributions will pause/);
   // Turning a switch back ON needs no warning.
   assert.deepEqual(configWarnings({ ...cfg, syncEnabled: false }, cfg, '1.5.0'), []);
   // An unchanged existing minimum is not warned about again.
@@ -106,6 +107,11 @@ test('configChanges sends only what changed, and null clears a banner', () => {
   assert.deepEqual(configChanges(cfg, { ...cfg, adsEnabled: false }), {
     flags: { adsEnabled: false },
   });
+  assert.deepEqual(configChanges(cfg, { ...cfg, paperUploadEnabled: false }), {
+    flags: { paperUploadEnabled: false },
+  });
   assert.equal(configToDraft({ flags: {} }).adsEnabled, true);
   assert.equal(configToDraft({ flags: { adsEnabled: false } }).adsEnabled, false);
+  assert.equal(configToDraft({ flags: {} }).paperUploadEnabled, true);
+  assert.equal(configToDraft({ flags: { paperUploadEnabled: false } }).paperUploadEnabled, false);
 });

@@ -76,6 +76,7 @@ export interface ConfigDraft {
   settingsSyncEnabled: boolean;
   nudgesEnabled: boolean;
   adsEnabled: boolean;
+  paperUploadEnabled: boolean;
 }
 
 const SEMVER = /^\d{1,4}\.\d{1,4}\.\d{1,4}$/;
@@ -120,6 +121,9 @@ export function configWarnings(
   }
   if (before.nudgesEnabled && !after.nudgesEnabled) out.push('Background sync nudges will stop.');
   if (before.adsEnabled && !after.adsEnabled) out.push('Paid ads will hide for everyone.');
+  if (before.paperUploadEnabled && !after.paperUploadEnabled) {
+    out.push('Student paper uploads and contributions will pause for everyone.');
+  }
   return out;
 }
 
@@ -142,7 +146,7 @@ export function configChanges(before: ConfigDraft, after: ConfigDraft): Record<s
       : null;
   }
   const flags: Record<string, boolean> = {};
-  for (const k of ['syncEnabled', 'settingsSyncEnabled', 'nudgesEnabled', 'adsEnabled'] as const) {
+  for (const k of ['syncEnabled', 'settingsSyncEnabled', 'nudgesEnabled', 'adsEnabled', 'paperUploadEnabled'] as const) {
     if (after[k] !== before[k]) flags[k] = after[k];
   }
   if (Object.keys(flags).length > 0) out.flags = flags;
@@ -160,5 +164,6 @@ export function configToDraft(c: any): ConfigDraft {
     settingsSyncEnabled: c?.flags?.settingsSyncEnabled !== false,
     nudgesEnabled: c?.flags?.nudgesEnabled !== false,
     adsEnabled: c?.flags?.adsEnabled !== false,
+    paperUploadEnabled: c?.flags?.paperUploadEnabled !== false,
   };
 }

@@ -52,20 +52,68 @@ export const AdminScroll = ({
   );
 };
 
-/** Top of every admin page: a kicker, a title, and an optional one-line summary. */
+/** Top of every admin page: a kicker, a title, an optional one-line summary, and actions. */
 export const PageHeader = ({
   kicker = 'Admin',
   title,
   summary,
+  icon,
+  badge,
+  rightAction,
 }: {
   kicker?: string;
   title: string;
   summary?: string;
+  icon?: React.ComponentProps<typeof Feather>['name'];
+  badge?: React.ReactNode;
+  rightAction?: React.ReactNode;
 }) => (
   <View style={s.header}>
-    <Text style={s.kicker}>{kicker.toUpperCase()}</Text>
+    <View style={s.headerTopRow}>
+      <View style={s.headerKickerWrap}>
+        {icon ? <Feather name={icon} size={13} color={COLORS.primary} /> : null}
+        <Text style={s.kicker}>{kicker.toUpperCase()}</Text>
+        {badge}
+      </View>
+      {rightAction}
+    </View>
     <Text style={s.title}>{title}</Text>
     {summary ? <Text style={s.summary}>{summary}</Text> : null}
+  </View>
+);
+
+/** Clean searchable input field for admin list screens. */
+export const SearchInput = ({
+  value,
+  onChangeText,
+  placeholder = 'Search...',
+  onClear,
+}: {
+  value: string;
+  onChangeText: (text: string) => void;
+  placeholder?: string;
+  onClear?: () => void;
+}) => (
+  <View style={s.searchWrap}>
+    <Feather name="search" size={16} color={COLORS.textMuted} style={s.searchIcon} />
+    <TextInput
+      value={value}
+      onChangeText={onChangeText}
+      placeholder={placeholder}
+      placeholderTextColor={COLORS.textSubtle}
+      style={s.searchInput}
+      autoCapitalize="none"
+      autoCorrect={false}
+    />
+    {value.length > 0 && onClear ? (
+      <TouchableOpacity
+        onPress={onClear}
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        style={s.searchClearBtn}
+      >
+        <Feather name="x-circle" size={16} color={COLORS.textMuted} />
+      </TouchableOpacity>
+    ) : null}
   </View>
 );
 
@@ -105,14 +153,23 @@ export const StatTile = ({
   value,
   hint,
   tone = 'neutral',
+  icon,
 }: {
   label: string;
   value: React.ReactNode;
   hint?: string;
   tone?: 'neutral' | 'ok' | 'danger';
+  icon?: React.ComponentProps<typeof Feather>['name'];
 }) => (
   <View style={[s.tile, tone === 'danger' && s.tileDanger]}>
-    <Text style={s.tileLabel}>{label}</Text>
+    <View style={s.tileHeaderRow}>
+      <Text style={s.tileLabel}>{label}</Text>
+      {icon ? (
+        <View style={s.tileIconCircle}>
+          <Feather name={icon} size={13} color={tone === 'danger' ? DANGER : COLORS.primary} />
+        </View>
+      ) : null}
+    </View>
     <Text style={[s.tileValue, tone === 'danger' && { color: DANGER }]}>{value}</Text>
     {hint ? <Text style={s.tileHint}>{hint}</Text> : null}
   </View>
@@ -403,9 +460,33 @@ export const num = (n: unknown) => (typeof n === 'number' ? n.toLocaleString() :
 const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: COLORS.background },
   header: { paddingHorizontal: 16, paddingTop: 14, paddingBottom: 6, gap: 4 },
+  headerTopRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  headerKickerWrap: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   kicker: { fontFamily: FONTS.bodyBold, fontSize: 11, letterSpacing: 1.2, color: COLORS.primary },
   title: { fontFamily: FONTS.displayBold, fontSize: 24, color: COLORS.text },
   summary: { fontFamily: FONTS.body, fontSize: 13, lineHeight: 19, color: COLORS.textMuted },
+  searchWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.card,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    gap: 8,
+  },
+  searchIcon: { marginTop: 1 },
+  searchInput: {
+    flex: 1,
+    fontFamily: FONTS.body,
+    fontSize: 14,
+    color: COLORS.text,
+    padding: 0,
+  },
+  searchClearBtn: {
+    padding: 2,
+  },
   section: { paddingHorizontal: 16, marginTop: 18, gap: 10 },
   sectionHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: 24 },
   sectionTitle: {
@@ -418,11 +499,16 @@ const s = StyleSheet.create({
   sectionBody: { gap: 10 },
   card: {
     backgroundColor: COLORS.card,
-    borderRadius: 14,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: COLORS.border,
-    padding: 14,
+    padding: 16,
     gap: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 3,
+    elevation: 1,
   },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   tile: {
@@ -436,6 +522,15 @@ const s = StyleSheet.create({
     gap: 4,
   },
   tileDanger: { borderColor: DANGER_BORDER, backgroundColor: DANGER_BG },
+  tileHeaderRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2 },
+  tileIconCircle: {
+    width: 26,
+    height: 26,
+    borderRadius: 8,
+    backgroundColor: COLORS.primaryLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   tileLabel: { fontFamily: FONTS.bodySemi, fontSize: 12, color: COLORS.textMuted },
   tileValue: { fontFamily: FONTS.displayBold, fontSize: 24, color: COLORS.text },
   tileHint: { fontFamily: FONTS.body, fontSize: 11, color: COLORS.textSubtle },

@@ -153,10 +153,10 @@ export const AdminDashboardScreen = () => {
         <>
           <Section title="Accounts">
             <TileGrid>
-              <StatTile label="Total accounts" value={num(a?.total)} />
-              <StatTile label="Active, last 7 days" value={num(a?.active7d)} hint={`${num(a?.active30d)} in 30 days`} />
-              <StatTile label="New, last 7 days" value={num(a?.created7d)} hint={`${num(a?.created30d)} in 30 days`} />
-              <StatTile label="Open reports" value={num(reports)} tone={reports > 0 ? 'danger' : 'neutral'} />
+              <StatTile label="Total accounts" value={num(a?.total)} icon="users" />
+              <StatTile label="Active, last 7 days" value={num(a?.active7d)} hint={`${num(a?.active30d)} in 30 days`} icon="activity" />
+              <StatTile label="New, last 7 days" value={num(a?.created7d)} hint={`${num(a?.created30d)} in 30 days`} icon="user-plus" />
+              <StatTile label="Open reports" value={num(reports)} tone={reports > 0 ? 'danger' : 'neutral'} icon="alert-circle" />
             </TileGrid>
           </Section>
 
@@ -175,14 +175,15 @@ export const AdminDashboardScreen = () => {
             <>
               <Section title="Sync traffic, last 7 days">
                 <TileGrid>
-                  <StatTile label="Sync requests" value={num(traffic.totals?.requests)} hint="both servers" />
+                  <StatTile label="Sync requests" value={num(traffic.totals?.requests)} hint="both servers" icon="repeat" />
                   <StatTile
                     label="Answered from a shared result"
                     value={num(traffic.totals?.coalescedRequests)}
                     hint={pct(traffic.totals?.coalescedRequests, traffic.totals?.requests)}
+                    icon="layers"
                   />
-                  <StatTile label="Rejected changes" value={num(traffic.totals?.opsRejected)} tone={traffic.totals?.opsRejected > 0 ? 'danger' : 'neutral'} />
-                  <StatTile label="Nudges folded together" value={num(traffic.totals?.nudgesSuppressed)} />
+                  <StatTile label="Rejected changes" value={num(traffic.totals?.opsRejected)} tone={traffic.totals?.opsRejected > 0 ? 'danger' : 'neutral'} icon="alert-octagon" />
+                  <StatTile label="Nudges folded together" value={num(traffic.totals?.nudgesSuppressed)} icon="minimize-2" />
                 </TileGrid>
                 {(traffic.perDay ?? []).length > 0 && (
                   <Card>
@@ -217,10 +218,10 @@ export const AdminDashboardScreen = () => {
 
           <Section title="Devices and votes">
             <TileGrid>
-              <StatTile label="Registered devices" value={num(dv?.registered)} hint={`${num(dv?.linkedToAccount)} linked to an account`} />
-              <StatTile label="Accounts with 2+ devices" value={num(dv?.accountsWithTwoOrMore)} />
-              <StatTile label="Solution votes" value={num(insights.votes?.solutions)} />
-              <StatTile label="Note votes" value={num(insights.votes?.notes)} />
+              <StatTile label="Registered devices" value={num(dv?.registered)} hint={`${num(dv?.linkedToAccount)} linked to an account`} icon="smartphone" />
+              <StatTile label="Accounts with 2+ devices" value={num(dv?.accountsWithTwoOrMore)} icon="tablet" />
+              <StatTile label="Solution votes" value={num(insights.votes?.solutions)} icon="thumbs-up" />
+              <StatTile label="Note votes" value={num(insights.votes?.notes)} icon="bookmark" />
             </TileGrid>
           </Section>
 
