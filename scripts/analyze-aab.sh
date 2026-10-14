@@ -122,7 +122,5 @@ echo "### Heavy dependency check"
 echo
 echo "| Dependency | Found |"
 echo "|---|---|"
-mlkit="$(find "$base" -type f \( -iname '*mlkit*' -o -iname '*ocr*' -o -iname '*text_recognition*' \) | wc -l)"
 hermes="$(find "$base" -type f -name 'libhermes*.so' | wc -l)"
-echo "| ML Kit / OCR files | $mlkit |"
 echo "| Hermes engine libs | $hermes |"

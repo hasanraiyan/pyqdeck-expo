@@ -6,12 +6,15 @@ import {
   Linking,
   Platform,
   RefreshControl,
+  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
+import { Image } from 'expo-image';
+import * as Haptics from 'expo-haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   adminDeleteContribution,
@@ -43,6 +46,14 @@ export const AdminContributionsScreen = () => {
   const [error, setError] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
+  // Confirmation after a status change: says where the paper went and offers a jump there.
+  const [moved, setMoved] = useState<{ subject: string; status: SubmissionItem['status'] } | null>(null);
+
+  useEffect(() => {
+    if (!moved) return;
+    const t = setTimeout(() => setMoved(null), 5000);
+    return () => clearTimeout(t);
+  }, [moved]);
 
   const loadData = useCallback(async () => {
     setError(null);
@@ -105,10 +116,12 @@ export const AdminContributionsScreen = () => {
   ) => {
     setActionLoadingId(item._id);
     adminUpdateContributionStatus(item._id, newStatus)
-      .then((updated) => {
+      .then(() => {
         setSubmissions((prev) =>
           prev.map((s) => (s._id === item._id ? { ...s, status: newStatus } : s))
         );
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        setMoved({ subject: item.subjectName || 'Paper', status: newStatus });
       })
       .catch((err) => {
         Alert.alert('Error', userMessage(err, 'Could not update status.'));
@@ -117,6 +130,11 @@ export const AdminContributionsScreen = () => {
         setActionLoadingId(null);
       });
   };
+
+  const counts = submissions.reduce<Record<string, number>>(
+    (acc, s) => ({ ...acc, [s.status]: (acc[s.status] ?? 0) + 1 }),
+    {},
+  );
 
   const filtered = submissions.filter((s) => {
     if (filterStatus === 'all') return true;
@@ -178,11 +196,13 @@ export const AdminContributionsScreen = () => {
               activeOpacity={0.7}
               onPress={() => handleOpenUrl(file.url)}
             >
-              <Feather
-                name={file.resourceType === 'raw' || file.name.toLowerCase().endsWith('.pdf') ? 'file-text' : 'image'}
-                size={14}
-                color={COLORS.primary}
-              />
+              {file.resourceType === 'raw' || file.name.toLowerCase().endsWith('.pdf') ? (
+                <View style={styles.fileThumbIcon}>
+                  <Feather name="file-text" size={16} color="#ffffff" />
+                </View>
+              ) : (
+                <Image source={{ uri: file.url }} style={styles.fileThumb} contentFit="cover" />
+              )}
               <Text style={styles.fileName} numberOfLines={1}>
                 {file.name}
               </Text>
@@ -200,33 +220,55 @@ export const AdminContributionsScreen = () => {
 
         {/* Moderation Actions */}
         <View style={styles.actionsRow}>
-          <View style={styles.statusChangeGroup}>
-            {(['received', 'reviewed', 'approved', 'rejected'] as const).map((st) => {
-              const active = item.status === st;
-              const scfg = STATUS_CONFIG[st];
-              return (
+          {item.status === 'approved' || item.status === 'rejected' ? (
+            <TouchableOpacity
+              style={styles.undoBtn}
+              onPress={() => handleUpdateStatus(item, 'received')}
+              disabled={isBusy}
+              activeOpacity={0.7}
+            >
+              <Feather name="rotate-ccw" size={14} color={COLORS.textMuted} />
+              <Text style={styles.undoBtnText}>Move back to Received</Text>
+            </TouchableOpacity>
+          ) : (
+            <View style={styles.decisionGroup}>
+              <TouchableOpacity
+                style={[styles.decisionBtn, styles.approveBtn, isBusy && styles.btnDisabled]}
+                onPress={() => handleUpdateStatus(item, 'approved')}
+                disabled={isBusy}
+                activeOpacity={0.8}
+              >
+                <Feather name="check" size={15} color="#ffffff" />
+                <Text style={styles.approveBtnText}>Approve</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.decisionBtn, styles.rejectBtn, isBusy && styles.btnDisabled]}
+                onPress={() => handleUpdateStatus(item, 'rejected')}
+                disabled={isBusy}
+                activeOpacity={0.8}
+              >
+                <Feather name="x" size={15} color="#e53e3e" />
+                <Text style={styles.rejectBtnText}>Reject</Text>
+              </TouchableOpacity>
+              {item.status === 'received' && (
                 <TouchableOpacity
-                  key={st}
-                  style={[
-                    styles.statusPill,
-                    active && { backgroundColor: scfg.color, borderColor: scfg.color },
-                  ]}
-                  onPress={() => !active && handleUpdateStatus(item, st)}
-                  disabled={isBusy || active}
+                  style={styles.reviewedBtn}
+                  onPress={() => handleUpdateStatus(item, 'reviewed')}
+                  disabled={isBusy}
+                  hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
                 >
-                  <Text style={[styles.statusPillText, active && { color: '#ffffff' }]}>
-                    {scfg.label}
-                  </Text>
+                  <Text style={styles.reviewedBtnText}>Mark reviewed</Text>
                 </TouchableOpacity>
-              );
-            })}
-          </View>
+              )}
+            </View>
+          )}
 
           <TouchableOpacity
             style={styles.deleteBtn}
             onPress={() => handleDelete(item)}
             disabled={isBusy}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            accessibilityLabel="Delete submission"
           >
             {isBusy ? (
               <ActivityIndicator size="small" color="#e53e3e" />
@@ -242,22 +284,53 @@ export const AdminContributionsScreen = () => {
   return (
     <View style={styles.root}>
       {/* Filters row */}
-      <View style={styles.filterBar}>
-        {(['all', 'received', 'reviewed', 'approved', 'rejected'] as const).map((st) => {
-          const selected = filterStatus === st;
-          return (
-            <TouchableOpacity
-              key={st}
-              style={[styles.filterChip, selected && styles.filterChipActive]}
-              onPress={() => setFilterStatus(st)}
-            >
-              <Text style={[styles.filterChipText, selected && styles.filterChipTextActive]}>
-                {st === 'all' ? `All (${total})` : STATUS_CONFIG[st]?.label || st}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
+      <View style={styles.filterWrap}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.filterBar}
+        >
+          {(['all', 'received', 'reviewed', 'approved', 'rejected'] as const).map((st) => {
+            const selected = filterStatus === st;
+            const n = st === 'all' ? total : counts[st] ?? 0;
+            return (
+              <TouchableOpacity
+                key={st}
+                style={[styles.filterChip, selected && styles.filterChipActive]}
+                onPress={() => setFilterStatus(st)}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.filterChipText, selected && styles.filterChipTextActive]}>
+                  {st === 'all' ? 'All' : STATUS_CONFIG[st].label}
+                </Text>
+                <View style={[styles.countBadge, selected && styles.countBadgeActive]}>
+                  <Text style={[styles.countText, selected && styles.countTextActive]}>{n}</Text>
+                </View>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
       </View>
+
+      {moved && (
+        <View style={styles.movedBanner}>
+          <Feather name={STATUS_CONFIG[moved.status].icon as any} size={16} color={STATUS_CONFIG[moved.status].color} />
+          <Text style={styles.movedText} numberOfLines={2}>
+            {moved.subject} marked {STATUS_CONFIG[moved.status].label.toLowerCase()}
+          </Text>
+          {filterStatus !== moved.status && (
+            <TouchableOpacity
+              onPress={() => {
+                setFilterStatus(moved.status);
+                setMoved(null);
+              }}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Text style={styles.movedLink}>View</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
 
       {/* Main content */}
       {loading ? (
@@ -304,17 +377,138 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.background,
   },
-  filterBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+  filterWrap: {
     backgroundColor: COLORS.card,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: COLORS.border,
+    flexGrow: 0,
+  },
+  filterBar: {
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
     gap: 8,
   },
+  countBadge: {
+    minWidth: 20,
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: RADIUS.full,
+    backgroundColor: COLORS.cardSecondary,
+    alignItems: 'center',
+  },
+  countBadgeActive: {
+    backgroundColor: COLORS.primary,
+  },
+  countText: {
+    fontSize: 11,
+    fontFamily: FONTS.bodyBold,
+    color: COLORS.textMuted,
+  },
+  countTextActive: {
+    color: '#ffffff',
+  },
+  movedBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginHorizontal: 16,
+    marginTop: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    backgroundColor: COLORS.card,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: RADIUS.md,
+    ...SHADOWS.subtle,
+  },
+  movedText: {
+    flex: 1,
+    fontSize: 13,
+    fontFamily: FONTS.bodySemi,
+    color: COLORS.text,
+  },
+  movedLink: {
+    fontSize: 13,
+    fontFamily: FONTS.bodyBold,
+    color: COLORS.primary,
+  },
+  fileThumb: {
+    width: 36,
+    height: 36,
+    borderRadius: RADIUS.sm,
+    backgroundColor: COLORS.cardSecondary,
+  },
+  fileThumbIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: RADIUS.sm,
+    backgroundColor: COLORS.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  decisionGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 8,
+    flex: 1,
+  },
+  decisionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+  },
+  approveBtn: {
+    backgroundColor: COLORS.success,
+    borderColor: COLORS.success,
+  },
+  approveBtnText: {
+    fontSize: 13,
+    fontFamily: FONTS.bodyBold,
+    color: '#ffffff',
+  },
+  rejectBtn: {
+    backgroundColor: COLORS.card,
+    borderColor: '#e53e3e',
+  },
+  rejectBtnText: {
+    fontSize: 13,
+    fontFamily: FONTS.bodyBold,
+    color: '#e53e3e',
+  },
+  btnDisabled: {
+    opacity: 0.5,
+  },
+  reviewedBtn: {
+    paddingHorizontal: 4,
+    paddingVertical: 6,
+  },
+  reviewedBtnText: {
+    fontSize: 12,
+    fontFamily: FONTS.bodySemi,
+    color: COLORS.textMuted,
+  },
+  undoBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 8,
+    flex: 1,
+  },
+  undoBtnText: {
+    fontSize: 12,
+    fontFamily: FONTS.bodySemi,
+    color: COLORS.textMuted,
+  },
   filterChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: RADIUS.full,
