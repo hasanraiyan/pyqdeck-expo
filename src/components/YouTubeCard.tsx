@@ -12,7 +12,7 @@ import {
 import { YouTubePlayer } from './YouTubePlayer';
 import * as WebBrowser from 'expo-web-browser';
 import * as Haptics from 'expo-haptics';
-import { Feather } from '@expo/vector-icons';
+import Feather from '@expo/vector-icons/Feather';
 import { COLORS, FONTS, RADIUS } from '../theme/colors';
 
 interface YouTubeCardProps {

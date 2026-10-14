@@ -18,7 +18,7 @@ import * as Sharing from 'expo-sharing';
 import { usePreventScreenCapture } from '../utils/screenCapture';
 import { useAdminAccess } from '../admin/useAdminAccess';
 import * as Haptics from 'expo-haptics';
-import { Feather } from '@expo/vector-icons';
+import Feather from '@expo/vector-icons/Feather';
 import { COLORS, FONTS } from '../theme/colors';
 
 const SHARE_STEPS = [

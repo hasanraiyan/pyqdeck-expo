@@ -10,7 +10,8 @@ import {
 import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
 import * as WebBrowser from 'expo-web-browser';
-import { Feather, FontAwesome } from '@expo/vector-icons';
+import Feather from '@expo/vector-icons/Feather';
+import { GoogleGlyph } from './GoogleGlyph';
 import { useNavigation } from '@react-navigation/native';
 import { NativeContentRenderer } from './NativeContentRenderer';
 import { QuestionSummary } from '../types';
@@ -196,7 +197,7 @@ export const QuestionItemClassic: React.FC<QuestionItemClassicProps> = React.mem
             accessibilityLabel="Search question on Google"
             hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
           >
-            <FontAwesome name="google" size={15} color={COLORS.textMuted} />
+            <GoogleGlyph size={15} color={COLORS.textMuted} />
           </TouchableOpacity>
 
           <TouchableOpacity

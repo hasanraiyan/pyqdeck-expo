@@ -12,7 +12,7 @@ import {
   LayoutChangeEvent,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { Feather } from '@expo/vector-icons';
+import Feather from '@expo/vector-icons/Feather';
 import { useInfiniteQuery, keepPreviousData } from '@tanstack/react-query';
 import { allSubjectsQuery } from '../api/queries';
 import { prefetchSubject } from '../api/prefetch';

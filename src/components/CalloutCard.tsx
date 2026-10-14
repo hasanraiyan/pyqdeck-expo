@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { Feather } from '@expo/vector-icons';
+import Feather from '@expo/vector-icons/Feather';
 import Markdown from 'react-native-markdown-display';
 import { CalloutType, CALLOUT_TYPE_CONFIG } from '../utils/calloutParser';
 import { COLORS, FONTS } from '../theme/colors';

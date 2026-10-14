@@ -14,7 +14,7 @@ import { WebView } from './WebViewCompat';
 import { Image } from 'expo-image';
 import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
-import { Feather } from '@expo/vector-icons';
+import Feather from '@expo/vector-icons/Feather';
 import { COLORS, FONTS, RADIUS } from '../theme/colors';
 import { ImageItem } from '../utils/imageGalleryParser';
 import { useImageDimensions } from '../utils/useImageDimensions';

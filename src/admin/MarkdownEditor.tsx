@@ -1,6 +1,6 @@
 import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Keyboard, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
+import Feather from '@expo/vector-icons/Feather';
 import { COLORS, FONTS } from '../theme/colors';
 import { Segmented, useEditorKeyboardOpen, type MenuItem } from './EditorFrame';
 import { LiveEditor, type LiveEditorHandle } from './LiveEditor';
@@ -38,11 +38,15 @@ export function modeMenuItems(current: EditorMode, setMode: (m: EditorMode) => v
 }
 
 type Sel = { start: number; end: number };
-type IconName = React.ComponentProps<typeof MaterialCommunityIcons>['name'];
+type IconName = React.ComponentProps<typeof Feather>['name'];
 
+// Feather has no strikethrough / numbered-list / quote / math glyphs, so those
+// tools show a short text glyph instead (`strike` draws it struck through).
 type Tool = {
   label: string;
   icon?: IconName;
+  glyph?: string;
+  strike?: boolean;
   pre: string;
   post?: string;
   ph?: string;
@@ -50,23 +54,23 @@ type Tool = {
 };
 
 const FORMAT: Tool[] = [
-  { label: 'Bold', icon: 'format-bold', pre: '**', post: '**', ph: 'text' },
-  { label: 'Italic', icon: 'format-italic', pre: '*', post: '*', ph: 'text' },
-  { label: 'Strikethrough', icon: 'format-strikethrough', pre: '~~', post: '~~', ph: 'text' },
-  { label: 'Code', icon: 'code-tags', pre: '`', post: '`', ph: 'code' },
+  { label: 'Bold', icon: 'bold', pre: '**', post: '**', ph: 'text' },
+  { label: 'Italic', icon: 'italic', pre: '*', post: '*', ph: 'text' },
+  { label: 'Strikethrough', glyph: 'S', strike: true, pre: '~~', post: '~~', ph: 'text' },
+  { label: 'Code', icon: 'code', pre: '`', post: '`', ph: 'code' },
 ];
 
 const BLOCKS: Tool[] = [
-  { label: 'Heading', icon: 'format-title', pre: '## ', block: true },
-  { label: 'List', icon: 'format-list-bulleted', pre: '- ', block: true },
-  { label: 'Numbered list', icon: 'format-list-numbered', pre: '1. ', block: true },
-  { label: 'Quote', icon: 'format-quote-close', pre: '> ', block: true },
+  { label: 'Heading', icon: 'type', pre: '## ', block: true },
+  { label: 'List', icon: 'list', pre: '- ', block: true },
+  { label: 'Numbered list', glyph: '1.', pre: '1. ', block: true },
+  { label: 'Quote', glyph: '>', pre: '> ', block: true },
 ];
 
 const INSERT: Tool[] = [
-  { label: 'Math', icon: 'square-root', pre: '$', post: '$', ph: 'x^2' },
-  { label: 'Math block', icon: 'sigma', pre: '$$\n', post: '\n$$', ph: 'E = mc^2', block: true },
-  { label: 'Diagram', icon: 'sitemap-outline', pre: '```mermaid\n', post: '\n```', ph: 'graph TD\n  A-->B', block: true },
+  { label: 'Math', glyph: '√', pre: '$', post: '$', ph: 'x^2' },
+  { label: 'Math block', glyph: 'Σ', pre: '$$\n', post: '\n$$', ph: 'E = mc^2', block: true },
+  { label: 'Diagram', icon: 'share-2', pre: '```mermaid\n', post: '\n```', ph: 'graph TD\n  A-->B', block: true },
 ];
 
 const HISTORY_LIMIT = 100;
@@ -319,8 +323,8 @@ const Toolbar = memo(function Toolbar({
 }) {
   return (
     <View style={s.bar}>
-      <ToolButton icon="undo" label="Undo" onPress={onUndo} disabled={disabled || !canUndo} />
-      <ToolButton icon="redo" label="Redo" onPress={onRedo} disabled={disabled || !canRedo} />
+      <ToolButton icon="corner-up-left" label="Undo" onPress={onUndo} disabled={disabled || !canUndo} />
+      <ToolButton icon="corner-up-right" label="Redo" onPress={onRedo} disabled={disabled || !canRedo} />
       <View style={s.divider} />
       <ScrollView
         horizontal
@@ -336,7 +340,8 @@ const Toolbar = memo(function Toolbar({
               <ToolButton
                 key={tool.label}
                 icon={tool.icon}
-                text={tool.icon ? undefined : tool.label}
+                text={tool.icon ? undefined : tool.glyph ?? tool.label}
+                strike={tool.strike}
                 label={`Insert ${tool.label}`}
                 onPress={() => onApply(tool)}
                 disabled={disabled}
@@ -346,7 +351,7 @@ const Toolbar = memo(function Toolbar({
         ))}
       </ScrollView>
       <View style={s.divider} />
-      <ToolButton icon="eye-outline" label="Preview" onPress={onPreview} disabled={disabled} />
+      <ToolButton icon="eye" label="Preview" onPress={onPreview} disabled={disabled} />
     </View>
   );
 });
@@ -354,12 +359,14 @@ const Toolbar = memo(function Toolbar({
 const ToolButton = ({
   icon,
   text,
+  strike,
   label,
   onPress,
   disabled,
 }: {
   icon?: IconName;
   text?: string;
+  strike?: boolean;
   label: string;
   onPress: () => void;
   disabled?: boolean;
@@ -372,9 +379,9 @@ const ToolButton = ({
     accessibilityState={{ disabled: !!disabled }}
   >
     {icon ? (
-      <MaterialCommunityIcons name={icon} size={22} color={COLORS.text} />
+      <Feather name={icon} size={20} color={COLORS.text} />
     ) : (
-      <Text style={s.toolText}>{text}</Text>
+      <Text style={[s.toolText, strike && s.toolTextStrike]}>{text}</Text>
     )}
   </TouchableOpacity>
 );
@@ -411,7 +418,8 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  toolText: { fontFamily: FONTS.bodyBold, fontSize: 13, color: COLORS.text },
+  toolText: { fontFamily: FONTS.bodyBold, fontSize: 15, color: COLORS.text },
+  toolTextStrike: { textDecorationLine: 'line-through' },
   divider: { width: StyleSheet.hairlineWidth, height: 26, marginHorizontal: 4, backgroundColor: COLORS.border },
   preview: {
     flex: 1,

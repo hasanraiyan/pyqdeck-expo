@@ -1,6 +1,6 @@
 import React from 'react';
 import { Text } from 'react-native';
-import { Feather } from '@expo/vector-icons';
+import Feather from '@expo/vector-icons/Feather';
 import { useAdminAccess } from '../../admin/useAdminAccess';
 import { can } from '../../admin/adminLogic';
 import { AdminScroll, Loading, Notice, PageHeader, Section, Card } from '../../admin/ui';

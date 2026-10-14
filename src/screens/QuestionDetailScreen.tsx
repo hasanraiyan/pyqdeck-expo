@@ -19,7 +19,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
 import * as WebBrowser from 'expo-web-browser';
-import { Feather, FontAwesome } from '@expo/vector-icons';
+import Feather from '@expo/vector-icons/Feather';
+import { GoogleGlyph } from '../components/GoogleGlyph';
 import { NativeContentRenderer } from '../components/NativeContentRenderer';
 import { useQueryClient } from '@tanstack/react-query';
 import { voteSolution, reportSolution, getMyVotes } from '../api';
@@ -609,7 +610,7 @@ export const QuestionDetailScreen = () => {
                   accessibilityLabel="Search question on Google"
                   hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
                 >
-                  <FontAwesome name="google" size={15} color={COLORS.textMuted} />
+                  <GoogleGlyph size={15} color={COLORS.textMuted} />
                   {isTablet && <Text style={styles.actionIconLabel}>Google</Text>}
                 </TouchableOpacity>
 

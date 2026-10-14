@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { useRoute, useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Feather } from '@expo/vector-icons';
+import Feather from '@expo/vector-icons/Feather';
 import * as Haptics from 'expo-haptics';
 import { useQuery, keepPreviousData, useQueryClient } from '@tanstack/react-query';
 import { useSubjectMeta, questionsQuery, paperStatusQuery } from '../api/queries';

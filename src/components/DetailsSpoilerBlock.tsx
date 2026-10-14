@@ -9,7 +9,7 @@ import {
   UIManager,
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
-import { Feather } from '@expo/vector-icons';
+import Feather from '@expo/vector-icons/Feather';
 import Markdown from 'react-native-markdown-display';
 import { COLORS, FONTS, RADIUS } from '../theme/colors';
 import { solutionMarkdownStyles, markdownRules, markdownParser } from '../theme/markdownStyles';

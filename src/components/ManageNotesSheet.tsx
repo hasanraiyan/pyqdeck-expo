@@ -24,7 +24,7 @@ import { extractFaqsFromNotes } from '../utils/faqParser';
  */
 
 const FAQ_TOOL: EditorTool[] = [
-  { label: 'FAQ', icon: 'help-circle-outline', pre: '## Frequently Asked Questions\n\n### Q: ', post: '', block: true },
+  { label: 'FAQ', icon: 'help-circle', pre: '## Frequently Asked Questions\n\n### Q: ', post: '', block: true },
 ];
 
 const renderNotesPreview = (text: string) => {

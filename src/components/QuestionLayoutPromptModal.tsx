@@ -8,7 +8,7 @@ import {
   StyleSheet,
   ScrollView,
 } from 'react-native';
-import { Feather } from '@expo/vector-icons';
+import Feather from '@expo/vector-icons/Feather';
 import * as Haptics from 'expo-haptics';
 import { COLORS, FONTS, RADIUS } from '../theme/colors';
 import { useDialogLayout } from '../utils/dialog';

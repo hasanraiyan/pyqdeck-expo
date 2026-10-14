@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Alert, Pressable, Text, View } from 'react-native';
-import { Feather } from '@expo/vector-icons';
+import Feather from '@expo/vector-icons/Feather';
 import { adminUsers } from '../../api';
 import { COLORS, FONTS } from '../../theme/colors';
 import { userMessage } from '../../utils/netError';

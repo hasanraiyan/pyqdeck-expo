@@ -1,6 +1,6 @@
 import * as Font from 'expo-font';
-import { Kalam_700Bold } from '@expo-google-fonts/kalam';
-import { PatrickHand_400Regular } from '@expo-google-fonts/patrick-hand';
+import { Kalam_700Bold } from '@expo-google-fonts/kalam/700Bold';
+import { PatrickHand_400Regular } from '@expo-google-fonts/patrick-hand/400Regular';
 
 // The handwritten faces used only by the notes' SVG diagrams (see
 // sanitizeSvgForNative). They are not needed for the first screen, so the app

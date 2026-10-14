@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { WebView, WebViewMessageEvent } from './WebViewCompat';
 import * as Haptics from 'expo-haptics';
-import { Feather } from '@expo/vector-icons';
+import Feather from '@expo/vector-icons/Feather';
 import { COLORS, FONTS, RADIUS } from '../theme/colors';
 import { DiagramPlaceholder } from './DiagramPlaceholder';
 import { enqueueHeavy } from '../utils/heavyQueue';

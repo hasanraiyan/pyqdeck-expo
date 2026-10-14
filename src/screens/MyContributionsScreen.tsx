@@ -9,7 +9,7 @@ import {
   RefreshControl,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Feather } from '@expo/vector-icons';
+import Feather from '@expo/vector-icons/Feather';
 import { useQuery } from '@tanstack/react-query';
 import { getMyContributions, type PaperContribution } from '../api';
 import { COLORS, FONTS, RADIUS, SHADOWS } from '../theme/colors';

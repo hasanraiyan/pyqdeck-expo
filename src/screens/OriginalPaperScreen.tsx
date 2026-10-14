@@ -4,7 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useAuth } from '@clerk/expo';
 import { useQuery } from '@tanstack/react-query';
-import { Feather } from '@expo/vector-icons';
+import Feather from '@expo/vector-icons/Feather';
 import { OriginalPaperViewer } from '../components/OriginalPaperViewer';
 import { paperPagesQuery } from '../api/queries';
 import { recordContentOpenedAndMaybeShowInterstitial } from '../utils/ads';
