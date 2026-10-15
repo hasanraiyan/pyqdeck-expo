@@ -15,6 +15,20 @@ All notable changes to PYQDeck are listed here, newest first.
 ### Removed
 - **Scan a question from a photo.** The camera search and on-device text recognition are removed, which also fixes debug builds failing on a manifest merge conflict.
 
+## 1.13.3
+
+### Added
+- **Remote switch for paper uploads.** Uploads can be paused from the admin app config; the upload sheet shows a "paused" notice and disables submission while it is off.
+
+### Changed
+- **Contribute from Home only.** The "Contribute paper copy" / "Upload exam paper" button is gone from the question list, so reading a year's questions is no longer cluttered by upload prompts.
+- **Friendlier upload card.** The Home upload card now rotates through short "pass it on to the next batch" messages, including Hinglish.
+- **Admin Paper Submissions.** Scrollable status filters with counts, one-tap Approve / Reject, a confirmation with a jump to the new status, undo, and image thumbnails.
+- **Upload sheet.** The keyboard no longer covers the year and subject fields, and a successful upload now celebrates with confetti.
+
+### Removed
+- **Scan a question from a photo.** The camera search and on-device text recognition are removed, which also fixes debug builds failing on a manifest merge conflict.
+
 ## 1.13.2
 
 ### Changed

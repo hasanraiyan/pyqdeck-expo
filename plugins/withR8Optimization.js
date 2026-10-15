@@ -1,8 +1,6 @@
 const { withAppBuildGradle, withGradleProperties } = require('expo/config-plugins');
 
-// expo-build-properties (SDK 57) has no option for full R8 optimization or
-// optimized resource shrinking, which Play Console flags. Both are small
-// generated-file tweaks, applied at prebuild so they survive `expo prebuild --clean`.
+// expo-build-properties (SDK 57) has no option for 
 
 const OPTIMIZED_SHRINKING_KEY = 'android.r8.optimizedResourceShrinking';
 

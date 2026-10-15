@@ -37,6 +37,14 @@ import { prefetchSubject } from '../api/prefetch';
 import { UploadPaperModal } from '../components/UploadPaperModal';
 import { useAppConfig } from '../config/useAppConfig';
 
+// The upload card picks one of these each time Home mounts, so it feels fresh.
+const UPLOAD_CTA_LINES = [
+  'Got an old paper? Pass it on, the next batch will thank you. Share a photo or PDF.',
+  'Purana paper hai? Juniors ke kaam aayega. Photo ya PDF share karo.',
+  "Share last year's paper. Help the next batch prepare.",
+  "Your paper could be someone's best revision tonight. Share a photo or PDF.",
+];
+
 export const HomeScreen = () => {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<any>();
@@ -45,6 +53,9 @@ export const HomeScreen = () => {
   const { width, bp, wideMaxWidth, hPadding } = useResponsive();
   const { flags } = useAppConfig();
   const [uploadModalVisible, setUploadModalVisible] = useState(false);
+  const [uploadCtaLine] = useState(
+    () => UPLOAD_CTA_LINES[Math.floor(Math.random() * UPLOAD_CTA_LINES.length)],
+  );
 
   // Laptop and up gets a real two-column hero: the pitch on the left, the
   // search box and stats stacked on the right. Below that there isn't enough
@@ -534,7 +545,7 @@ export const HomeScreen = () => {
               <View style={styles.uploadCtaContent}>
                 <Text style={styles.uploadCtaTitle}>Upload Exam Paper</Text>
                 <Text style={styles.uploadCtaDesc}>
-                  Help your classmates by sharing question paper photos or PDF
+                  {uploadCtaLine}
                 </Text>
               </View>
               <View style={styles.uploadCtaArrow}>
