@@ -28,6 +28,7 @@ import { useUser } from '@clerk/expo';
 import { COLORS, FONTS, RADIUS } from '../../theme/colors';
 import { CommunityAttachment } from '../../types/community';
 import { communityStore } from '../../data/mockCommunity';
+import { ImageCropEditor } from '../ImageCropEditor';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -50,9 +51,23 @@ export const CreateCommunityPostModal: React.FC<CreateCommunityPostModalProps> =
 
   const [body, setBody] = useState('');
   const [attachments, setAttachments] = useState<CommunityAttachment[]>([]);
+  const [editingImage, setEditingImage] = useState<CommunityAttachment | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
   const keyboardSpace = useRef(new Animated.Value(0)).current;
+
+  const handleImageEdited = (newUri: string) => {
+    if (editingImage) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+      setAttachments((prev) =>
+        prev.map((item) =>
+          item.id === editingImage.id ? { ...item, url: newUri } : item
+        )
+      );
+    }
+    setEditingImage(null);
+  };
 
   // Resolve author details from Clerk user or fallback to student profile
   const authorName =
@@ -307,7 +322,17 @@ export const CreateCommunityPostModal: React.FC<CreateCommunityPostModalProps> =
                 {attachments.map((att) => (
                   <View key={att.id} style={styles.attachmentThumbCard}>
                     {att.type === 'image' ? (
-                      <Image source={{ uri: att.url }} style={styles.thumbImage} contentFit="cover" />
+                      <TouchableOpacity
+                        activeOpacity={0.85}
+                        onPress={() => setEditingImage(att)}
+                        style={styles.thumbImageWrap}
+                        accessibilityLabel={`Crop or edit ${att.name}`}
+                      >
+                        <Image source={{ uri: att.url }} style={styles.thumbImage} contentFit="cover" />
+                        <View style={styles.cropBadge}>
+                          <Feather name="crop" size={11} color="#ffffff" />
+                        </View>
+                      </TouchableOpacity>
                     ) : (
                       <View style={styles.thumbPdf}>
                         <Feather name="file-text" size={24} color={COLORS.primary} />
@@ -334,11 +359,7 @@ export const CreateCommunityPostModal: React.FC<CreateCommunityPostModalProps> =
           <View
             style={[
               styles.bottomToolBar,
-              {
-                paddingBottom: isKeyboardVisible
-                  ? 12
-                  : Math.max(insets.bottom + 12, 24),
-              },
+               { paddingBottom: isKeyboardVisible ? (Platform.OS === 'android' ? 24 : 12) : Math.max(insets.bottom, 12) },
             ]}
           >
             <TouchableOpacity
@@ -369,6 +390,14 @@ export const CreateCommunityPostModal: React.FC<CreateCommunityPostModalProps> =
 
         {/* Android is edge-to-edge: lifts footer cleanly by real IME height */}
         {Platform.OS === 'android' && <Animated.View style={{ height: keyboardSpace }} />}
+
+        {/* Full-screen Image Crop & Correction Editor */}
+        <ImageCropEditor
+          uri={editingImage?.url ?? null}
+          title="Edit Photo"
+          onCancel={() => setEditingImage(null)}
+          onDone={handleImageEdited}
+        />
       </KeyboardAvoidingView>
     </Modal>
   );
@@ -516,6 +545,22 @@ const styles = StyleSheet.create({
   thumbImage: {
     width: '100%',
     height: '100%',
+  },
+  thumbImageWrap: {
+    width: '100%',
+    height: '100%',
+    position: 'relative',
+  },
+  cropBadge: {
+    position: 'absolute',
+    bottom: 4,
+    right: 4,
+    backgroundColor: 'rgba(0,0,0,0.65)',
+    width: 22,
+    height: 22,
+    borderRadius: RADIUS.full,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   thumbPdf: {
     width: '100%',

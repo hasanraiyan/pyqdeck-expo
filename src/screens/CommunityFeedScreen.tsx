@@ -196,20 +196,6 @@ export const CommunityFeedScreen: React.FC = () => {
       <View style={styles.siteHeader}>
         {isSearchExpanded ? (
           <View style={styles.expandedSearchRow}>
-            <TouchableOpacity
-              style={styles.searchBackBtn}
-              onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-                LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-                setIsSearchExpanded(false);
-                setSearchQuery('');
-              }}
-              hitSlop={8}
-              accessibilityLabel="Close search"
-            >
-              <Feather name="arrow-left" size={20} color={COLORS.text} />
-            </TouchableOpacity>
-
             <View style={styles.expandedSearchInputContainer}>
               <Feather name="search" size={15} color={COLORS.textMuted} style={{ marginRight: 8 }} />
               <TextInput
@@ -221,14 +207,19 @@ export const CommunityFeedScreen: React.FC = () => {
                 autoFocus
                 returnKeyType="search"
               />
-              {searchQuery.length > 0 && (
-                <TouchableOpacity
-                  onPress={() => setSearchQuery('')}
-                  hitSlop={8}
-                >
-                  <Feather name="x" size={14} color={COLORS.textMuted} />
-                </TouchableOpacity>
-              )}
+              <TouchableOpacity
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                  LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+                  setIsSearchExpanded(false);
+                  setSearchQuery('');
+                }}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                style={styles.searchCloseBtn}
+                accessibilityLabel="Close search"
+              >
+                <Feather name="x" size={16} color={COLORS.textMuted} />
+              </TouchableOpacity>
             </View>
           </View>
         ) : (
@@ -512,28 +503,27 @@ const styles = StyleSheet.create({
     color: COLORS.primary,
   },
   expandedSearchRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    height: 38,
-  },
-  searchBackBtn: {
-    width: 36,
-    height: 36,
-    alignItems: 'center',
-    justifyContent: 'center',
+    width: '100%',
+    paddingTop: 10,
+    paddingBottom: 8,
   },
   expandedSearchInputContainer: {
-    flex: 1,
+    width: '100%',
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: COLORS.cardSecondary,
     borderRadius: RADIUS.full,
     borderWidth: 1,
     borderColor: COLORS.borderLight,
-    paddingHorizontal: 12,
+    paddingHorizontal: 14,
     paddingVertical: 0,
-    height: 34,
+    height: 38,
+  },
+  searchCloseBtn: {
+    padding: 6,
+    marginLeft: 4,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   expandedSearchInput: {
     flex: 1,
