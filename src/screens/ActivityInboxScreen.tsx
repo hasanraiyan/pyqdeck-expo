@@ -231,13 +231,6 @@ export const ActivityInboxScreen: React.FC<{ route?: any }> = () => {
             );
           })}
         </View>
-
-        {filteredItems.length > 0 && (
-          <View style={styles.hintRow}>
-            <Feather name="arrow-left" size={11} color={COLORS.textSubtle} />
-            <Text style={styles.hintText}>Swipe left to dismiss</Text>
-          </View>
-        )}
       </View>
 
       {/* Unified List */}
@@ -430,19 +423,6 @@ const styles = StyleSheet.create({
   filterChipTextActive: {
     fontFamily: FONTS.bodySemi,
     color: '#ffffff',
-  },
-  hintRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'flex-end',
-    gap: 4,
-    marginTop: 6,
-    paddingRight: 4,
-  },
-  hintText: {
-    fontFamily: FONTS.body,
-    fontSize: 10.5,
-    color: COLORS.textMuted,
   },
   scrollView: {
     flex: 1,
