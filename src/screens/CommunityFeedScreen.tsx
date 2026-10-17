@@ -464,6 +464,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  headerBadgeDot: {
+    position: 'absolute',
+    top: 7,
+    right: 8,
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
+    backgroundColor: COLORS.primary,
+    borderWidth: 1.5,
+    borderColor: '#ffffff',
+  },
   headerIconButtonActive: {
     padding: 0,
     overflow: 'hidden',

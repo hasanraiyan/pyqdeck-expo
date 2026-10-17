@@ -61,6 +61,7 @@ import { TopicQuestionsScreen } from './src/screens/TopicQuestionsScreen';
 import { CommunityFeedScreen } from './src/screens/CommunityFeedScreen';
 import { CommunityPostDetailScreen } from './src/screens/CommunityPostDetailScreen';
 import { UserProfileScreen } from './src/screens/UserProfileScreen';
+import { ActivityInboxScreen } from './src/screens/ActivityInboxScreen';
 import { checkForStoreUpdate } from './src/utils/appUpdate';
 import { maybeRequestReview } from './src/utils/appReview';
 import { isSyllabusEnabled } from './src/config/features';
@@ -137,7 +138,7 @@ const linking: any = {
     const pathname = path.split(/[?#]/)[0];
     const segments = pathname.split('/').filter(Boolean);
     const first = segments[0];
-    if (first !== 'syllabus' && first !== 'search' && first !== 'community' && !QUESTION_PATH.test(pathname)) {
+    if (first !== 'syllabus' && first !== 'search' && first !== 'community' && first !== 'inbox' && first !== 'activity' && !QUESTION_PATH.test(pathname)) {
       return undefined;
     }
     return defaultGetStateFromPath(path, options);
@@ -146,6 +147,7 @@ const linking: any = {
     screens: {
       // Nested under Tabs now that a root stack sits above the tab navigator,
       // so the shipped Android App Links keep resolving.
+      Search: 'search',
       Tabs: {
         screens: {
           Browse: {
@@ -171,9 +173,9 @@ const linking: any = {
               UserProfile: 'community/u/:userId',
             },
           },
-          Search: {
+          Activity: {
             screens: {
-              SearchRoot: 'search',
+              ActivityRoot: 'inbox',
             },
           },
         },
@@ -241,6 +243,16 @@ function renderSharedScreens(StackNav: typeof Stack, syllabusTitle = 'Syllabus')
       <StackNav.Screen
         name="OriginalPaper"
         component={OriginalPaperScreen}
+        options={{ headerShown: false }}
+      />
+      <StackNav.Screen
+        name="Search"
+        component={SearchScreen}
+        options={{ headerShown: false }}
+      />
+      <StackNav.Screen
+        name="Activity"
+        component={ActivityInboxScreen}
         options={{ headerShown: false }}
       />
       <StackNav.Screen
@@ -321,12 +333,12 @@ function SyllabusStack() {
   );
 }
 
-function SearchStack() {
+function ActivityStack() {
   return (
     <Stack.Navigator screenOptions={commonScreenOptions}>
       <Stack.Screen
-        name="SearchRoot"
-        component={SearchScreen}
+        name="ActivityRoot"
+        component={ActivityInboxScreen}
         options={{ headerShown: false }}
       />
       {renderSharedScreens(Stack)}
@@ -382,7 +394,7 @@ function TabsNavigator() {
   const isSidebar = isLaptopUp && !collapsed;
   const shellWidth = getShellWidth(shellMode, collapsed);
 
-  const ROOT_TAB_SCREENS = new Set(['Home', 'SyllabusRoot', 'CommunityFeed', 'SearchRoot']);
+  const ROOT_TAB_SCREENS = new Set(['Home', 'SyllabusRoot', 'CommunityFeed', 'ActivityRoot']);
 
   // A per-screen tabBarStyle replaces the one in screenOptions, so it has to carry
   // the base style itself; returning undefined at the roots dropped the styling.
@@ -495,13 +507,22 @@ function TabsNavigator() {
           })}
         />
         <Tab.Screen
-          name="Search"
-          component={SearchStack}
+          name="Activity"
+          component={ActivityStack}
           options={({ route }: any) => ({
-            tabBarLabel: 'Search',
+            tabBarLabel: 'Activity',
             tabBarIcon: ({ color, size }) => (
-              <Feather name="search" size={size} color={color} />
+              <Feather name="bell" size={size} color={color} />
             ),
+            tabBarBadge: 3,
+            tabBarBadgeStyle: {
+              backgroundColor: COLORS.primary,
+              fontSize: 10,
+              minWidth: 16,
+              height: 16,
+              borderRadius: 8,
+              lineHeight: 14,
+            },
             ...(isBottom ? { tabBarStyle: getTabStyleForRoute(route) } : null),
           })}
         />
@@ -698,7 +719,7 @@ function AppContent() {
       if (isSearchKey && !dialogOpen && (e.key !== '/' || !typing)) {
         if (!navigationRef.isReady()) return;
         e.preventDefault();
-        navigationRef.navigate('Tabs', { screen: 'Search' });
+        navigationRef.navigate('Search' as never);
         return;
       }
       if (e.key !== 'Escape' || typing || dialogOpen) return;
@@ -756,6 +777,11 @@ function AppContent() {
               name="MyContributions"
               component={MyContributionsScreen}
               options={{ presentation: 'fullScreenModal' }}
+            />
+            <RootStack.Screen
+              name="Search"
+              component={SearchScreen}
+              options={{ headerShown: false }}
             />
             <RootStack.Screen
               name="Onboarding"

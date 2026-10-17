@@ -9,6 +9,7 @@ import {
   StyleSheet,
   Alert,
   ActivityIndicator,
+  BackHandler,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLinkTo, useNavigation, useRoute } from '@react-navigation/native';
@@ -45,7 +46,17 @@ type SearchTab = 'all' | 'notes' | 'questions' | 'subjects';
 
 type RecentSearch = { term: string };
 
-export const SearchScreen = () => {
+export interface SearchScreenProps {
+  embedded?: boolean;
+  onClose?: () => void;
+  autoFocus?: boolean;
+}
+
+export const SearchScreen: React.FC<SearchScreenProps> = ({
+  embedded = false,
+  onClose,
+  autoFocus = false,
+}) => {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
@@ -70,6 +81,15 @@ export const SearchScreen = () => {
     // Length only - the query text itself can be personal.
     if (submitted) logEvent('search', { query_length: submitted.length });
   }, [submitted]);
+
+  useEffect(() => {
+    if (!embedded || !onClose) return;
+    const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
+      onClose();
+      return true;
+    });
+    return () => backHandler.remove();
+  }, [embedded, onClose]);
   const q = submitted ?? '';
 
   const subsQ = useQuery({ ...searchSubjectsQuery(q), enabled: hasSearched });
@@ -596,76 +616,161 @@ export const SearchScreen = () => {
             { maxWidth: readMaxWidth + hPadding * 2, paddingHorizontal: hPadding },
           ]}
         >
-          {!hasSearched && (
-            <View style={styles.titleBlock}>
-              <Text style={styles.title}>Search</Text>
-              <Text style={styles.subtitle}>Questions, notes and subjects from BEU papers</Text>
-            </View>
-          )}
-
-          <View
-            style={[
-              styles.searchBar,
-              inputFocused && styles.searchBarFocused,
-              isInputDisabled && styles.searchBarDisabled,
-            ]}
-          >
-            <TouchableOpacity
-              onPress={handleSearch}
-              disabled={isInputDisabled}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              style={styles.searchIconBtn}
-            >
-              <Feather
-                name="search"
-                size={18}
-                color={query.trim().length > 0 || inputFocused ? COLORS.primary : COLORS.textMuted}
-              />
-            </TouchableOpacity>
-            <TextInput
-              ref={searchInputRef}
-              placeholder={cooldownSec > 0 ? `Cooldown ${cooldownSec}s...` : 'Search subjects, questions, or topics...'}
-              placeholderTextColor={COLORS.textSubtle}
-              value={query}
-              editable={!isInputDisabled}
-              onChangeText={(text) => {
-                setQuery(text);
-                if (validationError) setValidationError(null);
-                if (!text) {
-                  setSubmitted(null);
-                  setActiveTab('all');
-                }
-              }}
-              onFocus={() => setInputFocused(true)}
-              onBlur={() => setInputFocused(false)}
-              onSubmitEditing={handleSearch}
-              returnKeyType="search"
-              blurOnSubmit={true}
-              enablesReturnKeyAutomatically={true}
-              autoCorrect={false}
-              style={[
-                styles.searchInput,
-                isInputDisabled && { opacity: 0.6 },
-              ]}
-            />
-            {query.length > 0 && cooldownSec === 0 && (
-              <TouchableOpacity onPress={handleClear} style={styles.clearBtn} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                <Feather name="x" size={15} color={COLORS.textMuted} />
-              </TouchableOpacity>
-            )}
-
-            {query.trim().length > 0 && cooldownSec === 0 && (
+          {embedded ? (
+            <View style={styles.embeddedHeaderRow}>
               <TouchableOpacity
-                onPress={handleSearch}
-                style={styles.searchActionBtn}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                  onClose?.();
+                }}
+                hitSlop={8}
+                style={styles.embeddedBackBtn}
+                accessibilityLabel="Back to PYQ Home"
               >
-                <Feather name="arrow-right" size={17} color="#FFFFFF" />
+                <Feather name="arrow-left" size={20} color={COLORS.text} />
               </TouchableOpacity>
-            )}
 
-            {cooldownSec > 0 && !loading && <Feather name="clock" size={14} color={COLORS.textMuted} style={{ marginLeft: 6 }} />}
-          </View>
+              <View
+                style={[
+                  styles.searchBar,
+                  styles.embeddedSearchBar,
+                  inputFocused && styles.searchBarFocused,
+                  isInputDisabled && styles.searchBarDisabled,
+                ]}
+              >
+                <TouchableOpacity
+                  onPress={handleSearch}
+                  disabled={isInputDisabled}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  style={styles.searchIconBtn}
+                >
+                  <Feather
+                    name="search"
+                    size={18}
+                    color={query.trim().length > 0 || inputFocused ? COLORS.primary : COLORS.textMuted}
+                  />
+                </TouchableOpacity>
+                <TextInput
+                  ref={searchInputRef}
+                  placeholder={cooldownSec > 0 ? `Cooldown ${cooldownSec}s...` : 'Search subjects, questions, or topics...'}
+                  placeholderTextColor={COLORS.textSubtle}
+                  value={query}
+                  editable={!isInputDisabled}
+                  autoFocus={autoFocus || embedded}
+                  onChangeText={(text) => {
+                    setQuery(text);
+                    if (validationError) setValidationError(null);
+                    if (!text) {
+                      setSubmitted(null);
+                      setActiveTab('all');
+                    }
+                  }}
+                  onFocus={() => setInputFocused(true)}
+                  onBlur={() => setInputFocused(false)}
+                  onSubmitEditing={handleSearch}
+                  returnKeyType="search"
+                  blurOnSubmit={true}
+                  enablesReturnKeyAutomatically={true}
+                  autoCorrect={false}
+                  style={[
+                    styles.searchInput,
+                    isInputDisabled && { opacity: 0.6 },
+                  ]}
+                />
+                {query.length > 0 && cooldownSec === 0 && (
+                  <TouchableOpacity onPress={handleClear} style={styles.clearBtn} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                    <Feather name="x" size={15} color={COLORS.textMuted} />
+                  </TouchableOpacity>
+                )}
+
+                {query.trim().length > 0 && cooldownSec === 0 && (
+                  <TouchableOpacity
+                    onPress={handleSearch}
+                    style={styles.searchActionBtn}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  >
+                    <Feather name="arrow-right" size={17} color="#FFFFFF" />
+                  </TouchableOpacity>
+                )}
+
+                {cooldownSec > 0 && !loading && <Feather name="clock" size={14} color={COLORS.textMuted} style={{ marginLeft: 6 }} />}
+              </View>
+            </View>
+          ) : (
+            <>
+              {!hasSearched && (
+                <View style={styles.titleBlock}>
+                  <Text style={styles.title}>Search</Text>
+                  <Text style={styles.subtitle}>Questions, notes and subjects from BEU papers</Text>
+                </View>
+              )}
+
+              <View
+                style={[
+                  styles.searchBar,
+                  inputFocused && styles.searchBarFocused,
+                  isInputDisabled && styles.searchBarDisabled,
+                ]}
+              >
+                <TouchableOpacity
+                  onPress={handleSearch}
+                  disabled={isInputDisabled}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  style={styles.searchIconBtn}
+                >
+                  <Feather
+                    name="search"
+                    size={18}
+                    color={query.trim().length > 0 || inputFocused ? COLORS.primary : COLORS.textMuted}
+                  />
+                </TouchableOpacity>
+                <TextInput
+                  ref={searchInputRef}
+                  placeholder={cooldownSec > 0 ? `Cooldown ${cooldownSec}s...` : 'Search subjects, questions, or topics...'}
+                  placeholderTextColor={COLORS.textSubtle}
+                  value={query}
+                  editable={!isInputDisabled}
+                  autoFocus={autoFocus}
+                  onChangeText={(text) => {
+                    setQuery(text);
+                    if (validationError) setValidationError(null);
+                    if (!text) {
+                      setSubmitted(null);
+                      setActiveTab('all');
+                    }
+                  }}
+                  onFocus={() => setInputFocused(true)}
+                  onBlur={() => setInputFocused(false)}
+                  onSubmitEditing={handleSearch}
+                  returnKeyType="search"
+                  blurOnSubmit={true}
+                  enablesReturnKeyAutomatically={true}
+                  autoCorrect={false}
+                  style={[
+                    styles.searchInput,
+                    isInputDisabled && { opacity: 0.6 },
+                  ]}
+                />
+                {query.length > 0 && cooldownSec === 0 && (
+                  <TouchableOpacity onPress={handleClear} style={styles.clearBtn} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                    <Feather name="x" size={15} color={COLORS.textMuted} />
+                  </TouchableOpacity>
+                )}
+
+                {query.trim().length > 0 && cooldownSec === 0 && (
+                  <TouchableOpacity
+                    onPress={handleSearch}
+                    style={styles.searchActionBtn}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  >
+                    <Feather name="arrow-right" size={17} color="#FFFFFF" />
+                  </TouchableOpacity>
+                )}
+
+                {cooldownSec > 0 && !loading && <Feather name="clock" size={14} color={COLORS.textMuted} style={{ marginLeft: 6 }} />}
+              </View>
+            </>
+          )}
           {validationError && (
             <View style={styles.validationRow}>
               <Feather name="alert-circle" size={12} color="#DC2626" style={{ marginRight: 6 }} />
@@ -1052,6 +1157,22 @@ const styles = StyleSheet.create({
     paddingRight: 7,
     marginTop: 10,
     height: 52,
+  },
+  embeddedHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    width: '100%',
+  },
+  embeddedBackBtn: {
+    width: 38,
+    height: 38,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  embeddedSearchBar: {
+    flex: 1,
+    marginTop: 0,
   },
   searchBarFocused: {
     borderColor: COLORS.primary,

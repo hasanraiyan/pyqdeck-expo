@@ -36,6 +36,7 @@ import {
 import { prefetchSubject } from '../api/prefetch';
 import { UploadPaperModal } from '../components/UploadPaperModal';
 import { useAppConfig } from '../config/useAppConfig';
+import { SearchScreen } from './SearchScreen';
 
 // The upload card picks one of these each time Home mounts, so it feels fresh.
 const UPLOAD_CTA_LINES = [
@@ -48,6 +49,7 @@ const UPLOAD_CTA_LINES = [
 export const HomeScreen = () => {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<any>();
+  const [isSearchActive, setIsSearchActive] = useState(false);
   const { isSignedIn } = useAuth();
   const { user } = useUser();
   const { width, bp, wideMaxWidth, hPadding } = useResponsive();
@@ -177,6 +179,10 @@ export const HomeScreen = () => {
     [semestersData]
   );
 
+  if (isSearchActive) {
+    return <SearchScreen embedded onClose={() => setIsSearchActive(false)} autoFocus />;
+  }
+
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       {/* Site Header bar with Official PyQdeck Logo */}
@@ -202,7 +208,10 @@ export const HomeScreen = () => {
           </View>
           <View style={styles.headerActions}>
             <TouchableOpacity
-              onPress={() => navigation.navigate('Search')}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                setIsSearchActive(true);
+              }}
               style={styles.headerSearchButton}
               hitSlop={8}
               accessibilityRole="button"
@@ -659,6 +668,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginLeft: 8,
+  },
+  headerBadgeDot: {
+    position: 'absolute',
+    top: 7,
+    right: 8,
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
+    backgroundColor: COLORS.primary,
+    borderWidth: 1.5,
+    borderColor: '#ffffff',
   },
   headerIconButtonActive: {
     borderWidth: 0,
