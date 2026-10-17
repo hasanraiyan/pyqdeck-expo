@@ -27,6 +27,7 @@ import { useUser } from '@clerk/expo';
 import { COLORS, FONTS, RADIUS } from '../theme/colors';
 import { ScreenContainer } from '../components/ScreenContainer';
 import { CommunityPostCard } from '../components/community/CommunityPostCard';
+import { CommunityCommentsBottomSheet } from '../components/community/CommunityCommentsBottomSheet';
 import { communityStore } from '../data/mockCommunity';
 import { CommunityAuthor, CommunityPost } from '../types/community';
 import {
@@ -125,6 +126,7 @@ export const UserProfileScreen: React.FC = () => {
   const [editLinkedin, setEditLinkedin] = useState('');
   const [savingEdit, setSavingEdit] = useState(false);
   const [notificationsActive, setNotificationsActive] = useState(false);
+  const [commentSheetPost, setCommentSheetPost] = useState<CommunityPost | null>(null);
 
   // Community store posts subscription
   const [allPosts, setAllPosts] = useState<CommunityPost[]>(() => communityStore.getPosts());
@@ -135,6 +137,27 @@ export const UserProfileScreen: React.FC = () => {
     });
     return unsub;
   }, []);
+
+  // Keep commentSheetPost in sync with store updates
+  useEffect(() => {
+    if (commentSheetPost) {
+      const updated = allPosts.find((p) => p.id === commentSheetPost.id);
+      if (updated && updated !== commentSheetPost) {
+        setCommentSheetPost(updated);
+      }
+    }
+  }, [allPosts, commentSheetPost]);
+
+  const handleOpenDetail = useCallback(
+    (post: CommunityPost, focusComments = false) => {
+      navigation.navigate('CommunityPostDetail', {
+        postId: post.id,
+        initialPost: post,
+        focusComments,
+      });
+    },
+    [navigation]
+  );
 
   const loadProfile = useCallback(async () => {
     try {
@@ -622,6 +645,8 @@ export const UserProfileScreen: React.FC = () => {
                       showDismissAction={false}
                       onLikePress={(id) => communityStore.toggleLikePost(id)}
                       onBookmarkPress={(id) => communityStore.toggleBookmarkPost(id)}
+                      onCommentPress={(p) => setCommentSheetPost(p)}
+                      onOpenDetail={(p) => handleOpenDetail(p, false)}
                       onHashtagPress={(tag) => {
                         navigation.navigate('CommunityFeed', { filterHashtag: tag });
                       }}
@@ -754,6 +779,8 @@ export const UserProfileScreen: React.FC = () => {
                         showDismissAction={false}
                         onLikePress={(id) => communityStore.toggleLikePost(id)}
                         onBookmarkPress={(id) => communityStore.toggleBookmarkPost(id)}
+                        onCommentPress={(p) => setCommentSheetPost(p)}
+                        onOpenDetail={(p) => handleOpenDetail(p, false)}
                         onHashtagPress={(tag) => {
                           navigation.navigate('CommunityFeed', { filterHashtag: tag });
                         }}
@@ -917,6 +944,13 @@ export const UserProfileScreen: React.FC = () => {
           </ScrollView>
         </KeyboardAvoidingView>
       </Modal>
+
+      {/* LinkedIn-Style Comments Bottom Sheet */}
+      <CommunityCommentsBottomSheet
+        visible={!!commentSheetPost}
+        post={commentSheetPost}
+        onClose={() => setCommentSheetPost(null)}
+      />
     </View>
   );
 };
