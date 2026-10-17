@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -12,12 +12,16 @@ import {
   Platform,
   Alert,
   KeyboardAvoidingView,
+  Linking,
+  Animated,
+  useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { Feather } from '@expo/vector-icons';
+import { Feather, Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import * as Haptics from 'expo-haptics';
+import * as WebBrowser from 'expo-web-browser';
 import * as Clipboard from 'expo-clipboard';
 import { useUser } from '@clerk/expo';
 import { COLORS, FONTS, RADIUS } from '../theme/colors';
@@ -29,6 +33,26 @@ import {
   userProfileService,
   UserProfileData,
 } from '../services/userProfileService';
+
+const getLinkedInUrl = (input?: string) => {
+  if (!input) return '';
+  const trimmed = input.trim();
+  if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+    return trimmed;
+  }
+  const handle = trimmed.replace(/^[@/]+/, '');
+  return `https://www.linkedin.com/in/${handle}`;
+};
+
+const getGitHubUrl = (input?: string) => {
+  if (!input) return '';
+  const trimmed = input.trim();
+  if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+    return trimmed;
+  }
+  const handle = trimmed.replace(/^[@/]+/, '');
+  return `https://github.com/${handle}`;
+};
 
 export const UserProfileScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
@@ -49,6 +73,44 @@ export const UserProfileScreen: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'posts' | 'about' | 'contributions' | 'saved'>('posts');
   const [isFollowing, setIsFollowing] = useState(false);
   const [followersCount, setFollowersCount] = useState(0);
+
+  const { width: windowWidth } = useWindowDimensions();
+
+  const tabs: ('posts' | 'about' | 'contributions' | 'saved')[] = useMemo(
+    () => (isOwnProfile ? ['posts', 'about', 'contributions', 'saved'] : ['posts', 'about', 'contributions']),
+    [isOwnProfile]
+  );
+
+  const tabWidth = windowWidth / tabs.length;
+  const scrollX = useRef(new Animated.Value(0)).current;
+  const tabScrollRef = useRef<ScrollView>(null);
+
+  const indicatorTranslateX = useMemo(() => {
+    return scrollX.interpolate({
+      inputRange: tabs.map((_, i) => i * windowWidth),
+      outputRange: tabs.map((_, i) => i * tabWidth),
+      extrapolate: 'clamp',
+    });
+  }, [tabs, windowWidth, tabWidth, scrollX]);
+
+  const handleTabPress = (tab: typeof tabs[number], index: number) => {
+    Haptics.selectionAsync().catch(() => {});
+    setActiveTab(tab);
+    tabScrollRef.current?.scrollTo({ x: index * windowWidth, animated: true });
+  };
+
+  const getTabLabel = (tab: typeof tabs[number]) => {
+    switch (tab) {
+      case 'posts':
+        return `Posts (${userPosts.length})`;
+      case 'about':
+        return 'About';
+      case 'contributions':
+        return 'Contributions';
+      case 'saved':
+        return `Saved (${savedPosts.length})`;
+    }
+  };
 
   // Edit profile modal state
   const [editModalVisible, setEditModalVisible] = useState(false);
@@ -138,6 +200,75 @@ export const UserProfileScreen: React.FC = () => {
         message: `Check out ${profile?.name || 'Student'}'s profile on PyQdeck Community:\n${shareUrl}`,
       });
     } catch {}
+  };
+
+  const handleOpenSocialUrl = async (url: string) => {
+    if (!url) return;
+    Haptics.selectionAsync().catch(() => {});
+    try {
+      await WebBrowser.openBrowserAsync(url, {
+        toolbarColor: '#ffffff',
+        controlsColor: COLORS.primary,
+        secondaryToolbarColor: '#f9fafb',
+        showTitle: true,
+        enableBarCollapsing: true,
+      });
+    } catch {
+      try {
+        await Linking.openURL(url);
+      } catch {
+        Alert.alert('Unable to open link', 'Could not open the webpage. Please check your network connection.');
+      }
+    }
+  };
+
+  const handleOpenMessage = () => {
+    Haptics.selectionAsync().catch(() => {});
+    Alert.alert(
+      'Direct Messages',
+      `Direct messaging with ${profile?.name || 'this student'} will be available in the upcoming peer study update!`,
+      [{ text: 'OK' }]
+    );
+  };
+
+  const handleOpenMoreOptions = () => {
+    Haptics.selectionAsync().catch(() => {});
+    Alert.alert(
+      profile?.name || 'Profile Options',
+      'Select an action',
+      [
+        {
+          text: 'Share Profile',
+          onPress: handleShareProfile,
+        },
+        {
+          text: 'Copy Profile Link',
+          onPress: async () => {
+            const shareUrl = `https://pyqdeck.in/community/u/${profile?.id || 'student'}`;
+            try {
+              await Clipboard.setStringAsync(shareUrl);
+              Alert.alert('Copied', 'Profile URL copied to clipboard');
+            } catch {}
+          },
+        },
+        !isOwnProfile
+          ? {
+              text: 'Report Student',
+              style: 'destructive',
+              onPress: () => {
+                Alert.alert(
+                  'Report Received',
+                  'Thank you for keeping our community safe. Our team will review this report.'
+                );
+              },
+            }
+          : null,
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+      ].filter(Boolean) as any
+    );
   };
 
   const openEditModal = () => {
@@ -279,28 +410,29 @@ export const UserProfileScreen: React.FC = () => {
 
             {/* User Meta Information & Actions */}
             <View style={styles.profileMetaContent}>
-              <View style={styles.nameHeaderRow}>
-                <Text style={styles.profileName}>{profile.name}</Text>
-                <View style={styles.studentRoleBadge}>
-                  <Text style={styles.studentRoleBadgeText}>STUDENT</Text>
-                </View>
-              </View>
-
+              <Text style={styles.profileName}>{profile.name}</Text>
               <Text style={styles.profileBio}>{profile.bio}</Text>
 
-              {/* College & University Affiliation */}
+              {/* Address & College */}
               <View style={styles.infoMetaRow}>
-                <Feather name="book-open" size={14} color={COLORS.primary} style={styles.metaIcon} />
-                <Text style={styles.metaInstitutionText} numberOfLines={1}>
-                  {profile.college}
+                <Feather name="map-pin" size={12.5} color="#6b7280" style={styles.metaInlineIcon} />
+                <Text style={styles.metaAddressText} numberOfLines={1}>
+                  {profile.location || 'Bihar, India'}
                 </Text>
-              </View>
 
-              <View style={styles.infoMetaRow}>
-                <Feather name="map-pin" size={13.5} color="#6b7280" style={styles.metaIcon} />
-                <Text style={styles.metaSubText}>{profile.location || 'Bihar, India'}</Text>
-                <Text style={styles.metaDot}>•</Text>
-                <Text style={styles.metaSubText}>{profile.university}</Text>
+                {profile.college ? (
+                  <>
+                    <Text style={styles.metaDot}>•</Text>
+                    <Ionicons name="school-outline" size={13.5} color="#6b7280" style={styles.metaInlineIcon} />
+                    <Text
+                      style={styles.metaCollegeText}
+                      numberOfLines={1}
+                      ellipsizeMode="tail"
+                    >
+                      {profile.college}
+                    </Text>
+                  </>
+                ) : null}
               </View>
 
               {/* Social / Portfolio Links */}
@@ -308,33 +440,42 @@ export const UserProfileScreen: React.FC = () => {
                 <View style={styles.socialLinksRow}>
                   {profile.linkedin ? (
                     <TouchableOpacity
-                      style={styles.socialPill}
-                      onPress={async () => {
-                        await Clipboard.setStringAsync(`https://linkedin.com/in/${profile.linkedin}`);
-                        Alert.alert('Copied', 'LinkedIn profile URL copied to clipboard');
-                      }}
+                      style={[styles.socialIconBtn, styles.linkedinIconBtn]}
+                      onPress={() => handleOpenSocialUrl(getLinkedInUrl(profile.linkedin))}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                      accessibilityLabel="Open LinkedIn profile"
+                      activeOpacity={0.7}
                     >
-                      <Feather name="linkedin" size={13} color="#0a66c2" />
-                      <Text style={styles.socialPillText}>LinkedIn</Text>
+                      <Feather name="linkedin" size={16} color="#0a66c2" />
                     </TouchableOpacity>
                   ) : null}
 
                   {profile.github ? (
                     <TouchableOpacity
-                      style={styles.socialPill}
-                      onPress={async () => {
-                        await Clipboard.setStringAsync(`https://github.com/${profile.github}`);
-                        Alert.alert('Copied', 'GitHub profile URL copied to clipboard');
-                      }}
+                      style={[styles.socialIconBtn, styles.githubIconBtn]}
+                      onPress={() => handleOpenSocialUrl(getGitHubUrl(profile.github))}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                      accessibilityLabel="Open GitHub profile"
+                      activeOpacity={0.7}
                     >
-                      <Feather name="github" size={13} color="#111827" />
-                      <Text style={styles.socialPillText}>GitHub</Text>
+                      <Feather name="github" size={16} color="#111827" />
                     </TouchableOpacity>
                   ) : null}
                 </View>
               )}
 
-              {/* Profile Action Buttons Row (Full-width below bio) */}
+              {/* Network Stats (Followers & Following) */}
+              <View style={styles.networkRow}>
+                <Text style={styles.networkText}>
+                  <Text style={styles.networkBold}>{followersCount}</Text>
+                  {' followers'}
+                  <Text style={styles.networkDot}> • </Text>
+                  <Text style={styles.networkBold}>{profile.followingCount}</Text>
+                  {' following'}
+                </Text>
+              </View>
+
+              {/* Profile Action Buttons Row (Follow, Message, More) */}
               <View style={styles.actionButtonsRow}>
                 {isOwnProfile ? (
                   <>
@@ -347,12 +488,12 @@ export const UserProfileScreen: React.FC = () => {
                       <Text style={styles.primaryActionBtnText}>Edit profile</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
-                      style={styles.secondaryActionBtn}
-                      onPress={handleShareProfile}
+                      style={styles.moreActionBtn}
+                      onPress={handleOpenMoreOptions}
                       activeOpacity={0.8}
+                      accessibilityLabel="More options"
                     >
-                      <Feather name="share-2" size={14} color="#374151" style={{ marginRight: 6 }} />
-                      <Text style={styles.secondaryActionBtnText}>Share</Text>
+                      <Feather name="more-vertical" size={18} color="#374151" />
                     </TouchableOpacity>
                   </>
                 ) : (
@@ -380,276 +521,249 @@ export const UserProfileScreen: React.FC = () => {
                         {isFollowing ? 'Following' : 'Follow'}
                       </Text>
                     </TouchableOpacity>
+
                     <TouchableOpacity
                       style={styles.secondaryActionBtn}
-                      onPress={handleShareProfile}
+                      onPress={handleOpenMessage}
                       activeOpacity={0.8}
                     >
-                      <Feather name="share-2" size={14} color="#374151" style={{ marginRight: 6 }} />
-                      <Text style={styles.secondaryActionBtnText}>Share</Text>
+                      <Feather name="message-circle" size={15} color="#374151" style={{ marginRight: 6 }} />
+                      <Text style={styles.secondaryActionBtnText}>Message</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={styles.moreActionBtn}
+                      onPress={handleOpenMoreOptions}
+                      activeOpacity={0.8}
+                      accessibilityLabel="More profile options"
+                    >
+                      <Feather name="more-vertical" size={18} color="#374151" />
                     </TouchableOpacity>
                   </>
                 )}
               </View>
-
-              {/* Network / Community Impact Statistics */}
-              <View style={styles.statsRibbon}>
-                <View style={styles.statBox}>
-                  <Text style={styles.statNumber}>{followersCount}</Text>
-                  <Text style={styles.statLabel}>Followers</Text>
-                </View>
-                <View style={styles.statDivider} />
-                <View style={styles.statBox}>
-                  <Text style={styles.statNumber}>{profile.followingCount}</Text>
-                  <Text style={styles.statLabel}>Following</Text>
-                </View>
-                <View style={styles.statDivider} />
-                <View style={styles.statBox}>
-                  <Text style={styles.statNumber}>{userPosts.length}</Text>
-                  <Text style={styles.statLabel}>Posts</Text>
-                </View>
-                <View style={styles.statDivider} />
-                <View style={styles.statBox}>
-                  <Text style={styles.statNumber}>{profile.upvotesCount}</Text>
-                  <Text style={styles.statLabel}>Upvotes</Text>
-                </View>
-              </View>
             </View>
           </View>
 
-          {/* LinkedIn-style Navigation Tabs */}
+          {/* Navigation Tabs with Smooth Animated Sliding Indicator */}
           <View style={styles.tabBar}>
-            <TouchableOpacity
-              style={[styles.tabItem, activeTab === 'posts' && styles.tabItemActive]}
-              onPress={() => {
-                Haptics.selectionAsync().catch(() => {});
-                setActiveTab('posts');
-              }}
-            >
-              <Text
-                style={[
-                  styles.tabLabel,
-                  activeTab === 'posts' && styles.tabLabelActive,
-                ]}
-              >
-                Posts ({userPosts.length})
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.tabItem, activeTab === 'about' && styles.tabItemActive]}
-              onPress={() => {
-                Haptics.selectionAsync().catch(() => {});
-                setActiveTab('about');
-              }}
-            >
-              <Text
-                style={[
-                  styles.tabLabel,
-                  activeTab === 'about' && styles.tabLabelActive,
-                ]}
-              >
-                About
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.tabItem, activeTab === 'contributions' && styles.tabItemActive]}
-              onPress={() => {
-                Haptics.selectionAsync().catch(() => {});
-                setActiveTab('contributions');
-              }}
-            >
-              <Text
-                style={[
-                  styles.tabLabel,
-                  activeTab === 'contributions' && styles.tabLabelActive,
-                ]}
-              >
-                Contributions
-              </Text>
-            </TouchableOpacity>
-
-            {isOwnProfile && (
-              <TouchableOpacity
-                style={[styles.tabItem, activeTab === 'saved' && styles.tabItemActive]}
-                onPress={() => {
-                  Haptics.selectionAsync().catch(() => {});
-                  setActiveTab('saved');
-                }}
-              >
-                <Text
-                  style={[
-                    styles.tabLabel,
-                    activeTab === 'saved' && styles.tabLabelActive,
-                  ]}
+            {tabs.map((tab, index) => {
+              const isSelected = activeTab === tab;
+              return (
+                <TouchableOpacity
+                  key={tab}
+                  style={styles.tabItem}
+                  onPress={() => handleTabPress(tab, index)}
+                  activeOpacity={0.7}
                 >
-                  Saved ({savedPosts.length})
-                </Text>
-              </TouchableOpacity>
-            )}
+                  <Text
+                    style={[
+                      styles.tabLabel,
+                      isSelected && styles.tabLabelActive,
+                    ]}
+                  >
+                    {getTabLabel(tab)}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+
+            {/* Sliding Indicator Line */}
+            <Animated.View
+              style={[
+                styles.tabActiveIndicator,
+                {
+                  width: tabWidth,
+                  transform: [{ translateX: indicatorTranslateX }],
+                },
+              ]}
+            />
           </View>
 
-          {/* Tab 1: Posts */}
-          {activeTab === 'posts' && (
-            <View style={styles.tabContentSection}>
-              {userPosts.length === 0 ? (
-                <View style={styles.emptyCard}>
-                  <Feather name="file-text" size={32} color="#9ca3af" style={{ marginBottom: 8 }} />
-                  <Text style={styles.emptyCardTitle}>No posts published yet</Text>
-                  <Text style={styles.emptyCardSubtitle}>
-                    {isOwnProfile
-                      ? 'Share notes, ask questions, or solve PYQ doubts with your peers!'
-                      : `${profile.name} hasn't posted in the community yet.`}
-                  </Text>
-                </View>
-              ) : (
-                userPosts.map((post) => (
-                  <CommunityPostCard
-                    key={post.id}
-                    post={post}
-                    showDismissAction={false}
-                    onLikePress={(id) => communityStore.toggleLikePost(id)}
-                    onBookmarkPress={(id) => communityStore.toggleBookmarkPost(id)}
-                    onHashtagPress={(tag) => {
-                      navigation.navigate('CommunityFeed', { filterHashtag: tag });
-                    }}
-                  />
-                ))
-              )}
+          {/* Horizontal Swiping Tab Pages */}
+          <ScrollView
+            ref={tabScrollRef}
+            horizontal
+            pagingEnabled
+            nestedScrollEnabled
+            showsHorizontalScrollIndicator={false}
+            scrollEventThrottle={16}
+            onScroll={Animated.event(
+              [{ nativeEvent: { contentOffset: { x: scrollX } } }],
+              { useNativeDriver: false }
+            )}
+            onMomentumScrollEnd={(e) => {
+              const pageIndex = Math.round(e.nativeEvent.contentOffset.x / windowWidth);
+              const selectedTab = tabs[pageIndex];
+              if (selectedTab && selectedTab !== activeTab) {
+                Haptics.selectionAsync().catch(() => {});
+                setActiveTab(selectedTab);
+              }
+            }}
+          >
+            {/* Page 1: Posts */}
+            <View style={{ width: windowWidth }}>
+              <View style={styles.tabContentSection}>
+                {userPosts.length === 0 ? (
+                  <View style={styles.emptyCard}>
+                    <Feather name="file-text" size={32} color="#9ca3af" style={{ marginBottom: 8 }} />
+                    <Text style={styles.emptyCardTitle}>No posts published yet</Text>
+                    <Text style={styles.emptyCardSubtitle}>
+                      {isOwnProfile
+                        ? 'Share notes, ask questions, or solve PYQ doubts with your peers!'
+                        : `${profile.name} hasn't posted in the community yet.`}
+                    </Text>
+                  </View>
+                ) : (
+                  userPosts.map((post) => (
+                    <CommunityPostCard
+                      key={post.id}
+                      post={post}
+                      showDismissAction={false}
+                      onLikePress={(id) => communityStore.toggleLikePost(id)}
+                      onBookmarkPress={(id) => communityStore.toggleBookmarkPost(id)}
+                      onHashtagPress={(tag) => {
+                        navigation.navigate('CommunityFeed', { filterHashtag: tag });
+                      }}
+                    />
+                  ))
+                )}
+              </View>
             </View>
-          )}
 
-          {/* Tab 2: About & Academics */}
-          {activeTab === 'about' && (
-            <View style={styles.tabContentSection}>
-              {/* About Narrative Card */}
-              <View style={styles.contentCard}>
-                <Text style={styles.cardSectionTitle}>About</Text>
-                <Text style={styles.aboutBodyText}>
-                  {profile.about || 'Engineering student preparing for university exams with PYQDeck.'}
-                </Text>
-              </View>
-
-              {/* Academic Details Card */}
-              <View style={styles.contentCard}>
-                <Text style={styles.cardSectionTitle}>Academic Overview</Text>
-
-                <View style={styles.academicRow}>
-                  <View style={styles.academicIconWrap}>
-                    <Feather name="award" size={18} color={COLORS.primary} />
-                  </View>
-                  <View style={styles.academicMeta}>
-                    <Text style={styles.academicTitle}>Bachelor of Technology (B.Tech)</Text>
-                    <Text style={styles.academicSubtitle}>{profile.branch}</Text>
-                    <Text style={styles.academicDetailText}>
-                      {profile.semester} • Class of {profile.gradYear || '2026'}
-                    </Text>
-                  </View>
-                </View>
-
-                <View style={[styles.academicRow, { marginTop: 14 }]}>
-                  <View style={styles.academicIconWrap}>
-                    <Feather name="home" size={18} color={COLORS.primary} />
-                  </View>
-                  <View style={styles.academicMeta}>
-                    <Text style={styles.academicTitle}>{profile.college}</Text>
-                    <Text style={styles.academicSubtitle}>
-                      Affiliated to Bihar Engineering University, Patna
-                    </Text>
-                  </View>
-                </View>
-              </View>
-
-              {/* Skills & Focus Card */}
-              {profile.skills && profile.skills.length > 0 && (
+            {/* Page 2: About & Academics */}
+            <View style={{ width: windowWidth }}>
+              <View style={styles.tabContentSection}>
+                {/* About Narrative Card */}
                 <View style={styles.contentCard}>
-                  <Text style={styles.cardSectionTitle}>Core Subjects & Skills</Text>
-                  <View style={styles.skillsWrap}>
-                    {profile.skills.map((skill, index) => (
-                      <View key={index} style={styles.skillBadge}>
-                        <Text style={styles.skillBadgeText}>{skill}</Text>
-                      </View>
-                    ))}
+                  <Text style={styles.cardSectionTitle}>About</Text>
+                  <Text style={styles.aboutBodyText}>
+                    {profile.about || 'Engineering student preparing for university exams with PYQDeck.'}
+                  </Text>
+                </View>
+
+                {/* Academic Details Card */}
+                <View style={styles.contentCard}>
+                  <Text style={styles.cardSectionTitle}>Academic Overview</Text>
+
+                  <View style={styles.academicRow}>
+                    <View style={styles.academicIconWrap}>
+                      <Feather name="award" size={18} color={COLORS.primary} />
+                    </View>
+                    <View style={styles.academicMeta}>
+                      <Text style={styles.academicTitle}>Bachelor of Technology (B.Tech)</Text>
+                      <Text style={styles.academicSubtitle}>{profile.branch}</Text>
+                      <Text style={styles.academicDetailText}>
+                        {profile.semester} • Class of {profile.gradYear || '2026'}
+                      </Text>
+                    </View>
+                  </View>
+
+                  <View style={[styles.academicRow, { marginTop: 14 }]}>
+                    <View style={styles.academicIconWrap}>
+                      <Feather name="home" size={18} color={COLORS.primary} />
+                    </View>
+                    <View style={styles.academicMeta}>
+                      <Text style={styles.academicTitle}>{profile.college}</Text>
+                      <Text style={styles.academicSubtitle}>
+                        Affiliated to Bihar Engineering University, Patna
+                      </Text>
+                    </View>
                   </View>
                 </View>
-              )}
+
+                {/* Skills & Focus Card */}
+                {profile.skills && profile.skills.length > 0 && (
+                  <View style={styles.contentCard}>
+                    <Text style={styles.cardSectionTitle}>Core Subjects & Skills</Text>
+                    <View style={styles.skillsWrap}>
+                      {profile.skills.map((skill, index) => (
+                        <View key={index} style={styles.skillBadge}>
+                          <Text style={styles.skillBadgeText}>{skill}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  </View>
+                )}
+              </View>
             </View>
-          )}
 
-          {/* Tab 3: Contributions */}
-          {activeTab === 'contributions' && (
-            <View style={styles.tabContentSection}>
-              <View style={styles.contentCard}>
-                <Text style={styles.cardSectionTitle}>PYQ & Notes Contributions</Text>
-                <Text style={styles.contributionIntro}>
-                  Exam question papers, handwritten solution sheets, and verified notes shared by {profile.name}.
-                </Text>
+            {/* Page 3: Contributions */}
+            <View style={{ width: windowWidth }}>
+              <View style={styles.tabContentSection}>
+                <View style={styles.contentCard}>
+                  <Text style={styles.cardSectionTitle}>PYQ & Notes Contributions</Text>
+                  <Text style={styles.contributionIntro}>
+                    Exam question papers, handwritten solution sheets, and verified notes shared by {profile.name}.
+                  </Text>
 
-                <View style={styles.contributionItem}>
-                  <View style={styles.contributionIconWrap}>
-                    <Feather name="file-text" size={18} color={COLORS.primary} />
+                  <View style={styles.contributionItem}>
+                    <View style={styles.contributionIconWrap}>
+                      <Feather name="file-text" size={18} color={COLORS.primary} />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.contributionItemTitle}>
+                        {profile.branch} 2023 End-Sem Exam Papers
+                      </Text>
+                      <Text style={styles.contributionItemSub}>
+                        Verified by PYQDeck Team • 420+ Downloads
+                      </Text>
+                    </View>
+                    <View style={styles.verifiedContributionBadge}>
+                      <Feather name="check" size={12} color={COLORS.success} />
+                    </View>
                   </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.contributionItemTitle}>
-                      {profile.branch} 2023 End-Sem Exam Papers
-                    </Text>
-                    <Text style={styles.contributionItemSub}>
-                      Verified by PYQDeck Team • 420+ Downloads
-                    </Text>
-                  </View>
-                  <View style={styles.verifiedContributionBadge}>
-                    <Feather name="check" size={12} color={COLORS.success} />
-                  </View>
-                </View>
 
-                <View style={[styles.contributionItem, { marginTop: 12 }]}>
-                  <View style={styles.contributionIconWrap}>
-                    <Feather name="image" size={18} color="#0a66c2" />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.contributionItemTitle}>
-                      Module 3 & 4 Handwritten Diagrams & Solutions
-                    </Text>
-                    <Text style={styles.contributionItemSub}>
-                      High-Yield University Revision Notes • 180+ Saves
-                    </Text>
-                  </View>
-                  <View style={styles.verifiedContributionBadge}>
-                    <Feather name="check" size={12} color={COLORS.success} />
+                  <View style={[styles.contributionItem, { marginTop: 12 }]}>
+                    <View style={styles.contributionIconWrap}>
+                      <Feather name="image" size={18} color="#0a66c2" />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.contributionItemTitle}>
+                        Module 3 & 4 Handwritten Diagrams & Solutions
+                      </Text>
+                      <Text style={styles.contributionItemSub}>
+                        High-Yield University Revision Notes • 180+ Saves
+                      </Text>
+                    </View>
+                    <View style={styles.verifiedContributionBadge}>
+                      <Feather name="check" size={12} color={COLORS.success} />
+                    </View>
                   </View>
                 </View>
               </View>
             </View>
-          )}
 
-          {/* Tab 4: Saved / Bookmarked Posts (Own Profile Only) */}
-          {activeTab === 'saved' && isOwnProfile && (
-            <View style={styles.tabContentSection}>
-              {savedPosts.length === 0 ? (
-                <View style={styles.emptyCard}>
-                  <Feather name="bookmark" size={32} color="#9ca3af" style={{ marginBottom: 8 }} />
-                  <Text style={styles.emptyCardTitle}>No saved posts</Text>
-                  <Text style={styles.emptyCardSubtitle}>
-                    Save important PYQ solutions and notes to study later!
-                  </Text>
+            {/* Page 4: Saved / Bookmarked Posts (Own Profile Only) */}
+            {isOwnProfile && (
+              <View style={{ width: windowWidth }}>
+                <View style={styles.tabContentSection}>
+                  {savedPosts.length === 0 ? (
+                    <View style={styles.emptyCard}>
+                      <Feather name="bookmark" size={32} color="#9ca3af" style={{ marginBottom: 8 }} />
+                      <Text style={styles.emptyCardTitle}>No saved posts</Text>
+                      <Text style={styles.emptyCardSubtitle}>
+                        Save important PYQ solutions and notes to study later!
+                      </Text>
+                    </View>
+                  ) : (
+                    savedPosts.map((post) => (
+                      <CommunityPostCard
+                        key={post.id}
+                        post={post}
+                        showDismissAction={false}
+                        onLikePress={(id) => communityStore.toggleLikePost(id)}
+                        onBookmarkPress={(id) => communityStore.toggleBookmarkPost(id)}
+                        onHashtagPress={(tag) => {
+                          navigation.navigate('CommunityFeed', { filterHashtag: tag });
+                        }}
+                      />
+                    ))
+                  )}
                 </View>
-              ) : (
-                savedPosts.map((post) => (
-                  <CommunityPostCard
-                    key={post.id}
-                    post={post}
-                    showDismissAction={false}
-                    onLikePress={(id) => communityStore.toggleLikePost(id)}
-                    onBookmarkPress={(id) => communityStore.toggleBookmarkPost(id)}
-                    onHashtagPress={(tag) => {
-                      navigation.navigate('CommunityFeed', { filterHashtag: tag });
-                    }}
-                  />
-                ))
-              )}
-            </View>
-          )}
+              </View>
+            )}
+          </ScrollView>
         </ScreenContainer>
       </ScrollView>
 
@@ -936,30 +1050,11 @@ const styles = StyleSheet.create({
     paddingTop: 12,
     paddingBottom: 16,
   },
-  nameHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
   profileName: {
     fontFamily: FONTS.displayBold,
     fontSize: 22,
     color: '#111827',
     lineHeight: 26,
-  },
-  studentRoleBadge: {
-    paddingHorizontal: 7,
-    paddingVertical: 2,
-    backgroundColor: 'rgba(16, 185, 129, 0.12)',
-    borderRadius: 4,
-    borderWidth: 1,
-    borderColor: 'rgba(16, 185, 129, 0.25)',
-  },
-  studentRoleBadgeText: {
-    fontFamily: FONTS.displayBold,
-    fontSize: 10,
-    color: COLORS.success,
-    letterSpacing: 0.4,
   },
   profileBio: {
     fontFamily: FONTS.body,
@@ -973,45 +1068,51 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 7,
   },
-  metaIcon: {
-    marginRight: 6,
+  metaInlineIcon: {
+    marginRight: 4,
+    flexShrink: 0,
   },
-  metaInstitutionText: {
-    fontFamily: FONTS.bodySemi,
-    fontSize: 13,
-    color: '#1f2937',
-    flex: 1,
-  },
-  metaSubText: {
+  metaAddressText: {
     fontFamily: FONTS.body,
-    fontSize: 12,
+    fontSize: 12.5,
     color: '#6b7280',
+    flexShrink: 0,
+    maxWidth: '45%',
   },
   metaDot: {
-    marginHorizontal: 5,
+    marginHorizontal: 6,
     color: '#9ca3af',
+    fontSize: 12,
+    flexShrink: 0,
+  },
+  metaCollegeText: {
+    fontFamily: FONTS.body,
+    fontSize: 12.5,
+    color: '#6b7280',
+    flex: 1,
+    flexShrink: 1,
   },
   socialLinksRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    marginTop: 10,
+    gap: 10,
+    marginTop: 11,
   },
-  socialPill: {
-    flexDirection: 'row',
+  socialIconBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
     alignItems: 'center',
-    gap: 5,
-    paddingHorizontal: 11,
-    paddingVertical: 5,
-    borderRadius: RADIUS.full,
-    backgroundColor: '#f3f4f6',
+    justifyContent: 'center',
     borderWidth: 1,
-    borderColor: '#e5e7eb',
   },
-  socialPillText: {
-    fontFamily: FONTS.bodySemi,
-    fontSize: 12,
-    color: '#374151',
+  linkedinIconBtn: {
+    backgroundColor: '#eff6ff',
+    borderColor: '#bfdbfe',
+  },
+  githubIconBtn: {
+    backgroundColor: '#f3f4f6',
+    borderColor: '#e5e7eb',
   },
   actionButtonsRow: {
     flexDirection: 'row',
@@ -1042,11 +1143,12 @@ const styles = StyleSheet.create({
     color: '#374151',
   },
   secondaryActionBtn: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     height: 40,
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     borderRadius: RADIUS.full,
     borderWidth: 1.2,
     borderColor: '#d1d5db',
@@ -1057,62 +1159,63 @@ const styles = StyleSheet.create({
     fontSize: 13.5,
     color: '#374151',
   },
-  statsRibbon: {
+  moreActionBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: RADIUS.full,
+    borderWidth: 1.2,
+    borderColor: '#d1d5db',
+    backgroundColor: '#ffffff',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  networkRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-around',
-    marginTop: 16,
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-    backgroundColor: '#f9fafb',
-    borderRadius: RADIUS.md,
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
+    marginTop: 10,
   },
-  statBox: {
-    alignItems: 'center',
+  networkText: {
+    fontFamily: FONTS.body,
+    fontSize: 13,
+    color: '#6b7280',
   },
-  statNumber: {
+  networkBold: {
     fontFamily: FONTS.displayBold,
-    fontSize: 15.5,
     color: '#111827',
   },
-  statLabel: {
-    fontFamily: FONTS.body,
-    fontSize: 11,
-    color: '#6b7280',
-    marginTop: 1,
-  },
-  statDivider: {
-    width: 1,
-    height: 20,
-    backgroundColor: '#e5e7eb',
+  networkDot: {
+    color: '#9ca3af',
   },
   tabBar: {
+    position: 'relative',
     flexDirection: 'row',
     backgroundColor: '#ffffff',
     borderTopWidth: 1,
     borderBottomWidth: 1,
     borderColor: '#e5e7eb',
-    paddingHorizontal: 8,
     marginBottom: 8,
   },
   tabItem: {
+    flex: 1,
     paddingVertical: 12,
-    paddingHorizontal: 12,
-    borderBottomWidth: 2.5,
-    borderBottomColor: 'transparent',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  tabItemActive: {
-    borderBottomColor: COLORS.primary,
+  tabActiveIndicator: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    height: 2.5,
+    backgroundColor: COLORS.primary,
+    borderRadius: 1.5,
   },
   tabLabel: {
-    fontFamily: FONTS.body,
-    fontSize: 13,
+    fontFamily: FONTS.bodySemi,
+    fontSize: 12.5,
     color: '#6b7280',
+    textAlign: 'center',
   },
   tabLabelActive: {
-    fontFamily: FONTS.displayBold,
     color: COLORS.primary,
   },
   tabContentSection: {
