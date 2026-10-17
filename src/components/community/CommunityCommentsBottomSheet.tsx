@@ -863,11 +863,15 @@ const styles = StyleSheet.create({
   },
   threadLineTouchable: {
     width: 24,
-    alignItems: 'center',
+    alignSelf: 'stretch',
+    position: 'relative',
   },
   continuousThreadLine: {
     width: 1.5,
-    height: '100%',
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    left: 11.25,
     backgroundColor: '#cbd5e1',
   },
   nestedList: {

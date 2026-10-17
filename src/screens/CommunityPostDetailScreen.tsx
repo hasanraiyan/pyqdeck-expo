@@ -981,7 +981,9 @@ const styles = StyleSheet.create({
   },
   continuousThreadLine: {
     width: 1.5,
-    height: '100%',
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
     backgroundColor: '#cbd5e1',
     borderRadius: 1,
   },
