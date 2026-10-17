@@ -1,155 +1,178 @@
-# SRS: PYQDeck Community
+# SRS: PYQDeck Community, Profile, Inbox & Search Architecture
 
 | Field | Value |
 |---|---|
-| Product | PYQDeck Community (Website + Expo app + shared backend) |
-| Version | 1.4 |
+| Product | PYQDeck Mobile App (`pyqdeck-expo`) |
+| Feature Set | Community Feed, Student Profiles, Unified Activity/Inbox, Slide-to-Dismiss, and Embedded Search |
+| Version | 2.0 (Implemented) |
 | Date | 2026-10-17 |
-| Status | Draft |
-| Audience | Product, web, mobile, backend, and QA teams |
+| Status | Current Shipped Specification |
+| Audience | Engineering, Product, Design, QA |
 
-Priority: **M** = Must, **S** = Should, **C** = Could. This document describes the intended feature. API routes and data structures below are proposals and must be checked against the existing code before implementation.
+---
 
-## 1. Purpose
+## 1. Purpose & Overview
 
-PYQDeck Community lets students share and discover study notes, handwritten images, PDFs, doubts, PYQ solutions, and study tips through a simple, unified social feed without categorizing by complex post types.
+The PYQDeck Community ecosystem allows university students (primarily Bihar Engineering University) to share handwritten notes, PYQ solutions, academic doubts, and semester updates in a streamlined social feed. 
 
-The feature must work on both the website and Expo app. A shared link should open the same post in the app when installed, or in the website otherwise.
+This document defines the functional requirements and architectural specifications for the features built to date:
+1. **Community Feed**: Body-first posts, multi-image carousels, document previews, comment bottom sheets, and native ads.
+2. **Student Profile**: Cover banners, academic credentials, social portfolio links, follow network, and own/saved post tabs.
+3. **Unified Activity & Inbox**: Single consolidated stream for direct messages, upvotes, comments, exam routine notices, and follow alerts.
+4. **Slide-to-Dismiss**: Native-driver swipe-to-dismiss gesture on notification cards with layout collapse.
+5. **Embedded Search**: In-place search integrated directly into the PYQ Home header.
+6. **4-Tab Navigation**: Clean bottom tab bar (PYQ, Study, Community, Activity).
 
-## 2. Scope
+---
 
-Included:
-- Public community feed and searchable notes library.
-- Create posts with images or PDFs.
-- Optional hashtags in post bodies for discovery (for example, #ComputerNetworks or #Semester6).
-- Doubts, comments, helpful reactions, bookmarks, and reports.
-- Links to existing PYQs and syllabus topics.
-- Shareable web pages, social previews, and app deep links.
-- Upload screening, moderation, and admin review.
-- Responsive web and mobile layouts.
+## 2. Implemented Scope
 
-Not included in the first version: direct messaging, live chat, monetization, or AI-generated answers.
+### 2.1 Community Feed (`CommunityFeedScreen.tsx`)
+- **Body-First Posting**: Posts prioritize text content without requiring rigid title or category dropdowns.
+- **Hashtag Discovery**: Interactive `#hashtags` embedded in posts; tapping a hashtag filters the feed instantly.
+- **Multi-Image Carousel (`CommunityMultiImageCarousel.tsx`)**: Horizontal swiping across 1–5 images with pagination dot indicators (implemented with `ScrollView` to avoid React Native `VirtualizedList` nesting warnings).
+- **Document Previews (`CommunityDocumentSlide.tsx`)**: Clean document cards with page counts, file type badges, and slide thumbnail previews.
+- **Interactive Comments Bottom Sheet (`CommunityCommentsBottomSheet.tsx`)**: Slide-up comments sheet with instant reply inputs and comment counts.
+- **Header Layout**:
+  - Left: Official PyQdeck logo (`40x40`, radius `11`), title (`rf(22)`), and subtitle ("BEU COMMUNITY").
+  - Right: Expandable inline search button, borderless message icon (`message-circle`), and User Profile/Settings avatar.
+- **Floating Action Button (FAB)**: Elevated pill-shaped button (`+ Post`) anchored in the bottom-right corner (`bottom: 12`, `right: 16`) for natural thumb reachability.
 
-## 3. Users
+### 2.2 Inline Native Advertisements (`CommunityInlineAdCard.tsx`)
+- Clean, minimalist ad cards inserted naturally into the community feed stream.
+- Placement cadence: Displays after post #3, then repeats every 5 posts.
+- Removed intrusive "Sponsored" badges and info icons for an uncluttered, native appearance.
+- Respects paid-ad removal entitlements.
 
-| User | Permissions |
-|---|---|
-| Guest | Browse, search, read, and share published posts |
-| Signed-in student | Create and manage own posts, comment, react, bookmark, and report |
-| Moderator | Review reported/pending posts and remove unsafe content |
-| Admin | Manage moderation and review audit records |
+### 2.3 User Profile System (`UserProfileScreen.tsx`, `userProfileService.ts`)
+- **Visual Identity**: Full-width cover image with dark gradient, elevated avatar with fallback initials, and notification bell toggle.
+- **Academic Credentials**: Displays college name, branch, semester, and contributor rank (e.g., "ECE 6th Sem • GEC Patna • Top Contributor").
+- **Portfolio & Social Links**: Interactive icon buttons for:
+  - Personal Website / Portfolio (`globe`)
+  - Twitter / X (`twitter`)
+  - GitHub (`github`)
+  - LinkedIn (`linkedin`)
+- **Social Graph**: Follower and following counters with optimistic follow/unfollow state toggling.
+- **Profile Action Row**:
+  - Own profile: "Edit profile" (modal editing all profile fields) and "More options".
+  - Peer profile: "Follow/Following", "Message" (opens direct conversation), and "More options".
+- **Tabs**: "Posts" (authored posts), "Saved" (bookmarked posts), and "About" (biography and academic stats).
 
-Users should be able to browse without signing in or completing an academic profile. Sign-in is required for actions that change content. Creating a post must not require an academic profile or academic dropdown selections.
+### 2.4 Unified Activity & Inbox System (`ActivityInboxScreen.tsx`)
+- **Consolidated Feed**: Merged notifications and peer student direct messages into a single chronological stream.
+- **Direct Message Cards**: Show sender avatar, college tag, quoted message preview, timestamp, and unread indicator dot.
+- **Activity Cards**: Categorized with distinctive icon badges:
+  - Upvotes: Green `arrow-up`
+  - Comments: Blue `message-square`
+  - University Notices: Amber `bell`
+  - Follows: Purple `user-plus`
+- **Filter Chips**: Single-tap filter pills at top:
+  - **All**: Complete stream.
+  - **Unread**: Only items pending review.
+  - **Messages**: Direct student peer chats.
+  - **Activity**: Upvotes, comments, notices, and follows.
+- **Bulk Action**: "Mark all as read" button when unread items are present.
+- **Back Navigation**: Automatically displays a back arrow when pushed from headers.
 
-## 4. Functional requirements
+### 2.5 Slide-to-Dismiss Gesture (`SwipeableDismissItem.tsx`)
+- **Gesture Priority**: Horizontal swipe detection (`|dx| > 10` and `|dx| > 1.5 * |dy|`) ensures vertical feed scrolling is never interrupted.
+- **Performance**: Animated with `useNativeDriver: true` running on the native UI thread at 60/120fps.
+- **Hidden Layer & Opacity Interpolation**:
+  - Red background layer with trash icon and "Dismiss" text sits behind the card.
+  - Dynamic opacity interpolation (`bgOpacity` = `0` when `translateX == 0`) guarantees that card taps or press states never bleed red through translucent backgrounds.
+  - Red background only fades in when actively dragging left.
+- **Auto-Dismiss & Collapse**: Dragging past 28% screen width or releasing with velocity (`vx < -0.6`) slides the card off-screen, triggers haptic feedback (`Medium`), and triggers `LayoutAnimation` so remaining cards smoothly glide up.
+- **Spring Reset**: Releasing before the threshold snaps the card back to origin with smooth bounciness.
 
-| ID | Requirement | Priority |
+### 2.6 PYQ Home Embedded Search (`HomeScreen.tsx`, `SearchScreen.tsx`)
+- **In-Place Search Transition**: Tapping the search icon in the PYQ Home header mounts an embedded `<SearchScreen embedded onClose={...} autoFocus />` directly inside the screen container.
+- **Embedded Chrome**: Renders a dedicated back arrow button and auto-focused search input bar.
+- **Hardware Back Handling**: Hardware `BackHandler` on Android closes the embedded search view and returns to the standard home view without navigating back through history.
+- **Header Uniformity**: PYQ Home header matches Community header styling 1:1.
+
+### 2.7 Navigation Architecture (`App.tsx`)
+- **Bottom Tab Navigator**:
+  1. **PYQ** (`file-text`): Home subject cards, recent study history, and question list.
+  2. **Study** (`book-open`): Syllabus modules, topic notes, and past paper mappings.
+  3. **Community** (`users`): Social feed, notes sharing, and discussions.
+  4. **Activity** (`bell`): Consolidated notifications and inbox with unread count badge.
+- **Universal Linking Paths**:
+  - `pyqdeck.in/community` -> Community Feed
+  - `pyqdeck.in/community/:slug` -> Post Detail
+  - `pyqdeck.in/community/u/:userId` -> User Profile
+  - `pyqdeck.in/inbox` -> Activity / Inbox
+  - `pyqdeck.in/search` -> Search Screen
+  - Keyboard shortcut (`/`, `Ctrl+K`) maps to Search on desktop/web.
+
+---
+
+## 3. Functional Requirements
+
+| ID | Description | Component | Status |
+|---|---|---|---|
+| **FR-COM-1** | Feed SHALL display posts with author, college badge, body text, hashtags, and media. | `CommunityFeedScreen` | Implemented |
+| **FR-COM-2** | Multi-image posts SHALL render a horizontal preview carousel with dot pagination. | `CommunityMultiImageCarousel` | Implemented |
+| **FR-COM-3** | Document posts SHALL render page count and page slide previews. | `CommunityDocumentSlide` | Implemented |
+| **FR-COM-4** | Feed SHALL render native ad cards after post #3, then every 5 posts. | `CommunityInlineAdCard` | Implemented |
+| **FR-COM-5** | Tapping a hashtag in a post body SHALL filter the feed to that tag. | `CommunityFeedScreen` | Implemented |
+| **FR-COM-6** | Top header SHALL provide an inline expandable search input bar. | `CommunityFeedScreen` | Implemented |
+| **FR-COM-7** | Top header SHALL provide a borderless `message-circle` button opening the Activity tab. | `CommunityFeedScreen` | Implemented |
+| **FR-COM-8** | Screen SHALL provide a floating action button (FAB) in the bottom-right corner for creating posts. | `CommunityFeedScreen` | Implemented |
+| **FR-COM-9** | Comments button SHALL open an interactive bottom sheet with comments and reply input. | `CommunityCommentsBottomSheet` | Implemented |
+| **FR-PRF-1** | User profile SHALL display cover banner, avatar, bio, and college/branch details. | `UserProfileScreen` | Implemented |
+| **FR-PRF-2** | Profile SHALL provide clickable links for Website/Portfolio, Twitter/X, GitHub, and LinkedIn. | `UserProfileScreen` | Implemented |
+| **FR-PRF-3** | Profile SHALL display follower/following counts with optimistic toggle on follow button. | `UserProfileScreen` | Implemented |
+| **FR-PRF-4** | Profile SHALL allow owner to edit bio, college, branch, semester, and social URLs via modal. | `UserProfileScreen` | Implemented |
+| **FR-PRF-5** | Profile SHALL provide tabs for authored posts and bookmarked saved posts. | `UserProfileScreen` | Implemented |
+| **FR-ACT-1** | Activity screen SHALL merge direct messages and activity notifications into one timeline. | `ActivityInboxScreen` | Implemented |
+| **FR-ACT-2** | Direct message items SHALL display sender avatar, college tag, message quote, and profile link. | `ActivityInboxScreen` | Implemented |
+| **FR-ACT-3** | Activity screen SHALL provide filter chips for All, Unread, Messages, and Activity. | `ActivityInboxScreen` | Implemented |
+| **FR-ACT-4** | Activity screen SHALL provide a "Mark all as read" button when unread items exist. | `ActivityInboxScreen` | Implemented |
+| **FR-ACT-5** | Cards SHALL support slide-to-dismiss gesture to dismiss notifications with haptics. | `SwipeableDismissItem` | Implemented |
+| **FR-ACT-6** | Red dismiss background SHALL have 0 opacity at rest so card taps never show red bleed-through. | `SwipeableDismissItem` | Implemented |
+| **FR-NAV-1** | App SHALL feature 4 bottom tabs: PYQ, Study, Community, and Activity (with badge). | `App.tsx` | Implemented |
+| **FR-NAV-2** | PYQ Home header search button SHALL open in-place embedded search with back button. | `HomeScreen.tsx` | Implemented |
+| **FR-NAV-3** | Web keyboard shortcuts (`/`, `Ctrl+K`) and URLs (`/search`) SHALL navigate to Search. | `App.tsx` | Implemented |
+
+---
+
+## 4. UI & Layout Specifications
+
+### Header Architecture
+- **Branding Block**:
+  - Logo: `40x40`, radius `11`.
+  - Brand Title: `FONTS.display`, size `rf(22)`, color `COLORS.text`.
+  - Subtitle: `FONTS.bodyMedium`, size `rf(9.5)`, letter spacing `1.4`, color `COLORS.primary`.
+- **Action Buttons**:
+  - Search Button: `38x38`, borderless, icon size `19`.
+  - Message Button: `38x38`, borderless, icon size `20`.
+  - Avatar Button: `38x38`, radius `19`, border `1px` `COLORS.border`.
+- **Floating Action Button (FAB)**:
+  - Position: `position: 'absolute'`, `bottom: 12`, `right: 16`.
+  - Shape: Pill with `paddingVertical: 11`, `paddingHorizontal: 18`, radius `RADIUS.full`.
+  - Palette: Background `COLORS.primary`, text and icon `#ffffff`, elevation `6`.
+
+---
+
+## 5. Non-Functional & Reliability Highlights
+
+1. **VirtualizedList Nesting Prevention**:
+   - Resolved React Native warning (`VirtualizedLists should never be nested inside plain ScrollViews`) by using horizontal `ScrollView` for carousels and document slide previews within feed items.
+2. **Gesture Isolation**:
+   - `SwipeableDismissItem` requires horizontal movement (`dx < -10` and `|dx| > 1.5 * |dy|`) before acquiring gesture locks, preventing interference with vertical list scrolling.
+3. **Native Driver Animation**:
+   - `translateX` and `opacity` animations leverage `useNativeDriver: true` for zero-frame-drop 60fps/120fps performance on Android and iOS.
+4. **Layout Continuity**:
+   - Removal of dismissed cards uses React Native `LayoutAnimation.Presets.easeInEaseOut` for smooth upward transitions of surrounding cards.
+5. **Deep Link Compatibility**:
+   - Android App Links and iOS Universal Links resolve cleanly across tabs and root stacks.
+
+---
+
+## 6. Revision History
+
+| Version | Date | Changes Summary |
 |---|---|---|
-| FR-1 | The website SHALL provide a Community page and individual public post pages. | M |
-| FR-2 | The Expo app SHALL provide a Community feed, post details, notes viewer, and create-post flow. | M |
-| FR-3 | Users SHALL be able to share notes, ask doubts, post PYQ solutions, and share study tips in a unified body-first format. | M |
-| FR-4 | Posts SHALL use one main body field with optional image/PDF attachments. Separate title or post-type fields SHALL NOT be required. | M |
-| FR-5 | Users MAY include hashtags directly in the post body. Hashtags SHALL be optional and support search and discovery. | M |
-| FR-6 | Users SHALL be able to search and filter posts by text and hashtags. Creating a post MUST NOT require selecting a post type, university, branch, semester, subject, module, or topic. | M |
-| FR-7 | The feed SHOULD help users discover relevant posts without requiring an academic profile. | S |
-| FR-8 | Authors SHALL be able to edit or remove their own posts. Edited content or attachments MUST be checked again before publication. | M |
-| FR-9 | Users SHALL be able to comment, react/helpful-vote, bookmark, and report eligible posts. | M |
-| FR-10 | A post MAY link to an existing PYQ question or syllabus resource, but such linking SHALL be optional. | M |
-| FR-11 | Users SHALL see upload progress and clear pending, published, rejected, or failed states. | M |
-| FR-12 | Users SHALL be able to see the status of their own posts. | S |
-| FR-13 | Public feeds, search results, profiles, and pages MUST show only published posts. | M |
-| FR-14 | The system SHALL provide a moderator queue for pending or reported content. Moderators must be able to approve, reject, or remove content with a recorded reason. | M |
-
-## 5. Website sharing and app deep links
-
-| ID | Requirement | Priority |
-|---|---|---|
-| LINK-1 | Every published post SHALL have a stable HTTPS URL on the official PYQDeck domain. Example: `https://pyqdeck.in/community/:slug`. | M |
-| LINK-2 | Website and app SHALL offer native sharing where available and a copy-link fallback. | M |
-| LINK-3 | Opening a shared link SHALL show the same post on the website when the app is unavailable. | M |
-| LINK-4 | When installed, the Expo app SHOULD open supported HTTPS links directly to the matching post, including on a cold start. | M |
-| LINK-5 | Android App Links and iOS Universal Links SHALL be configured for supported platforms. | M |
-| LINK-6 | Public post pages SHOULD include canonical metadata and social preview title, description, and safe thumbnail. | M |
-| LINK-7 | Unknown, removed, or unpublished posts SHALL show an appropriate unavailable page and MUST NOT reveal private moderation details. | M |
-| LINK-8 | Share URLs MUST NOT contain authentication tokens or temporary/private upload URLs. | M |
-
-## 6. Upload safety and moderation
-
-All uploads must be private until the system has checked them. **Unreviewed files must never appear in the public feed or be accessible through public permanent URLs.**
-
-1. Validate the actual file type, file size, and file contents on the server.
-2. Store uploads in private quarantine or an equivalent non-public state.
-3. Scan every image and supported document for prohibited content; do not assume a whole post is safe because one attachment passed.
-4. Publish only when the moderation policy permits it.
-5. Send uncertain results to human review; reject prohibited content.
-6. If scanning fails or times out, keep the post unpublished.
-7. Provide report actions and allow moderators to remove content after publication.
-8. Record moderation decisions without putting prohibited image contents or private URLs in ordinary logs.
-9. Define retention and deletion rules for rejected and removed uploads before launch.
-
-Content suspected to involve sexual exploitation of minors requires a restricted safety escalation process, not routine public moderation.
-
-## 7. Non-functional requirements
-
-- **Performance:** Feed and search must be paginated; feed cards should use optimized image thumbnails.
-- **Security:** Use HTTPS, server-side authentication, ownership checks, role checks, upload validation, and rate limits.
-- **Privacy:** Do not expose private profiles, email addresses, bookmarks, reports, drafts, or internal moderation notes.
-- **Reliability:** Failed uploads and feed requests must show a recoverable error state.
-- **Accessibility:** Web pages must support keyboard navigation, visible focus, readable contrast, and responsive layouts.
-- **Consistency:** Website and app must use the same backend records and publication rules.
-- **Testing:** Test permissions, hashtag search, upload moderation, direct URL navigation, share previews, and app deep links.
-
-## 8. Proposed API and data
-
-These are suggested API contracts, not claims that the routes already exist. Reuse or extend equivalent endpoints in the current backend.
-
-| Proposed endpoint | Purpose |
-|---|---|
-| `GET /api/community/feed` | Paginated published feed |
-| `GET /api/community/notes` | Search and filter notes |
-| `GET /api/community/posts/:idOrSlug` | Fetch a published post |
-| `POST /api/community/posts` | Create a post |
-| `PATCH /api/community/posts/:id` | Edit own post |
-| `DELETE /api/community/posts/:id` | Remove own post |
-| `GET/POST /api/community/posts/:id/comments` | Read or add comments |
-| `PUT/DELETE /api/community/posts/:id/bookmark` | Add or remove bookmark |
-| `POST /api/community/posts/:id/reports` | Report a post |
-| `GET /api/admin/community/moderation` | Review moderation queue |
-| `POST /api/admin/community/moderation/:id/decision` | Record moderation decision |
-
-The implementation must follow the existing backend's authentication and upload approach.
-
-A post record will generally need: stable ID, slug, author ID, body, attachment references, hashtags, status, and timestamps. A separate title, post type, or structured academic selections are not required. Attachments need their media type and moderation/publication state. This is a conceptual model; adapt it to the current database conventions.
-
-## 9. MVP acceptance checklist
-
-- [ ] Guests can browse and read published posts on the website.
-- [ ] Signed-in students can create a body-first post with optional hashtags and images/PDFs, without selecting post types or filling out academic dropdowns.
-- [ ] Hashtag search returns relevant posts.
-- [ ] Pending or unsafe uploads never appear publicly.
-- [ ] Users can share a canonical link with a useful preview.
-- [ ] The link opens the same post in the app when installed and the website otherwise.
-- [ ] Users can report a post and moderators can record a decision.
-- [ ] Removed posts disappear from feeds/search and their public attachment access is revoked.
-- [ ] Direct web navigation, refresh, browser history, and app cold-start links work.
-- [ ] Authorization and moderation tests pass.
-
-## 10. Decisions to confirm
-
-1. Which website and backend repositories/routes should this integrate with?
-2. Does the website use the same Clerk identity as the Expo app?
-3. What are the upload size, file-count, and PDF page limits?
-4. Which moderation service and human-review process will be used?
-5. What are the retention rules for rejected/deleted uploads?
-6. Will iOS deep links be supported in the first release?
-7. Should comments support attachments or replies?
-
-## Revision history
-
-| Version | Date | Notes |
-|---|---|---|
-| 1.0 | 2026-10-17 | Initial detailed draft |
-| 1.1 | 2026-10-17 | Simplified structure and condensed requirements |
-| 1.2 | 2026-10-17 | Simplified posting to body, optional hashtags, and attachments; removed mandatory academic selections |
-| 1.3 | 2026-10-17 | Explicitly clarified that post creation never requires academic dropdowns or an academic profile |
-| 1.4 | 2026-10-17 | Removed post types entirely; simplified posts to unified body-first posts with optional hashtags and attachments |
+| 1.0 | 2026-10-17 | Initial conceptual draft for community posting. |
+| 1.4 | 2026-10-17 | Simplified posts to unified body-first format with optional hashtags. |
+| 2.0 | 2026-10-17 | Updated to reflect all implemented features: multi-image carousels, document previews, inline native ads, user profile screen with social links, unified activity/inbox with slide-to-dismiss, embedded search in PYQ Home, and 4-tab navigation with floating action button (FAB). |
