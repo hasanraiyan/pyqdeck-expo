@@ -666,7 +666,7 @@ class CommunityStore {
   private posts: CommunityPost[] = [...INITIAL_MOCK_POSTS];
   private comments: Record<string, CommunityComment[]> = { ...INITIAL_MOCK_COMMENTS };
   private pendingUploads: PendingPostUpload[] = [];
-  private uploadTimers: Record<string, ReturnType<typeof setInterval>> = {};
+  private uploadTimers: Record<string, ReturnType<typeof setTimeout>> = {};
   private listeners: Set<() => void> = new Set();
 
   subscribe(listener: () => void) {
@@ -702,45 +702,33 @@ class CommunityStore {
       body: newPostData.body,
       hashtags: newPostData.hashtags,
       attachments: newPostData.attachments,
-      progress: 0.08,
+      progress: 0,
       status: 'uploading',
       createdAt: 'Just now',
     };
 
+    // Notify ONCE when post upload starts (no per-tick re-renders, preventing feed blinking)
     this.pendingUploads = [pendingItem, ...this.pendingUploads];
     this.notify();
 
-    // Smoothly simulate multi-stage background upload
-    let currentProgress = 0.08;
-    const interval = setInterval(() => {
-      // Step increment based on attachments
-      const step = pendingItem.attachments.length > 0 ? 0.12 : 0.22;
-      currentProgress = Math.min(1, currentProgress + step);
+    // 60-second mock timer for visual state inspection
+    const timer = setTimeout(() => {
+      delete this.uploadTimers[uploadId];
 
-      if (currentProgress >= 1) {
-        clearInterval(interval);
-        delete this.uploadTimers[uploadId];
+      // Successfully published: remove from pending and add to real posts
+      this.pendingUploads = this.pendingUploads.filter((p) => p.id !== uploadId);
+      const created = this.addPost(newPostData);
+      onComplete?.(created);
+      this.notify();
+    }, 60000);
 
-        // Successfully published: remove from pending and add to real posts
-        this.pendingUploads = this.pendingUploads.filter((p) => p.id !== uploadId);
-        const created = this.addPost(newPostData);
-        onComplete?.(created);
-        this.notify();
-      } else {
-        this.pendingUploads = this.pendingUploads.map((p) =>
-          p.id === uploadId ? { ...p, progress: currentProgress } : p
-        );
-        this.notify();
-      }
-    }, 280);
-
-    this.uploadTimers[uploadId] = interval;
+    this.uploadTimers[uploadId] = timer;
     return uploadId;
   }
 
   cancelPostUpload(uploadId: string): boolean {
     if (this.uploadTimers[uploadId]) {
-      clearInterval(this.uploadTimers[uploadId]);
+      clearTimeout(this.uploadTimers[uploadId]);
       delete this.uploadTimers[uploadId];
     }
     const existed = this.pendingUploads.some((p) => p.id === uploadId);

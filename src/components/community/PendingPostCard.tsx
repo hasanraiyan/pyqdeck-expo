@@ -4,7 +4,6 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
-  ActivityIndicator,
   Animated,
   Easing,
 } from 'react-native';
@@ -57,17 +56,18 @@ export const PendingPostCard: React.FC<PendingPostCardProps> = ({
   upload,
   onCancel,
 }) => {
-  const animatedProgress = useRef(new Animated.Value(upload.progress)).current;
+  // Smooth continuous animation across the 60s upload without triggering component re-renders
+  const animatedProgress = useRef(new Animated.Value(0)).current;
   const shimmerAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     Animated.timing(animatedProgress, {
-      toValue: upload.progress,
-      duration: 260,
-      easing: Easing.out(Easing.quad),
+      toValue: 1,
+      duration: 60000,
+      easing: Easing.linear,
       useNativeDriver: false,
     }).start();
-  }, [upload.progress, animatedProgress]);
+  }, [animatedProgress]);
 
   // Continuous left-to-right shimmer animation while sending
   useEffect(() => {
@@ -95,8 +95,6 @@ export const PendingPostCard: React.FC<PendingPostCardProps> = ({
     }
     return (name[0] || 'Y').toUpperCase();
   };
-
-  const progressPercent = Math.min(100, Math.round(upload.progress * 100));
 
   const progressWidth = animatedProgress.interpolate({
     inputRange: [0, 1],
@@ -145,10 +143,7 @@ export const PendingPostCard: React.FC<PendingPostCardProps> = ({
                 {upload.author.name}
               </Text>
               <Text style={styles.timeDot}>•</Text>
-              <View style={styles.sendingBadge}>
-                <ActivityIndicator size={10} color="#dc2626" style={{ marginRight: 4 }} />
-                <Text style={styles.sendingText}>Posting... {progressPercent}%</Text>
-              </View>
+              <Text style={styles.timeText}>Just now</Text>
             </View>
             {upload.author.bio ? (
               <Text style={styles.authorBio} numberOfLines={1} ellipsizeMode="tail">
@@ -158,17 +153,18 @@ export const PendingPostCard: React.FC<PendingPostCardProps> = ({
           </View>
         </View>
 
-        {/* Cancel Post Button */}
-        <TouchableOpacity
-          onPress={handleCancel}
-          style={styles.cancelBtn}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          accessibilityLabel="Cancel posting"
-          accessibilityRole="button"
-        >
-          <Feather name="x" size={13} color="#dc2626" />
-          <Text style={styles.cancelBtnText}>Cancel</Text>
-        </TouchableOpacity>
+        {/* Top-Right Action Button: Standard X icon in same place as post card */}
+        <View style={styles.headerRightActions}>
+          <TouchableOpacity
+            onPress={handleCancel}
+            hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
+            style={styles.headerActionBtn}
+            accessibilityRole="button"
+            accessibilityLabel="Cancel post"
+          >
+            <Feather name="x" size={18} color={COLORS.textSubtle} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Main Post Body (Markdown & Hashtags) */}
@@ -320,18 +316,10 @@ const styles = StyleSheet.create({
     color: '#94a3b8',
     marginHorizontal: 5,
   },
-  sendingBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fef2f2',
-    paddingHorizontal: 6,
-    paddingVertical: 1.5,
-    borderRadius: RADIUS.full,
-  },
-  sendingText: {
-    fontFamily: FONTS.bodyMedium,
-    fontSize: 11,
-    color: '#dc2626',
+  timeText: {
+    fontFamily: FONTS.body,
+    fontSize: 12,
+    color: '#64748b',
   },
   authorBio: {
     fontFamily: FONTS.body,
@@ -340,21 +328,15 @@ const styles = StyleSheet.create({
     marginTop: 2,
     lineHeight: 16,
   },
-  cancelBtn: {
+  headerRightActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fef2f2',
-    borderWidth: 1,
-    borderColor: '#fecaca',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: RADIUS.full,
-    gap: 3,
+    gap: 4,
+    paddingTop: 2,
   },
-  cancelBtnText: {
-    fontFamily: FONTS.bodySemi,
-    fontSize: 11,
-    color: '#dc2626',
+  headerActionBtn: {
+    padding: 6,
+    borderRadius: RADIUS.full,
   },
   bodyWrap: {
     paddingHorizontal: 16,
