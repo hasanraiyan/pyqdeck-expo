@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Modal,
   View,
@@ -65,6 +65,16 @@ export const CreateCommunityPostModal: React.FC<CreateCommunityPostModalProps> =
     (user?.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : 'You (Student)');
   const authorAvatarUrl = user?.imageUrl;
   const authorInitial = (user?.firstName?.[0] || authorName[0] || 'Y').toUpperCase();
+
+  // Filter out any hashtag that is already used in the post body
+  const availableTags = useMemo(() => {
+    const lowerBody = body.toLowerCase();
+    return POPULAR_TAGS.filter((tag) => {
+      // Check if #tag is present in the body (case-insensitive word boundary)
+      const regex = new RegExp(`#${tag.toLowerCase()}(?:[^a-z0-9_-]|$)`, 'i');
+      return !regex.test(lowerBody);
+    });
+  }, [body]);
 
   useEffect(() => {
     const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
@@ -372,32 +382,34 @@ export const CreateCommunityPostModal: React.FC<CreateCommunityPostModalProps> =
 
         {/* Footer Container: Grouped Attachments Strip + Quick Hashtags + Bottom Toolbar */}
         <View style={styles.footerContainer}>
-          {/* Quick Hashtags Strip: Single tap to insert tags */}
-          <View style={styles.quickTagsContainer}>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.quickTagsRow}
-              keyboardShouldPersistTaps="handled"
-            >
-              <Text style={styles.quickTagsLabel}>Suggested:</Text>
-              {POPULAR_TAGS.map((tag) => {
-                const isSelected = body.includes(`#${tag}`);
-                return (
+          {/* Quick Hashtags Strip: Only shown when there are unused suggested tags */}
+          {availableTags.length > 0 && (
+            <View style={styles.quickTagsContainer}>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.quickTagsRow}
+                keyboardShouldPersistTaps="handled"
+              >
+                <Text style={styles.quickTagsLabel}>Suggested:</Text>
+                {availableTags.map((tag) => (
                   <TouchableOpacity
                     key={tag}
-                    onPress={() => handleInsertHash(tag)}
-                    style={[styles.quickTagChip, isSelected && styles.quickTagChipActive]}
+                    onPress={() => {
+                      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+                      handleInsertHash(tag);
+                    }}
+                    style={styles.quickTagChip}
                     activeOpacity={0.7}
                   >
-                    <Text style={[styles.quickTagChipText, isSelected && styles.quickTagChipTextActive]}>
+                    <Text style={styles.quickTagChipText}>
                       #{tag}
                     </Text>
                   </TouchableOpacity>
-                );
-              })}
-            </ScrollView>
-          </View>
+                ))}
+              </ScrollView>
+            </View>
+          )}
 
           {/* Docked Attachments Strip: Sits directly above bottom buttons, moves together */}
           {attachments.length > 0 && (
