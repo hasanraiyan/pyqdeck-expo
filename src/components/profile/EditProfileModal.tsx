@@ -14,7 +14,7 @@ import {
   Keyboard,
   Animated,
   Easing,
-  TouchableWithoutFeedback,
+  Dimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
@@ -91,6 +91,9 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
   }, [visible, profile]);
 
   const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const scrollYRef = useRef(0);
+  const keyboardTopRef = useRef(0); // screen Y where keyboard starts (0 = hidden)
+  const focusedInputRef = useRef<TextInput | null>(null);
 
   // Robust cross-platform keyboard height listener
   useEffect(() => {
@@ -100,6 +103,10 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
     const showSub = Keyboard.addListener(showEvent, (e) => {
       setIsKeyboardVisible(true);
       setKeyboardHeight(e.endCoordinates.height);
+      keyboardTopRef.current =
+        e.endCoordinates.screenY || Dimensions.get('window').height - e.endCoordinates.height;
+      // Wait for bottom padding to render, then bring focused input into view
+      setTimeout(() => ensureFocusedVisible(), 120);
       Animated.timing(keyboardSpace, {
         toValue: e.endCoordinates.height,
         duration: 220,
@@ -111,6 +118,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
     const hideSub = Keyboard.addListener(hideEvent, () => {
       setIsKeyboardVisible(false);
       setKeyboardHeight(0);
+      keyboardTopRef.current = 0;
       Animated.timing(keyboardSpace, {
         toValue: 0,
         duration: 180,
@@ -125,18 +133,29 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
     };
   }, [keyboardSpace]);
 
-  // Field-specific auto-scroll ensuring the input lands nicely right above keyboard
-  const scrollToField = (yOffset: number) => {
-    setTimeout(() => {
-      scrollViewRef.current?.scrollTo({ y: yOffset, animated: true });
-    }, 100);
+  // Measure the focused input on screen and scroll just enough to sit above the keyboard
+  const ensureFocusedVisible = () => {
+    const input = focusedInputRef.current;
+    const kbTop = keyboardTopRef.current;
+    if (!input || !kbTop) return;
+    input.measureInWindow((_x, y, _w, h) => {
+      const bottomLimit = kbTop - 56; // keep clear of keyboard + Done bar
+      const topLimit = (insets.top || 12) + 80; // keep clear of header
+      let delta = 0;
+      if (y + h > bottomLimit) delta = y + h - bottomLimit;
+      else if (y < topLimit) delta = y - topLimit;
+      if (delta !== 0) {
+        scrollViewRef.current?.scrollTo({ y: Math.max(0, scrollYRef.current + delta), animated: true });
+      }
+    });
   };
 
-  const scrollToAboutInput = () => scrollToField(360);
-  const scrollToGithub = () => scrollToField(480);
-  const scrollToLinkedin = () => scrollToField(560);
-  const scrollToWebsite = () => scrollToField(640);
-  const scrollToTwitter = () => scrollToField(720);
+  const onFieldFocus = (ref: React.RefObject<TextInput | null>) => () => {
+    focusedInputRef.current = ref.current;
+    // If keyboard is already up (moving between fields) scroll now;
+    // otherwise the keyboard show listener handles it.
+    if (keyboardTopRef.current) setTimeout(() => ensureFocusedVisible(), 60);
+  };
 
   // Check if user has modified anything
   const isDirty = useMemo(() => {
@@ -373,6 +392,10 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
           showsVerticalScrollIndicator={false}
+          onScroll={(e) => {
+            scrollYRef.current = e.nativeEvent.contentOffset.y;
+          }}
+          scrollEventThrottle={16}
         >
           {/* Cover Banner & Avatar Hero Card */}
           <View style={styles.heroSection}>
@@ -432,6 +455,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
               </Text>
               <TextInput
                 ref={nameRef}
+                onFocus={onFieldFocus(nameRef)}
                 style={styles.textInput}
                 value={name}
                 onChangeText={setName}
@@ -449,6 +473,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
               </Text>
               <TextInput
                 ref={bioRef}
+                onFocus={onFieldFocus(bioRef)}
                 style={styles.textInput}
                 value={bio}
                 onChangeText={setBio}
@@ -475,6 +500,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
               <Text style={styles.inputLabel}>Engineering College</Text>
               <TextInput
                 ref={collegeRef}
+                onFocus={onFieldFocus(collegeRef)}
                 style={styles.textInput}
                 value={college}
                 onChangeText={setCollege}
@@ -491,6 +517,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
                 <Text style={styles.inputLabel}>Branch / Stream</Text>
                 <TextInput
                   ref={branchRef}
+                  onFocus={onFieldFocus(branchRef)}
                   style={styles.textInput}
                   value={branch}
                   onChangeText={setBranch}
@@ -506,6 +533,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
                 <Text style={styles.inputLabel}>Semester</Text>
                 <TextInput
                   ref={semesterRef}
+                  onFocus={onFieldFocus(semesterRef)}
                   style={styles.textInput}
                   value={semester}
                   onChangeText={setSemester}
@@ -522,6 +550,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
               <Text style={styles.inputLabel}>Location / City</Text>
               <TextInput
                 ref={locationRef}
+                onFocus={onFieldFocus(locationRef)}
                 style={styles.textInput}
                 value={location}
                 onChangeText={setLocation}
@@ -548,7 +577,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
                 style={[styles.textInput, styles.textAreaInput]}
                 value={about}
                 onChangeText={setAbout}
-                onFocus={scrollToAboutInput}
+                onFocus={onFieldFocus(aboutRef)}
                 multiline
                 numberOfLines={4}
                 placeholder="Share your exam prep focus, favorite subjects, or engineering aspirations with peers..."
@@ -577,7 +606,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
                   style={[styles.textInput, styles.prefixedInput]}
                   value={github}
                   onChangeText={setGithub}
-                  onFocus={scrollToGithub}
+                  onFocus={onFieldFocus(githubRef)}
                   placeholder="username or URL"
                   placeholderTextColor="#9ca3af"
                   autoCapitalize="none"
@@ -600,7 +629,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
                   style={[styles.textInput, styles.prefixedInput]}
                   value={linkedin}
                   onChangeText={setLinkedin}
-                  onFocus={scrollToLinkedin}
+                  onFocus={onFieldFocus(linkedinRef)}
                   placeholder="username or URL"
                   placeholderTextColor="#9ca3af"
                   autoCapitalize="none"
@@ -623,7 +652,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
                   style={[styles.textInput, styles.prefixedInput]}
                   value={website}
                   onChangeText={setWebsite}
-                  onFocus={scrollToWebsite}
+                  onFocus={onFieldFocus(websiteRef)}
                   placeholder="https://yourportfolio.dev"
                   placeholderTextColor="#9ca3af"
                   autoCapitalize="none"
@@ -647,7 +676,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
                   style={[styles.textInput, styles.prefixedInput]}
                   value={twitter}
                   onChangeText={setTwitter}
-                  onFocus={scrollToTwitter}
+                  onFocus={onFieldFocus(twitterRef)}
                   placeholder="@handle or URL"
                   placeholderTextColor="#9ca3af"
                   autoCapitalize="none"
