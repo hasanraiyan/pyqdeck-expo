@@ -34,6 +34,9 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
+const MAX_ATTACHMENTS = 5;
+const POPULAR_TAGS = ['Doubt', 'Notes', 'PYQ', 'BEU', 'ExamPrep', 'Solutions'];
+
 interface CreateCommunityPostModalProps {
   visible: boolean;
   onClose: () => void;
@@ -55,19 +58,6 @@ export const CreateCommunityPostModal: React.FC<CreateCommunityPostModalProps> =
   const [submitting, setSubmitting] = useState(false);
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
   const keyboardSpace = useRef(new Animated.Value(0)).current;
-
-  const handleImageEdited = (newUri: string) => {
-    if (editingImage) {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
-      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-      setAttachments((prev) =>
-        prev.map((item) =>
-          item.id === editingImage.id ? { ...item, url: newUri } : item
-        )
-      );
-    }
-    setEditingImage(null);
-  };
 
   // Resolve author details from Clerk user or fallback to student profile
   const authorName =
@@ -101,23 +91,66 @@ export const CreateCommunityPostModal: React.FC<CreateCommunityPostModalProps> =
     };
   }, [keyboardSpace]);
 
-  const handlePickImages = async () => {
+  const handleSnapCamera = async () => {
+    if (attachments.length >= MAX_ATTACHMENTS) {
+      Alert.alert('Limit Reached', `You can attach up to ${MAX_ATTACHMENTS} items per post.`);
+      return;
+    }
     try {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission needed', 'Please allow camera permissions to photograph handwritten notes.');
+        return;
+      }
+
+      const result = await ImagePicker.launchCameraAsync({
+        quality: 0.85,
+      });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+        const asset = result.assets[0];
+        const newAttachment: CommunityAttachment = {
+          id: `cam-${Date.now()}`,
+          type: 'image',
+          url: asset.uri,
+          name: `Photo_${Date.now()}.jpg`,
+        };
+        setAttachments((prev) => [...prev, newAttachment]);
+        // Immediately offer to crop/straighten the fresh scan!
+        setEditingImage(newAttachment);
+      }
+    } catch {
+      Alert.alert('Error', 'Unable to open camera.');
+    }
+  };
+
+  const handlePickImages = async () => {
+    if (attachments.length >= MAX_ATTACHMENTS) {
+      Alert.alert('Limit Reached', `You can attach up to ${MAX_ATTACHMENTS} items per post.`);
+      return;
+    }
+    try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+      const remainingSlots = MAX_ATTACHMENTS - attachments.length;
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['images'],
         allowsMultipleSelection: true,
+        selectionLimit: remainingSlots,
         quality: 0.8,
       });
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
         LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-        const newAttachments: CommunityAttachment[] = result.assets.map((asset, i) => ({
-          id: `img-${Date.now()}-${i}`,
-          type: 'image',
-          url: asset.uri,
-          name: asset.fileName || `Photo_${i + 1}.jpg`,
-        }));
+        const newAttachments: CommunityAttachment[] = result.assets
+          .slice(0, remainingSlots)
+          .map((asset, i) => ({
+            id: `img-${Date.now()}-${i}`,
+            type: 'image',
+            url: asset.uri,
+            name: asset.fileName || `Photo_${i + 1}.jpg`,
+          }));
         setAttachments((prev) => [...prev, ...newAttachments]);
       }
     } catch {
@@ -126,6 +159,10 @@ export const CreateCommunityPostModal: React.FC<CreateCommunityPostModalProps> =
   };
 
   const handlePickDocument = async () => {
+    if (attachments.length >= MAX_ATTACHMENTS) {
+      Alert.alert('Limit Reached', `You can attach up to ${MAX_ATTACHMENTS} items per post.`);
+      return;
+    }
     try {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
       const result = await DocumentPicker.getDocumentAsync({
@@ -151,15 +188,44 @@ export const CreateCommunityPostModal: React.FC<CreateCommunityPostModalProps> =
     }
   };
 
+  const handleAddMoreChoice = () => {
+    Alert.alert('Add Attachment', 'Choose a source to attach to your post:', [
+      { text: 'Take Photo', onPress: handleSnapCamera },
+      { text: 'Choose from Gallery', onPress: handlePickImages },
+      { text: 'Upload PDF Notes', onPress: handlePickDocument },
+      { text: 'Cancel', style: 'cancel' },
+    ]);
+  };
+
   const removeAttachment = (id: string) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setAttachments((prev) => prev.filter((a) => a.id !== id));
   };
 
-  const handleInsertHash = () => {
+  const handleImageEdited = (newUri: string) => {
+    if (editingImage) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+      setAttachments((prev) =>
+        prev.map((item) =>
+          item.id === editingImage.id ? { ...item, url: newUri } : item
+        )
+      );
+    }
+    setEditingImage(null);
+  };
+
+  const handleInsertHash = (tagText?: string) => {
     Haptics.selectionAsync().catch(() => {});
-    setBody((prev) => (prev && !/\s$/.test(prev) ? `${prev} #` : `${prev}#`));
+    if (tagText) {
+      setBody((prev) => {
+        const cleaned = prev.trim();
+        return cleaned ? `${cleaned} #${tagText} ` : `#${tagText} `;
+      });
+    } else {
+      setBody((prev) => (prev && !/\s$/.test(prev) ? `${prev} #` : `${prev}#`));
+    }
     inputRef.current?.focus();
   };
 
@@ -255,11 +321,12 @@ export const CreateCommunityPostModal: React.FC<CreateCommunityPostModalProps> =
                 <Text style={styles.authorAvatarText}>{authorInitial}</Text>
               </View>
             )}
-            <View>
+            <View style={{ flexShrink: 1 }}>
               <Text style={styles.authorName} numberOfLines={1}>{authorName}</Text>
               <View style={styles.audiencePill}>
                 <Feather name="globe" size={10} color="#6b7280" style={{ marginRight: 3 }} />
                 <Text style={styles.audiencePillText}>Anyone</Text>
+                <Feather name="chevron-down" size={10} color="#9ca3af" style={{ marginLeft: 2 }} />
               </View>
             </View>
           </View>
@@ -292,7 +359,7 @@ export const CreateCommunityPostModal: React.FC<CreateCommunityPostModalProps> =
                 ref={inputRef}
                 style={styles.textInput}
                 multiline
-                placeholder="What do you want to share with the community?"
+                placeholder="Ask a doubt, share handwritten notes, or discuss exam questions..."
                 placeholderTextColor="#9ca3af"
                 value={body}
                 onChangeText={setBody}
@@ -303,14 +370,44 @@ export const CreateCommunityPostModal: React.FC<CreateCommunityPostModalProps> =
           </View>
         </TouchableWithoutFeedback>
 
-        {/* Footer Container: Grouped Attachments Strip + Bottom Toolbar */}
+        {/* Footer Container: Grouped Attachments Strip + Quick Hashtags + Bottom Toolbar */}
         <View style={styles.footerContainer}>
+          {/* Quick Hashtags Strip: Single tap to insert tags */}
+          <View style={styles.quickTagsContainer}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.quickTagsRow}
+              keyboardShouldPersistTaps="handled"
+            >
+              <Text style={styles.quickTagsLabel}>Suggested:</Text>
+              {POPULAR_TAGS.map((tag) => {
+                const isSelected = body.includes(`#${tag}`);
+                return (
+                  <TouchableOpacity
+                    key={tag}
+                    onPress={() => handleInsertHash(tag)}
+                    style={[styles.quickTagChip, isSelected && styles.quickTagChipActive]}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[styles.quickTagChipText, isSelected && styles.quickTagChipTextActive]}>
+                      #{tag}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          </View>
+
           {/* Docked Attachments Strip: Sits directly above bottom buttons, moves together */}
           {attachments.length > 0 && (
             <View style={styles.dockedAttachmentsSection}>
               <View style={styles.dockedAttachmentsHeader}>
                 <Text style={styles.dockedAttachmentsTitle}>
-                  Attachments ({attachments.length})
+                  Attached Media ({attachments.length}/{MAX_ATTACHMENTS})
+                </Text>
+                <Text style={styles.dockedAttachmentsHint}>
+                  Tap any photo to crop or rotate
                 </Text>
               </View>
               <ScrollView
@@ -323,21 +420,27 @@ export const CreateCommunityPostModal: React.FC<CreateCommunityPostModalProps> =
                   <View key={att.id} style={styles.attachmentThumbCard}>
                     {att.type === 'image' ? (
                       <TouchableOpacity
-                        activeOpacity={0.85}
+                        activeOpacity={0.88}
                         onPress={() => setEditingImage(att)}
                         style={styles.thumbImageWrap}
                         accessibilityLabel={`Crop or edit ${att.name}`}
                       >
                         <Image source={{ uri: att.url }} style={styles.thumbImage} contentFit="cover" />
-                        <View style={styles.cropBadge}>
-                          <Feather name="crop" size={11} color="#ffffff" />
+                        <View style={styles.editPill}>
+                          <Feather name="crop" size={10} color="#ffffff" style={{ marginRight: 3 }} />
+                          <Text style={styles.editPillText}>Edit</Text>
                         </View>
                       </TouchableOpacity>
                     ) : (
                       <View style={styles.thumbPdf}>
-                        <Feather name="file-text" size={24} color={COLORS.primary} />
+                        <View style={styles.pdfBadgeIcon}>
+                          <Feather name="file-text" size={22} color={COLORS.primary} />
+                        </View>
                         <Text style={styles.thumbPdfName} numberOfLines={1}>
                           {att.name}
+                        </Text>
+                        <Text style={styles.thumbPdfMeta}>
+                          {att.size || 'PDF Document'}
                         </Text>
                       </View>
                     )}
@@ -347,10 +450,25 @@ export const CreateCommunityPostModal: React.FC<CreateCommunityPostModalProps> =
                       hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                       accessibilityLabel="Remove attachment"
                     >
-                      <Feather name="x" size={13} color="#ffffff" />
+                      <Feather name="x" size={12} color="#ffffff" />
                     </TouchableOpacity>
                   </View>
                 ))}
+
+                {/* "+ Add" Card when under limit */}
+                {attachments.length < MAX_ATTACHMENTS && (
+                  <TouchableOpacity
+                    style={styles.addMoreCard}
+                    onPress={handleAddMoreChoice}
+                    activeOpacity={0.7}
+                    accessibilityLabel="Add more attachments"
+                  >
+                    <View style={styles.addMoreIconWrap}>
+                      <Feather name="plus" size={18} color="#6b7280" />
+                    </View>
+                    <Text style={styles.addMoreText}>Add</Text>
+                  </TouchableOpacity>
+                )}
               </ScrollView>
             </View>
           )}
@@ -359,42 +477,64 @@ export const CreateCommunityPostModal: React.FC<CreateCommunityPostModalProps> =
           <View
             style={[
               styles.bottomToolBar,
-               { paddingBottom: isKeyboardVisible ? (Platform.OS === 'android' ? 24 : 12) : Math.max(insets.bottom, 12) },
+                        { paddingBottom: isKeyboardVisible ? (Platform.OS === 'android' ? 24 : 12) : Math.max(insets.bottom, 12) },
+
             ]}
           >
-            <TouchableOpacity
-              style={styles.toolIconBtn}
-              onPress={handlePickImages}
-              accessibilityLabel="Add photo"
-            >
-              <Feather name="image" size={21} color="#4b5563" />
-            </TouchableOpacity>
+            <View style={styles.toolsGroup}>
+              <TouchableOpacity
+                style={styles.toolIconBtn}
+                onPress={handleSnapCamera}
+                accessibilityLabel="Take photo with camera"
+                activeOpacity={0.7}
+              >
+                <Feather name="camera" size={20} color="#374151" />
+              </TouchableOpacity>
 
-            <TouchableOpacity
-              style={styles.toolIconBtn}
-              onPress={handlePickDocument}
-              accessibilityLabel="Add PDF"
-            >
-              <Feather name="file-text" size={21} color="#4b5563" />
-            </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.toolIconBtn}
+                onPress={handlePickImages}
+                accessibilityLabel="Add photo from gallery"
+                activeOpacity={0.7}
+              >
+                <Feather name="image" size={20} color="#374151" />
+              </TouchableOpacity>
 
-            <TouchableOpacity
-              style={styles.toolIconBtn}
-              onPress={handleInsertHash}
-              accessibilityLabel="Add tag"
-            >
-              <Feather name="hash" size={21} color="#4b5563" />
-            </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.toolIconBtn}
+                onPress={handlePickDocument}
+                accessibilityLabel="Attach PDF notes"
+                activeOpacity={0.7}
+              >
+                <Feather name="file-text" size={20} color="#374151" />
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.toolIconBtn}
+                onPress={() => handleInsertHash()}
+                accessibilityLabel="Add tag"
+                activeOpacity={0.7}
+              >
+                <Feather name="hash" size={20} color="#374151" />
+              </TouchableOpacity>
+            </View>
+
+            {/* Live Character/Word Hint */}
+            <View style={styles.counterWrap}>
+              <Text style={styles.counterText}>
+                {body.length > 0 ? `${body.length} chars` : ''}
+              </Text>
+            </View>
           </View>
         </View>
 
         {/* Android is edge-to-edge: lifts footer cleanly by real IME height */}
         {Platform.OS === 'android' && <Animated.View style={{ height: keyboardSpace }} />}
 
-        {/* Full-screen Image Crop & Correction Editor */}
+        {/* Full-screen Image Crop & Straighten Editor */}
         <ImageCropEditor
           uri={editingImage?.url ?? null}
-          title="Edit Photo"
+          title="Edit & Crop Photo"
           onCancel={() => setEditingImage(null)}
           onDone={handleImageEdited}
         />
@@ -459,8 +599,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#f3f4f6',
-    paddingHorizontal: 6,
-    paddingVertical: 1.5,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
     borderRadius: RADIUS.full,
     marginTop: 1,
     alignSelf: 'flex-start',
@@ -509,78 +649,149 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: '#f1f5f9',
   },
+
+  quickTagsContainer: {
+    paddingVertical: 7,
+    backgroundColor: '#ffffff',
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#f1f5f9',
+  },
+  quickTagsRow: {
+    paddingHorizontal: 16,
+    alignItems: 'center',
+    gap: 6,
+  },
+  quickTagsLabel: {
+    fontSize: 11,
+    fontFamily: FONTS.bodyMedium,
+    color: '#9ca3af',
+    marginRight: 2,
+  },
+  quickTagChip: {
+    paddingHorizontal: 10,
+    paddingVertical: 3.5,
+    borderRadius: RADIUS.full,
+    backgroundColor: '#f3f4f6',
+  },
+  quickTagChipActive: {
+    backgroundColor: COLORS.primaryLight,
+  },
+  quickTagChipText: {
+    fontSize: 11,
+    fontFamily: FONTS.bodyMedium,
+    color: '#4b5563',
+  },
+  quickTagChipTextActive: {
+    color: COLORS.primary,
+    fontFamily: FONTS.displayBold,
+  },
+
   dockedAttachmentsSection: {
     paddingTop: 8,
-    paddingBottom: 8,
+    paddingBottom: 10,
     backgroundColor: '#fafaf9',
     borderBottomWidth: 1,
     borderBottomColor: '#f1f5f9',
   },
   dockedAttachmentsHeader: {
     paddingHorizontal: 16,
-    marginBottom: 6,
+    marginBottom: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   dockedAttachmentsTitle: {
     fontSize: 11,
-    fontFamily: FONTS.bodyMedium,
-    color: '#6b7280',
+    fontFamily: FONTS.displayBold,
+    color: '#4b5563',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
+  },
+  dockedAttachmentsHint: {
+    fontSize: 10.5,
+    fontFamily: FONTS.body,
+    color: '#9ca3af',
   },
   attachmentsRow: {
     paddingHorizontal: 16,
     gap: 10,
     flexDirection: 'row',
+    alignItems: 'center',
   },
   attachmentThumbCard: {
-    width: 84,
-    height: 84,
-    borderRadius: RADIUS.md,
+    width: 100,
+    height: 100,
+    borderRadius: RADIUS.lg,
     overflow: 'hidden',
     position: 'relative',
     backgroundColor: '#ffffff',
     borderWidth: 1,
     borderColor: '#e5e7eb',
-  },
-  thumbImage: {
-    width: '100%',
-    height: '100%',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
   thumbImageWrap: {
     width: '100%',
     height: '100%',
     position: 'relative',
   },
-  cropBadge: {
+  thumbImage: {
+    width: '100%',
+    height: '100%',
+  },
+  editPill: {
     position: 'absolute',
-    bottom: 4,
-    right: 4,
-    backgroundColor: 'rgba(0,0,0,0.65)',
-    width: 22,
-    height: 22,
+    bottom: 5,
+    left: 5,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    paddingHorizontal: 6,
+    paddingVertical: 2.5,
     borderRadius: RADIUS.full,
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+  },
+  editPillText: {
+    color: '#ffffff',
+    fontSize: 9.5,
+    fontFamily: FONTS.displayBold,
   },
   thumbPdf: {
     width: '100%',
     height: '100%',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 6,
+    padding: 8,
+    backgroundColor: '#fafafa',
+  },
+  pdfBadgeIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 8,
+    backgroundColor: COLORS.primaryLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 4,
   },
   thumbPdfName: {
-    fontSize: 9,
-    fontFamily: FONTS.bodyMedium,
+    fontSize: 9.5,
+    fontFamily: FONTS.displayBold,
     color: '#374151',
-    marginTop: 4,
     textAlign: 'center',
+  },
+  thumbPdfMeta: {
+    fontSize: 8.5,
+    fontFamily: FONTS.body,
+    color: '#9ca3af',
+    marginTop: 2,
   },
   removeThumbBtn: {
     position: 'absolute',
-    top: 4,
-    right: 4,
-    backgroundColor: 'rgba(0,0,0,0.65)',
+    top: 5,
+    right: 5,
+    backgroundColor: 'rgba(0,0,0,0.68)',
     width: 22,
     height: 22,
     borderRadius: RADIUS.full,
@@ -588,16 +799,61 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
 
+  addMoreCard: {
+    width: 72,
+    height: 100,
+    borderRadius: RADIUS.lg,
+    borderWidth: 1.5,
+    borderStyle: 'dashed',
+    borderColor: '#d1d5db',
+    backgroundColor: '#f9fafb',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+  },
+  addMoreIconWrap: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: '#e5e7eb',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  addMoreText: {
+    fontSize: 10,
+    fontFamily: FONTS.displayBold,
+    color: '#6b7280',
+  },
+
   bottomToolBar: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingTop: 12,
-    gap: 22,
+    paddingTop: 10,
     backgroundColor: '#ffffff',
   },
+  toolsGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+  },
   toolIconBtn: {
-    padding: 8,
+    width: 38,
+    height: 38,
     borderRadius: RADIUS.full,
+    backgroundColor: '#f9fafb',
+    borderWidth: 1,
+    borderColor: '#f1f5f9',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  counterWrap: {
+    paddingRight: 4,
+  },
+  counterText: {
+    fontSize: 11,
+    fontFamily: FONTS.body,
+    color: '#9ca3af',
   },
 });
