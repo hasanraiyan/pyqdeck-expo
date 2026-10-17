@@ -332,12 +332,12 @@ export const CreateCommunityPostModal: React.FC<CreateCommunityPostModalProps> =
                 <Text style={styles.authorAvatarText}>{authorInitial}</Text>
               </View>
             )}
-            <View style={{ flexShrink: 1 }}>
+            <View style={styles.authorMeta}>
               <Text style={styles.authorName} numberOfLines={1}>{authorName}</Text>
               <View style={styles.audiencePill}>
-                <Feather name="globe" size={10} color="#6b7280" style={{ marginRight: 3 }} />
+                <Feather name="globe" size={10} color="#6b7280" style={{ marginRight: 3.5 }} />
                 <Text style={styles.audiencePillText}>Anyone</Text>
-                <Feather name="chevron-down" size={10} color="#9ca3af" style={{ marginLeft: 2 }} />
+                <Feather name="chevron-down" size={10} color="#9ca3af" style={{ marginLeft: 3 }} />
               </View>
             </View>
           </View>
@@ -603,24 +603,31 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: COLORS.secondary,
   },
+  authorMeta: {
+    flexShrink: 1,
+    justifyContent: 'center',
+  },
   authorName: {
     fontFamily: FONTS.displayBold,
-    fontSize: 13.5,
+    fontSize: 14,
+    lineHeight: 18,
     color: '#111827',
   },
   audiencePill: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#f3f4f6',
-    paddingHorizontal: 7,
-    paddingVertical: 2,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    paddingHorizontal: 8,
+    paddingVertical: 2.5,
     borderRadius: RADIUS.full,
-    marginTop: 1,
+    marginTop: 4,
     alignSelf: 'flex-start',
   },
   audiencePillText: {
-    fontFamily: FONTS.body,
-    fontSize: 10,
+    fontFamily: FONTS.bodyMedium,
+    fontSize: 10.5,
     color: '#4b5563',
   },
   postBtn: {
