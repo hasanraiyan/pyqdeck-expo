@@ -18,11 +18,36 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
-import { Feather, Ionicons } from '@expo/vector-icons';
+import { Feather, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
 import { COLORS, FONTS, RADIUS } from '../../theme/colors';
 import { UserProfileData } from '../../services/userProfileService';
+import { CollegePickerBottomSheet } from './CollegePickerBottomSheet';
+import { BranchPickerBottomSheet } from './BranchPickerBottomSheet';
+
+const QUICK_SEMESTERS = [
+  '1st Sem',
+  '2nd Sem',
+  '3rd Sem',
+  '4th Sem',
+  '5th Sem',
+  '6th Sem',
+  '7th Sem',
+  '8th Sem',
+  'Alumni',
+];
+
+const QUICK_PASSOUT_YEARS = [
+  '2025',
+  '2024',
+  '2023',
+  '2022',
+  '2021',
+  '2020',
+  '2019',
+  '2018',
+];
 
 interface EditProfileModalProps {
   visible: boolean;
@@ -46,8 +71,11 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
   const [name, setName] = useState(profile.name || '');
   const [bio, setBio] = useState(profile.bio || '');
   const [college, setCollege] = useState(profile.college || '');
+  const [isCollegePickerVisible, setIsCollegePickerVisible] = useState(false);
   const [branch, setBranch] = useState(profile.branch || '');
+  const [isBranchPickerVisible, setIsBranchPickerVisible] = useState(false);
   const [semester, setSemester] = useState(profile.semester || '');
+  const [gradYear, setGradYear] = useState(profile.gradYear || '');
   const [location, setLocation] = useState(profile.location || '');
   const [about, setAbout] = useState(profile.about || '');
   const [github, setGithub] = useState(profile.github || '');
@@ -64,12 +92,24 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
   const collegeRef = useRef<TextInput>(null);
   const branchRef = useRef<TextInput>(null);
   const semesterRef = useRef<TextInput>(null);
+  const gradYearRef = useRef<TextInput>(null);
   const locationRef = useRef<TextInput>(null);
   const aboutRef = useRef<TextInput>(null);
   const githubRef = useRef<TextInput>(null);
   const linkedinRef = useRef<TextInput>(null);
   const websiteRef = useRef<TextInput>(null);
   const twitterRef = useRef<TextInput>(null);
+
+  // Determine if user has passed out / alumni status
+  const isAlumni = useMemo(() => {
+    const s = (semester || '').toLowerCase();
+    return (
+      s.includes('alumn') ||
+      s.includes('graduat') ||
+      s.includes('passout') ||
+      s.includes('passed')
+    );
+  }, [semester]);
 
   // Reset form when modal opens
   useEffect(() => {
@@ -79,6 +119,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
       setCollege(profile.college || '');
       setBranch(profile.branch || '');
       setSemester(profile.semester || '');
+      setGradYear(profile.gradYear || '');
       setLocation(profile.location || '');
       setAbout(profile.about || '');
       setGithub(profile.github || '');
@@ -166,6 +207,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
       college !== (profile.college || '') ||
       branch !== (profile.branch || '') ||
       semester !== (profile.semester || '') ||
+      gradYear !== (profile.gradYear || '') ||
       location !== (profile.location || '') ||
       about !== (profile.about || '') ||
       github !== (profile.github || '') ||
@@ -182,6 +224,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
     college,
     branch,
     semester,
+    gradYear,
     location,
     about,
     github,
@@ -316,7 +359,8 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
         bio: bio.trim() || 'Student • PYQDeck Community',
         college: college.trim() || 'Bihar Engineering University',
         branch: branch.trim() || 'Engineering',
-        semester: semester.trim() || 'B.Tech',
+        semester: semester.trim() || (isAlumni ? 'Alumni' : 'B.Tech'),
+        gradYear: gradYear.trim() || undefined,
         location: location.trim() || 'Bihar, India',
         about: about.trim(),
         github: github.trim(),
@@ -480,7 +524,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
                 placeholder="e.g. CSE 3rd Year • Core CS & Systems • GATE '26"
                 placeholderTextColor="#9ca3af"
                 returnKeyType="next"
-                onSubmitEditing={() => collegeRef.current?.focus()}
+                onSubmitEditing={() => setIsCollegePickerVisible(true)}
                 blurOnSubmit={false}
               />
               <Text style={styles.helperText}>
@@ -496,55 +540,305 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
               <Text style={styles.sectionTitle}>Academic Details</Text>
             </View>
 
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Engineering College</Text>
-              <TextInput
-                ref={collegeRef}
-                onFocus={onFieldFocus(collegeRef)}
-                style={styles.textInput}
-                value={college}
-                onChangeText={setCollege}
-                placeholder="e.g. BCE Bhagalpur / MIT Muzaffarpur / GEC Patna"
-                placeholderTextColor="#9ca3af"
-                returnKeyType="next"
-                onSubmitEditing={() => branchRef.current?.focus()}
-                blurOnSubmit={false}
-              />
+            {/* Academic Status Segment (Current Student vs Passed Out / Alumni) */}
+            <View style={styles.statusSegment}>
+              <TouchableOpacity
+                onPress={() => {
+                  Haptics.selectionAsync().catch(() => {});
+                  if (isAlumni) {
+                    setSemester('6th Sem');
+                  }
+                }}
+                style={[styles.statusSegmentBtn, !isAlumni && styles.statusSegmentBtnActive]}
+                activeOpacity={0.8}
+              >
+                <Ionicons
+                  name="school"
+                  size={14}
+                  color={!isAlumni ? COLORS.primary : '#64748b'}
+                  style={{ marginRight: 6 }}
+                />
+                <Text style={[styles.statusSegmentText, !isAlumni && styles.statusSegmentTextActive]}>
+                  Current Student
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() => {
+                  Haptics.selectionAsync().catch(() => {});
+                  setSemester('Alumni');
+                  if (!gradYear) {
+                    setGradYear('2024');
+                  }
+                }}
+                style={[styles.statusSegmentBtn, isAlumni && styles.statusSegmentBtnActive]}
+                activeOpacity={0.8}
+              >
+                <Ionicons
+                  name="ribbon"
+                  size={14}
+                  color={isAlumni ? COLORS.primary : '#64748b'}
+                  style={{ marginRight: 6 }}
+                />
+                <Text style={[styles.statusSegmentText, isAlumni && styles.statusSegmentTextActive]}>
+                  Passed Out / Alumni
+                </Text>
+              </TouchableOpacity>
             </View>
 
-            <View style={styles.twoColumnRow}>
-              <View style={[styles.inputGroup, { flex: 1.2 }]}>
-                <Text style={styles.inputLabel}>Branch / Stream</Text>
+            {/* Engineering College Picker Trigger */}
+            <View style={styles.inputGroup}>
+              <View style={styles.labelRow}>
+                <Text style={styles.inputLabel}>Engineering College</Text>
+                <TouchableOpacity
+                  onPress={() => {
+                    Keyboard.dismiss();
+                    setIsCollegePickerVisible(true);
+                  }}
+                  style={styles.browseCollegesBtn}
+                  activeOpacity={0.7}
+                  hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                >
+                  <Ionicons name="school-outline" size={12} color={COLORS.primary} style={{ marginRight: 4 }} />
+                  <Text style={styles.browseCollegesBtnText}>Browse 56+ BEU Colleges</Text>
+                </TouchableOpacity>
+              </View>
+
+              <TouchableOpacity
+                activeOpacity={0.75}
+                onPress={() => {
+                  Keyboard.dismiss();
+                  setIsCollegePickerVisible(true);
+                }}
+                style={[
+                  styles.collegePickerTrigger,
+                  college ? styles.collegePickerTriggerActive : undefined,
+                ]}
+                accessibilityLabel="Select engineering college"
+              >
+                <View style={styles.collegePickerLeft}>
+                  <View
+                    style={[
+                      styles.collegePickerIconWrap,
+                      college ? styles.collegePickerIconWrapActive : undefined,
+                    ]}
+                  >
+                    <Ionicons
+                      name="school"
+                      size={16}
+                      color={college ? COLORS.primary : '#94a3b8'}
+                    />
+                  </View>
+                  <Text
+                    style={[
+                      styles.collegePickerValue,
+                      college ? styles.collegePickerValueFilled : styles.collegePickerPlaceholder,
+                    ]}
+                    numberOfLines={2}
+                  >
+                    {college || 'Select your engineering college...'}
+                  </Text>
+                </View>
+
+                <View style={styles.collegePickerRight}>
+                  {college ? (
+                    <TouchableOpacity
+                      onPress={(e) => {
+                        e.stopPropagation();
+                        setCollege('');
+                      }}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                      style={styles.collegeClearBtn}
+                      accessibilityLabel="Clear selected college"
+                    >
+                      <Feather name="x" size={14} color="#64748b" />
+                    </TouchableOpacity>
+                  ) : null}
+                  <Feather name="chevron-down" size={17} color="#64748b" />
+                </View>
+              </TouchableOpacity>
+            </View>
+
+            {/* Engineering Branch Picker Trigger */}
+            <View style={styles.inputGroup}>
+              <View style={styles.labelRow}>
+                <Text style={styles.inputLabel}>Branch / Discipline</Text>
+                <TouchableOpacity
+                  onPress={() => {
+                    Keyboard.dismiss();
+                    setIsBranchPickerVisible(true);
+                  }}
+                  style={styles.browseCollegesBtn}
+                  activeOpacity={0.7}
+                  hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                >
+                  <MaterialCommunityIcons
+                    name="compass-outline"
+                    size={12}
+                    color={COLORS.primary}
+                    style={{ marginRight: 4 }}
+                  />
+                  <Text style={styles.browseCollegesBtnText}>Browse 34+ BEU Branches</Text>
+                </TouchableOpacity>
+              </View>
+
+              <TouchableOpacity
+                activeOpacity={0.75}
+                onPress={() => {
+                  Keyboard.dismiss();
+                  setIsBranchPickerVisible(true);
+                }}
+                style={[
+                  styles.collegePickerTrigger,
+                  branch ? styles.collegePickerTriggerActive : undefined,
+                ]}
+                accessibilityLabel="Select engineering branch"
+              >
+                <View style={styles.collegePickerLeft}>
+                  <View
+                    style={[
+                      styles.collegePickerIconWrap,
+                      branch ? styles.collegePickerIconWrapActive : undefined,
+                    ]}
+                  >
+                    <MaterialCommunityIcons
+                      name="compass"
+                      size={16}
+                      color={branch ? COLORS.primary : '#94a3b8'}
+                    />
+                  </View>
+                  <Text
+                    style={[
+                      styles.collegePickerValue,
+                      branch ? styles.collegePickerValueFilled : styles.collegePickerPlaceholder,
+                    ]}
+                    numberOfLines={2}
+                  >
+                    {branch || 'Select your engineering branch...'}
+                  </Text>
+                </View>
+
+                <View style={styles.collegePickerRight}>
+                  {branch ? (
+                    <TouchableOpacity
+                      onPress={(e) => {
+                        e.stopPropagation();
+                        setBranch('');
+                      }}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                      style={styles.collegeClearBtn}
+                      accessibilityLabel="Clear selected branch"
+                    >
+                      <Feather name="x" size={14} color="#64748b" />
+                    </TouchableOpacity>
+                  ) : null}
+                  <Feather name="chevron-down" size={17} color="#64748b" />
+                </View>
+              </TouchableOpacity>
+            </View>
+
+            {/* Semester or Passout Batch */}
+            {isAlumni ? (
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Passout Batch (Graduation Year)</Text>
                 <TextInput
-                  ref={branchRef}
-                  onFocus={onFieldFocus(branchRef)}
+                  ref={gradYearRef}
+                  onFocus={onFieldFocus(gradYearRef)}
                   style={styles.textInput}
-                  value={branch}
-                  onChangeText={setBranch}
-                  placeholder="e.g. CSE / ECE / ME / Civil"
+                  value={gradYear}
+                  onChangeText={setGradYear}
+                  placeholder="e.g. 2024"
                   placeholderTextColor="#9ca3af"
+                  keyboardType="number-pad"
                   returnKeyType="next"
-                  onSubmitEditing={() => semesterRef.current?.focus()}
+                  onSubmitEditing={() => locationRef.current?.focus()}
                   blurOnSubmit={false}
                 />
               </View>
-
-              <View style={[styles.inputGroup, { flex: 1 }]}>
-                <Text style={styles.inputLabel}>Semester</Text>
+            ) : (
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Current Semester</Text>
                 <TextInput
                   ref={semesterRef}
                   onFocus={onFieldFocus(semesterRef)}
                   style={styles.textInput}
                   value={semester}
                   onChangeText={setSemester}
-                  placeholder="e.g. 6th Semester"
+                  placeholder="e.g. 6th Sem"
                   placeholderTextColor="#9ca3af"
                   returnKeyType="next"
                   onSubmitEditing={() => locationRef.current?.focus()}
                   blurOnSubmit={false}
                 />
               </View>
-            </View>
+            )}
+
+            {isAlumni ? (
+              /* Passout Year Shortcuts for Alumni */
+              <View style={styles.quickChipsSection}>
+                <Text style={styles.quickChipsLabel}>Passout Batch Shortcuts:</Text>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.quickChipsScroll}
+                  keyboardShouldPersistTaps="handled"
+                >
+                  {QUICK_PASSOUT_YEARS.map((y) => {
+                    const active = gradYear === y;
+                    return (
+                      <TouchableOpacity
+                        key={y}
+                        onPress={() => {
+                          Haptics.selectionAsync().catch(() => {});
+                          setGradYear(y);
+                        }}
+                        style={[styles.quickChip, active && styles.quickChipActive]}
+                        activeOpacity={0.7}
+                      >
+                        <Text style={[styles.quickChipText, active && styles.quickChipTextActive]}>
+                          Batch {y}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </ScrollView>
+              </View>
+            ) : (
+              /* Semester Shortcuts for Students */
+              <View style={styles.quickChipsSection}>
+                <Text style={styles.quickChipsLabel}>Semester Shortcuts:</Text>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.quickChipsScroll}
+                  keyboardShouldPersistTaps="handled"
+                >
+                  {QUICK_SEMESTERS.map((s) => {
+                    const active = semester.toLowerCase() === s.toLowerCase();
+                    return (
+                      <TouchableOpacity
+                        key={s}
+                        onPress={() => {
+                          Haptics.selectionAsync().catch(() => {});
+                          if (s === 'Alumni') {
+                            setSemester('Alumni');
+                            if (!gradYear) setGradYear('2024');
+                          } else {
+                            setSemester(s);
+                          }
+                        }}
+                        style={[styles.quickChip, active && styles.quickChipActive]}
+                        activeOpacity={0.7}
+                      >
+                        <Text style={[styles.quickChipText, active && styles.quickChipTextActive]}>
+                          {s}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </ScrollView>
+              </View>
+            )}
 
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>Location / City</Text>
@@ -702,6 +996,32 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
           </View>
         )}
       </KeyboardAvoidingView>
+
+      {/* Engineering College Picker Bottom Sheet */}
+      <CollegePickerBottomSheet
+        visible={isCollegePickerVisible}
+        selectedCollege={college}
+        onSelect={(selectedName, selectedLoc) => {
+          setCollege(selectedName);
+          if (
+            selectedLoc &&
+            (!location || location.trim() === 'Bihar, India' || location.trim() === 'Bihar')
+          ) {
+            setLocation(selectedLoc);
+          }
+        }}
+        onClose={() => setIsCollegePickerVisible(false)}
+      />
+
+      {/* Engineering Branch Picker Bottom Sheet */}
+      <BranchPickerBottomSheet
+        visible={isBranchPickerVisible}
+        selectedBranch={branch}
+        onSelect={(branchName) => {
+          setBranch(branchName);
+        }}
+        onClose={() => setIsBranchPickerVisible(false)}
+      />
     </Modal>
   );
 };
@@ -955,5 +1275,143 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.bodySemi,
     fontSize: 13,
     color: '#334155',
+  },
+  labelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  browseCollegesBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 2,
+    paddingHorizontal: 6,
+  },
+  browseCollegesBtnText: {
+    fontFamily: FONTS.bodySemi,
+    fontSize: 11.5,
+    color: COLORS.primary,
+  },
+  collegePickerTrigger: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#cbd5e1',
+    borderRadius: RADIUS.md,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    minHeight: 46,
+    gap: 8,
+  },
+  collegePickerTriggerActive: {
+    borderColor: COLORS.primary,
+    backgroundColor: '#fafbfc',
+  },
+  collegePickerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    gap: 8,
+  },
+  collegePickerIconWrap: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#f1f5f9',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  collegePickerIconWrapActive: {
+    backgroundColor: '#e0e7ff',
+  },
+  collegePickerValue: {
+    flex: 1,
+    fontFamily: FONTS.body,
+    fontSize: 13.5,
+  },
+  collegePickerValueFilled: {
+    color: '#0f172a',
+    fontFamily: FONTS.bodySemi,
+  },
+  collegePickerPlaceholder: {
+    color: '#9ca3af',
+  },
+  collegePickerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  collegeClearBtn: {
+    padding: 3,
+  },
+  quickChipsSection: {
+    gap: 6,
+  },
+  quickChipsLabel: {
+    fontFamily: FONTS.bodyMedium,
+    fontSize: 11,
+    color: '#64748b',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  quickChipsScroll: {
+    gap: 6,
+    paddingVertical: 2,
+  },
+  quickChip: {
+    backgroundColor: '#f1f5f9',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: RADIUS.full,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  quickChipActive: {
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
+  },
+  quickChipText: {
+    fontFamily: FONTS.bodyMedium,
+    fontSize: 11.5,
+    color: '#475569',
+  },
+  quickChipTextActive: {
+    color: '#ffffff',
+    fontFamily: FONTS.bodySemi,
+  },
+  statusSegment: {
+    flexDirection: 'row',
+    backgroundColor: '#f1f5f9',
+    borderRadius: RADIUS.md,
+    padding: 3,
+    marginBottom: 4,
+    gap: 4,
+  },
+  statusSegmentBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 7,
+    borderRadius: RADIUS.sm,
+  },
+  statusSegmentBtnActive: {
+    backgroundColor: '#ffffff',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  statusSegmentText: {
+    fontFamily: FONTS.bodyMedium,
+    fontSize: 12.5,
+    color: '#64748b',
+  },
+  statusSegmentTextActive: {
+    fontFamily: FONTS.displayBold,
+    color: COLORS.primary,
   },
 });

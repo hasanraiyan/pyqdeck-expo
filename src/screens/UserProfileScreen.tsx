@@ -15,6 +15,7 @@ import {
   Linking,
   Animated,
   useWindowDimensions,
+  LayoutChangeEvent,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -105,6 +106,26 @@ export const UserProfileScreen: React.FC = () => {
   const tabWidth = windowWidth / tabs.length;
   const scrollX = useRef(new Animated.Value(0)).current;
   const tabScrollRef = useRef<ScrollView>(null);
+  // Measured content height of each tab page, so the pager only takes the height of the visible page
+  const [pageHeights, setPageHeights] = useState<number[]>([]);
+  const onPageLayout = (index: number) => (e: LayoutChangeEvent) => {
+    const h = Math.ceil(e.nativeEvent.layout.height);
+    setPageHeights((prev) => {
+      if (prev[index] === h) return prev;
+      const next = [...prev];
+      next[index] = h;
+      return next;
+    });
+  };
+  const pagerHeight = useMemo(() => {
+    const ready = tabs.every((_, i) => (pageHeights[i] ?? 0) > 0);
+    if (!ready) return undefined;
+    return scrollX.interpolate({
+      inputRange: tabs.map((_, i) => i * windowWidth),
+      outputRange: tabs.map((_, i) => pageHeights[i]),
+      extrapolate: 'clamp',
+    });
+  }, [tabs, pageHeights, windowWidth, scrollX]);
 
   const indicatorTranslateX = useMemo(() => {
     return scrollX.interpolate({
@@ -597,9 +618,12 @@ export const UserProfileScreen: React.FC = () => {
           </View>
 
           {/* Horizontal Swiping Tab Pages */}
+          <Animated.View style={pagerHeight ? { height: pagerHeight, overflow: 'hidden' } : undefined}>
           <ScrollView
             ref={tabScrollRef}
             horizontal
+            style={pagerHeight ? { flex: 1 } : undefined}
+            contentContainerStyle={{ alignItems: 'flex-start' }}
             pagingEnabled
             nestedScrollEnabled
             showsHorizontalScrollIndicator={false}
@@ -618,7 +642,7 @@ export const UserProfileScreen: React.FC = () => {
             }}
           >
             {/* Page 1: Posts */}
-            <View style={{ width: windowWidth }}>
+            <View style={{ width: windowWidth }} onLayout={onPageLayout(0)}>
               <View style={styles.tabContentSection}>
                 {userPosts.length === 0 ? (
                   <View style={styles.emptyCard}>
@@ -650,7 +674,7 @@ export const UserProfileScreen: React.FC = () => {
             </View>
 
             {/* Page 2: About & Academics */}
-            <View style={{ width: windowWidth }}>
+            <View style={{ width: windowWidth }} onLayout={onPageLayout(1)}>
               <View style={styles.tabContentSection}>
                 {/* About Narrative Card */}
                 <View style={styles.contentCard}>
@@ -672,7 +696,20 @@ export const UserProfileScreen: React.FC = () => {
                       <Text style={styles.academicTitle}>Bachelor of Technology (B.Tech)</Text>
                       <Text style={styles.academicSubtitle}>{profile.branch}</Text>
                       <Text style={styles.academicDetailText}>
-                        {profile.semester} • Class of {profile.gradYear || '2026'}
+                        {(() => {
+                          const s = (profile.semester || '').toLowerCase();
+                          const isAlumni =
+                            s.includes('alumn') ||
+                            s.includes('graduat') ||
+                            s.includes('passout') ||
+                            s.includes('passed');
+                          if (isAlumni) {
+                            return profile.gradYear
+                              ? `Alumni • Batch of ${profile.gradYear}`
+                              : 'Alumni (Passed Out)';
+                          }
+                          return `${profile.semester} • Class of ${profile.gradYear || '2026'}`;
+                        })()}
                       </Text>
                     </View>
                   </View>
@@ -708,7 +745,7 @@ export const UserProfileScreen: React.FC = () => {
 
             {/* Page 4: Saved / Bookmarked Posts (Own Profile Only) */}
             {isOwnProfile && (
-              <View style={{ width: windowWidth }}>
+              <View style={{ width: windowWidth }} onLayout={onPageLayout(2)}>
                 <View style={styles.tabContentSection}>
                   {savedPosts.length === 0 ? (
                     <View style={styles.emptyCard}>
@@ -738,6 +775,7 @@ export const UserProfileScreen: React.FC = () => {
               </View>
             )}
           </ScrollView>
+          </Animated.View>
         </ScreenContainer>
       </ScrollView>
 
