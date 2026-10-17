@@ -269,16 +269,16 @@ export const CommunityFeedScreen: React.FC = () => {
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={styles.headerPostBtn}
                 onPress={() => {
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-                  setCreateModalVisible(true);
+                  navigation.navigate('Tabs', { screen: 'Activity' });
                 }}
-                activeOpacity={0.7}
+                style={styles.headerIconButton}
                 hitSlop={8}
-                accessibilityLabel="Create new post"
+                accessibilityRole="button"
+                accessibilityLabel="Messages & Activity"
               >
-                <NewPostIcon size={21} color={COLORS.primary} />
+                <Feather name="message-circle" size={18} color={COLORS.text} />
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -363,6 +363,21 @@ export const CommunityFeedScreen: React.FC = () => {
           }
         />
       )}
+
+      {/* Floating Action Button for New Post (like Twitter/X & Reddit) */}
+      <TouchableOpacity
+        style={styles.fab}
+        onPress={() => {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+          setCreateModalVisible(true);
+        }}
+        activeOpacity={0.85}
+        accessibilityRole="button"
+        accessibilityLabel="Create new post"
+      >
+        <NewPostIcon size={19} color="#ffffff" />
+        <Text style={styles.fabText}>Post</Text>
+      </TouchableOpacity>
 
       {/* Create Post Modal */}
       <CreateCommunityPostModal
@@ -602,5 +617,29 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.displayBold,
     fontSize: 13,
     color: '#ffffff',
+  },
+  fab: {
+    position: 'absolute',
+    right: 16,
+    bottom: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+    backgroundColor: COLORS.primary,
+    paddingVertical: 11,
+    paddingHorizontal: 18,
+    borderRadius: RADIUS.full,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 5,
+    elevation: 6,
+    zIndex: 99,
+  },
+  fabText: {
+    fontFamily: FONTS.displayBold,
+    fontSize: 14,
+    color: '#ffffff',
+    letterSpacing: 0.3,
   },
 });
