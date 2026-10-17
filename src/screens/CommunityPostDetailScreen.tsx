@@ -12,6 +12,8 @@ import {
   UIManager,
   Alert,
   Keyboard,
+  Animated,
+  Easing,
 } from 'react-native';
 import { Image } from 'expo-image';
 import * as Clipboard from 'expo-clipboard';
@@ -75,6 +77,7 @@ export const CommunityPostDetailScreen: React.FC = () => {
   const scrollViewRef = useRef<ScrollView>(null);
   const headerHeight = useHeaderHeight();
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
+  const keyboardSpace = useRef(new Animated.Value(0)).current;
   const { postId, initialPost } = route.params || {};
 
   const [post, setPost] = useState<CommunityPost | undefined>(
@@ -95,11 +98,23 @@ export const CommunityPostDetailScreen: React.FC = () => {
     const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
     const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
 
-    const showSub = Keyboard.addListener(showEvent, () => {
+    const showSub = Keyboard.addListener(showEvent, (e) => {
       setIsKeyboardVisible(true);
+      Animated.timing(keyboardSpace, {
+        toValue: e.endCoordinates.height,
+        duration: 250,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: false,
+      }).start();
     });
     const hideSub = Keyboard.addListener(hideEvent, () => {
       setIsKeyboardVisible(false);
+      Animated.timing(keyboardSpace, {
+        toValue: 0,
+        duration: 200,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: false,
+      }).start();
     });
 
     return () => {
@@ -545,7 +560,7 @@ export const CommunityPostDetailScreen: React.FC = () => {
           styles.composerContainer,
           {
             paddingBottom: isKeyboardVisible
-              ? 10
+              ? Platform.OS === 'android' ? 24 : 10
               : Math.max(insets.bottom, 10),
           },
         ]}
@@ -562,20 +577,6 @@ export const CommunityPostDetailScreen: React.FC = () => {
         )}
 
         <View style={styles.composerRow}>
-          {/* User Avatar with Dropdown Arrow */}
-          <View style={styles.composerAvatarWrap}>
-            {user?.imageUrl ? (
-              <Image source={{ uri: user.imageUrl }} style={styles.composerAvatar} />
-            ) : (
-              <View style={styles.composerAvatarFallback}>
-                <Text style={styles.composerAvatarText}>
-                  {(user?.firstName?.[0] || 'U').toUpperCase()}
-                </Text>
-              </View>
-            )}
-            <Feather name="chevron-down" size={11} color="#6b7280" style={styles.composerAvatarDropdown} />
-          </View>
-
           {/* Rounded Pill Composer */}
           <View style={styles.composerPill}>
             <TextInput
@@ -598,6 +599,10 @@ export const CommunityPostDetailScreen: React.FC = () => {
           </View>
         </View>
       </View>
+
+      {/* Android is edge-to-edge: the window never resizes, so lift the composer by the real
+          IME height (includes the suggestion strip), animated. iOS uses KeyboardAvoidingView. */}
+      {Platform.OS === 'android' && <Animated.View style={{ height: keyboardSpace }} />}
     </KeyboardAvoidingView>
   );
 };
@@ -918,57 +923,31 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
   },
-  composerAvatarWrap: {
-    position: 'relative',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  composerAvatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-  },
-  composerAvatarFallback: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: COLORS.secondaryLight,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(31, 75, 67, 0.25)',
-  },
-  composerAvatarText: {
-    fontFamily: FONTS.displayBold,
-    fontSize: 12,
-    color: COLORS.secondary,
-  },
-  composerAvatarDropdown: {
-    position: 'absolute',
-    right: -2,
-    bottom: -2,
-    backgroundColor: '#ffffff',
-    borderRadius: 6,
-  },
   composerPill: {
     flex: 1,
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-end',
     backgroundColor: '#f3f4f6',
-    borderRadius: RADIUS.full,
+    borderRadius: 20,
     paddingLeft: 14,
-    paddingRight: 6,
+    paddingRight: 4,
+    paddingBottom: 3,
     minHeight: 38,
     borderWidth: 1,
     borderColor: '#e5e7eb',
   },
   composerInput: {
     flex: 1,
-    paddingVertical: 6,
+    paddingVertical: 0,
+    paddingTop: 7,
+    paddingBottom: 7,
     fontFamily: FONTS.body,
     fontSize: 13.5,
+    lineHeight: 19,
     color: '#111827',
-    maxHeight: 80,
+    // 3 lines (3 * 19) + vertical padding (14)
+    maxHeight: 71,
+    textAlignVertical: 'top',
   },
   sendBtn: {
     width: 30,
