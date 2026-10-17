@@ -520,18 +520,23 @@ export const CommunityPostDetailScreen: React.FC = () => {
           {/* Flattened Level 1 Replies Container (Strictly Max 2 Levels) */}
           {totalReplies > 0 && isRepliesExpanded && (
             <View style={styles.repliesExpandedWrap}>
-              <TouchableOpacity
-                style={styles.threadLineTouchable}
-                onPress={() => toggleCollapseThread(comment.id)}
-                activeOpacity={0.6}
-                accessibilityLabel="Tap thread line to collapse"
-              >
-                <View style={styles.continuousThreadLine} />
-              </TouchableOpacity>
+              <View style={styles.repliesThreadRow}>
+                <TouchableOpacity
+                  style={styles.threadLineTouchable}
+                  onPress={() => toggleCollapseThread(comment.id)}
+                  activeOpacity={0.6}
+                  accessibilityLabel="Tap thread line to collapse"
+                >
+                  <View style={styles.continuousThreadLine} />
+                </TouchableOpacity>
 
-              <View style={styles.nestedList}>
-                {allReplies.map((reply) => renderReplyItem(reply, comment.id))}
+                <View style={styles.nestedList}>
+                  {allReplies.map((reply) => renderReplyItem(reply, comment.id))}
+                </View>
+              </View>
 
+              <View style={styles.hideRepliesRow}>
+                <View style={styles.hideRepliesElbowCurve} />
                 <TouchableOpacity
                   style={styles.hideRepliesBtn}
                   onPress={() => toggleExpandReplies(comment.id)}
@@ -964,28 +969,45 @@ const styles = StyleSheet.create({
     marginTop: 4,
     paddingLeft: 4,
   },
+  repliesThreadRow: {
+    position: 'relative',
+  },
   threadLineTouchable: {
     position: 'absolute',
     left: -28,
     top: -10,
-    bottom: 8,
+    bottom: 0,
     width: 24,
   },
   continuousThreadLine: {
     width: 1.5,
     height: '100%',
-    backgroundColor: '#e2e8f0',
+    backgroundColor: '#cbd5e1',
     borderRadius: 1,
   },
   nestedList: {
     gap: 8,
   },
+  hideRepliesRow: {
+    position: 'relative',
+    marginTop: 6,
+  },
+  hideRepliesElbowCurve: {
+    position: 'absolute',
+    left: -28,
+    top: -12,
+    width: 24,
+    height: 24,
+    borderLeftWidth: 1.5,
+    borderBottomWidth: 1.5,
+    borderColor: '#cbd5e1',
+    borderBottomLeftRadius: 10,
+  },
   hideRepliesBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 6,
+    paddingVertical: 4,
     paddingHorizontal: 2,
-    marginTop: 4,
   },
   hideRepliesText: {
     fontFamily: FONTS.bodyMedium,

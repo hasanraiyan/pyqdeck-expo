@@ -451,17 +451,22 @@ export const CommunityCommentsBottomSheet: React.FC<CommunityCommentsBottomSheet
 
           {totalReplies > 0 && isRepliesExpanded && (
             <View style={styles.repliesExpandedWrap}>
-              <TouchableOpacity
-                style={styles.threadLineTouchable}
-                onPress={() => toggleCollapseThread(comment.id)}
-                activeOpacity={0.6}
-              >
-                <View style={styles.continuousThreadLine} />
-              </TouchableOpacity>
+              <View style={styles.repliesThreadRow}>
+                <TouchableOpacity
+                  style={styles.threadLineTouchable}
+                  onPress={() => toggleCollapseThread(comment.id)}
+                  activeOpacity={0.6}
+                >
+                  <View style={styles.continuousThreadLine} />
+                </TouchableOpacity>
 
-              <View style={styles.nestedList}>
-                {allReplies.map((reply) => renderReplyItem(reply, comment.id))}
+                <View style={styles.nestedList}>
+                  {allReplies.map((reply) => renderReplyItem(reply, comment.id))}
+                </View>
+              </View>
 
+              <View style={styles.hideRepliesRow}>
+                <View style={styles.hideRepliesElbowCurve} />
                 <TouchableOpacity
                   style={styles.hideRepliesBtn}
                   onPress={() => toggleExpandReplies(comment.id)}
@@ -830,15 +835,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginTop: 6,
-    marginLeft: -10,
   },
   elbowCurve: {
-    width: 14,
+    width: 16,
     height: 12,
     borderLeftWidth: 1.5,
     borderBottomWidth: 1.5,
     borderColor: '#cbd5e1',
-    borderBottomLeftRadius: 6,
+    borderBottomLeftRadius: 8,
+    marginLeft: 11.25,
     marginRight: 6,
   },
   seeRepliesBtn: {
@@ -851,13 +856,14 @@ const styles = StyleSheet.create({
     color: '#2563eb',
   },
   repliesExpandedWrap: {
-    flexDirection: 'row',
     marginTop: 8,
+  },
+  repliesThreadRow: {
+    flexDirection: 'row',
   },
   threadLineTouchable: {
     width: 24,
     alignItems: 'center',
-    justifyContent: 'center',
   },
   continuousThreadLine: {
     width: 1.5,
@@ -869,11 +875,27 @@ const styles = StyleSheet.create({
     gap: 12,
     paddingLeft: 4,
   },
-  hideRepliesBtn: {
+  hideRepliesRow: {
     flexDirection: 'row',
     alignItems: 'center',
     marginTop: 4,
+  },
+  hideRepliesElbowCurve: {
+    width: 16,
+    height: 14,
+    borderLeftWidth: 1.5,
+    borderBottomWidth: 1.5,
+    borderColor: '#cbd5e1',
+    borderBottomLeftRadius: 8,
+    marginLeft: 11.25,
+    marginRight: 6,
+    marginTop: -8,
+  },
+  hideRepliesBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingVertical: 3,
+    paddingHorizontal: 4,
   },
   hideRepliesText: {
     fontFamily: FONTS.bodySemi,
