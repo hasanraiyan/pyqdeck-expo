@@ -17,6 +17,8 @@ export interface UserProfileData {
   location?: string;
   github?: string;
   linkedin?: string;
+  website?: string;
+  twitter?: string;
   skills: string[];
   followersCount: number;
   followingCount: number;
@@ -134,6 +136,8 @@ const DEFAULT_OWN_PROFILE: UserProfileData = {
   location: 'Bihar, India',
   github: '',
   linkedin: '',
+  website: '',
+  twitter: '',
   skills: ['Semester Prep', 'Core Engineering', 'PYQ Revision'],
   followersCount: 19,
   followingCount: 42,

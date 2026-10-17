@@ -4,7 +4,7 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  FlatList,
+  ScrollView,
   Dimensions,
   NativeSyntheticEvent,
   NativeScrollEvent,
@@ -29,7 +29,7 @@ export const CommunityDocumentSlide: React.FC<CommunityDocumentSlideProps> = ({
   const [containerWidth, setContainerWidth] = useState(
     Dimensions.get('window').width - 24
   );
-  const flatListRef = useRef<FlatList<string>>(null);
+  const scrollViewRef = useRef<ScrollView>(null);
 
   const pages: string[] =
     attachment.previewPages && attachment.previewPages.length > 0
@@ -55,7 +55,7 @@ export const CommunityDocumentSlide: React.FC<CommunityDocumentSlideProps> = ({
     if (currentPage > 1) {
       Haptics.selectionAsync().catch(() => {});
       const targetIndex = currentPage - 2;
-      flatListRef.current?.scrollToIndex({ index: targetIndex, animated: true });
+      scrollViewRef.current?.scrollTo({ x: targetIndex * containerWidth, animated: true });
       setCurrentPage(currentPage - 1);
     }
   };
@@ -64,7 +64,7 @@ export const CommunityDocumentSlide: React.FC<CommunityDocumentSlideProps> = ({
     if (currentPage < pages.length) {
       Haptics.selectionAsync().catch(() => {});
       const targetIndex = currentPage;
-      flatListRef.current?.scrollToIndex({ index: targetIndex, animated: true });
+      scrollViewRef.current?.scrollTo({ x: targetIndex * containerWidth, animated: true });
       setCurrentPage(currentPage + 1);
     }
   };
@@ -82,22 +82,17 @@ export const CommunityDocumentSlide: React.FC<CommunityDocumentSlideProps> = ({
       {/* Slide Carousel */}
       <View style={styles.carouselContainer}>
         {pages.length > 0 ? (
-          <FlatList
-            ref={flatListRef}
-            data={pages}
-            keyExtractor={(_, idx) => `doc-page-${idx}`}
+          <ScrollView
+            ref={scrollViewRef}
             horizontal
             pagingEnabled
             showsHorizontalScrollIndicator={false}
             onScroll={handleScroll}
             scrollEventThrottle={32}
-            getItemLayout={(_, index) => ({
-              length: containerWidth,
-              offset: containerWidth * index,
-              index,
-            })}
-            renderItem={({ item, index }) => (
+          >
+            {pages.map((item, index) => (
               <TouchableOpacity
+                key={`doc-page-${index}`}
                 activeOpacity={0.94}
                 style={[styles.pageSlide, { width: containerWidth }]}
                 onPress={() => {
@@ -112,8 +107,8 @@ export const CommunityDocumentSlide: React.FC<CommunityDocumentSlideProps> = ({
                   transition={200}
                 />
               </TouchableOpacity>
-            )}
-          />
+            ))}
+          </ScrollView>
         ) : (
           <TouchableOpacity
             style={styles.placeholderContainer}

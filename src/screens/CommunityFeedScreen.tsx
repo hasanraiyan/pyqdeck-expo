@@ -24,13 +24,22 @@ import { communityStore } from '../data/mockCommunity';
 import { CommunityPostCard } from '../components/community/CommunityPostCard';
 import { CreateCommunityPostModal } from '../components/community/CreateCommunityPostModal';
 import { CommunityCommentsBottomSheet } from '../components/community/CommunityCommentsBottomSheet';
+import { CommunityInlineAdCard } from '../components/community/CommunityInlineAdCard';
 import { NewPostIcon } from '../components/community/NewPostIcon';
 import { ScreenContainer } from '../components/ScreenContainer';
 import { CommunityFeedSkeleton } from '../components/Skeletons';
+import { useAppConfig } from '../config/useAppConfig';
+import { useAdsEntitlement } from '../utils/adsEntitlement';
+import { adsAvailable } from '../utils/mobileAds';
+import { rf } from '../utils/responsive';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
+
+type FeedItem =
+  | { type: 'post'; post: CommunityPost }
+  | { type: 'ad'; id: string };
 
 export const CommunityFeedScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
@@ -106,6 +115,33 @@ export const CommunityFeedScreen: React.FC = () => {
       return true;
     });
   }, [posts, selectedHashtag, searchQuery]);
+
+  const { flags } = useAppConfig();
+  const entitlement = useAdsEntitlement();
+  const canShowAds = flags.adsEnabled !== false && !entitlement.adFree && (adsAvailable || __DEV__);
+
+  // Interleave inline feed ads (e.g. after 3rd post, then every 5 posts)
+  const feedItems = useMemo<FeedItem[]>(() => {
+    if (!canShowAds || filteredPosts.length < 3) {
+      return filteredPosts.map((post) => ({ type: 'post' as const, post }));
+    }
+
+    const items: FeedItem[] = [];
+    const FIRST_AD_OFFSET = 2; // After 3rd post (0-indexed: 0, 1, 2)
+    const AD_CADENCE = 5;
+
+    filteredPosts.forEach((post, index) => {
+      items.push({ type: 'post', post });
+      if (
+        index === FIRST_AD_OFFSET ||
+        (index > FIRST_AD_OFFSET && (index - FIRST_AD_OFFSET) % AD_CADENCE === 0)
+      ) {
+        items.push({ type: 'ad', id: `feed-inline-ad-${post.id}-${index}` });
+      }
+    });
+
+    return items;
+  }, [filteredPosts, canShowAds]);
 
   const handleOpenDetail = (post: CommunityPost, focusComments = false) => {
     navigation.navigate('CommunityPostDetail', {
@@ -292,19 +328,23 @@ export const CommunityFeedScreen: React.FC = () => {
         </ScreenContainer>
       ) : (
         <FlatList
-          data={filteredPosts}
-          keyExtractor={(item) => item.id}
+          data={feedItems}
+          keyExtractor={(item) => (item.type === 'post' ? item.post.id : item.id)}
           renderItem={({ item }) => (
             <ScreenContainer variant="read" gutter={false}>
-              <CommunityPostCard
-                post={item}
-                onLikePress={(id) => communityStore.toggleLikePost(id)}
-                onBookmarkPress={(id) => communityStore.toggleBookmarkPost(id)}
-                onHashtagPress={(tag) => setSelectedHashtag(tag)}
-                onCommentPress={(p) => setCommentSheetPost(p)}
-                onOpenDetail={(p) => handleOpenDetail(p, false)}
-                onDismissPost={(id) => communityStore.dismissPost(id)}
-              />
+              {item.type === 'ad' ? (
+                <CommunityInlineAdCard />
+              ) : (
+                <CommunityPostCard
+                  post={item.post}
+                  onLikePress={(id) => communityStore.toggleLikePost(id)}
+                  onBookmarkPress={(id) => communityStore.toggleBookmarkPost(id)}
+                  onHashtagPress={(tag) => setSelectedHashtag(tag)}
+                  onCommentPress={(p) => setCommentSheetPost(p)}
+                  onOpenDetail={(p) => handleOpenDetail(p, false)}
+                  onDismissPost={(id) => communityStore.dismissPost(id)}
+                />
+              )}
             </ScreenContainer>
           )}
           ListHeaderComponent={renderHeader}
@@ -353,14 +393,14 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#e5e7eb',
     paddingHorizontal: 16,
-    paddingTop: 8,
-    paddingBottom: 8,
   },
   headerInner: {
     width: '100%',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    paddingTop: 10,
+    paddingBottom: 6,
   },
   brandRow: {
     flexDirection: 'row',
@@ -370,9 +410,9 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   headerLogo: {
-    width: 38,
-    height: 38,
-    borderRadius: 10,
+    width: 40,
+    height: 40,
+    borderRadius: 11,
     borderWidth: 1,
     borderColor: COLORS.border,
     flexShrink: 0,
@@ -383,14 +423,14 @@ const styles = StyleSheet.create({
   },
   brandTitle: {
     fontFamily: FONTS.display,
-    fontSize: 22,
+    fontSize: rf(22),
     color: COLORS.text,
     letterSpacing: -0.6,
-    lineHeight: 25,
+    lineHeight: rf(25),
   },
   brandSubtitle: {
     fontFamily: FONTS.bodyMedium,
-    fontSize: 9.5,
+    fontSize: rf(9.5),
     color: COLORS.primary,
     letterSpacing: 1.4,
     textTransform: 'uppercase',

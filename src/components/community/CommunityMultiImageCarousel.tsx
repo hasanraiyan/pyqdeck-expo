@@ -4,7 +4,7 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  FlatList,
+  ScrollView,
   Dimensions,
   NativeSyntheticEvent,
   NativeScrollEvent,
@@ -57,39 +57,42 @@ export const CommunityMultiImageCarousel: React.FC<CommunityMultiImageCarouselPr
         }
       }}
     >
-      <FlatList
-        data={images}
-        keyExtractor={(_, index) => `post-img-${index}`}
+      <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={[
           styles.listContent,
           { paddingHorizontal: PADDING },
         ]}
-        ItemSeparatorComponent={() => <View style={{ width: GAP }} />}
         snapToInterval={snapInterval}
         snapToAlignment="start"
         decelerationRate={Platform.OS === 'ios' ? 'normal' : 'fast'}
         onScroll={handleScroll}
         scrollEventThrottle={32}
-        renderItem={({ item, index }) => (
-          <TouchableOpacity
-            activeOpacity={0.92}
-            style={[styles.imageCard, { width: cardWidth, height: CARD_HEIGHT }]}
-            onPress={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-              onOpenImage(index);
-            }}
+      >
+        {images.map((item, index) => (
+          <View
+            key={`post-img-${index}`}
+            style={{ marginRight: index < images.length - 1 ? GAP : 0 }}
           >
-            <Image
-              source={{ uri: item.src }}
-              style={styles.cardImage}
-              contentFit="cover"
-              transition={200}
-            />
-          </TouchableOpacity>
-        )}
-      />
+            <TouchableOpacity
+              activeOpacity={0.92}
+              style={[styles.imageCard, { width: cardWidth, height: CARD_HEIGHT }]}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                onOpenImage(index);
+              }}
+            >
+              <Image
+                source={{ uri: item.src }}
+                style={styles.cardImage}
+                contentFit="cover"
+                transition={200}
+              />
+            </TouchableOpacity>
+          </View>
+        ))}
+      </ScrollView>
 
       {/* Floating Counter Pill (Top-Right, matching image.png 1/3 pill) */}
       {images.length > 1 && (

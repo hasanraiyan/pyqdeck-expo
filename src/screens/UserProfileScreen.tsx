@@ -55,6 +55,25 @@ const getGitHubUrl = (input?: string) => {
   return `https://github.com/${handle}`;
 };
 
+const getWebsiteUrl = (input?: string) => {
+  if (!input) return '';
+  const trimmed = input.trim();
+  if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+    return trimmed;
+  }
+  return `https://${trimmed}`;
+};
+
+const getTwitterUrl = (input?: string) => {
+  if (!input) return '';
+  const trimmed = input.trim();
+  if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+    return trimmed;
+  }
+  const handle = trimmed.replace(/^[@/]+/, '');
+  return `https://x.com/${handle}`;
+};
+
 export const UserProfileScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<any>();
@@ -71,14 +90,14 @@ export const UserProfileScreen: React.FC = () => {
 
   const [profile, setProfile] = useState<UserProfileData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'posts' | 'about' | 'contributions' | 'saved'>('posts');
+  const [activeTab, setActiveTab] = useState<'posts' | 'about' | 'saved'>('posts');
   const [isFollowing, setIsFollowing] = useState(false);
   const [followersCount, setFollowersCount] = useState(0);
 
   const { width: windowWidth } = useWindowDimensions();
 
-  const tabs: ('posts' | 'about' | 'contributions' | 'saved')[] = useMemo(
-    () => (isOwnProfile ? ['posts', 'about', 'contributions', 'saved'] : ['posts', 'about', 'contributions']),
+  const tabs: ('posts' | 'about' | 'saved')[] = useMemo(
+    () => (isOwnProfile ? ['posts', 'about', 'saved'] : ['posts', 'about']),
     [isOwnProfile]
   );
 
@@ -103,11 +122,9 @@ export const UserProfileScreen: React.FC = () => {
   const getTabLabel = (tab: typeof tabs[number]) => {
     switch (tab) {
       case 'posts':
-        return `Posts (${userPosts.length})`;
+        return 'Posts';
       case 'about':
         return 'About';
-      case 'contributions':
-        return 'Contributions';
       case 'saved':
         return `Saved (${savedPosts.length})`;
     }
@@ -124,6 +141,8 @@ export const UserProfileScreen: React.FC = () => {
   const [editAbout, setEditAbout] = useState('');
   const [editGithub, setEditGithub] = useState('');
   const [editLinkedin, setEditLinkedin] = useState('');
+  const [editWebsite, setEditWebsite] = useState('');
+  const [editTwitter, setEditTwitter] = useState('');
   const [savingEdit, setSavingEdit] = useState(false);
   const [notificationsActive, setNotificationsActive] = useState(false);
   const [commentSheetPost, setCommentSheetPost] = useState<CommunityPost | null>(null);
@@ -306,6 +325,8 @@ export const UserProfileScreen: React.FC = () => {
     setEditAbout(profile.about || '');
     setEditGithub(profile.github || '');
     setEditLinkedin(profile.linkedin || '');
+    setEditWebsite(profile.website || '');
+    setEditTwitter(profile.twitter || '');
     setEditModalVisible(true);
   };
 
@@ -327,6 +348,8 @@ export const UserProfileScreen: React.FC = () => {
       about: editAbout.trim(),
       github: editGithub.trim(),
       linkedin: editLinkedin.trim(),
+      website: editWebsite.trim(),
+      twitter: editTwitter.trim(),
     });
 
     setProfile(updated);
@@ -459,8 +482,20 @@ export const UserProfileScreen: React.FC = () => {
               </View>
 
               {/* Social / Portfolio Links */}
-              {(profile.github || profile.linkedin) && (
+              {(profile.github || profile.linkedin || profile.website || profile.twitter) && (
                 <View style={styles.socialLinksRow}>
+                  {profile.website ? (
+                    <TouchableOpacity
+                      style={[styles.socialIconBtn, styles.websiteIconBtn]}
+                      onPress={() => handleOpenSocialUrl(getWebsiteUrl(profile.website))}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                      accessibilityLabel="Open Portfolio or Personal Website"
+                      activeOpacity={0.7}
+                    >
+                      <Feather name="globe" size={16} color="#0d9488" />
+                    </TouchableOpacity>
+                  ) : null}
+
                   {profile.linkedin ? (
                     <TouchableOpacity
                       style={[styles.socialIconBtn, styles.linkedinIconBtn]}
@@ -482,6 +517,18 @@ export const UserProfileScreen: React.FC = () => {
                       activeOpacity={0.7}
                     >
                       <Feather name="github" size={16} color="#111827" />
+                    </TouchableOpacity>
+                  ) : null}
+
+                  {profile.twitter ? (
+                    <TouchableOpacity
+                      style={[styles.socialIconBtn, styles.twitterIconBtn]}
+                      onPress={() => handleOpenSocialUrl(getTwitterUrl(profile.twitter))}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                      accessibilityLabel="Open X (Twitter) profile"
+                      activeOpacity={0.7}
+                    >
+                      <Feather name="twitter" size={16} color="#0284c7" />
                     </TouchableOpacity>
                   ) : null}
                 </View>
@@ -713,52 +760,6 @@ export const UserProfileScreen: React.FC = () => {
               </View>
             </View>
 
-            {/* Page 3: Contributions */}
-            <View style={{ width: windowWidth }}>
-              <View style={styles.tabContentSection}>
-                <View style={styles.contentCard}>
-                  <Text style={styles.cardSectionTitle}>PYQ & Notes Contributions</Text>
-                  <Text style={styles.contributionIntro}>
-                    Exam question papers, handwritten solution sheets, and verified notes shared by {profile.name}.
-                  </Text>
-
-                  <View style={styles.contributionItem}>
-                    <View style={styles.contributionIconWrap}>
-                      <Feather name="file-text" size={18} color={COLORS.primary} />
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.contributionItemTitle}>
-                        {profile.branch} 2023 End-Sem Exam Papers
-                      </Text>
-                      <Text style={styles.contributionItemSub}>
-                        Verified by PYQDeck Team • 420+ Downloads
-                      </Text>
-                    </View>
-                    <View style={styles.verifiedContributionBadge}>
-                      <Feather name="check" size={12} color={COLORS.success} />
-                    </View>
-                  </View>
-
-                  <View style={[styles.contributionItem, { marginTop: 12 }]}>
-                    <View style={styles.contributionIconWrap}>
-                      <Feather name="image" size={18} color="#0a66c2" />
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.contributionItemTitle}>
-                        Module 3 & 4 Handwritten Diagrams & Solutions
-                      </Text>
-                      <Text style={styles.contributionItemSub}>
-                        High-Yield University Revision Notes • 180+ Saves
-                      </Text>
-                    </View>
-                    <View style={styles.verifiedContributionBadge}>
-                      <Feather name="check" size={12} color={COLORS.success} />
-                    </View>
-                  </View>
-                </View>
-              </View>
-            </View>
-
             {/* Page 4: Saved / Bookmarked Posts (Own Profile Only) */}
             {isOwnProfile && (
               <View style={{ width: windowWidth }}>
@@ -937,6 +938,31 @@ export const UserProfileScreen: React.FC = () => {
                 value={editLinkedin}
                 onChangeText={setEditLinkedin}
                 placeholder="e.g. your-linkedin-handle"
+                placeholderTextColor="#9ca3af"
+                autoCapitalize="none"
+              />
+            </View>
+
+            <View style={styles.formField}>
+              <Text style={styles.fieldLabel}>Portfolio / Personal Website</Text>
+              <TextInput
+                style={styles.fieldInput}
+                value={editWebsite}
+                onChangeText={setEditWebsite}
+                placeholder="e.g. https://yourportfolio.dev or yourname.me"
+                placeholderTextColor="#9ca3af"
+                autoCapitalize="none"
+                keyboardType="url"
+              />
+            </View>
+
+            <View style={styles.formField}>
+              <Text style={styles.fieldLabel}>X (Twitter) Username</Text>
+              <TextInput
+                style={styles.fieldInput}
+                value={editTwitter}
+                onChangeText={setEditTwitter}
+                placeholder="e.g. your-handle"
                 placeholderTextColor="#9ca3af"
                 autoCapitalize="none"
               />
@@ -1147,6 +1173,14 @@ const styles = StyleSheet.create({
   githubIconBtn: {
     backgroundColor: '#f3f4f6',
     borderColor: '#e5e7eb',
+  },
+  websiteIconBtn: {
+    backgroundColor: '#f0fdf4',
+    borderColor: '#bbf7d0',
+  },
+  twitterIconBtn: {
+    backgroundColor: '#f0f9ff',
+    borderColor: '#bae6fd',
   },
   actionButtonsRow: {
     flexDirection: 'row',
