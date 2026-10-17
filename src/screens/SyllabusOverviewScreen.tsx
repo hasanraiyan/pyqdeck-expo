@@ -29,9 +29,9 @@ import { can } from '../admin/adminLogic';
 import { ManageSubjectSheet } from '../components/ManageSubjectSheet';
 import { EditorModal } from '../admin/EditorFrame';
 
-if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
-  UIManager.setLayoutAnimationEnabledExperimental(true);
-}
+import { enableLayoutAnimation } from '../utils/layoutAnimation';
+
+enableLayoutAnimation();
 
 /**
  * The semester's subject sheet - theory above, labs below, each as a table of

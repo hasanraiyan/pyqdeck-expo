@@ -251,7 +251,7 @@ function renderSharedScreens(StackNav: typeof Stack, syllabusTitle = 'Syllabus')
         options={{ headerShown: false }}
       />
       <StackNav.Screen
-        name="Activity"
+        name="ActivityInbox"
         component={ActivityInboxScreen}
         options={{ headerShown: false }}
       />

@@ -14,10 +14,10 @@ import Markdown from 'react-native-markdown-display';
 import { COLORS, FONTS, RADIUS } from '../theme/colors';
 import { solutionMarkdownStyles, markdownRules, markdownParser } from '../theme/markdownStyles';
 
+import { enableLayoutAnimation } from '../utils/layoutAnimation';
+
 // Enable LayoutAnimation on Android
-if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
-  UIManager.setLayoutAnimationEnabledExperimental(true);
-}
+enableLayoutAnimation();
 
 interface DetailsSpoilerBlockProps {
   summary: string;

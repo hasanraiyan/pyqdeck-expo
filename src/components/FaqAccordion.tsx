@@ -14,10 +14,10 @@ import { COLORS, FONTS, RADIUS } from '../theme/colors';
 import { FaqItem } from '../utils/faqParser';
 import { NativeContentRenderer } from './NativeContentRenderer';
 
+import { enableLayoutAnimation } from '../utils/layoutAnimation';
+
 // Enable LayoutAnimation for Android
-if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
-  UIManager.setLayoutAnimationEnabledExperimental(true);
-}
+enableLayoutAnimation();
 
 export interface FaqAccordionProps {
   items: FaqItem[];

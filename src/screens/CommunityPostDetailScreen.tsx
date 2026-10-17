@@ -20,9 +20,9 @@ import * as Clipboard from 'expo-clipboard';
 import { useUser } from '@clerk/expo';
 import { useHeaderHeight } from '@react-navigation/elements';
 
-if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
-  UIManager.setLayoutAnimationEnabledExperimental(true);
-}
+import { enableLayoutAnimation } from '../utils/layoutAnimation';
+
+enableLayoutAnimation();
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';

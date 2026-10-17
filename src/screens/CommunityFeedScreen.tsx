@@ -34,9 +34,9 @@ import { useAdsEntitlement } from '../utils/adsEntitlement';
 import { adsAvailable } from '../utils/mobileAds';
 import { rf } from '../utils/responsive';
 
-if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
-  UIManager.setLayoutAnimationEnabledExperimental(true);
-}
+import { enableLayoutAnimation } from '../utils/layoutAnimation';
+
+enableLayoutAnimation();
 
 type FeedItem =
   | { type: 'post'; post: CommunityPost }

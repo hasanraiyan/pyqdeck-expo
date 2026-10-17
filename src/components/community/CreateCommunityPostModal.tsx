@@ -30,9 +30,9 @@ import { CommunityAttachment } from '../../types/community';
 import { communityStore } from '../../data/mockCommunity';
 import { ImageCropEditor } from '../ImageCropEditor';
 
-if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
-  UIManager.setLayoutAnimationEnabledExperimental(true);
-}
+import { enableLayoutAnimation } from '../../utils/layoutAnimation';
+
+enableLayoutAnimation();
 
 const MAX_ATTACHMENTS = 5;
 const POPULAR_TAGS = ['Doubt', 'Notes', 'PYQ', 'BEU', 'ExamPrep', 'Solutions'];

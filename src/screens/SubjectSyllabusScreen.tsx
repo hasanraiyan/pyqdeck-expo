@@ -30,9 +30,9 @@ import { ManageTopicSheet } from '../components/ManageTopicSheet';
 import { ManageModuleSheet } from '../components/ManageModuleSheet';
 import { EditorModal } from '../admin/EditorFrame';
 
-if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
-  UIManager.setLayoutAnimationEnabledExperimental(true);
-}
+import { enableLayoutAnimation } from '../utils/layoutAnimation';
+
+enableLayoutAnimation();
 
 /** Namespaced so two subjects reusing topic id "t1" never collide in storage. */
 const topicKey = (moduleId: string, topicId: string) => `${moduleId}:${topicId}`;

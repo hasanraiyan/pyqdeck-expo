@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet, ScrollView, Text, ActivityIndicator, InteractionManager } from 'react-native';
+import { View, StyleSheet, ScrollView, Text, ActivityIndicator } from 'react-native';
 import { ScreenContainer } from '../components/ScreenContainer';
 import { NativeContentRenderer } from '../components/NativeContentRenderer';
 import { FaqAccordion } from '../components/FaqAccordion';
@@ -744,8 +744,16 @@ export const MermaidDemoScreen: React.FC = () => {
   // otherwise the JS thread is blocked and the screen feels stuck.
   const [ready, setReady] = React.useState(false);
   React.useEffect(() => {
-    const task = InteractionManager.runAfterInteractions(() => setReady(true));
-    return () => task.cancel();
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    if (typeof requestIdleCallback !== 'undefined') {
+      const handle = requestIdleCallback(() => setReady(true));
+      return () => cancelIdleCallback(handle);
+    } else {
+      timer = setTimeout(() => setReady(true), 120);
+      return () => {
+        if (timer) clearTimeout(timer);
+      };
+    }
   }, []);
 
   if (!ready) {

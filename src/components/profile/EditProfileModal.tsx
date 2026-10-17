@@ -90,6 +90,8 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
     }
   }, [visible, profile]);
 
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+
   // Robust cross-platform keyboard height listener
   useEffect(() => {
     const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
@@ -97,6 +99,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
 
     const showSub = Keyboard.addListener(showEvent, (e) => {
       setIsKeyboardVisible(true);
+      setKeyboardHeight(e.endCoordinates.height);
       Animated.timing(keyboardSpace, {
         toValue: e.endCoordinates.height,
         duration: 220,
@@ -107,6 +110,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
 
     const hideSub = Keyboard.addListener(hideEvent, () => {
       setIsKeyboardVisible(false);
+      setKeyboardHeight(0);
       Animated.timing(keyboardSpace, {
         toValue: 0,
         duration: 180,
@@ -120,6 +124,19 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
       hideSub.remove();
     };
   }, [keyboardSpace]);
+
+  // Smooth auto-scroll when focusing bottom inputs (preventing keyboard hiding them)
+  const scrollToSocialInput = () => {
+    setTimeout(() => {
+      scrollViewRef.current?.scrollToEnd({ animated: true });
+    }, 120);
+  };
+
+  const scrollToAboutInput = () => {
+    setTimeout(() => {
+      scrollViewRef.current?.scrollTo({ y: 460, animated: true });
+    }, 120);
+  };
 
   // Check if user has modified anything
   const isDirty = useMemo(() => {
@@ -349,7 +366,10 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
         <ScrollView
           ref={scrollViewRef}
           style={styles.scrollArea}
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={[
+            styles.scrollContent,
+            { paddingBottom: keyboardHeight > 0 ? keyboardHeight + 140 : 50 },
+          ]}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
           showsVerticalScrollIndicator={false}
@@ -528,6 +548,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
                 style={[styles.textInput, styles.textAreaInput]}
                 value={about}
                 onChangeText={setAbout}
+                onFocus={scrollToAboutInput}
                 multiline
                 numberOfLines={4}
                 placeholder="Share your exam prep focus, favorite subjects, or engineering aspirations with peers..."
@@ -556,6 +577,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
                   style={[styles.textInput, styles.prefixedInput]}
                   value={github}
                   onChangeText={setGithub}
+                  onFocus={scrollToSocialInput}
                   placeholder="username or URL"
                   placeholderTextColor="#9ca3af"
                   autoCapitalize="none"
@@ -578,6 +600,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
                   style={[styles.textInput, styles.prefixedInput]}
                   value={linkedin}
                   onChangeText={setLinkedin}
+                  onFocus={scrollToSocialInput}
                   placeholder="username or URL"
                   placeholderTextColor="#9ca3af"
                   autoCapitalize="none"
@@ -600,6 +623,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
                   style={[styles.textInput, styles.prefixedInput]}
                   value={website}
                   onChangeText={setWebsite}
+                  onFocus={scrollToSocialInput}
                   placeholder="https://yourportfolio.dev"
                   placeholderTextColor="#9ca3af"
                   autoCapitalize="none"
@@ -623,6 +647,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
                   style={[styles.textInput, styles.prefixedInput]}
                   value={twitter}
                   onChangeText={setTwitter}
+                  onFocus={scrollToSocialInput}
                   placeholder="@handle or URL"
                   placeholderTextColor="#9ca3af"
                   autoCapitalize="none"
@@ -632,9 +657,6 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
               </View>
             </View>
           </View>
-
-          {/* Android Keyboard Dynamic Spacer (Prevents keyboard covering bottom fields) */}
-          <Animated.View style={{ height: keyboardSpace }} />
         </ScrollView>
 
         {/* Floating Keyboard Dismiss Bar when keyboard is visible */}

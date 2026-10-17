@@ -14,9 +14,9 @@ import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { RADIUS } from '../theme/colors';
 
-if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
-  UIManager.setLayoutAnimationEnabledExperimental(true);
-}
+import { enableLayoutAnimation } from '../utils/layoutAnimation';
+
+enableLayoutAnimation();
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const DISMISS_THRESHOLD = -SCREEN_WIDTH * 0.28;
