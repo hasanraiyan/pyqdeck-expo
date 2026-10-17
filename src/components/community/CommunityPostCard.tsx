@@ -17,8 +17,11 @@ import * as Clipboard from 'expo-clipboard';
 import { useNavigation } from '@react-navigation/native';
 import { CommunityPost } from '../../types/community';
 import { COLORS, FONTS, RADIUS } from '../../theme/colors';
-import { ImageViewerModal } from '../ImageViewerModal';
+import { CommunityDocumentSlide } from './CommunityDocumentSlide';
+import { CommunityMediaViewerModal } from './CommunityMediaViewerModal';
+import { CommunityMultiImageCarousel } from './CommunityMultiImageCarousel';
 import { NativeContentRenderer } from '../NativeContentRenderer';
+import { useImageDimensions } from '../../utils/useImageDimensions';
 import { baseMarkdownStyles, markdownRules } from '../../theme/markdownStyles';
 
 interface CommunityPostCardProps {
@@ -32,70 +35,12 @@ interface CommunityPostCardProps {
   initialExpanded?: boolean;
 }
 
-export function formatHashtagsForMarkdown(text: string): string {
-  if (!text) return '';
-  const shielded: string[] = [];
-  const placeholder = (match: string) => {
-    shielded.push(match);
-    return `\uE002${shielded.length - 1}\uE003`;
-  };
+import {
+  formatHashtagsForMarkdown,
+  truncateMarkdownSafely,
+} from '../../utils/communityFormatters';
 
-  let prepared = text
-    .replace(/```[\s\S]*?```/g, placeholder)
-    .replace(/`[^`\n]+`/g, placeholder)
-    .replace(/\$\$[\s\S]*?\$\$/g, placeholder)
-    .replace(/\$[^\$\n]+\$/g, placeholder);
-
-  prepared = prepared.replace(
-    /(^|[\s(\[])#([A-Za-z0-9_-]+)/g,
-    (_, prefix, tag) => `${prefix}[#${tag}](hashtag:${tag})`
-  );
-
-  return prepared.replace(/\uE002(\d+)\uE003/g, (_, i) => shielded[Number(i)]);
-}
-
-export function truncateMarkdownSafely(text: string, limit = 220): string {
-  if (text.length <= limit) return text;
-
-  let truncated = text.slice(0, limit);
-  const lastSpace = truncated.lastIndexOf(' ');
-  if (lastSpace > limit * 0.7) {
-    truncated = truncated.slice(0, lastSpace);
-  }
-
-  // Close unclosed bold (**)
-  const boldMatches = truncated.match(/\*\*/g);
-  if (boldMatches && boldMatches.length % 2 !== 0) {
-    truncated += '**';
-  }
-
-  // Close unclosed italic (*)
-  const strippedBold = truncated.replace(/\*\*/g, '');
-  const italicMatches = strippedBold.match(/\*/g);
-  if (italicMatches && italicMatches.length % 2 !== 0) {
-    truncated += '*';
-  }
-
-  // Close unclosed inline code (`)
-  const codeMatches = truncated.match(/`/g);
-  if (codeMatches && codeMatches.length % 2 !== 0) {
-    truncated += '`';
-  }
-
-  // Close unclosed display math ($$) or inline math ($)
-  const displayMathMatches = truncated.match(/\$\$/g);
-  if (displayMathMatches && displayMathMatches.length % 2 !== 0) {
-    truncated += '$$';
-  } else {
-    const strippedDisplay = truncated.replace(/\$\$/g, '');
-    const inlineMathMatches = strippedDisplay.match(/\$/g);
-    if (inlineMathMatches && inlineMathMatches.length % 2 !== 0) {
-      truncated += '$';
-    }
-  }
-
-  return truncated.trim();
-}
+export { formatHashtagsForMarkdown, truncateMarkdownSafely };
 
 const postMarkdownStyles = {
   ...baseMarkdownStyles,
@@ -137,6 +82,39 @@ const postMarkdownStyles = {
   },
 };
 
+const CommunitySingleImage: React.FC<{
+  src: string;
+  onPress: () => void;
+}> = ({ src, onPress }) => {
+  const { aspect } = useImageDimensions(src);
+
+  // Dynamic aspect ratio bounded between 0.75 (portrait 3:4) and 1.91 (landscape 16:9)
+  // Defaults to 1.33 (4:3) until measured
+  const clampedAspect = aspect ? Math.max(0.75, Math.min(aspect, 1.91)) : 1.33;
+
+  return (
+    <TouchableOpacity
+      activeOpacity={0.92}
+      style={[
+        styles.singleImageWrap,
+        {
+          aspectRatio: clampedAspect,
+          maxHeight: 460,
+          minHeight: 180,
+        },
+      ]}
+      onPress={onPress}
+    >
+      <Image
+        source={{ uri: src }}
+        style={styles.singleImage}
+        contentFit="cover"
+        transition={200}
+      />
+    </TouchableOpacity>
+  );
+};
+
 export const CommunityPostCard: React.FC<CommunityPostCardProps> = ({
   post,
   onLikePress,
@@ -148,8 +126,9 @@ export const CommunityPostCard: React.FC<CommunityPostCardProps> = ({
   initialExpanded = false,
 }) => {
   const navigation = useNavigation<any>();
-  const [imageViewerVisible, setImageViewerVisible] = useState(false);
-  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+  const [mediaViewerVisible, setMediaViewerVisible] = useState(false);
+  const [selectedMediaIndex, setSelectedMediaIndex] = useState(0);
+  const [mediaType, setMediaType] = useState<'document' | 'image'>('image');
   const [expandedText, setExpandedText] = useState(initialExpanded);
   const [optionsModalVisible, setOptionsModalVisible] = useState(false);
 
@@ -161,8 +140,9 @@ export const CommunityPostCard: React.FC<CommunityPostCardProps> = ({
 
   const handleOpenImage = (index: number) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-    setSelectedImageIndex(index);
-    setImageViewerVisible(true);
+    setSelectedMediaIndex(index);
+    setMediaType('image');
+    setMediaViewerVisible(true);
   };
 
   const handleShare = async () => {
@@ -330,76 +310,31 @@ export const CommunityPostCard: React.FC<CommunityPostCardProps> = ({
 
 
 
-      {/* PDF Document Preview (LinkedIn style) */}
+      {/* PDF Document Slide Carousel (LinkedIn style) */}
       {pdfAttachment && (
-        <TouchableOpacity
-          style={styles.pdfCard}
-          activeOpacity={0.8}
-          onPress={() => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-            if (pdfAttachment.thumbnailUrl) {
-              setSelectedImageIndex(0);
-              setImageViewerVisible(true);
-            } else {
-              Alert.alert('PDF Document', `${pdfAttachment.name}\nReady to view/download.`);
-            }
+        <CommunityDocumentSlide
+          attachment={pdfAttachment}
+          onOpenFullscreen={(pageIndex) => {
+            setSelectedMediaIndex(pageIndex);
+            setMediaType('document');
+            setMediaViewerVisible(true);
           }}
-        >
-          <View style={styles.pdfIconWrap}>
-            <Feather name="file-text" size={22} color={COLORS.primary} />
-          </View>
-          <View style={styles.pdfInfo}>
-            <Text style={styles.pdfName} numberOfLines={1}>
-              {pdfAttachment.name || 'Document.pdf'}
-            </Text>
-            <Text style={styles.pdfMeta}>
-              {pdfAttachment.pageCount ? `${pdfAttachment.pageCount} pages • ` : ''}
-              {pdfAttachment.size || 'PDF'}
-            </Text>
-          </View>
-          <Feather name="external-link" size={16} color={COLORS.textMuted} />
-        </TouchableOpacity>
+        />
       )}
 
       {/* Images presentation */}
       {images.length > 0 && (
         <View style={styles.mediaContainer}>
           {images.length === 1 ? (
-            <TouchableOpacity
-              activeOpacity={0.92}
-              style={styles.singleImageWrap}
+            <CommunitySingleImage
+              src={images[0].src}
               onPress={() => handleOpenImage(0)}
-            >
-              <Image
-                source={{ uri: images[0].src }}
-                style={styles.singleImage}
-                contentFit="cover"
-                transition={200}
-              />
-            </TouchableOpacity>
+            />
           ) : (
-            <View style={styles.multiImageGrid}>
-              {images.slice(0, 2).map((img, idx) => (
-                <TouchableOpacity
-                  key={idx}
-                  activeOpacity={0.92}
-                  style={styles.gridImageWrap}
-                  onPress={() => handleOpenImage(idx)}
-                >
-                  <Image
-                    source={{ uri: img.src }}
-                    style={styles.gridImage}
-                    contentFit="cover"
-                    transition={200}
-                  />
-                  {idx === 1 && images.length > 2 && (
-                    <View style={styles.moreImagesOverlay}>
-                      <Text style={styles.moreImagesText}>+{images.length - 2}</Text>
-                    </View>
-                  )}
-                </TouchableOpacity>
-              ))}
-            </View>
+            <CommunityMultiImageCarousel
+              images={images}
+              onOpenImage={handleOpenImage}
+            />
           )}
         </View>
       )}
@@ -459,7 +394,7 @@ export const CommunityPostCard: React.FC<CommunityPostCardProps> = ({
           onPress={handleShare}
           activeOpacity={0.7}
         >
-          <Feather name="repeat" size={16} color={COLORS.textMuted} />
+          <Feather name="share-2" size={16} color={COLORS.textMuted} />
           <Text style={styles.actionTabText}>Share</Text>
         </TouchableOpacity>
 
@@ -487,15 +422,26 @@ export const CommunityPostCard: React.FC<CommunityPostCardProps> = ({
         </TouchableOpacity>
       </View>
 
-      {/* Lightbox Image Viewer */}
-      {images.length > 0 && (
-        <ImageViewerModal
-          visible={imageViewerVisible}
-          images={images}
-          initialIndex={selectedImageIndex}
-          onClose={() => setImageViewerVisible(false)}
-        />
-      )}
+      {/* Community Fullscreen Media & Document Viewer (LinkedIn style) */}
+      <CommunityMediaViewerModal
+        visible={mediaViewerVisible}
+        post={post}
+        initialIndex={selectedMediaIndex}
+        initialType={mediaType}
+        onClose={() => setMediaViewerVisible(false)}
+        onLikePress={onLikePress}
+        onCommentPress={onCommentPress}
+        onSharePress={handleShare}
+        onOpenDetail={
+          onOpenDetail ||
+          ((targetPost) => {
+            navigation.navigate('CommunityPostDetail', {
+              postId: targetPost.id,
+              initialPost: targetPost,
+            });
+          })
+        }
+      />
 
       {/* 3-Dot Options Bottom Sheet Modal */}
       <Modal
@@ -787,8 +733,9 @@ const styles = StyleSheet.create({
   },
   seeMoreInlineText: {
     fontFamily: FONTS.bodySemi,
-    fontSize: 14,
-    color: '#6b7280',
+    fontSize: 14.5,
+    color: '#0a66c2',
+    fontWeight: '600',
   },
 
   pdfCard: {
@@ -826,12 +773,12 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   mediaContainer: {
-    marginBottom: 8,
+    marginBottom: 0,
   },
   singleImageWrap: {
     width: '100%',
-    height: 220,
     backgroundColor: '#f1f5f9',
+    overflow: 'hidden',
   },
   singleImage: {
     width: '100%',
@@ -872,9 +819,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingVertical: 9,
-    borderTopWidth: 1,
-    borderTopColor: '#f3f4f6',
+    paddingTop: 8,
+    paddingBottom: 8,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: '#f1f5f9',
   },
   reactionCountBadge: {
     flexDirection: 'row',

@@ -15,6 +15,7 @@ export interface CommunityAttachment {
   name?: string;
   size?: string;
   pageCount?: number;
+  previewPages?: string[]; // High-res preview pages for documents / multi-page slides
 }
 
 export interface CommunityLinkedResource {
