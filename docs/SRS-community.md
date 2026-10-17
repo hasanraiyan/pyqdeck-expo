@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | Product | PYQDeck Community (Website + Expo app + shared backend) |
-| Version | 1.3 |
+| Version | 1.4 |
 | Date | 2026-10-17 |
 | Status | Draft |
 | Audience | Product, web, mobile, backend, and QA teams |
@@ -12,7 +12,7 @@ Priority: **M** = Must, **S** = Should, **C** = Could. This document describes t
 
 ## 1. Purpose
 
-PYQDeck Community lets students share and discover study notes, handwritten images, PDFs, doubts, PYQ solutions, and study tips through a simple, social feed.
+PYQDeck Community lets students share and discover study notes, handwritten images, PDFs, doubts, PYQ solutions, and study tips through a simple, unified social feed without categorizing by complex post types.
 
 The feature must work on both the website and Expo app. A shared link should open the same post in the app when installed, or in the website otherwise.
 
@@ -47,10 +47,10 @@ Users should be able to browse without signing in or completing an academic prof
 |---|---|---|
 | FR-1 | The website SHALL provide a Community page and individual public post pages. | M |
 | FR-2 | The Expo app SHALL provide a Community feed, post details, notes viewer, and create-post flow. | M |
-| FR-3 | Users SHALL be able to share notes, ask doubts, post PYQ solutions, and share study tips. | M |
-| FR-4 | Posts SHALL use one main body field with optional image/PDF attachments. A separate title field SHALL NOT be required. | M |
+| FR-3 | Users SHALL be able to share notes, ask doubts, post PYQ solutions, and share study tips in a unified body-first format. | M |
+| FR-4 | Posts SHALL use one main body field with optional image/PDF attachments. Separate title or post-type fields SHALL NOT be required. | M |
 | FR-5 | Users MAY include hashtags directly in the post body. Hashtags SHALL be optional and support search and discovery. | M |
-| FR-6 | Users SHALL be able to search and filter posts by hashtag and post type. Creating a post MUST NOT require selecting a university, branch, semester, subject, module, or topic. | M |
+| FR-6 | Users SHALL be able to search and filter posts by text and hashtags. Creating a post MUST NOT require selecting a post type, university, branch, semester, subject, module, or topic. | M |
 | FR-7 | The feed SHOULD help users discover relevant posts without requiring an academic profile. | S |
 | FR-8 | Authors SHALL be able to edit or remove their own posts. Edited content or attachments MUST be checked again before publication. | M |
 | FR-9 | Users SHALL be able to comment, react/helpful-vote, bookmark, and report eligible posts. | M |
@@ -119,12 +119,12 @@ These are suggested API contracts, not claims that the routes already exist. Reu
 
 The implementation must follow the existing backend's authentication and upload approach.
 
-A post record will generally need: stable ID, slug, author ID, post type, body, attachment references, hashtags, status, and timestamps. A separate title or structured academic selections are not required. Attachments need their media type and moderation/publication state. This is a conceptual model; adapt it to the current database conventions.
+A post record will generally need: stable ID, slug, author ID, body, attachment references, hashtags, status, and timestamps. A separate title, post type, or structured academic selections are not required. Attachments need their media type and moderation/publication state. This is a conceptual model; adapt it to the current database conventions.
 
 ## 9. MVP acceptance checklist
 
 - [ ] Guests can browse and read published posts on the website.
-- [ ] Signed-in students can create a body-first post with optional hashtags and images/PDFs, without filling out academic dropdowns.
+- [ ] Signed-in students can create a body-first post with optional hashtags and images/PDFs, without selecting post types or filling out academic dropdowns.
 - [ ] Hashtag search returns relevant posts.
 - [ ] Pending or unsafe uploads never appear publicly.
 - [ ] Users can share a canonical link with a useful preview.
@@ -152,3 +152,4 @@ A post record will generally need: stable ID, slug, author ID, post type, body, 
 | 1.1 | 2026-10-17 | Simplified structure and condensed requirements |
 | 1.2 | 2026-10-17 | Simplified posting to body, optional hashtags, and attachments; removed mandatory academic selections |
 | 1.3 | 2026-10-17 | Explicitly clarified that post creation never requires academic dropdowns or an academic profile |
+| 1.4 | 2026-10-17 | Removed post types entirely; simplified posts to unified body-first posts with optional hashtags and attachments |

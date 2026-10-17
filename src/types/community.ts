@@ -1,0 +1,62 @@
+export interface CommunityAuthor {
+  id: string;
+  name: string;
+  avatarUrl?: string;
+  headline?: string; // e.g. "Computer Science & Engineering • 3rd Year"
+  badge?: string;
+  college?: string;
+}
+
+export interface CommunityAttachment {
+  id: string;
+  type: 'image' | 'pdf';
+  url: string;
+  thumbnailUrl?: string;
+  name?: string;
+  size?: string;
+  pageCount?: number;
+}
+
+export interface CommunityLinkedResource {
+  type: 'pyq' | 'topic';
+  title: string;
+  subtitle?: string;
+  subjectId?: string;
+  semesterId?: string;
+  year?: number;
+  questionId?: string;
+  topicId?: string;
+}
+
+export type CommunityPostStatus = 'published' | 'pending' | 'rejected';
+
+export interface CommunityPost {
+  id: string;
+  slug: string;
+  author: CommunityAuthor;
+  createdAt: string; // e.g. '2h'
+  body: string;
+  hashtags: string[];
+  attachments: CommunityAttachment[];
+  linkedResource?: CommunityLinkedResource;
+  likesCount: number;
+  isLiked: boolean;
+  commentsCount: number;
+  bookmarksCount: number;
+  isBookmarked: boolean;
+  status: CommunityPostStatus;
+  isOwnPost?: boolean;
+}
+
+export interface CommunityComment {
+  id: string;
+  postId: string;
+  author: CommunityAuthor;
+  body: string;
+  createdAt: string;
+  likesCount: number;
+  isLiked: boolean;
+  parentId?: string; // Set when this comment is a reply to another comment ("comment pe comment")
+  replyToAuthorName?: string;
+  replies?: CommunityComment[]; // Nested replies thread
+}

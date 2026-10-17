@@ -31,7 +31,7 @@ Out of scope: client behaviour (companion SRS), new study features, the AI/Perso
 | Op | One client change: topic key, `done`, `updatedAt`, `opId`. |
 | LWW | Last-write-wins by `updatedAt`. |
 | `clerkId` | Clerk user id; `req.clerkId` after `attachUser`. Votes, reports and push-token links already use it (stored in fields named `voterId`). |
-| Origin | A deployed instance: EC2 (`ec2-api.pyqdeck.in`, primary) and Render (`api.pyqdeck.in`, fallback). |
+| Origin | The deployed backend instance: `api.pyqdeck.in`. |
 
 ### 1.4 Verified facts about the current server
 

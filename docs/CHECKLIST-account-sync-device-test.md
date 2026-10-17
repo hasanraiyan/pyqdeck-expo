@@ -9,10 +9,10 @@ Tester: ____________  Device/Android: ____________  Build (versionCode): ______ 
 
 ## 0. Before you start (one-time setup)
 
-- [x] Server is deployed on **both** EC2 and Render with the latest `main` (`/api/me/progress/sync` exists).
-- [x] Both hosts use the **same `MONGO_URI`** (compare the two `.env` files, same cluster and database name).
+- [x] Server is deployed with the latest `main` (`/api/me/progress/sync` exists).
+- [x] Host uses the production `MONGO_URI`.
 - [x] Clerk dashboard has the `user.deleted` webhook registered for `https://api.pyqdeck.in/api/webhooks/clerk`, and `CLERK_WEBHOOK_SIGNING_SECRET` matches.
-- [x] Quick server check from a browser/terminal: `GET https://api.pyqdeck.in/api/ping` and `https://ec2-api.pyqdeck.in/api/ping` both return `status: ok`.
+- [x] Quick server check from a browser/terminal: `GET https://api.pyqdeck.in/api/ping` returns `status: ok`.
 - [x] `GET .../api/me/progress/summary` **without** a token returns `401` with `"code": "unauthenticated"`.
 - [x] You have **two test accounts** (A and B) and ideally a **second device** (or an emulator) for A.
 - [x] Debug build is not required, but have `adb logcat` or Sentry open to watch for errors.

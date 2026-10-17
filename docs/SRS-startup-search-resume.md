@@ -41,13 +41,13 @@ PyQDeck earns revenue only while a student is online and viewing ads. Therefore:
 ## 2. R1: Backend health check off the critical path
 
 ### 2.1 Current behaviour (verified)
-`request()` in `src/api/index.ts` starts with `await Backend.ready()`. `ready()` in `src/api/backend.ts` runs `choose()`, which pings `ec2-api.pyqdeck.in/api/ping` and then, if that fails, `api.pyqdeck.in/api/ping` (4 s timeout each). No data request is sent until that finishes. The source comment records a cold ping of about 3.5 s and a warm one of about 330 ms.
+`request()` in `src/api/index.ts` starts with `await Backend.ready()`. `ready()` in `src/api/backend.ts` connects to `https://api.pyqdeck.in` and runs `ping()` against `api.pyqdeck.in/api/ping`.
 
 ### 2.2 Requirements
-- R1.1 The first data request MUST NOT wait for a health check. It MUST be sent immediately to the last known good origin.
-- R1.2 The last known good origin id MUST be persisted (AsyncStorage, key `pyqdeck:backend_origin`, value `ec2` or `render`) whenever selection succeeds or a failover switches origin, and read once at boot. With no stored value, the default stays `render` (current shipped default).
+- R1.1 The first data request MUST NOT wait for a health check. It MUST be sent immediately to the API origin (`api.pyqdeck.in`).
+- R1.2 The origin id is persisted (AsyncStorage, key `pyqdeck:backend_origin`, value `api`).
 - R1.3 Reading the stored origin MUST NOT block first render. If it has not been read when the first request fires, the default origin is used.
-- R1.4 The health check MUST still run in the background at boot and on foreground return after 5 minutes (existing `recheckIfStale`), so a session that fell back to Render climbs back to EC2.
+- R1.4 The health check MUST still run in the background at boot and on foreground return after 5 minutes (existing `recheckIfStale`).
 - R1.5 Failover behaviour stays as is: 5xx or transport error on a first attempt triggers `failover()` and one retry on a different origin; 4xx (including 429) never triggers failover; `isRetry` still caps retries at one.
 - R1.6 Concurrent callers MUST still share one in-flight health check.
 - R1.7 The debug banner and `setPinned` dev override keep working.

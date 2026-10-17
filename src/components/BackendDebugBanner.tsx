@@ -5,10 +5,7 @@ import * as Backend from '../api/backend';
 import { COLORS, FONTS } from '../theme/colors';
 import { useResponsive } from '../utils/responsive';
 
-// Dev-only strip showing which backend the app is talking to, with buttons to
-// force one. Exists because backend selection is otherwise invisible - the
-// whole point of the EC2/Render split is that the app silently switches, which
-// is exactly what makes it hard to verify by hand in Expo Go.
+// Dev-only strip showing which backend origin the app is talking to (api.pyqdeck.in).
 //
 // Never renders in a release build: App.tsx returns the pre-existing tree
 // unchanged when !__DEV__, and this component returns null on the same check.

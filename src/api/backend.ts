@@ -1,17 +1,11 @@
-// Picks which backend origin the app talks to. Two deployments run identical
-// code - EC2 (primary) and Render (backup) - and either can be down
-// independently, so the client decides at runtime rather than relying on DNS
-// or a load balancer. See /api/ping in the server repo (server/server.js).
-//
-// Deliberately client-side for now: at this traffic level a gateway or
-// Cloudflare load balancer is more infrastructure than the app needs, and
-// this whole file can be deleted the day that changes - nothing outside
-// src/api/index.ts (and the dev banner) imports it.
+// Backend origin configuration for PYQDeck.
+// The app connects to the primary API origin: https://api.pyqdeck.in
+// See /api/ping in the server repo (server/server.js).
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { emit, on } from '../events/bus';
 
-export type OriginId = 'ec2' | 'render';
+export type OriginId = 'api';
 
 type Origin = {
   id: OriginId;
@@ -19,37 +13,20 @@ type Origin = {
   root: string;
 };
 
-// Order is the preference order. EC2 first: it's the box we control and pay
-// for directly, Render is the safety net.
 const ORIGINS: Origin[] = [
-  { id: 'ec2', label: 'EC2', root: 'https://ec2-api.pyqdeck.in' },
-  { id: 'render', label: 'Render', root: 'https://api.pyqdeck.in' },
+  { id: 'api', label: 'API', root: 'https://api.pyqdeck.in' },
 ];
 
-const RENDER = ORIGINS[1];
+const DEFAULT_ORIGIN = ORIGINS[0];
 
-// The 'EC2 is too slow, use Render instead' threshold - failing over on
-// slowness, not just on hard failure, is the whole point of the budget.
-//
-// Sized from measured round trips (Aug 2026, IN -> both origins): warm, EC2
-// and Render are identical at ~330ms; cold, EC2 took 3541ms and Render
-// 1879ms. Nearly all of that cold cost is DNS + TLS handshake, which *both*
-// origins pay, so a tighter budget would abandon EC2 over a one-time
-// handshake and hand traffic to a Render that is no faster once warm. 4s
-// clears the measured cold path with headroom while still capping how long a
-// genuinely wedged origin can stall the first screen.
 const PING_TIMEOUT_MS = 4000;
 
 // How stale a selection has to be before returning from background re-runs
-// it. Short enough to climb back onto EC2 after an outage, long enough that
-// tabbing away for a few seconds costs nothing.
+// it. Short enough to recover after an outage, long enough that tabbing away
+// for a few seconds costs nothing.
 const RESUME_RECHECK_AFTER_MS = 5 * 60 * 1000;
 
-// Render, not EC2, is the pre-selection default: it's what the app shipped
-// with before this file existed, so if selection somehow never runs the
-// behaviour is exactly today's. Every request awaits ready() first, so this
-// value is only ever used if the health check itself fails to run.
-let active: Origin = RENDER;
+let active: Origin = DEFAULT_ORIGIN;
 
 // Dev-only manual override set by the debug banner (see
 // src/components/BackendDebugBanner.tsx). null = normal auto-selection.
@@ -81,6 +58,10 @@ function persistOrigin(origin: Origin): void {
 // Only applies if nothing has selected an origin in the meantime.
 const storedRead: Promise<void> = AsyncStorage.getItem(ORIGIN_KEY)
   .then((id) => {
+    // If old cached id was ec2 or render, migrate to api
+    if (id === 'ec2' || id === 'render') {
+      AsyncStorage.setItem(ORIGIN_KEY, 'api').catch(() => {});
+    }
     const stored = ORIGINS.find((o) => o.id === id);
     if (stored && !hasSelected && !pinned) active = stored;
   })
@@ -100,9 +81,6 @@ async function ping(origin: Origin): Promise<boolean> {
   try {
     const res = await fetch(`${origin.root}/api/ping`, {
       signal: controller.signal,
-      // The origin already sends Cache-Control: no-store, but Cloudflare
-      // fronts both hosts and the platform HTTP cache sits in front of that -
-      // a stale probe would happily vouch for a dead box.
       headers: { 'Cache-Control': 'no-cache' },
     });
 
@@ -127,14 +105,7 @@ async function ping(origin: Origin): Promise<boolean> {
   }
 }
 
-// Walks ORIGINS in preference order and stops at the first healthy one, so a
-// healthy EC2 means Render is never contacted - that's the "don't ping both
-// servers constantly" requirement, handled by construction rather than by a
-// scheduler.
 async function choose(): Promise<Origin> {
-  // A pinned origin is held even when it is unhealthy: the point of pinning
-  // is to watch a specific backend fail, and auto-selection would helpfully
-  // undo the experiment.
   if (pinned) {
     active = ORIGINS.find((o) => o.id === pinned) ?? active;
     lastCheckedAt = Date.now();
@@ -145,29 +116,21 @@ async function choose(): Promise<Origin> {
 
   console.log('[Backend] Health check started');
 
-  for (const origin of ORIGINS) {
-    if (await ping(origin)) {
-      active = origin;
-      lastCheckedAt = Date.now();
-      persistOrigin(origin);
-      console.log(`[Backend] Selected: ${origin.label}`);
-      notify();
-      return origin;
-    }
+  if (await ping(DEFAULT_ORIGIN)) {
+    active = DEFAULT_ORIGIN;
+    lastCheckedAt = Date.now();
+    persistOrigin(DEFAULT_ORIGIN);
+    console.log(`[Backend] Selected: ${DEFAULT_ORIGIN.label}`);
+    notify();
+    return DEFAULT_ORIGIN;
   }
 
-  // Both unreachable. Keep whatever was active rather than blanking it: the
-  // device is most likely offline, and the read paths in index.ts serve their
-  // persisted cache off the resulting error. When connectivity returns, the next
-  // failed request re-runs this.
   lastCheckedAt = Date.now();
-  console.log(`[Backend] No backend available - staying on ${active.label}`);
+  console.log(`[Backend] Health check failed - staying on ${active.label}`);
   return active;
 }
 
-// Collapses concurrent callers onto one health check. Without this, a screen
-// firing four parallel requests into a dead origin would start four probe
-// storms at once.
+// Collapses concurrent callers onto one health check.
 function run(): Promise<Origin> {
   if (inFlight) return inFlight;
   inFlight = choose().finally(() => {
@@ -177,12 +140,8 @@ function run(): Promise<Origin> {
   return inFlight;
 }
 
-// Awaited by every request, but never on a health check: it resolves with the
-// current best guess (the origin that last proved healthy, else the default)
-// straight away, and kicks the real check off in the background if it has not
-// run yet. A wrong guess costs one failover retry inside request(); a right one
-// - the common case - saves the whole ping round trip, which measured ~3.5s
-// cold, off the first screen.
+// Awaited by every request: resolves with current best guess (the active origin)
+// straight away and runs background health check if not yet run.
 export async function ready(): Promise<Origin> {
   if (!hasSelected && !inFlight && !pinned) void run();
   if (!hasSelected) {
@@ -195,26 +154,12 @@ export function getApiBaseUrl(): string {
   return `${active.root}/api/public`;
 }
 
-// Re-runs selection after a request failed. Returns true only if the active
-// origin now differs from the one that request was actually SENT to - the
-// caller uses it to decide whether retrying is worth anything. If that origin
-// still probes healthy the request failed for its own reasons and retrying it
-// elsewhere would just double the failure.
-//
-// The attempted origin is passed in rather than read from `active` here: on a
-// cold start the background health check can move `active` (say Render ->
-// EC2) while the first request is still in flight to Render. Comparing against
-// a snapshot taken after that move would report "no switch" and skip a retry
-// that would have succeeded.
+// With a single origin (https://api.pyqdeck.in), failover is a no-op.
 export async function failover(attempted: OriginId): Promise<boolean> {
-  await run();
-  const switched = active.id !== attempted;
-  if (switched) console.log(`[Backend] Switched: ${attempted} -> ${active.id}`);
-  return switched;
+  return false;
 }
 
-// Called when the app returns to the foreground, so a session that fell back
-// to Render climbs back onto EC2 once it recovers.
+// Called when the app returns to the foreground.
 export function recheckIfStale(): void {
   if (Date.now() - lastCheckedAt < RESUME_RECHECK_AFTER_MS) return;
   void run();
@@ -222,9 +167,6 @@ export function recheckIfStale(): void {
 
 // ---------------------------------------------------------------
 // Dev-only surface, consumed by src/components/BackendDebugBanner.tsx.
-// These stay in the release bundle (Metro does not tree-shake), but the
-// banner is never mounted there and setPinned() no-ops on !__DEV__, so a
-// shipped build can never leave auto-selection.
 // ---------------------------------------------------------------
 
 export type BackendState = {
@@ -242,15 +184,10 @@ export function listOrigins(): ReadonlyArray<{ id: OriginId; label: string }> {
   return ORIGINS.map((o) => ({ id: o.id, label: o.label }));
 }
 
-// Subscribe to selection changes so the banner re-renders when auto-selection
-// resolves or a failover switches origins. Returns an unsubscribe function.
 export function subscribe(fn: () => void): () => void {
   return on('backend.changed', () => fn());
 }
 
-// Pin to one origin (or pass null to hand control back to auto-selection).
-// No-op outside __DEV__ so a stray call can never strand a shipped build on
-// one backend.
 export function setPinned(id: OriginId | null): void {
   if (!__DEV__) return;
 

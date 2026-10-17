@@ -1,0 +1,438 @@
+import React, { useState } from 'react';
+import {
+  Modal,
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  ScrollView,
+  StyleSheet,
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  Alert,
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Image } from 'expo-image';
+import { Feather } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
+import * as ImagePicker from 'expo-image-picker';
+import * as DocumentPicker from 'expo-document-picker';
+import { COLORS, FONTS, RADIUS } from '../../theme/colors';
+import {
+  CommunityAttachment,
+  CommunityLinkedResource,
+} from '../../types/community';
+import { communityStore } from '../../data/mockCommunity';
+
+interface CreateCommunityPostModalProps {
+  visible: boolean;
+  onClose: () => void;
+  onPostCreated?: (postId: string) => void;
+}
+
+const SUGGESTED_HASHTAGS = [
+  'OperatingSystems',
+  'ComputerNetworks',
+  'DBMS',
+  'CompilerDesign',
+  'Semester5',
+  'Semester6',
+  'Notes',
+  'Doubts',
+  'ExamTips',
+];
+
+export const CreateCommunityPostModal: React.FC<CreateCommunityPostModalProps> = ({
+  visible,
+  onClose,
+  onPostCreated,
+}) => {
+  const insets = useSafeAreaInsets();
+  const [body, setBody] = useState('');
+  const [attachments, setAttachments] = useState<CommunityAttachment[]>([]);
+  const [submitting, setSubmitting] = useState(false);
+
+  const handlePickImages = async () => {
+    try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsMultipleSelection: true,
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const newAttachments: CommunityAttachment[] = result.assets.map((asset, i) => ({
+          id: `img-${Date.now()}-${i}`,
+          type: 'image',
+          url: asset.uri,
+          name: asset.fileName || `Photo_${i + 1}.jpg`,
+        }));
+        setAttachments((prev) => [...prev, ...newAttachments]);
+      }
+    } catch {
+      Alert.alert('Permission needed', 'Please allow gallery permissions to attach images.');
+    }
+  };
+
+  const handlePickDocument = async () => {
+    try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+      const result = await DocumentPicker.getDocumentAsync({
+        type: 'application/pdf',
+        copyToCacheDirectory: true,
+      });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const doc = result.assets[0];
+        const newPdf: CommunityAttachment = {
+          id: `pdf-${Date.now()}`,
+          type: 'pdf',
+          url: doc.uri,
+          name: doc.name,
+          size: doc.size ? `${(doc.size / (1024 * 1024)).toFixed(1)} MB` : '1.2 MB',
+          pageCount: 6,
+        };
+        setAttachments((prev) => [...prev, newPdf]);
+      }
+    } catch {
+      Alert.alert('Error', 'Unable to pick PDF document.');
+    }
+  };
+
+  const removeAttachment = (id: string) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    setAttachments((prev) => prev.filter((a) => a.id !== id));
+  };
+
+  const handleAddHashtag = (tag: string) => {
+    Haptics.selectionAsync().catch(() => {});
+    const hashTagWithPrefix = `#${tag}`;
+    if (!body.includes(hashTagWithPrefix)) {
+      setBody((prev) => (prev.trim() ? `${prev.trim()} ${hashTagWithPrefix} ` : `${hashTagWithPrefix} `));
+    }
+  };
+
+  const handleSubmit = () => {
+    if (!body.trim() && attachments.length === 0) {
+      Alert.alert('Empty Post', 'Please write a message or attach notes to share with the community.');
+      return;
+    }
+
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+    setSubmitting(true);
+
+    // Extract hashtags from body
+    const matches = body.match(/#[A-Za-z0-9_-]+/g) || [];
+    const hashtags = Array.from(new Set(matches.map((m) => m.replace(/^#/, ''))));
+
+    setTimeout(() => {
+      const created = communityStore.addPost({
+        author: {
+          id: 'me',
+          name: 'You (Student)',
+          headline: 'Student • PYQDeck Community',
+        },
+        body: body.trim(),
+        hashtags,
+        attachments,
+        status: 'published',
+      });
+
+      setSubmitting(false);
+      setBody('');
+      setAttachments([]);
+      onClose();
+      onPostCreated?.(created.id);
+    }, 400);
+  };
+
+  return (
+    <Modal visible={visible} animationType="slide" presentationStyle="fullScreen" onRequestClose={onClose}>
+      <KeyboardAvoidingView
+        style={[styles.container, { paddingTop: insets.top || 16 }]}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        {/* LinkedIn-style Composer Header */}
+        <View style={styles.header}>
+          <TouchableOpacity onPress={onClose} style={styles.closeBtn} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+            <Feather name="x" size={22} color="#111827" />
+          </TouchableOpacity>
+
+          <View style={styles.headerAuthorRow}>
+            <View style={styles.authorAvatar}>
+              <Text style={styles.authorAvatarText}>Y</Text>
+            </View>
+            <View>
+              <Text style={styles.authorName}>You</Text>
+              <View style={styles.audiencePill}>
+                <Feather name="globe" size={10} color="#6b7280" style={{ marginRight: 3 }} />
+                <Text style={styles.audiencePillText}>Anyone</Text>
+              </View>
+            </View>
+          </View>
+
+          <TouchableOpacity
+            onPress={handleSubmit}
+            disabled={submitting || (!body.trim() && attachments.length === 0)}
+            style={[
+              styles.postBtn,
+              (!body.trim() && attachments.length === 0) && styles.postBtnDisabled,
+            ]}
+          >
+            {submitting ? (
+              <ActivityIndicator size="small" color="#ffffff" />
+            ) : (
+              <Text style={styles.postBtnText}>Post</Text>
+            )}
+          </TouchableOpacity>
+        </View>
+
+        {/* Scrollable Writing Canvas */}
+        <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+          <TextInput
+            style={styles.textInput}
+            multiline
+            placeholder="What do you want to talk about?"
+            placeholderTextColor="#9ca3af"
+            value={body}
+            onChangeText={setBody}
+            textAlignVertical="top"
+            autoFocus
+          />
+
+          {/* Attachments Strip */}
+          {attachments.length > 0 && (
+            <View style={styles.attachmentsSection}>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.attachmentsRow}>
+                {attachments.map((att) => (
+                  <View key={att.id} style={styles.attachmentThumbCard}>
+                    {att.type === 'image' ? (
+                      <Image source={{ uri: att.url }} style={styles.thumbImage} contentFit="cover" />
+                    ) : (
+                      <View style={styles.thumbPdf}>
+                        <Feather name="file-text" size={26} color={COLORS.primary} />
+                        <Text style={styles.thumbPdfName} numberOfLines={1}>{att.name}</Text>
+                      </View>
+                    )}
+                    <TouchableOpacity
+                      style={styles.removeThumbBtn}
+                      onPress={() => removeAttachment(att.id)}
+                      hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                    >
+                      <Feather name="x" size={13} color="#ffffff" />
+                    </TouchableOpacity>
+                  </View>
+                ))}
+              </ScrollView>
+            </View>
+          )}
+
+        </ScrollView>
+
+        {/* Quick Hashtags Strip above toolbar */}
+        <View style={styles.hashtagRowContainer}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.hashtagScroll}>
+            {SUGGESTED_HASHTAGS.map((tag) => (
+              <TouchableOpacity
+                key={tag}
+                style={styles.insertTagChip}
+                onPress={() => handleAddHashtag(tag)}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.insertTagText}>#{tag}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+
+        {/* LinkedIn-style Bottom Action Toolbar */}
+        <View style={[styles.bottomToolBar, { paddingBottom: Math.max(insets.bottom, 12) }]}>
+          <TouchableOpacity style={styles.toolIconBtn} onPress={handlePickImages}>
+            <Feather name="image" size={22} color="#4b5563" />
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.toolIconBtn} onPress={handlePickDocument}>
+            <Feather name="file-text" size={22} color="#4b5563" />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.toolIconBtn}
+            onPress={() => handleAddHashtag('Question')}
+          >
+            <Feather name="hash" size={22} color="#4b5563" />
+          </TouchableOpacity>
+        </View>
+      </KeyboardAvoidingView>
+    </Modal>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#ffffff',
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f3f4f6',
+  },
+  closeBtn: {
+    padding: 4,
+  },
+  headerAuthorRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flex: 1,
+    marginLeft: 12,
+  },
+  authorAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: COLORS.secondaryLight,
+    borderWidth: 1,
+    borderColor: 'rgba(31, 75, 67, 0.25)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  authorAvatarText: {
+    fontFamily: FONTS.displayBold,
+    fontSize: 14,
+    color: COLORS.secondary,
+  },
+  authorName: {
+    fontFamily: FONTS.displayBold,
+    fontSize: 13.5,
+    color: '#111827',
+  },
+  audiencePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f3f4f6',
+    paddingHorizontal: 6,
+    paddingVertical: 1.5,
+    borderRadius: RADIUS.full,
+    marginTop: 1,
+    alignSelf: 'flex-start',
+  },
+  audiencePillText: {
+    fontFamily: FONTS.body,
+    fontSize: 10,
+    color: '#4b5563',
+  },
+  postBtn: {
+    backgroundColor: COLORS.primary,
+    paddingVertical: 6,
+    paddingHorizontal: 16,
+    borderRadius: RADIUS.full,
+  },
+  postBtnDisabled: {
+    backgroundColor: '#e5e7eb',
+  },
+  postBtnText: {
+    fontFamily: FONTS.displayBold,
+    fontSize: 13.5,
+    color: '#ffffff',
+  },
+  scrollContent: {
+    padding: 16,
+    flexGrow: 1,
+  },
+  textInput: {
+    fontFamily: FONTS.body,
+    fontSize: 16,
+    color: '#111827',
+    lineHeight: 24,
+    minHeight: 200,
+  },
+  attachmentsSection: {
+    marginTop: 14,
+    marginBottom: 10,
+  },
+  attachmentsRow: {
+    gap: 10,
+    flexDirection: 'row',
+  },
+  attachmentThumbCard: {
+    width: 90,
+    height: 90,
+    borderRadius: RADIUS.md,
+    overflow: 'hidden',
+    position: 'relative',
+    backgroundColor: '#f3f4f6',
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+  },
+  thumbImage: {
+    width: '100%',
+    height: '100%',
+  },
+  thumbPdf: {
+    width: '100%',
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 6,
+  },
+  thumbPdfName: {
+    fontSize: 9,
+    fontFamily: FONTS.bodyMedium,
+    color: '#374151',
+    marginTop: 4,
+    textAlign: 'center',
+  },
+  removeThumbBtn: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    width: 20,
+    height: 20,
+    borderRadius: RADIUS.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  hashtagRowContainer: {
+    paddingVertical: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#f3f4f6',
+  },
+  hashtagScroll: {
+    paddingHorizontal: 16,
+    gap: 8,
+    flexDirection: 'row',
+  },
+  insertTagChip: {
+    backgroundColor: '#f3f4f6',
+    paddingHorizontal: 10,
+    paddingVertical: 4.5,
+    borderRadius: RADIUS.full,
+  },
+  insertTagText: {
+    fontFamily: FONTS.bodySemi,
+    fontSize: 11.5,
+    color: COLORS.secondary,
+  },
+  bottomToolBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#e5e7eb',
+    gap: 20,
+    backgroundColor: '#ffffff',
+  },
+  toolIconBtn: {
+    padding: 6,
+  },
+});

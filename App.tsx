@@ -58,6 +58,8 @@ import { SubjectSyllabusScreen } from './src/screens/SubjectSyllabusScreen';
 import { OriginalPaperScreen } from './src/screens/OriginalPaperScreen';
 import { TopicNotesScreen } from './src/screens/TopicNotesScreen';
 import { TopicQuestionsScreen } from './src/screens/TopicQuestionsScreen';
+import { CommunityFeedScreen } from './src/screens/CommunityFeedScreen';
+import { CommunityPostDetailScreen } from './src/screens/CommunityPostDetailScreen';
 import { checkForStoreUpdate } from './src/utils/appUpdate';
 import { maybeRequestReview } from './src/utils/appReview';
 import { isSyllabusEnabled } from './src/config/features';
@@ -134,7 +136,7 @@ const linking: any = {
     const pathname = path.split(/[?#]/)[0];
     const segments = pathname.split('/').filter(Boolean);
     const first = segments[0];
-    if (first !== 'syllabus' && first !== 'search' && !QUESTION_PATH.test(pathname)) {
+    if (first !== 'syllabus' && first !== 'search' && first !== 'community' && !QUESTION_PATH.test(pathname)) {
       return undefined;
     }
     return defaultGetStateFromPath(path, options);
@@ -159,6 +161,12 @@ const linking: any = {
               },
               SubjectSyllabus: 'syllabus/subject/:subjectId',
               TopicNotes: 'syllabus/subject/:subjectId/topic/:topicId/:topicSlug?',
+            },
+          },
+          Community: {
+            screens: {
+              CommunityFeed: 'community',
+              CommunityPostDetail: 'community/:slug',
             },
           },
           Search: {
@@ -319,6 +327,29 @@ function SearchStack() {
   );
 }
 
+function CommunityStack() {
+  return (
+    <Stack.Navigator screenOptions={commonScreenOptions}>
+      <Stack.Screen
+        name="CommunityFeed"
+        component={CommunityFeedScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="CommunityPostDetail"
+        component={CommunityPostDetailScreen}
+        options={{ title: 'Post' }}
+      />
+      <Stack.Screen
+        name="Settings"
+        component={SettingsScreen}
+        options={{ title: 'Settings' }}
+      />
+      {renderSharedScreens(Stack)}
+    </Stack.Navigator>
+  );
+}
+
 /** The tab navigator, wrapped by the root stack so the auth screens can sit above it. */
 function TabsNavigator() {
   const insets = useSafeAreaInsets();
@@ -339,7 +370,7 @@ function TabsNavigator() {
   const isSidebar = isLaptopUp && !collapsed;
   const shellWidth = getShellWidth(shellMode, collapsed);
 
-  const ROOT_TAB_SCREENS = new Set(['Home', 'SyllabusRoot', 'SearchRoot']);
+  const ROOT_TAB_SCREENS = new Set(['Home', 'SyllabusRoot', 'CommunityFeed', 'SearchRoot']);
 
   // A per-screen tabBarStyle replaces the one in screenOptions, so it has to carry
   // the base style itself; returning undefined at the roots dropped the styling.
@@ -439,6 +470,17 @@ function TabsNavigator() {
             })}
           />
         )}
+        <Tab.Screen
+          name="Community"
+          component={CommunityStack}
+          options={({ route }: any) => ({
+            tabBarLabel: 'Community',
+            tabBarIcon: ({ color, size }) => (
+              <Feather name="users" size={size} color={color} />
+            ),
+            ...(isBottom ? { tabBarStyle: getTabStyleForRoute(route) } : null),
+          })}
+        />
         <Tab.Screen
           name="Search"
           component={SearchStack}
@@ -601,8 +643,8 @@ function AppContent() {
     // background; requests do not wait for it (see src/api/backend.ts).
     void Backend.ready();
 
-    // A session that fell back to Render should climb back onto EC2 once it
-    // recovers. Returning to the foreground is the natural moment to look,
+    // Recheck backend health when returning to the foreground.
+    // Returning to the foreground is the natural moment to look,
     // and recheckIfStale() ignores brief tab-aways.
     const offForeground = on('app.foreground', () => Backend.recheckIfStale());
 
