@@ -125,18 +125,18 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
     };
   }, [keyboardSpace]);
 
-  // Smooth auto-scroll when focusing bottom inputs (preventing keyboard hiding them)
-  const scrollToSocialInput = () => {
+  // Field-specific auto-scroll ensuring the input lands nicely right above keyboard
+  const scrollToField = (yOffset: number) => {
     setTimeout(() => {
-      scrollViewRef.current?.scrollToEnd({ animated: true });
-    }, 120);
+      scrollViewRef.current?.scrollTo({ y: yOffset, animated: true });
+    }, 100);
   };
 
-  const scrollToAboutInput = () => {
-    setTimeout(() => {
-      scrollViewRef.current?.scrollTo({ y: 460, animated: true });
-    }, 120);
-  };
+  const scrollToAboutInput = () => scrollToField(360);
+  const scrollToGithub = () => scrollToField(480);
+  const scrollToLinkedin = () => scrollToField(560);
+  const scrollToWebsite = () => scrollToField(640);
+  const scrollToTwitter = () => scrollToField(720);
 
   // Check if user has modified anything
   const isDirty = useMemo(() => {
@@ -368,7 +368,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
           style={styles.scrollArea}
           contentContainerStyle={[
             styles.scrollContent,
-            { paddingBottom: keyboardHeight > 0 ? keyboardHeight + 140 : 50 },
+            { paddingBottom: keyboardHeight > 0 ? keyboardHeight + 30 : 40 },
           ]}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
@@ -577,7 +577,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
                   style={[styles.textInput, styles.prefixedInput]}
                   value={github}
                   onChangeText={setGithub}
-                  onFocus={scrollToSocialInput}
+                  onFocus={scrollToGithub}
                   placeholder="username or URL"
                   placeholderTextColor="#9ca3af"
                   autoCapitalize="none"
@@ -600,7 +600,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
                   style={[styles.textInput, styles.prefixedInput]}
                   value={linkedin}
                   onChangeText={setLinkedin}
-                  onFocus={scrollToSocialInput}
+                  onFocus={scrollToLinkedin}
                   placeholder="username or URL"
                   placeholderTextColor="#9ca3af"
                   autoCapitalize="none"
@@ -623,7 +623,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
                   style={[styles.textInput, styles.prefixedInput]}
                   value={website}
                   onChangeText={setWebsite}
-                  onFocus={scrollToSocialInput}
+                  onFocus={scrollToWebsite}
                   placeholder="https://yourportfolio.dev"
                   placeholderTextColor="#9ca3af"
                   autoCapitalize="none"
@@ -647,7 +647,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
                   style={[styles.textInput, styles.prefixedInput]}
                   value={twitter}
                   onChangeText={setTwitter}
-                  onFocus={scrollToSocialInput}
+                  onFocus={scrollToTwitter}
                   placeholder="@handle or URL"
                   placeholderTextColor="#9ca3af"
                   autoCapitalize="none"
