@@ -566,7 +566,7 @@ export const CommunityPostDetailScreen: React.FC = () => {
                   >
                     <Feather name="chevron-down" size={14} color={COLORS.primary} style={{ marginRight: 6 }} />
                     <Text style={styles.loadMoreCommentsText}>
-                      Load more comments ({remainingCommentsCount} remaining)
+                      Load more comments
                     </Text>
                   </TouchableOpacity>
                 )}
