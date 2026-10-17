@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,7 +9,13 @@ import {
   Alert,
   Modal,
   Linking,
+  LayoutAnimation,
+  UIManager,
 } from 'react-native';
+
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 import { Image } from 'expo-image';
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
@@ -131,6 +137,16 @@ export const CommunityPostCard: React.FC<CommunityPostCardProps> = ({
   const [mediaType, setMediaType] = useState<'document' | 'image'>('image');
   const [expandedText, setExpandedText] = useState(initialExpanded);
   const [optionsModalVisible, setOptionsModalVisible] = useState(false);
+  const [isDismissing, setIsDismissing] = useState(false);
+  const dismissTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (dismissTimerRef.current) {
+        clearTimeout(dismissTimerRef.current);
+      }
+    };
+  }, []);
 
   const images = post.attachments
     .filter((a) => a.type === 'image')
@@ -169,8 +185,28 @@ export const CommunityPostCard: React.FC<CommunityPostCardProps> = ({
   const cleanTime = (post.createdAt || '').replace(/[•·]?\s*🌐/g, '').trim();
 
   const handleDiscard = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
-    onDismissPost?.(post.id);
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setIsDismissing(true);
+
+    if (dismissTimerRef.current) {
+      clearTimeout(dismissTimerRef.current);
+    }
+
+    dismissTimerRef.current = setTimeout(() => {
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+      onDismissPost?.(post.id);
+    }, 4000);
+  };
+
+  const handleUndoDismiss = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    if (dismissTimerRef.current) {
+      clearTimeout(dismissTimerRef.current);
+      dismissTimerRef.current = null;
+    }
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setIsDismissing(false);
   };
 
   // Custom markdown rules: intercept hashtag links and see-more inline link
@@ -239,6 +275,31 @@ export const CommunityPostCard: React.FC<CommunityPostCardProps> = ({
     }
     return (name[0] || '?').toUpperCase();
   };
+
+  if (isDismissing) {
+    return (
+      <View style={styles.dismissedCard}>
+        <View style={styles.dismissedLeft}>
+          <View style={styles.dismissedIconWrap}>
+            <Feather name="check" size={14} color={COLORS.primary} />
+          </View>
+          <View style={styles.dismissedTextContainer}>
+            <Text style={styles.dismissedText}>Post removed</Text>
+            <Text style={styles.dismissedSubtext}>Hidden from your feed</Text>
+          </View>
+        </View>
+
+        <TouchableOpacity
+          style={styles.undoBtn}
+          onPress={handleUndoDismiss}
+          activeOpacity={0.7}
+          hitSlop={{ top: 8, bottom: 8, left: 10, right: 10 }}
+        >
+          <Text style={styles.undoBtnText}>Undo</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.cardContainer}>
@@ -587,6 +648,59 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderColor: '#e5e7eb',
     marginBottom: 8,
+  },
+  dismissedCard: {
+    backgroundColor: '#ffffff',
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: '#e5e7eb',
+    marginBottom: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  dismissedLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    flex: 1,
+  },
+  dismissedIconWrap: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: 'rgba(31, 75, 67, 0.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dismissedTextContainer: {
+    flex: 1,
+  },
+  dismissedText: {
+    fontFamily: FONTS.displayBold,
+    fontSize: 13,
+    color: '#1f2937',
+  },
+  dismissedSubtext: {
+    fontFamily: FONTS.body,
+    fontSize: 11,
+    color: '#6b7280',
+    marginTop: 1,
+  },
+  undoBtn: {
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    backgroundColor: COLORS.primaryLight,
+    borderRadius: RADIUS.full,
+    borderWidth: 1,
+    borderColor: 'rgba(31, 75, 67, 0.25)',
+  },
+  undoBtnText: {
+    fontFamily: FONTS.displayBold,
+    fontSize: 12.5,
+    color: COLORS.primary,
   },
   headerRow: {
     flexDirection: 'row',

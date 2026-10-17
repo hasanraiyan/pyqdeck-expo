@@ -254,6 +254,8 @@ export const CommunityPostDetailScreen: React.FC = () => {
   };
 
   const totalComments = getTotalCount(comments);
+  const visibleComments = comments.slice(0, visibleRootCommentsCount);
+  const remainingCommentsCount = comments.length - visibleRootCommentsCount;
 
   // Render a Level 1 reply item (indented beside vertical threadline, with bold blue mention)
   const renderReplyItem = (reply: CommunityComment, rootCommentId: string) => {
@@ -550,7 +552,24 @@ export const CommunityPostDetailScreen: React.FC = () => {
               </View>
             ) : (
               <View style={styles.commentsList}>
-                {comments.map((comment) => renderRootComment(comment))}
+                {visibleComments.map((comment) => renderRootComment(comment))}
+
+                {remainingCommentsCount > 0 && (
+                  <TouchableOpacity
+                    style={styles.loadMoreCommentsBtn}
+                    onPress={() => {
+                      Haptics.selectionAsync().catch(() => {});
+                      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+                      setVisibleRootCommentsCount((prev) => prev + 4);
+                    }}
+                    activeOpacity={0.7}
+                  >
+                    <Feather name="chevron-down" size={14} color={COLORS.primary} style={{ marginRight: 6 }} />
+                    <Text style={styles.loadMoreCommentsText}>
+                      Load more comments ({remainingCommentsCount} remaining)
+                    </Text>
+                  </TouchableOpacity>
+                )}
               </View>
             )}
           </View>
@@ -685,6 +704,24 @@ const styles = StyleSheet.create({
   },
   commentsList: {
     gap: 16,
+  },
+  loadMoreCommentsBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 9,
+    paddingHorizontal: 16,
+    backgroundColor: '#f8fafc',
+    borderRadius: RADIUS.full,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    marginTop: 8,
+    alignSelf: 'center',
+  },
+  loadMoreCommentsText: {
+    fontFamily: FONTS.displayBold,
+    fontSize: 12.5,
+    color: COLORS.primary,
   },
   commentBlock: {
     flexDirection: 'row',
