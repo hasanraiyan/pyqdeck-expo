@@ -191,10 +191,10 @@ export const CommunityPostDetailSkeleton = () => (
 );
 
 /** Standalone comment threads skeleton for bottom sheet or comments section */
-export const CommunityCommentsSkeleton = () => (
+export const CommunityCommentsSkeleton = ({ count = 3 }: { count?: number } = {}) => (
   <SkeletonPulse>
     <View style={{ gap: 16 }}>
-      {[0, 1, 2, 3].map((i) => (
+      {Array.from({ length: count }).map((_, i) => (
         <View key={i} style={styles.commentSkeletonRow}>
           <Bone style={styles.commentAvatarSkeleton} />
           <View style={{ flex: 1, gap: 6 }}>

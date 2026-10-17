@@ -39,6 +39,7 @@ interface CommunityPostCardProps {
   onOpenDetail?: (post: CommunityPost) => void;
   onDismissPost?: (postId: string) => void;
   initialExpanded?: boolean;
+  showDismissAction?: boolean;
 }
 
 import {
@@ -130,6 +131,7 @@ export const CommunityPostCard: React.FC<CommunityPostCardProps> = ({
   onOpenDetail,
   onDismissPost,
   initialExpanded = false,
+  showDismissAction = true,
 }) => {
   const navigation = useNavigation<any>();
   const [mediaViewerVisible, setMediaViewerVisible] = useState(false);
@@ -342,15 +344,17 @@ export const CommunityPostCard: React.FC<CommunityPostCardProps> = ({
             <Feather name="more-vertical" size={18} color={COLORS.textSubtle} />
           </TouchableOpacity>
 
-          <TouchableOpacity
-            onPress={handleDiscard}
-            hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
-            style={styles.headerActionBtn}
-            accessibilityRole="button"
-            accessibilityLabel="Discard post"
-          >
-            <Feather name="x" size={18} color={COLORS.textSubtle} />
-          </TouchableOpacity>
+          {showDismissAction && (
+            <TouchableOpacity
+              onPress={handleDiscard}
+              hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
+              style={styles.headerActionBtn}
+              accessibilityRole="button"
+              accessibilityLabel="Discard post"
+            >
+              <Feather name="x" size={18} color={COLORS.textSubtle} />
+            </TouchableOpacity>
+          )}
         </View>
       </View>
 

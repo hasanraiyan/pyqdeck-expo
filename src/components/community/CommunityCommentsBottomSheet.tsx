@@ -90,6 +90,7 @@ export const CommunityCommentsBottomSheet: React.FC<CommunityCommentsBottomSheet
   const [expandedReplyThreads, setExpandedReplyThreads] = useState<Record<string, boolean>>({});
   const INITIAL_ROOT_LIMIT = 4;
   const [visibleRootCount, setVisibleRootCount] = useState(INITIAL_ROOT_LIMIT);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
 
   // Sync comments for current post with smooth initial skeleton
   useEffect(() => {
@@ -536,12 +537,22 @@ export const CommunityCommentsBottomSheet: React.FC<CommunityCommentsBottomSheet
               <View style={styles.commentsList}>
                 {visibleComments.map((comment) => renderRootComment(comment))}
 
-                {remainingCount > 0 && (
+                {isLoadingMore && (
+                  <View style={{ marginTop: 12 }}>
+                    <CommunityCommentsSkeleton count={2} />
+                  </View>
+                )}
+
+                {remainingCount > 0 && !isLoadingMore && (
                   <TouchableOpacity
                     style={styles.loadMoreBtn}
                     onPress={() => {
                       Haptics.selectionAsync().catch(() => {});
-                      setVisibleRootCount((prev) => prev + 4);
+                      setIsLoadingMore(true);
+                      setTimeout(() => {
+                        setVisibleRootCount((prev) => prev + 4);
+                        setIsLoadingMore(false);
+                      }, 350);
                     }}
                     activeOpacity={0.7}
                   >

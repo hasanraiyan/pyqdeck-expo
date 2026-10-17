@@ -34,7 +34,7 @@ import { CommunityPostCard } from '../components/community/CommunityPostCard';
 import { ScreenContainer } from '../components/ScreenContainer';
 import { NativeContentRenderer } from '../components/NativeContentRenderer';
 import { baseMarkdownStyles } from '../theme/markdownStyles';
-import { CommunityPostDetailSkeleton } from '../components/Skeletons';
+import { CommunityPostDetailSkeleton, CommunityCommentsSkeleton } from '../components/Skeletons';
 
 const commentMarkdownStyles = {
   ...baseMarkdownStyles,
@@ -96,6 +96,7 @@ export const CommunityPostDetailScreen: React.FC = () => {
   const [expandedReplyThreads, setExpandedReplyThreads] = useState<Record<string, boolean>>({});
   const INITIAL_ROOT_COMMENTS_LIMIT = 4;
   const [visibleRootCommentsCount, setVisibleRootCommentsCount] = useState(INITIAL_ROOT_COMMENTS_LIMIT);
+  const [isLoadingMoreComments, setIsLoadingMoreComments] = useState(false);
   const commentsSectionYRef = useRef<number>(0);
 
   // Auto-focus comment composer & scroll down if opened via comment button on feed
@@ -565,14 +566,11 @@ export const CommunityPostDetailScreen: React.FC = () => {
           <CommunityPostCard
             post={post}
             initialExpanded={true}
+            showDismissAction={false}
             onLikePress={(id) => communityStore.toggleLikePost(id)}
             onBookmarkPress={(id) => communityStore.toggleBookmarkPost(id)}
             onHashtagPress={(tag) => {
               navigation.navigate('CommunityFeed', { filterHashtag: tag });
-            }}
-            onDismissPost={(id) => {
-              communityStore.dismissPost(id);
-              navigation.goBack();
             }}
           />
 
@@ -602,13 +600,23 @@ export const CommunityPostDetailScreen: React.FC = () => {
               <View style={styles.commentsList}>
                 {visibleComments.map((comment) => renderRootComment(comment))}
 
-                {remainingCommentsCount > 0 && (
+                {isLoadingMoreComments && (
+                  <View style={{ marginTop: 12 }}>
+                    <CommunityCommentsSkeleton count={2} />
+                  </View>
+                )}
+
+                {remainingCommentsCount > 0 && !isLoadingMoreComments && (
                   <TouchableOpacity
                     style={styles.loadMoreCommentsBtn}
                     onPress={() => {
                       Haptics.selectionAsync().catch(() => {});
-                      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-                      setVisibleRootCommentsCount((prev) => prev + 4);
+                      setIsLoadingMoreComments(true);
+                      setTimeout(() => {
+                        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+                        setVisibleRootCommentsCount((prev) => prev + 4);
+                        setIsLoadingMoreComments(false);
+                      }, 350);
                     }}
                     activeOpacity={0.7}
                   >
