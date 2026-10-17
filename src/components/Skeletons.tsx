@@ -190,6 +190,24 @@ export const CommunityPostDetailSkeleton = () => (
   </SkeletonPulse>
 );
 
+/** Standalone comment threads skeleton for bottom sheet or comments section */
+export const CommunityCommentsSkeleton = () => (
+  <SkeletonPulse>
+    <View style={{ gap: 16 }}>
+      {[0, 1, 2, 3].map((i) => (
+        <View key={i} style={styles.commentSkeletonRow}>
+          <Bone style={styles.commentAvatarSkeleton} />
+          <View style={{ flex: 1, gap: 6 }}>
+            <Bone style={{ height: 12, width: '38%' }} />
+            <Bone style={{ height: 10, width: '92%' }} />
+            <Bone style={{ height: 10, width: '68%' }} />
+          </View>
+        </View>
+      ))}
+    </View>
+  </SkeletonPulse>
+);
+
 const styles = StyleSheet.create({
   bone: { backgroundColor: COLORS.borderLight, borderRadius: 4 },
 
@@ -389,8 +407,8 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   commentAvatarSkeleton: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
+    width: 32,
+    height: 32,
+    borderRadius: 8,
   },
 });

@@ -26,6 +26,7 @@ import { CommunityComment, CommunityPost } from '../../types/community';
 import { communityStore } from '../../data/mockCommunity';
 import { NativeContentRenderer } from '../NativeContentRenderer';
 import { baseMarkdownStyles } from '../../theme/markdownStyles';
+import { CommunityCommentsSkeleton } from '../Skeletons';
 
 const commentMarkdownStyles = {
   ...baseMarkdownStyles,
@@ -78,6 +79,7 @@ export const CommunityCommentsBottomSheet: React.FC<CommunityCommentsBottomSheet
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
   const keyboardSpace = useRef(new Animated.Value(0)).current;
 
+  const [isLoading, setIsLoading] = useState(true);
   const [comments, setComments] = useState<CommunityComment[]>([]);
   const [commentInput, setCommentInput] = useState('');
   const [replyingTo, setReplyingTo] = useState<{
@@ -89,14 +91,24 @@ export const CommunityCommentsBottomSheet: React.FC<CommunityCommentsBottomSheet
   const INITIAL_ROOT_LIMIT = 4;
   const [visibleRootCount, setVisibleRootCount] = useState(INITIAL_ROOT_LIMIT);
 
-  // Sync comments for current post
+  // Sync comments for current post with smooth initial skeleton
   useEffect(() => {
     if (visible && post) {
-      setComments(communityStore.getComments(post.id));
+      setIsLoading(true);
+      const timer = setTimeout(() => {
+        setComments(communityStore.getComments(post.id));
+        setIsLoading(false);
+      }, 300);
+
       const unsub = communityStore.subscribe(() => {
         setComments(communityStore.getComments(post.id));
       });
-      return unsub;
+      return () => {
+        clearTimeout(timer);
+        unsub();
+      };
+    } else {
+      setIsLoading(true);
     }
   }, [visible, post]);
 
@@ -500,15 +512,21 @@ export const CommunityCommentsBottomSheet: React.FC<CommunityCommentsBottomSheet
           </View>
 
           {/* Comments List */}
+          {/* Comments List */}
           <ScrollView
             ref={scrollViewRef}
             style={styles.commentsScrollView}
-            contentContainerStyle={styles.commentsScrollContent}
+            contentContainerStyle={[
+              styles.commentsScrollContent,
+              !isLoading && comments.length === 0 && styles.commentsScrollContentEmpty,
+            ]}
             keyboardShouldPersistTaps="handled"
           >
-            {comments.length === 0 ? (
+            {isLoading ? (
+              <CommunityCommentsSkeleton />
+            ) : comments.length === 0 ? (
               <View style={styles.emptyCard}>
-                <Feather name="message-circle" size={26} color="#9ca3af" style={{ marginBottom: 6 }} />
+                <Feather name="message-circle" size={32} color="#9ca3af" style={{ marginBottom: 8 }} />
                 <Text style={styles.emptyTitle}>No comments yet</Text>
                 <Text style={styles.emptySubtitle}>
                   Be the first to share an answer, clarification, or insight!
@@ -641,22 +659,31 @@ const styles = StyleSheet.create({
     paddingTop: 12,
     paddingBottom: 24,
   },
+  commentsScrollContentEmpty: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   emptyCard: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 40,
+    paddingVertical: 20,
+    paddingHorizontal: 24,
   },
   emptyTitle: {
     fontFamily: FONTS.displayBold,
-    fontSize: 14,
+    fontSize: 15,
     color: '#374151',
     marginBottom: 4,
+    textAlign: 'center',
   },
   emptySubtitle: {
     fontFamily: FONTS.body,
     fontSize: 12.5,
     color: '#6b7280',
     textAlign: 'center',
+    lineHeight: 18,
+    maxWidth: 280,
   },
   commentsList: {
     gap: 16,
