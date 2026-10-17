@@ -93,6 +93,8 @@ export const CommunityPostDetailScreen: React.FC = () => {
   } | null>(null);
   const [collapsedThreads, setCollapsedThreads] = useState<Record<string, boolean>>({});
   const [expandedReplyThreads, setExpandedReplyThreads] = useState<Record<string, boolean>>({});
+  const INITIAL_ROOT_COMMENTS_LIMIT = 4;
+  const [visibleRootCommentsCount, setVisibleRootCommentsCount] = useState(INITIAL_ROOT_COMMENTS_LIMIT);
 
   useEffect(() => {
     const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
@@ -194,6 +196,7 @@ export const CommunityPostDetailScreen: React.FC = () => {
 
     setCommentInput('');
     setReplyingTo(null);
+    setVisibleRootCommentsCount((prev) => Math.max(prev, comments.length + 1));
   };
 
   const handleStartReply = (commentId: string, authorName: string) => {

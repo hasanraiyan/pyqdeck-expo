@@ -31,7 +31,7 @@ Attached my rough calculation sheet. Would appreciate any insights from seniors 
     ],
     likesCount: 38,
     isLiked: false,
-    commentsCount: 5,
+    commentsCount: 19,
     bookmarksCount: 12,
     isBookmarked: false,
     status: 'published',
@@ -237,6 +237,242 @@ but $\\text{Available}$ drops to $(2, 3, 0)$. None of the remaining processes ca
           body: '@Rohan For single instances, a simple cycle in RAG is necessary and sufficient for deadlock. But for multiple instances, a cycle is only necessary, not sufficient—that\'s where Banker\'s matrix safety test comes in.',
           createdAt: '15m ago',
           likesCount: 5,
+          isLiked: false,
+        },
+      ],
+    },
+    {
+      id: 'c-3',
+      postId: 'post-1',
+      author: {
+        id: 'user-c3',
+        name: 'Kavya Nair',
+        headline: 'CSE Final Year • Distributed Systems',
+      },
+      body: `There is a quick inspection shortcut for university exams:
+If $\\sum \\text{Allocation}_i = \\text{Total Resources}$, and $\\text{Available} = (0, 0, 0)$, you can immediately inspect the smallest Need vector. If even one process has $\\text{Need}_k > 0$, deadlock is unavoidable without preemption.`,
+      createdAt: '40m ago',
+      likesCount: 9,
+      isLiked: false,
+      replies: [
+        {
+          id: 'r-3-1',
+          postId: 'post-1',
+          parentId: 'c-3',
+          replyToAuthorName: 'Kavya Nair',
+          author: {
+            id: 'user-c3-reply1',
+            name: 'Kunal Verma',
+            headline: 'CSE Sem 5 • GATE Aspirant',
+          },
+          body: '@Kavya Wait, is that true even if one process can release a non-critical resource?',
+          createdAt: '25m ago',
+          likesCount: 2,
+          isLiked: false,
+        },
+        {
+          id: 'r-3-2',
+          postId: 'post-1',
+          parentId: 'c-3',
+          replyToAuthorName: 'Kunal Verma',
+          author: {
+            id: 'user-c3',
+            name: 'Kavya Nair',
+            headline: 'CSE Final Year • Distributed Systems',
+          },
+          body: '@Kunal Good catch! Only when the resource is non-preemptible. In classic Banker\'s assumptions, resources are non-preemptible and processes hold-and-wait.',
+          createdAt: '18m ago',
+          likesCount: 7,
+          isLiked: true,
+        },
+      ],
+    },
+    {
+      id: 'c-4',
+      postId: 'post-1',
+      author: {
+        id: 'user-c4',
+        name: 'Meera Joshi',
+        headline: 'IT 3rd Year • OS & Linux Kernel',
+      },
+      body: `Here is the clean breakdown from Silberschatz:
+
+$$\\text{Need}[i][j] = \\text{Max}[i][j] - \\text{Allocation}[i][j]$$
+
+Always verify the 3 conditions in the safety algorithm:
+1. $\\text{Work} = \\text{Available}$
+2. $\\text{Finish}[i] = \\text{false}$
+3. $\\text{Need}_i \\le \\text{Work}$
+
+If step 3 fails for all unfinished processes, the system is in an unsafe state!`,
+      createdAt: '35m ago',
+      likesCount: 16,
+      isLiked: false,
+      replies: [
+        {
+          id: 'r-4-1',
+          postId: 'post-1',
+          parentId: 'c-4',
+          replyToAuthorName: 'Meera Joshi',
+          author: {
+            id: 'user-c4-reply1',
+            name: 'Rahul Gupta',
+            headline: 'ECE Sem 6',
+          },
+          body: '@Meera Thanks for writing down the exact 3 conditions! Memorizing these step-by-step is crucial for 14-mark answers.',
+          createdAt: '22m ago',
+          likesCount: 3,
+          isLiked: false,
+        },
+      ],
+    },
+    {
+      id: 'c-5',
+      postId: 'post-1',
+      author: {
+        id: 'user-c5',
+        name: 'Deepak Choudhary',
+        headline: 'CSE Sem 6 • Algorithms & CP',
+      },
+      body: `A fun practical note:
+The time complexity of the safety algorithm is:
+$$O(m \\times n^2)$$
+where $n$ is processes and $m$ is resource types. That's why real production OS kernels (Linux, Windows) don't use Banker's algorithm—they use the **Ostrich algorithm** (pretend the problem doesn't exist if rare) and rely on process kill timeouts.`,
+      createdAt: '28m ago',
+      likesCount: 22,
+      isLiked: true,
+      replies: [
+        {
+          id: 'r-5-1',
+          postId: 'post-1',
+          parentId: 'c-5',
+          replyToAuthorName: 'Deepak Choudhary',
+          author: {
+            id: 'user-4',
+            name: 'Sneha Roy',
+            headline: 'CSE Senior • Systems Programming',
+          },
+          body: '@Deepak The Ostrich algorithm is everyone\'s favorite viva question! "Stick head in sand and pretend there is no problem."',
+          createdAt: '12m ago',
+          likesCount: 11,
+          isLiked: false,
+        },
+        {
+          id: 'r-5-2',
+          postId: 'post-1',
+          parentId: 'c-5',
+          replyToAuthorName: 'Sneha Roy',
+          author: {
+            id: 'user-1',
+            name: 'Aarav Sharma',
+            headline: 'Author • CSE 3rd Year',
+          },
+          body: '@Sneha @Deepak Haha love this! Makes total sense why modern OSes wouldn\'t waste CPU cycles checking matrices on every single malloc/alloc call.',
+          createdAt: '8m ago',
+          likesCount: 5,
+          isLiked: false,
+        },
+      ],
+    },
+    {
+      id: 'c-6',
+      postId: 'post-1',
+      author: {
+        id: 'user-c6',
+        name: 'Ishaan Kapoor',
+        headline: 'Electrical & CS • Systems Programming',
+      },
+      body: 'Can someone clarify what happens if two processes request resources simultaneously? Does Banker\'s algorithm evaluate requests sequentially or concurrently?',
+      createdAt: '21m ago',
+      likesCount: 2,
+      isLiked: false,
+      replies: [
+        {
+          id: 'r-6-1',
+          postId: 'post-1',
+          parentId: 'c-6',
+          replyToAuthorName: 'Ishaan Kapoor',
+          author: {
+            id: 'user-commenter-1',
+            name: 'Nikhil Kashyap',
+            headline: 'CSE Sem 6 • Systems & OS',
+          },
+          body: '@Ishaan Requests are strictly serialized using kernel spinlocks/monitors, so only one safety matrix check runs at any instant.',
+          createdAt: '9m ago',
+          likesCount: 4,
+          isLiked: false,
+        },
+      ],
+    },
+    {
+      id: 'c-7',
+      postId: 'post-1',
+      author: {
+        id: 'user-c7',
+        name: 'Pooja Trivedi',
+        headline: 'Computer Engineering 3rd Year',
+      },
+      body: `Sharing a quick C snippet of the check loop if anyone wants to run test vectors:
+
+\`\`\`c
+int safe = 1;
+for (int k = 0; k < n; k++) {
+    if (finish[k] == 0) {
+        safe = 0;
+        break;
+    }
+}
+if (!safe) printf("System is in unsafe state!\\n");
+\`\`\`
+
+Testing $(1, 0, 2)$ flags unsafe immediately!`,
+      createdAt: '17m ago',
+      likesCount: 8,
+      isLiked: false,
+    },
+    {
+      id: 'c-8',
+      postId: 'post-1',
+      author: {
+        id: 'user-c8',
+        name: 'Tanmay Bhatia',
+        headline: 'CSE 2nd Year • Core Enthusiast',
+      },
+      body: 'Bookmarked! The explanation in this comment section is clearer than any textbook chapter.',
+      createdAt: '10m ago',
+      likesCount: 4,
+      isLiked: false,
+    },
+    {
+      id: 'c-9',
+      postId: 'post-1',
+      author: {
+        id: 'user-c9',
+        name: 'Dr. Rajesh K.',
+        headline: 'Adjunct Faculty • Systems Engineering',
+      },
+      body: `Impressive technical depth in this discussion! One reminder for semester exam candidates:
+Don't forget to state the **3 fundamental assumptions** of Banker's Algorithm:
+• Fixed number of processes and resource types
+• Maximum resource demand of each process is declared upfront
+• Resources granted to a process will be returned in finite time`,
+      createdAt: '5m ago',
+      likesCount: 19,
+      isLiked: true,
+      replies: [
+        {
+          id: 'r-9-1',
+          postId: 'post-1',
+          parentId: 'c-9',
+          replyToAuthorName: 'Dr. Rajesh K.',
+          author: {
+            id: 'user-1',
+            name: 'Aarav Sharma',
+            headline: 'Author • CSE 3rd Year',
+          },
+          body: '@Dr. Rajesh K. Thank you sir! Adding these exact 3 assumptions to my study sheet right now.',
+          createdAt: '2m ago',
+          likesCount: 6,
           isLiked: false,
         },
       ],

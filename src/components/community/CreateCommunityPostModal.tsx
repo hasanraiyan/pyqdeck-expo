@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Modal,
   View,
@@ -11,6 +11,9 @@ import {
   KeyboardAvoidingView,
   Platform,
   Alert,
+  Keyboard,
+  Animated,
+  Easing,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
@@ -31,18 +34,6 @@ interface CreateCommunityPostModalProps {
   onPostCreated?: (postId: string) => void;
 }
 
-const SUGGESTED_HASHTAGS = [
-  'OperatingSystems',
-  'ComputerNetworks',
-  'DBMS',
-  'CompilerDesign',
-  'Semester5',
-  'Semester6',
-  'Notes',
-  'Doubts',
-  'ExamTips',
-];
-
 export const CreateCommunityPostModal: React.FC<CreateCommunityPostModalProps> = ({
   visible,
   onClose,
@@ -52,6 +43,33 @@ export const CreateCommunityPostModal: React.FC<CreateCommunityPostModalProps> =
   const [body, setBody] = useState('');
   const [attachments, setAttachments] = useState<CommunityAttachment[]>([]);
   const [submitting, setSubmitting] = useState(false);
+  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
+  const keyboardSpace = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    const animateTo = (toValue: number, duration: number) =>
+      Animated.timing(keyboardSpace, {
+        toValue,
+        duration,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: false,
+      }).start();
+
+    const showSub = Keyboard.addListener(showEvent, (e) => {
+      setIsKeyboardVisible(true);
+      animateTo(e.endCoordinates.height, 250);
+    });
+    const hideSub = Keyboard.addListener(hideEvent, () => {
+      setIsKeyboardVisible(false);
+      animateTo(0, 200);
+    });
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, [keyboardSpace]);
 
   const handlePickImages = async () => {
     try {
@@ -106,12 +124,10 @@ export const CreateCommunityPostModal: React.FC<CreateCommunityPostModalProps> =
     setAttachments((prev) => prev.filter((a) => a.id !== id));
   };
 
-  const handleAddHashtag = (tag: string) => {
+  const handleInsertHash = () => {
     Haptics.selectionAsync().catch(() => {});
-    const hashTagWithPrefix = `#${tag}`;
-    if (!body.includes(hashTagWithPrefix)) {
-      setBody((prev) => (prev.trim() ? `${prev.trim()} ${hashTagWithPrefix} ` : `${hashTagWithPrefix} `));
-    }
+    // Add just "#" (space-separated from preceding text) so the user types the tag themselves.
+    setBody((prev) => (prev && !/\s$/.test(prev) ? `${prev} #` : `${prev}#`));
   };
 
   const handleSubmit = () => {
@@ -149,7 +165,14 @@ export const CreateCommunityPostModal: React.FC<CreateCommunityPostModalProps> =
   };
 
   return (
-    <Modal visible={visible} animationType="slide" presentationStyle="fullScreen" onRequestClose={onClose}>
+    <Modal
+      visible={visible}
+      animationType="slide"
+      presentationStyle="fullScreen"
+      onRequestClose={onClose}
+      statusBarTranslucent
+      navigationBarTranslucent
+    >
       <KeyboardAvoidingView
         style={[styles.container, { paddingTop: insets.top || 16 }]}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -231,24 +254,13 @@ export const CreateCommunityPostModal: React.FC<CreateCommunityPostModalProps> =
 
         </ScrollView>
 
-        {/* Quick Hashtags Strip above toolbar */}
-        <View style={styles.hashtagRowContainer}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.hashtagScroll}>
-            {SUGGESTED_HASHTAGS.map((tag) => (
-              <TouchableOpacity
-                key={tag}
-                style={styles.insertTagChip}
-                onPress={() => handleAddHashtag(tag)}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.insertTagText}>#{tag}</Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </View>
-
         {/* LinkedIn-style Bottom Action Toolbar */}
-        <View style={[styles.bottomToolBar, { paddingBottom: Math.max(insets.bottom, 12) }]}>
+        <View
+          style={[
+            styles.bottomToolBar,
+            { paddingBottom: isKeyboardVisible ? (Platform.OS === 'android' ? 24 : 12) : Math.max(insets.bottom, 12) },
+          ]}
+        >
           <TouchableOpacity style={styles.toolIconBtn} onPress={handlePickImages} accessibilityLabel="Add photo">
             <Feather name="image" size={21} color="#4b5563" />
           </TouchableOpacity>
@@ -259,12 +271,16 @@ export const CreateCommunityPostModal: React.FC<CreateCommunityPostModalProps> =
 
           <TouchableOpacity
             style={styles.toolIconBtn}
-            onPress={() => handleAddHashtag('Question')}
+            onPress={handleInsertHash}
             accessibilityLabel="Add tag"
           >
             <Feather name="hash" size={21} color="#4b5563" />
           </TouchableOpacity>
         </View>
+
+        {/* Android is edge-to-edge: lift the toolbar by the real IME height, animated.
+            iOS uses KeyboardAvoidingView. */}
+        {Platform.OS === 'android' && <Animated.View style={{ height: keyboardSpace }} />}
       </KeyboardAvoidingView>
     </Modal>
   );
@@ -402,27 +418,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
 
-  hashtagRowContainer: {
-    paddingVertical: 8,
-    borderTopWidth: 1,
-    borderTopColor: '#f3f4f6',
-  },
-  hashtagScroll: {
-    paddingHorizontal: 16,
-    gap: 8,
-    flexDirection: 'row',
-  },
-  insertTagChip: {
-    backgroundColor: '#f3f4f6',
-    paddingHorizontal: 10,
-    paddingVertical: 4.5,
-    borderRadius: RADIUS.full,
-  },
-  insertTagText: {
-    fontFamily: FONTS.bodySemi,
-    fontSize: 11.5,
-    color: COLORS.secondary,
-  },
   bottomToolBar: {
     flexDirection: 'row',
     alignItems: 'center',
