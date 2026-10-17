@@ -11,10 +11,12 @@ import {
   LayoutAnimation,
   UIManager,
   Alert,
+  Keyboard,
 } from 'react-native';
 import { Image } from 'expo-image';
 import * as Clipboard from 'expo-clipboard';
 import { useUser } from '@clerk/expo';
+import { useHeaderHeight } from '@react-navigation/elements';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -70,6 +72,9 @@ export const CommunityPostDetailScreen: React.FC = () => {
   const route = useRoute<any>();
   const { user } = useUser();
   const inputRef = useRef<TextInput>(null);
+  const scrollViewRef = useRef<ScrollView>(null);
+  const headerHeight = useHeaderHeight();
+  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
   const { postId, initialPost } = route.params || {};
 
   const [post, setPost] = useState<CommunityPost | undefined>(
@@ -85,6 +90,23 @@ export const CommunityPostDetailScreen: React.FC = () => {
   } | null>(null);
   const [collapsedThreads, setCollapsedThreads] = useState<Record<string, boolean>>({});
   const [expandedReplyThreads, setExpandedReplyThreads] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+    const showSub = Keyboard.addListener(showEvent, () => {
+      setIsKeyboardVisible(true);
+    });
+    const hideSub = Keyboard.addListener(hideEvent, () => {
+      setIsKeyboardVisible(false);
+    });
+
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
 
   useEffect(() => {
     const unsub = communityStore.subscribe(() => {
@@ -162,7 +184,13 @@ export const CommunityPostDetailScreen: React.FC = () => {
   const handleStartReply = (commentId: string, authorName: string) => {
     Haptics.selectionAsync().catch(() => {});
     setReplyingTo({ commentId, authorName });
-    inputRef.current?.focus();
+    setExpandedReplyThreads((prev) => ({
+      ...prev,
+      [commentId]: true,
+    }));
+    setTimeout(() => {
+      inputRef.current?.focus();
+    }, 100);
   };
 
   const handleLikeComment = (commentId: string) => {
@@ -460,9 +488,15 @@ export const CommunityPostDetailScreen: React.FC = () => {
     <KeyboardAvoidingView
       style={styles.screen}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 88 : 0}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? headerHeight : 0}
     >
-      <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        ref={scrollViewRef}
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="interactive"
+      >
         <ScreenContainer variant="read" gutter={false}>
           {/* Post item */}
           <CommunityPostCard
@@ -506,7 +540,16 @@ export const CommunityPostDetailScreen: React.FC = () => {
       </ScrollView>
 
       {/* Floating Comment Composer (LinkedIn style with user avatar + selector) */}
-      <View style={[styles.composerContainer, { paddingBottom: Math.max(insets.bottom, 10) }]}>
+      <View
+        style={[
+          styles.composerContainer,
+          {
+            paddingBottom: isKeyboardVisible
+              ? 10
+              : Math.max(insets.bottom, 10),
+          },
+        ]}
+      >
         {replyingTo && (
           <View style={styles.replyBanner}>
             <Text style={styles.replyBannerText}>
@@ -564,7 +607,11 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f3f4f6',
   },
+  scrollView: {
+    flex: 1,
+  },
   scrollContent: {
+    flexGrow: 1,
     paddingBottom: 20,
   },
   centerContainer: {

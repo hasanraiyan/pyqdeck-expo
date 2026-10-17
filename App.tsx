@@ -411,6 +411,7 @@ function TabsNavigator() {
         }
         screenOptions={{
           headerShown: false,
+          tabBarHideOnKeyboard: true,
           // Navigation follows window class (SRS section 4): bottom bar on
           // phone, 72 px icon rail on tablet, labelled sidebar from laptop up.
           // React Navigation turns the bar into a sidebar for 'left'.

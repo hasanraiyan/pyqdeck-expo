@@ -17,6 +17,7 @@
       }
     },
     "android": {
+      "softwareKeyboardLayoutMode": "resize",
       "package": "app.hasanraiyan.pyqdeck",
       "versionCode": 101,
       "googleServicesFile": "./google-services.json",
