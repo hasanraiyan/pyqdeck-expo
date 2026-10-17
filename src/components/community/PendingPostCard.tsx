@@ -56,18 +56,18 @@ export const PendingPostCard: React.FC<PendingPostCardProps> = ({
   upload,
   onCancel,
 }) => {
-  // Smooth continuous animation across the 60s upload without triggering component re-renders
   const animatedProgress = useRef(new Animated.Value(0)).current;
   const shimmerAnim = useRef(new Animated.Value(0)).current;
+  const duration = upload.attachments.length > 0 ? 3000 : 2000;
 
   useEffect(() => {
     Animated.timing(animatedProgress, {
       toValue: 1,
-      duration: 60000,
-      easing: Easing.linear,
+      duration,
+      easing: Easing.out(Easing.quad),
       useNativeDriver: false,
     }).start();
-  }, [animatedProgress]);
+  }, [animatedProgress, duration]);
 
   // Continuous left-to-right shimmer animation while sending
   useEffect(() => {

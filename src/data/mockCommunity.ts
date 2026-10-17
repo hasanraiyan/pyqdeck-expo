@@ -711,7 +711,8 @@ class CommunityStore {
     this.pendingUploads = [pendingItem, ...this.pendingUploads];
     this.notify();
 
-    // 60-second mock timer for visual state inspection
+    // Realistic background upload duration (2s for text, 3s with attachments)
+    const duration = pendingItem.attachments.length > 0 ? 3000 : 2000;
     const timer = setTimeout(() => {
       delete this.uploadTimers[uploadId];
 
@@ -720,7 +721,7 @@ class CommunityStore {
       const created = this.addPost(newPostData);
       onComplete?.(created);
       this.notify();
-    }, 60000);
+    }, duration);
 
     this.uploadTimers[uploadId] = timer;
     return uploadId;
