@@ -158,6 +158,155 @@ Check 2021-2023 past questions on the app before test day. #ExamTips #CompilerDe
     isBookmarked: true,
     status: 'published',
   },
+  {
+    id: 'post-5',
+    slug: 'daa-master-theorem-divide-and-conquer-cases',
+    author: {
+      id: 'user-1',
+      name: 'Aarav Sharma',
+      bio: 'CSE 3rd Year • Operating Systems & Core CS',
+      college: 'BEU Tech',
+    },
+    createdAt: '1d',
+    body: `Master Theorem is a guaranteed 7-mark question in **#DAA** (Design and Analysis of Algorithms).
+For recurrences of form:
+$$T(n) = aT(n/b) + f(n)$$
+where $a \\ge 1, b > 1$:
+
+• **Case 1**: If $f(n) = O(n^{\\log_b a - \\epsilon})$, then $T(n) = \\Theta(n^{\\log_b a})$
+• **Case 2**: If $f(n) = \\Theta(n^{\\log_b a} \\log^k n)$, then $T(n) = \\Theta(n^{\\log_b a} \\log^{k+1} n)$
+• **Case 3**: If $f(n) = \\Omega(n^{\\log_b a + \\epsilon})$ and regularity condition holds, $T(n) = \\Theta(f(n))$
+
+Remember: Master Theorem cannot be applied if $a$ is not constant or if $f(n)$ is not a polynomial!
+
+#DAA #Algorithms #Semester4 #BEUExams`,
+    hashtags: ['DAA', 'Algorithms', 'Semester4', 'BEUExams'],
+    attachments: [],
+    likesCount: 84,
+    isLiked: false,
+    commentsCount: 11,
+    bookmarksCount: 46,
+    isBookmarked: false,
+    status: 'published',
+  },
+  {
+    id: 'post-6',
+    slug: 'digital-electronics-k-map-5-variable-grouping',
+    author: {
+      id: 'user-2',
+      name: 'Priya Patel',
+      bio: 'ECE 6th Sem • Networking & Telecom • Top Contributor',
+      college: 'GEC Patna',
+    },
+    createdAt: '2d',
+    body: `Solved the 5-variable **K-Map minimization** problem from the 2022 Digital Electronics paper.
+When dealing with $A, B, C, D, E$, draw two $4 \\times 4$ maps side-by-side ($A=0$ plane and $A=1$ plane).
+
+Always look for 3D super-groups between the two maps! Overlapping cubes across planes will eliminate the 5th variable automatically:
+$$F = A' B D + B C E' + D' E$$
+
+Check your groupings carefully before writing down the final POS or SOP expression.
+
+#DigitalElectronics #KMap #ECE #Semester3`,
+    hashtags: ['DigitalElectronics', 'KMap', 'ECE', 'Semester3'],
+    attachments: [],
+    likesCount: 63,
+    isLiked: false,
+    commentsCount: 7,
+    bookmarksCount: 29,
+    isBookmarked: false,
+    status: 'published',
+  },
+  {
+    id: 'post-7',
+    slug: 'microprocessors-8085-vs-8086-comparison',
+    author: {
+      id: 'user-3',
+      name: 'Vikram Singh',
+      bio: 'IT Final Year • Database Systems & Cloud',
+      college: 'MIT Muzaffarpur',
+    },
+    createdAt: '3d',
+    body: `Most repeated theory question in Semester 5: **Differences between Intel 8085 and 8086**:
+
+| Feature | 8085 | 8086 |
+|---|---|---|
+| Data Bus Width | 8-bit | 16-bit |
+| Address Bus Width | 16-bit (64 KB) | 20-bit (1 MB) |
+| Architecture | Single unit | BIU + EU (Pipelined) |
+| Clock Speed | 3 MHz | 5 to 10 MHz |
+| Instruction Queue | No queue | 6-byte Prefetch Queue |
+
+8086 pipelining fetches the next instruction while executing the current one, giving significantly higher throughput.
+
+#Microprocessors #8085 #8086 #Semester5`,
+    hashtags: ['Microprocessors', '8085', '8086', 'Semester5'],
+    attachments: [],
+    likesCount: 112,
+    isLiked: false,
+    commentsCount: 15,
+    bookmarksCount: 73,
+    isBookmarked: false,
+    status: 'published',
+  },
+  {
+    id: 'post-8',
+    slug: 'software-engineering-agile-vs-waterfall-sdlc',
+    author: {
+      id: 'user-4',
+      name: 'Sneha Roy',
+      bio: 'CSE Senior • Compiler Design & Systems Programming',
+      college: 'BCE Bhagalpur',
+    },
+    createdAt: '3d',
+    body: `Quick summary for **#SoftwareEngineering** Module 2: When to choose **Agile** vs **Waterfall** in real projects:
+
+• **Waterfall**: Requirements are frozen and well understood upfront (e.g., defense, banking core, medical devices).
+• **Agile**: Evolving requirements, rapid prototyping, continuous user feedback sprints (e.g., consumer apps, SaaS products).
+
+Also revise the **COCOMO Model** (Organic, Semidetached, Embedded formulas) for the numerical questions!
+
+#SoftwareEngineering #SDLC #Agile #BEU`,
+    hashtags: ['SoftwareEngineering', 'SDLC', 'Agile', 'BEU'],
+    attachments: [],
+    likesCount: 79,
+    isLiked: false,
+    commentsCount: 6,
+    bookmarksCount: 41,
+    isBookmarked: false,
+    status: 'published',
+  },
+  {
+    id: 'post-9',
+    slug: 'computer-graphics-bresenham-line-drawing-algorithm',
+    author: {
+      id: 'user-1',
+      name: 'Aarav Sharma',
+      bio: 'CSE 3rd Year • Operating Systems & Core CS',
+      college: 'BEU Tech',
+    },
+    createdAt: '4d',
+    body: `Why does **Bresenham's Line Algorithm** outperform DDA?
+Because Bresenham uses **pure integer addition and subtraction**, avoiding floating-point multiplication and round() operations completely.
+
+Decision parameter update:
+$$P_{k+1} = P_k + 2\\Delta y - 2\\Delta x(y_{k+1} - y_k)$$
+
+If $P_k < 0$, plot $(x_k + 1, y_k)$ and $P_{k+1} = P_k + 2\\Delta y$.
+If $P_k \\ge 0$, plot $(x_k + 1, y_k + 1)$ and $P_{k+1} = P_k + 2\\Delta y - 2\\Delta x$.
+
+High-scoring numerical in university mid-semesters and end-terms!
+
+#ComputerGraphics #Bresenham #Algorithms #Semester5`,
+    hashtags: ['ComputerGraphics', 'Bresenham', 'Algorithms', 'Semester5'],
+    attachments: [],
+    likesCount: 95,
+    isLiked: false,
+    commentsCount: 8,
+    bookmarksCount: 62,
+    isBookmarked: false,
+    status: 'published',
+  },
 ];
 
 export const INITIAL_MOCK_COMMENTS: Record<string, CommunityComment[]> = {
