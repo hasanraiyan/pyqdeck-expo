@@ -34,6 +34,7 @@ import {
   userProfileService,
   UserProfileData,
 } from '../services/userProfileService';
+import { EditProfileModal } from '../components/profile/EditProfileModal';
 
 const getLinkedInUrl = (input?: string) => {
   if (!input) return '';
@@ -132,18 +133,6 @@ export const UserProfileScreen: React.FC = () => {
 
   // Edit profile modal state
   const [editModalVisible, setEditModalVisible] = useState(false);
-  const [editName, setEditName] = useState('');
-  const [editBio, setEditBio] = useState('');
-  const [editCollege, setEditCollege] = useState('');
-  const [editBranch, setEditBranch] = useState('');
-  const [editSemester, setEditSemester] = useState('');
-  const [editLocation, setEditLocation] = useState('');
-  const [editAbout, setEditAbout] = useState('');
-  const [editGithub, setEditGithub] = useState('');
-  const [editLinkedin, setEditLinkedin] = useState('');
-  const [editWebsite, setEditWebsite] = useState('');
-  const [editTwitter, setEditTwitter] = useState('');
-  const [savingEdit, setSavingEdit] = useState(false);
   const [notificationsActive, setNotificationsActive] = useState(false);
   const [commentSheetPost, setCommentSheetPost] = useState<CommunityPost | null>(null);
 
@@ -316,45 +305,12 @@ export const UserProfileScreen: React.FC = () => {
   const openEditModal = () => {
     if (!profile) return;
     Haptics.selectionAsync().catch(() => {});
-    setEditName(profile.name);
-    setEditBio(profile.bio);
-    setEditCollege(profile.college);
-    setEditBranch(profile.branch);
-    setEditSemester(profile.semester);
-    setEditLocation(profile.location || '');
-    setEditAbout(profile.about || '');
-    setEditGithub(profile.github || '');
-    setEditLinkedin(profile.linkedin || '');
-    setEditWebsite(profile.website || '');
-    setEditTwitter(profile.twitter || '');
     setEditModalVisible(true);
   };
 
-  const handleSaveProfile = async () => {
-    if (!editName.trim()) {
-      Alert.alert('Name required', 'Please provide your full name.');
-      return;
-    }
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
-    setSavingEdit(true);
-
-    const updated = await userProfileService.updateOwnProfile({
-      name: editName.trim(),
-      bio: editBio.trim() || 'Student • PYQDeck Community',
-      college: editCollege.trim() || 'Bihar Engineering University',
-      branch: editBranch.trim() || 'Engineering',
-      semester: editSemester.trim() || 'B.Tech',
-      location: editLocation.trim() || 'Bihar, India',
-      about: editAbout.trim(),
-      github: editGithub.trim(),
-      linkedin: editLinkedin.trim(),
-      website: editWebsite.trim(),
-      twitter: editTwitter.trim(),
-    });
-
+  const handleSaveProfile = async (updates: Partial<UserProfileData>) => {
+    const updated = await userProfileService.updateOwnProfile(updates);
     setProfile(updated);
-    setSavingEdit(false);
-    setEditModalVisible(false);
   };
 
   const getInitials = (name: string) => {
@@ -548,24 +504,14 @@ export const UserProfileScreen: React.FC = () => {
               {/* Profile Action Buttons Row (Follow, Message, More) */}
               <View style={styles.actionButtonsRow}>
                 {isOwnProfile ? (
-                  <>
-                    <TouchableOpacity
-                      style={styles.primaryActionBtn}
-                      onPress={openEditModal}
-                      activeOpacity={0.8}
-                    >
-                      <Feather name="edit-2" size={14} color="#ffffff" style={{ marginRight: 6 }} />
-                      <Text style={styles.primaryActionBtnText}>Edit profile</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={styles.moreActionBtn}
-                      onPress={handleOpenMoreOptions}
-                      activeOpacity={0.8}
-                      accessibilityLabel="More options"
-                    >
-                      <Feather name="more-vertical" size={18} color="#374151" />
-                    </TouchableOpacity>
-                  </>
+                  <TouchableOpacity
+                    style={styles.primaryActionBtn}
+                    onPress={openEditModal}
+                    activeOpacity={0.8}
+                  >
+                    <Feather name="edit-2" size={14} color="#ffffff" style={{ marginRight: 6 }} />
+                    <Text style={styles.primaryActionBtnText}>Edit profile</Text>
+                  </TouchableOpacity>
                 ) : (
                   <>
                     <TouchableOpacity
@@ -795,181 +741,15 @@ export const UserProfileScreen: React.FC = () => {
         </ScreenContainer>
       </ScrollView>
 
-      {/* Edit Profile Bottom Sheet Modal */}
-      <Modal
-        visible={editModalVisible}
-        animationType="slide"
-        presentationStyle="pageSheet"
-        onRequestClose={() => setEditModalVisible(false)}
-      >
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          style={styles.modalContainer}
-        >
-          {/* Modal Header */}
-          <View style={styles.modalHeader}>
-            <TouchableOpacity
-              onPress={() => setEditModalVisible(false)}
-              hitSlop={8}
-              style={styles.modalCloseBtn}
-            >
-              <Feather name="x" size={20} color="#374151" />
-            </TouchableOpacity>
-            <Text style={styles.modalTitle}>Edit Profile</Text>
-            <TouchableOpacity
-              onPress={handleSaveProfile}
-              disabled={savingEdit}
-              style={styles.modalSaveBtn}
-            >
-              {savingEdit ? (
-                <ActivityIndicator size="small" color="#ffffff" />
-              ) : (
-                <Text style={styles.modalSaveBtnText}>Save</Text>
-              )}
-            </TouchableOpacity>
-          </View>
-
-          <ScrollView
-            style={styles.modalScrollView}
-            contentContainerStyle={styles.modalScrollContent}
-            keyboardShouldPersistTaps="handled"
-          >
-            <View style={styles.formField}>
-              <Text style={styles.fieldLabel}>Full Name *</Text>
-              <TextInput
-                style={styles.fieldInput}
-                value={editName}
-                onChangeText={setEditName}
-                placeholder="Your full name"
-                placeholderTextColor="#9ca3af"
-              />
-            </View>
-
-            <View style={styles.formField}>
-              <Text style={styles.fieldLabel}>Headline / Bio *</Text>
-              <TextInput
-                style={styles.fieldInput}
-                value={editBio}
-                onChangeText={setEditBio}
-                placeholder="e.g. CSE 3rd Year • Core CS & Systems"
-                placeholderTextColor="#9ca3af"
-              />
-              <Text style={styles.fieldHint}>
-                Appears under your name in community posts and discussion threads.
-              </Text>
-            </View>
-
-            <View style={styles.formField}>
-              <Text style={styles.fieldLabel}>Engineering College</Text>
-              <TextInput
-                style={styles.fieldInput}
-                value={editCollege}
-                onChangeText={setEditCollege}
-                placeholder="e.g. BCE Bhagalpur / MIT Muzaffarpur"
-                placeholderTextColor="#9ca3af"
-              />
-            </View>
-
-            <View style={styles.formRow}>
-              <View style={[styles.formField, { flex: 1, marginRight: 8 }]}>
-                <Text style={styles.fieldLabel}>Branch</Text>
-                <TextInput
-                  style={styles.fieldInput}
-                  value={editBranch}
-                  onChangeText={setEditBranch}
-                  placeholder="e.g. CSE / ECE / ME"
-                  placeholderTextColor="#9ca3af"
-                />
-              </View>
-
-              <View style={[styles.formField, { flex: 1, marginLeft: 8 }]}>
-                <Text style={styles.fieldLabel}>Semester</Text>
-                <TextInput
-                  style={styles.fieldInput}
-                  value={editSemester}
-                  onChangeText={setEditSemester}
-                  placeholder="e.g. 6th Semester"
-                  placeholderTextColor="#9ca3af"
-                />
-              </View>
-            </View>
-
-            <View style={styles.formField}>
-              <Text style={styles.fieldLabel}>Location</Text>
-              <TextInput
-                style={styles.fieldInput}
-                value={editLocation}
-                onChangeText={setEditLocation}
-                placeholder="e.g. Patna, Bihar"
-                placeholderTextColor="#9ca3af"
-              />
-            </View>
-
-            <View style={styles.formField}>
-              <Text style={styles.fieldLabel}>About You</Text>
-              <TextInput
-                style={[styles.fieldInput, styles.textAreaInput]}
-                value={editAbout}
-                onChangeText={setEditAbout}
-                multiline
-                numberOfLines={4}
-                placeholder="Write a brief overview about your engineering interests, exam prep, or study goals..."
-                placeholderTextColor="#9ca3af"
-                textAlignVertical="top"
-              />
-            </View>
-
-            <View style={styles.formField}>
-              <Text style={styles.fieldLabel}>GitHub Username</Text>
-              <TextInput
-                style={styles.fieldInput}
-                value={editGithub}
-                onChangeText={setEditGithub}
-                placeholder="e.g. your-github-handle"
-                placeholderTextColor="#9ca3af"
-                autoCapitalize="none"
-              />
-            </View>
-
-            <View style={styles.formField}>
-              <Text style={styles.fieldLabel}>LinkedIn Username</Text>
-              <TextInput
-                style={styles.fieldInput}
-                value={editLinkedin}
-                onChangeText={setEditLinkedin}
-                placeholder="e.g. your-linkedin-handle"
-                placeholderTextColor="#9ca3af"
-                autoCapitalize="none"
-              />
-            </View>
-
-            <View style={styles.formField}>
-              <Text style={styles.fieldLabel}>Portfolio / Personal Website</Text>
-              <TextInput
-                style={styles.fieldInput}
-                value={editWebsite}
-                onChangeText={setEditWebsite}
-                placeholder="e.g. https://yourportfolio.dev or yourname.me"
-                placeholderTextColor="#9ca3af"
-                autoCapitalize="none"
-                keyboardType="url"
-              />
-            </View>
-
-            <View style={styles.formField}>
-              <Text style={styles.fieldLabel}>X (Twitter) Username</Text>
-              <TextInput
-                style={styles.fieldInput}
-                value={editTwitter}
-                onChangeText={setEditTwitter}
-                placeholder="e.g. your-handle"
-                placeholderTextColor="#9ca3af"
-                autoCapitalize="none"
-              />
-            </View>
-          </ScrollView>
-        </KeyboardAvoidingView>
-      </Modal>
+      {/* Modern Edit Profile Modal with Full Keyboard Handling & Photo Pickers */}
+      {profile && (
+        <EditProfileModal
+          visible={editModalVisible}
+          profile={profile}
+          onClose={() => setEditModalVisible(false)}
+          onSave={handleSaveProfile}
+        />
+      )}
 
       {/* LinkedIn-Style Comments Bottom Sheet */}
       <CommunityCommentsBottomSheet
@@ -1431,77 +1211,5 @@ const styles = StyleSheet.create({
     marginTop: 4,
     lineHeight: 18,
     maxWidth: 260,
-  },
-  modalContainer: {
-    flex: 1,
-    backgroundColor: '#ffffff',
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderColor: '#e5e7eb',
-  },
-  modalCloseBtn: {
-    padding: 4,
-  },
-  modalTitle: {
-    fontFamily: FONTS.displayBold,
-    fontSize: 16,
-    color: '#111827',
-  },
-  modalSaveBtn: {
-    paddingHorizontal: 16,
-    paddingVertical: 6,
-    borderRadius: RADIUS.full,
-    backgroundColor: COLORS.primary,
-  },
-  modalSaveBtnText: {
-    fontFamily: FONTS.displayBold,
-    fontSize: 13,
-    color: '#ffffff',
-  },
-  modalScrollView: {
-    flex: 1,
-  },
-  modalScrollContent: {
-    padding: 16,
-    gap: 14,
-  },
-  formField: {
-    gap: 5,
-  },
-  formRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  fieldLabel: {
-    fontFamily: FONTS.displayBold,
-    fontSize: 12.5,
-    color: '#374151',
-  },
-  fieldInput: {
-    borderWidth: 1,
-    borderColor: '#d1d5db',
-    borderRadius: RADIUS.sm,
-    paddingHorizontal: 12,
-    paddingVertical: 9,
-    fontFamily: FONTS.body,
-    fontSize: 14,
-    color: '#111827',
-    backgroundColor: '#f9fafb',
-  },
-  textAreaInput: {
-    minHeight: 80,
-    paddingTop: 9,
-  },
-  fieldHint: {
-    fontFamily: FONTS.body,
-    fontSize: 11,
-    color: '#6b7280',
-    marginTop: 2,
   },
 });
