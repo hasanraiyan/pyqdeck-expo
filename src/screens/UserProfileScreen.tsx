@@ -62,6 +62,7 @@ export const UserProfileScreen: React.FC = () => {
   const [editGithub, setEditGithub] = useState('');
   const [editLinkedin, setEditLinkedin] = useState('');
   const [savingEdit, setSavingEdit] = useState(false);
+  const [notificationsActive, setNotificationsActive] = useState(false);
 
   // Community store posts subscription
   const [allPosts, setAllPosts] = useState<CommunityPost[]>(() => communityStore.getPosts());
@@ -111,6 +112,22 @@ export const UserProfileScreen: React.FC = () => {
     setIsFollowing(nextFollowing);
     setFollowersCount((prev) => (nextFollowing ? prev + 1 : Math.max(0, prev - 1)));
     await userProfileService.toggleFollowUser(profile.id);
+  };
+
+  const handleToggleNotifications = () => {
+    Haptics.selectionAsync().catch(() => {});
+    const nextState = !notificationsActive;
+    setNotificationsActive(nextState);
+    Alert.alert(
+      nextState ? 'Notifications turned on' : 'Notifications turned off',
+      nextState
+        ? isOwnProfile
+          ? 'You will receive notifications for activity on your profile and contributions.'
+          : `You will now receive notifications when ${profile?.name || 'this student'} posts or shares updates.`
+        : isOwnProfile
+          ? 'Profile activity notifications paused.'
+          : `Notifications muted for ${profile?.name || 'this student'}.`
+    );
   };
 
   const handleShareProfile = async () => {
@@ -239,6 +256,25 @@ export const UserProfileScreen: React.FC = () => {
                   </View>
                 )}
               </View>
+
+              <TouchableOpacity
+                style={[styles.bellBtn, notificationsActive && styles.bellBtnActive]}
+                onPress={handleToggleNotifications}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                accessibilityLabel={
+                  notificationsActive
+                    ? 'Turn off notifications'
+                    : 'Turn on notifications'
+                }
+                activeOpacity={0.7}
+              >
+                <Feather
+                  name="bell"
+                  size={18}
+                  color={notificationsActive ? COLORS.primary : '#4b5563'}
+                />
+                {notificationsActive && <View style={styles.bellActiveDot} />}
+              </TouchableOpacity>
             </View>
 
             {/* User Meta Information & Actions */}
@@ -838,6 +874,33 @@ const styles = StyleSheet.create({
   avatarRow: {
     paddingHorizontal: 16,
     marginTop: -45,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+  },
+  bellBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    borderWidth: 1.5,
+    borderColor: '#e5e7eb',
+    backgroundColor: '#ffffff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 5,
+  },
+  bellBtnActive: {
+    borderColor: COLORS.primary,
+    backgroundColor: '#eff6ff',
+  },
+  bellActiveDot: {
+    position: 'absolute',
+    top: 6,
+    right: 7,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: COLORS.primary,
   },
   avatarBorderWrap: {
     position: 'relative',
@@ -846,11 +909,6 @@ const styles = StyleSheet.create({
     borderColor: '#ffffff',
     borderRadius: 48,
     backgroundColor: '#ffffff',
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
   },
   avatar: {
     width: 86,
