@@ -339,24 +339,9 @@ export const CommunityPostCard: React.FC<CommunityPostCardProps> = ({
         </View>
       )}
 
-      {/* Social Engagement Count Line (LinkedIn style) */}
-      <View style={styles.socialCountsRow}>
-        <View style={styles.reactionCountBadge}>
-          <View style={styles.reactionIconCircle}>
-            <Feather name="thumbs-up" size={10} color="#ffffff" />
-          </View>
-          <Text style={styles.socialCountsText}>{post.likesCount}</Text>
-        </View>
-
-        <TouchableOpacity onPress={() => onCommentPress?.(post)}>
-          <Text style={styles.socialCountsText}>
-            {post.commentsCount} {post.commentsCount === 1 ? 'comment' : 'comments'}
-          </Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* LinkedIn 4-Action Bar: Like, Comment, Repost/Share, Save */}
-      <View style={styles.actionsBar}>
+      {/* Merged Single-Line Action Bar (Icon + Number, 0 is hidden) */}
+      <View style={styles.singleActionsBar}>
+        {/* Like */}
         <TouchableOpacity
           style={styles.actionTab}
           onPress={() => {
@@ -364,40 +349,51 @@ export const CommunityPostCard: React.FC<CommunityPostCardProps> = ({
             onLikePress(post.id);
           }}
           activeOpacity={0.7}
+          accessibilityLabel={`Like, ${post.likesCount} likes`}
         >
           <Feather
             name="thumbs-up"
-            size={16}
+            size={18}
             color={post.isLiked ? COLORS.primary : COLORS.textMuted}
           />
-          <Text
-            style={[
-              styles.actionTabText,
-              post.isLiked && { color: COLORS.primary, fontFamily: FONTS.displayBold },
-            ]}
-          >
-            Like
-          </Text>
+          {post.likesCount > 0 && (
+            <Text
+              style={[
+                styles.actionCountText,
+                post.isLiked && { color: COLORS.primary, fontFamily: FONTS.displayBold },
+              ]}
+            >
+              {post.likesCount}
+            </Text>
+          )}
         </TouchableOpacity>
 
+        {/* Comment */}
         <TouchableOpacity
           style={styles.actionTab}
           onPress={() => onCommentPress?.(post)}
           activeOpacity={0.7}
+          accessibilityLabel={`Comments, ${post.commentsCount} comments`}
         >
-          <Feather name="message-square" size={16} color={COLORS.textMuted} />
-          <Text style={styles.actionTabText}>Comment</Text>
+          <Feather name="message-square" size={18} color={COLORS.textMuted} />
+          {post.commentsCount > 0 && (
+            <Text style={styles.actionCountText}>
+              {post.commentsCount}
+            </Text>
+          )}
         </TouchableOpacity>
 
+        {/* Share */}
         <TouchableOpacity
           style={styles.actionTab}
           onPress={handleShare}
           activeOpacity={0.7}
+          accessibilityLabel="Share post"
         >
-          <Feather name="share-2" size={16} color={COLORS.textMuted} />
-          <Text style={styles.actionTabText}>Share</Text>
+          <Feather name="share-2" size={18} color={COLORS.textMuted} />
         </TouchableOpacity>
 
+        {/* Bookmark / Save */}
         <TouchableOpacity
           style={styles.actionTab}
           onPress={() => {
@@ -405,20 +401,23 @@ export const CommunityPostCard: React.FC<CommunityPostCardProps> = ({
             onBookmarkPress(post.id);
           }}
           activeOpacity={0.7}
+          accessibilityLabel="Save post"
         >
           <Feather
             name="bookmark"
-            size={16}
+            size={18}
             color={post.isBookmarked ? COLORS.secondary : COLORS.textMuted}
           />
-          <Text
-            style={[
-              styles.actionTabText,
-              post.isBookmarked && { color: COLORS.secondary, fontFamily: FONTS.displayBold },
-            ]}
-          >
-            Save
-          </Text>
+          {post.bookmarksCount > 0 && (
+            <Text
+              style={[
+                styles.actionCountText,
+                post.isBookmarked && { color: COLORS.secondary, fontFamily: FONTS.displayBold },
+              ]}
+            >
+              {post.bookmarksCount}
+            </Text>
+          )}
         </TouchableOpacity>
       </View>
 
@@ -814,41 +813,14 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.displayBold,
     fontSize: 20,
   },
-  socialCountsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingTop: 8,
-    paddingBottom: 8,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: '#f1f5f9',
-  },
-  reactionCountBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-  },
-  reactionIconCircle: {
-    width: 17,
-    height: 17,
-    borderRadius: 8.5,
-    backgroundColor: '#0a66c2',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  socialCountsText: {
-    fontFamily: FONTS.body,
-    fontSize: 12,
-    color: '#6b7280',
-  },
-  actionsBar: {
+  singleActionsBar: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-around',
-    borderTopWidth: 1,
-    borderTopColor: '#f3f4f6',
-    paddingVertical: 4,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: '#f1f5f9',
+    paddingVertical: 3,
+    paddingHorizontal: 8,
   },
   actionTab: {
     flex: 1,
@@ -858,9 +830,9 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingVertical: 10,
   },
-  actionTabText: {
+  actionCountText: {
     fontFamily: FONTS.bodySemi,
-    fontSize: 12.5,
-    color: '#4b5563',
+    fontSize: 13,
+    color: '#64748b',
   },
 });
