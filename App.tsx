@@ -338,7 +338,12 @@ function CommunityStack() {
       <Stack.Screen
         name="CommunityPostDetail"
         component={CommunityPostDetailScreen}
-        options={{ title: 'Post' }}
+        options={{
+          title: 'Post',
+          headerStyle: {
+            backgroundColor: '#ffffff',
+          },
+        }}
       />
       <Stack.Screen
         name="Settings"

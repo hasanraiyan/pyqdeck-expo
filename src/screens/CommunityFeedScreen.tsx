@@ -315,9 +315,9 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.background,
   },
   siteHeader: {
-    backgroundColor: COLORS.background,
+    backgroundColor: '#ffffff',
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.borderLight,
+    borderBottomColor: '#e5e7eb',
     paddingHorizontal: 16,
     paddingTop: 8,
     paddingBottom: 8,
