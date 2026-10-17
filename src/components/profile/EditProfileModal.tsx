@@ -26,7 +26,7 @@ import { UserProfileData } from '../../services/userProfileService';
 import { CollegePickerBottomSheet } from './CollegePickerBottomSheet';
 import { BranchPickerBottomSheet } from './BranchPickerBottomSheet';
 
-const QUICK_SEMESTERS = [
+const SEMESTERS = [
   '1st Sem',
   '2nd Sem',
   '3rd Sem',
@@ -35,7 +35,6 @@ const QUICK_SEMESTERS = [
   '6th Sem',
   '7th Sem',
   '8th Sem',
-  'Alumni',
 ];
 
 const QUICK_PASSOUT_YEARS = [
@@ -737,10 +736,15 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
               </TouchableOpacity>
             </View>
 
-            {/* Semester or Passout Batch */}
+            {/* Semester (for Students) or Passout Batch (for Alumni) */}
             {isAlumni ? (
               <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Passout Batch (Graduation Year)</Text>
+                <View style={styles.labelRow}>
+                  <Text style={styles.inputLabel}>Passout Batch (Graduation Year)</Text>
+                  {gradYear ? (
+                    <Text style={styles.activeSemBadgeText}>Batch of {gradYear}</Text>
+                  ) : null}
+                </View>
                 <TextInput
                   ref={gradYearRef}
                   onFocus={onFieldFocus(gradYearRef)}
@@ -754,83 +758,69 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
                   onSubmitEditing={() => locationRef.current?.focus()}
                   blurOnSubmit={false}
                 />
+                {/* Passout Year Shortcuts for Alumni */}
+                <View style={[styles.quickChipsSection, { marginTop: 4 }]}>
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={styles.quickChipsScroll}
+                    keyboardShouldPersistTaps="handled"
+                  >
+                    {QUICK_PASSOUT_YEARS.map((y) => {
+                      const active = gradYear === y;
+                      return (
+                        <TouchableOpacity
+                          key={y}
+                          onPress={() => {
+                            Haptics.selectionAsync().catch(() => {});
+                            setGradYear(y);
+                          }}
+                          style={[styles.quickChip, active && styles.quickChipActive]}
+                          activeOpacity={0.7}
+                        >
+                          <Text style={[styles.quickChipText, active && styles.quickChipTextActive]}>
+                            Batch {y}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </ScrollView>
+                </View>
               </View>
             ) : (
               <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Current Semester</Text>
-                <TextInput
-                  ref={semesterRef}
-                  onFocus={onFieldFocus(semesterRef)}
-                  style={styles.textInput}
-                  value={semester}
-                  onChangeText={setSemester}
-                  placeholder="e.g. 6th Sem"
-                  placeholderTextColor="#9ca3af"
-                  returnKeyType="next"
-                  onSubmitEditing={() => locationRef.current?.focus()}
-                  blurOnSubmit={false}
-                />
-              </View>
-            )}
+                <View style={styles.labelRow}>
+                  <Text style={styles.inputLabel}>Current Semester</Text>
+                  {semester ? (
+                    <Text style={styles.activeSemBadgeText}>{semester}</Text>
+                  ) : null}
+                </View>
 
-            {isAlumni ? (
-              /* Passout Year Shortcuts for Alumni */
-              <View style={styles.quickChipsSection}>
-                <Text style={styles.quickChipsLabel}>Passout Batch Shortcuts:</Text>
+                {/* Unified 1st to 8th Semester Button Selector */}
                 <ScrollView
                   horizontal
                   showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={styles.quickChipsScroll}
+                  contentContainerStyle={styles.semScrollContainer}
                   keyboardShouldPersistTaps="handled"
                 >
-                  {QUICK_PASSOUT_YEARS.map((y) => {
-                    const active = gradYear === y;
-                    return (
-                      <TouchableOpacity
-                        key={y}
-                        onPress={() => {
-                          Haptics.selectionAsync().catch(() => {});
-                          setGradYear(y);
-                        }}
-                        style={[styles.quickChip, active && styles.quickChipActive]}
-                        activeOpacity={0.7}
-                      >
-                        <Text style={[styles.quickChipText, active && styles.quickChipTextActive]}>
-                          Batch {y}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </ScrollView>
-              </View>
-            ) : (
-              /* Semester Shortcuts for Students */
-              <View style={styles.quickChipsSection}>
-                <Text style={styles.quickChipsLabel}>Semester Shortcuts:</Text>
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={styles.quickChipsScroll}
-                  keyboardShouldPersistTaps="handled"
-                >
-                  {QUICK_SEMESTERS.map((s) => {
+                  {SEMESTERS.map((s) => {
                     const active = semester.toLowerCase() === s.toLowerCase();
                     return (
                       <TouchableOpacity
                         key={s}
                         onPress={() => {
                           Haptics.selectionAsync().catch(() => {});
-                          if (s === 'Alumni') {
-                            setSemester('Alumni');
-                            if (!gradYear) setGradYear('2024');
-                          } else {
-                            setSemester(s);
-                          }
+                          setSemester(s);
                         }}
-                        style={[styles.quickChip, active && styles.quickChipActive]}
+                        style={[styles.semSelectBtn, active && styles.semSelectBtnActive]}
                         activeOpacity={0.7}
                       >
-                        <Text style={[styles.quickChipText, active && styles.quickChipTextActive]}>
+                        <Text
+                          style={[
+                            styles.semSelectBtnText,
+                            active && styles.semSelectBtnTextActive,
+                          ]}
+                        >
                           {s}
                         </Text>
                       </TouchableOpacity>
@@ -1413,5 +1403,36 @@ const styles = StyleSheet.create({
   statusSegmentTextActive: {
     fontFamily: FONTS.displayBold,
     color: COLORS.primary,
+  },
+  activeSemBadgeText: {
+    fontFamily: FONTS.bodySemi,
+    fontSize: 12,
+    color: COLORS.primary,
+  },
+  semScrollContainer: {
+    flexDirection: 'row',
+    gap: 8,
+    paddingVertical: 4,
+  },
+  semSelectBtn: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: RADIUS.md,
+    backgroundColor: '#f1f5f9',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  semSelectBtnActive: {
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
+  },
+  semSelectBtnText: {
+    fontFamily: FONTS.bodyMedium,
+    fontSize: 12.5,
+    color: '#475569',
+  },
+  semSelectBtnTextActive: {
+    color: '#ffffff',
+    fontFamily: FONTS.bodySemi,
   },
 });
