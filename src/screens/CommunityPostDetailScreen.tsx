@@ -8,7 +8,13 @@ import {
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
+  LayoutAnimation,
+  UIManager,
 } from 'react-native';
+
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
@@ -72,6 +78,8 @@ export const CommunityPostDetailScreen: React.FC = () => {
     commentId: string;
     authorName: string;
   } | null>(null);
+  const [collapsedThreads, setCollapsedThreads] = useState<Record<string, boolean>>({});
+  const [expandedReplyThreads, setExpandedReplyThreads] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     const unsub = communityStore.subscribe(() => {
@@ -82,6 +90,39 @@ export const CommunityPostDetailScreen: React.FC = () => {
     });
     return unsub;
   }, [postId]);
+
+  // Recursively collect all descendant replies in conversation order for 2-level flat rendering
+  const flattenReplies = (repliesList: CommunityComment[]): CommunityComment[] => {
+    const flat: CommunityComment[] = [];
+    const walk = (list: CommunityComment[]) => {
+      for (const item of list) {
+        flat.push(item);
+        if (item.replies && item.replies.length > 0) {
+          walk(item.replies);
+        }
+      }
+    };
+    walk(repliesList);
+    return flat;
+  };
+
+  const toggleCollapseThread = (commentId: string) => {
+    Haptics.selectionAsync().catch(() => {});
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setCollapsedThreads((prev) => ({
+      ...prev,
+      [commentId]: !prev[commentId],
+    }));
+  };
+
+  const toggleExpandReplies = (commentId: string) => {
+    Haptics.selectionAsync().catch(() => {});
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setExpandedReplyThreads((prev) => ({
+      ...prev,
+      [commentId]: !prev[commentId],
+    }));
+  };
 
   const handleSendComment = () => {
     if (!commentInput.trim() || !postId) return;
@@ -95,6 +136,14 @@ export const CommunityPostDetailScreen: React.FC = () => {
       'You (Student)',
       'B.Tech Student • PYQDeck'
     );
+
+    // Auto-expand replies in the active thread so user sees their new response immediately
+    if (replyingTo?.commentId) {
+      setExpandedReplyThreads((prev) => ({
+        ...prev,
+        [replyingTo.commentId]: true,
+      }));
+    }
 
     setCommentInput('');
     setReplyingTo(null);
@@ -131,17 +180,105 @@ export const CommunityPostDetailScreen: React.FC = () => {
 
   const totalComments = getTotalCount(comments);
 
-  // Render a single comment item (top level or reply)
-  const renderCommentItem = (comment: CommunityComment, isReply = false) => {
+  // Render a Level 1 reply item (always indented by standard 1 level with @mention)
+  const renderReplyItem = (reply: CommunityComment, rootCommentId: string) => {
+    const initials = (reply.author.name[0] || 'U').toUpperCase();
+
+    return (
+      <View key={reply.id} style={styles.replyBlock}>
+        {/* Left Avatar (compact 26px for replies) */}
+        <View style={styles.replyAvatar}>
+          <Text style={styles.replyAvatarText}>{initials}</Text>
+        </View>
+
+        {/* Right Content */}
+        <View style={styles.commentContent}>
+          <View style={styles.bubble}>
+            <View style={styles.bubbleHeader}>
+              <Text style={styles.bubbleAuthorName} numberOfLines={1}>
+                {reply.author.name}
+              </Text>
+              <Text style={styles.bubbleTime}>{reply.createdAt}</Text>
+            </View>
+
+            {reply.author.headline && (
+              <Text style={styles.bubbleHeadline} numberOfLines={1}>
+                {reply.author.headline}
+              </Text>
+            )}
+
+            {reply.replyToAuthorName && (
+              <Text style={styles.replyMention}>@{reply.replyToAuthorName} </Text>
+            )}
+
+            <NativeContentRenderer
+              content={reply.body}
+              variant="question"
+              fontSize={13}
+              markdownStyles={commentMarkdownStyles}
+            />
+          </View>
+
+          {/* Action Row: Like, Reply */}
+          <View style={styles.commentActionsRow}>
+            <TouchableOpacity
+              style={styles.actionInlineBtn}
+              onPress={() => handleLikeComment(reply.id)}
+            >
+              <Text style={[styles.actionInlineText, reply.isLiked && styles.actionLikedText]}>
+                Like {reply.likesCount > 0 ? `(${reply.likesCount})` : ''}
+              </Text>
+            </TouchableOpacity>
+
+            <Text style={styles.actionDot}>•</Text>
+
+            <TouchableOpacity
+              style={styles.actionInlineBtn}
+              onPress={() => handleStartReply(rootCommentId, reply.author.name)}
+            >
+              <Text style={styles.actionInlineText}>Reply</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    );
+  };
+
+  // Render top-level root comment with progressive disclosure and Reddit-style collapsing
+  const renderRootComment = (comment: CommunityComment) => {
+    const allReplies = flattenReplies(comment.replies || []);
+    const isCollapsed = !!collapsedThreads[comment.id];
+    const isRepliesExpanded = !!expandedReplyThreads[comment.id];
+    const totalReplies = allReplies.length;
+
+    // Reddit-style collapsed thread bar (single row)
+    if (isCollapsed) {
+      return (
+        <TouchableOpacity
+          key={comment.id}
+          style={styles.collapsedBlock}
+          onPress={() => toggleCollapseThread(comment.id)}
+          activeOpacity={0.7}
+        >
+          <View style={styles.collapsedLeftRow}>
+            <Feather name="chevron-right" size={14} color="#6b7280" style={{ marginRight: 6 }} />
+            <Text style={styles.collapsedAuthorName}>{comment.author.name}</Text>
+            <Text style={styles.collapsedMeta} numberOfLines={1}>
+              • {comment.createdAt} • {totalReplies > 0 ? `${totalReplies} ${totalReplies === 1 ? 'reply' : 'replies'} hidden` : 'collapsed'}
+            </Text>
+          </View>
+          <Text style={styles.collapsedExpandBtn}>Expand</Text>
+        </TouchableOpacity>
+      );
+    }
+
     const initials = (comment.author.name[0] || 'U').toUpperCase();
 
     return (
-      <View key={comment.id} style={[styles.commentBlock, isReply && styles.replyBlock]}>
+      <View key={comment.id} style={styles.commentBlock}>
         {/* Left Avatar */}
-        <View style={isReply ? styles.replyAvatar : styles.commentAvatar}>
-          <Text style={isReply ? styles.replyAvatarText : styles.commentAvatarText}>
-            {initials}
-          </Text>
+        <View style={styles.commentAvatar}>
+          <Text style={styles.commentAvatarText}>{initials}</Text>
         </View>
 
         {/* Right Content */}
@@ -149,10 +286,22 @@ export const CommunityPostDetailScreen: React.FC = () => {
           {/* Gray LinkedIn-style Bubble */}
           <View style={styles.bubble}>
             <View style={styles.bubbleHeader}>
-              <Text style={styles.bubbleAuthorName} numberOfLines={1}>
-                {comment.author.name}
-              </Text>
-              <Text style={styles.bubbleTime}>{comment.createdAt}</Text>
+              <View style={styles.bubbleAuthorWrap}>
+                <Text style={styles.bubbleAuthorName} numberOfLines={1}>
+                  {comment.author.name}
+                </Text>
+              </View>
+              <View style={styles.bubbleHeaderRight}>
+                <Text style={styles.bubbleTime}>{comment.createdAt}</Text>
+                <TouchableOpacity
+                  style={styles.collapseThreadBtn}
+                  onPress={() => toggleCollapseThread(comment.id)}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  accessibilityLabel="Collapse thread"
+                >
+                  <Feather name="minus-circle" size={14} color="#9ca3af" />
+                </TouchableOpacity>
+              </View>
             </View>
 
             {comment.author.headline && (
@@ -164,6 +313,7 @@ export const CommunityPostDetailScreen: React.FC = () => {
             {comment.replyToAuthorName && (
               <Text style={styles.replyMention}>@{comment.replyToAuthorName} </Text>
             )}
+
             <NativeContentRenderer
               content={comment.body}
               variant="question"
@@ -191,14 +341,65 @@ export const CommunityPostDetailScreen: React.FC = () => {
             >
               <Text style={styles.actionInlineText}>Reply</Text>
             </TouchableOpacity>
+
+            {totalReplies > 0 && (
+              <>
+                <Text style={styles.actionDot}>•</Text>
+                <TouchableOpacity
+                  style={styles.actionInlineBtn}
+                  onPress={() => toggleExpandReplies(comment.id)}
+                >
+                  <Text
+                    style={[
+                      styles.actionInlineText,
+                      isRepliesExpanded && { color: COLORS.primary, fontFamily: FONTS.displayBold },
+                    ]}
+                  >
+                    {totalReplies} {totalReplies === 1 ? 'reply' : 'replies'}
+                  </Text>
+                </TouchableOpacity>
+              </>
+            )}
           </View>
 
-          {/* Nested Replies ("comment pe comment") */}
-          {comment.replies && comment.replies.length > 0 && (
+          {/* Level 0 Loaded First: Click to load/reveal replies */}
+          {totalReplies > 0 && !isRepliesExpanded && (
+            <TouchableOpacity
+              style={styles.viewRepliesPillBtn}
+              onPress={() => toggleExpandReplies(comment.id)}
+              activeOpacity={0.7}
+            >
+              <Feather name="corner-down-right" size={13} color={COLORS.primary} style={{ marginRight: 2 }} />
+              <Text style={styles.viewRepliesPillText}>
+                View {totalReplies} {totalReplies === 1 ? 'reply' : 'replies'}
+              </Text>
+              <Feather name="chevron-down" size={13} color={COLORS.primary} style={{ marginLeft: 2 }} />
+            </TouchableOpacity>
+          )}
+
+          {/* Flattened Level 1 Replies Container (Strictly Max 2 Levels) */}
+          {totalReplies > 0 && isRepliesExpanded && (
             <View style={styles.nestedContainer}>
-              <View style={styles.threadLine} />
+              <TouchableOpacity
+                style={styles.threadLineTouchable}
+                onPress={() => toggleCollapseThread(comment.id)}
+                activeOpacity={0.6}
+                accessibilityLabel="Tap thread line to collapse"
+              >
+                <View style={styles.threadLine} />
+              </TouchableOpacity>
+
               <View style={styles.nestedList}>
-                {comment.replies.map((reply) => renderCommentItem(reply, true))}
+                {allReplies.map((reply) => renderReplyItem(reply, comment.id))}
+
+                <TouchableOpacity
+                  style={styles.hideRepliesBtn}
+                  onPress={() => toggleExpandReplies(comment.id)}
+                  activeOpacity={0.7}
+                >
+                  <Feather name="chevron-up" size={13} color="#6b7280" style={{ marginRight: 5 }} />
+                  <Text style={styles.hideRepliesText}>Hide replies</Text>
+                </TouchableOpacity>
               </View>
             </View>
           )}
@@ -248,7 +449,7 @@ export const CommunityPostDetailScreen: React.FC = () => {
               </View>
             ) : (
               <View style={styles.commentsList}>
-                {comments.map((comment) => renderCommentItem(comment, false))}
+                {comments.map((comment) => renderRootComment(comment))}
               </View>
             )}
           </View>
@@ -368,7 +569,9 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
   },
   replyBlock: {
-    marginTop: 10,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginTop: 6,
   },
   commentAvatar: {
     width: 36,
@@ -387,18 +590,20 @@ const styles = StyleSheet.create({
     color: COLORS.secondary,
   },
   replyAvatar: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: '#f3f4f6',
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: '#eff6ff',
+    borderWidth: 1,
+    borderColor: '#bfdbfe',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 8,
   },
   replyAvatarText: {
     fontFamily: FONTS.displayBold,
-    fontSize: 11,
-    color: '#4b5563',
+    fontSize: 10.5,
+    color: COLORS.primary,
   },
   commentContent: {
     flex: 1,
@@ -468,22 +673,111 @@ const styles = StyleSheet.create({
     color: '#9ca3af',
     marginHorizontal: 4,
   },
+  repliesCountIndicator: {
+    fontFamily: FONTS.bodyMedium,
+    fontSize: 11.5,
+    color: '#64748b',
+  },
+  collapsedBlock: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#f9fafb',
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    marginBottom: 8,
+  },
+  collapsedLeftRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    marginRight: 8,
+  },
+  collapsedAuthorName: {
+    fontFamily: FONTS.displayBold,
+    fontSize: 12.5,
+    color: '#374151',
+  },
+  collapsedMeta: {
+    fontFamily: FONTS.body,
+    fontSize: 11,
+    color: '#6b7280',
+    marginLeft: 6,
+    flex: 1,
+  },
+  collapsedExpandBtn: {
+    fontFamily: FONTS.bodySemi,
+    fontSize: 12,
+    color: COLORS.primary,
+  },
+  bubbleAuthorWrap: {
+    flex: 1,
+  },
+  bubbleHeaderRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  collapseThreadBtn: {
+    padding: 2,
+    marginLeft: 4,
+  },
   nestedContainer: {
     position: 'relative',
     marginTop: 4,
     paddingLeft: 4,
   },
-  threadLine: {
+  threadLineTouchable: {
     position: 'absolute',
     left: -24,
-    top: -10,
-    bottom: 12,
+    top: -6,
+    bottom: 6,
+    width: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  threadLine: {
     width: 2,
-    backgroundColor: '#e5e7eb',
+    height: '100%',
+    backgroundColor: '#e2e8f0',
     borderRadius: 1,
   },
   nestedList: {
     gap: 8,
+  },
+  viewRepliesPillBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+    backgroundColor: '#eff6ff',
+    borderRadius: RADIUS.full,
+    alignSelf: 'flex-start',
+    marginTop: 4,
+    marginBottom: 4,
+    borderWidth: 1,
+    borderColor: '#dbeafe',
+  },
+  viewRepliesPillText: {
+    fontFamily: FONTS.bodySemi,
+    fontSize: 12,
+    color: COLORS.primary,
+  },
+  hideRepliesBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 6,
+    paddingHorizontal: 2,
+    marginTop: 4,
+  },
+  hideRepliesText: {
+    fontFamily: FONTS.bodyMedium,
+    fontSize: 12,
+    color: '#6b7280',
   },
   composerContainer: {
     backgroundColor: '#ffffff',
