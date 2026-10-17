@@ -79,7 +79,7 @@ export const CommunityPostDetailScreen: React.FC = () => {
   const headerHeight = useHeaderHeight();
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
   const keyboardSpace = useRef(new Animated.Value(0)).current;
-  const { postId, initialPost } = route.params || {};
+  const { postId, initialPost, focusComments } = route.params || {};
 
   const [post, setPost] = useState<CommunityPost | undefined>(
     () => initialPost || communityStore.getPostById(postId)
@@ -96,6 +96,20 @@ export const CommunityPostDetailScreen: React.FC = () => {
   const [expandedReplyThreads, setExpandedReplyThreads] = useState<Record<string, boolean>>({});
   const INITIAL_ROOT_COMMENTS_LIMIT = 4;
   const [visibleRootCommentsCount, setVisibleRootCommentsCount] = useState(INITIAL_ROOT_COMMENTS_LIMIT);
+  const commentsSectionYRef = useRef<number>(0);
+
+  // Auto-focus comment composer & scroll down if opened via comment button on feed
+  useEffect(() => {
+    if (focusComments) {
+      const timer = setTimeout(() => {
+        inputRef.current?.focus();
+        if (commentsSectionYRef.current > 0) {
+          scrollViewRef.current?.scrollTo({ y: commentsSectionYRef.current, animated: true });
+        }
+      }, 350);
+      return () => clearTimeout(timer);
+    }
+  }, [focusComments]);
 
   useEffect(() => {
     const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
@@ -198,6 +212,11 @@ export const CommunityPostDetailScreen: React.FC = () => {
     setCommentInput('');
     setReplyingTo(null);
     setVisibleRootCommentsCount((prev) => Math.max(prev, comments.length + 1));
+
+    // Smoothly scroll down so the user sees their newly posted comment immediately
+    setTimeout(() => {
+      scrollViewRef.current?.scrollToEnd({ animated: true });
+    }, 200);
   };
 
   const handleStartReply = (commentId: string, authorName: string) => {
@@ -558,7 +577,12 @@ export const CommunityPostDetailScreen: React.FC = () => {
           />
 
           {/* Comments section */}
-          <View style={styles.commentsSection}>
+          <View
+            style={styles.commentsSection}
+            onLayout={(e) => {
+              commentsSectionYRef.current = e.nativeEvent.layout.y;
+            }}
+          >
             {/* Comments Header */}
             <View style={styles.commentsHeaderRow}>
               <Text style={styles.commentsHeaderTitle}>

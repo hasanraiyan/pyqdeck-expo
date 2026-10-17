@@ -23,6 +23,7 @@ import { CommunityPost } from '../types/community';
 import { communityStore } from '../data/mockCommunity';
 import { CommunityPostCard } from '../components/community/CommunityPostCard';
 import { CreateCommunityPostModal } from '../components/community/CreateCommunityPostModal';
+import { CommunityCommentsBottomSheet } from '../components/community/CommunityCommentsBottomSheet';
 import { NewPostIcon } from '../components/community/NewPostIcon';
 import { ScreenContainer } from '../components/ScreenContainer';
 import { CommunityFeedSkeleton } from '../components/Skeletons';
@@ -47,6 +48,7 @@ export const CommunityFeedScreen: React.FC = () => {
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [createModalVisible, setCreateModalVisible] = useState(false);
+  const [commentSheetPost, setCommentSheetPost] = useState<CommunityPost | null>(null);
 
   // Initial load simulation with skeleton placeholder
   useEffect(() => {
@@ -105,10 +107,11 @@ export const CommunityFeedScreen: React.FC = () => {
     });
   }, [posts, selectedHashtag, searchQuery]);
 
-  const handleOpenDetail = (post: CommunityPost) => {
+  const handleOpenDetail = (post: CommunityPost, focusComments = false) => {
     navigation.navigate('CommunityPostDetail', {
       postId: post.id,
       initialPost: post,
+      focusComments,
     });
   };
 
@@ -294,8 +297,8 @@ export const CommunityFeedScreen: React.FC = () => {
                 onLikePress={(id) => communityStore.toggleLikePost(id)}
                 onBookmarkPress={(id) => communityStore.toggleBookmarkPost(id)}
                 onHashtagPress={(tag) => setSelectedHashtag(tag)}
-                onCommentPress={handleOpenDetail}
-                onOpenDetail={handleOpenDetail}
+                onCommentPress={(p) => setCommentSheetPost(p)}
+                onOpenDetail={(p) => handleOpenDetail(p, false)}
                 onDismissPost={(id) => communityStore.dismissPost(id)}
               />
             </ScreenContainer>
@@ -324,6 +327,13 @@ export const CommunityFeedScreen: React.FC = () => {
         onPostCreated={() => {
           setSelectedHashtag(null);
         }}
+      />
+
+      {/* LinkedIn-Style Comments Bottom Sheet */}
+      <CommunityCommentsBottomSheet
+        visible={!!commentSheetPost}
+        post={commentSheetPost}
+        onClose={() => setCommentSheetPost(null)}
       />
     </View>
   );
