@@ -273,12 +273,12 @@ export const CommunityFeedScreen: React.FC = () => {
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
                   navigation.navigate('Tabs', { screen: 'Activity' });
                 }}
-                style={styles.headerIconButton}
+                style={styles.headerMessageButton}
                 hitSlop={8}
                 accessibilityRole="button"
                 accessibilityLabel="Messages & Activity"
               >
-                <Feather name="message-circle" size={18} color={COLORS.text} />
+                <Feather name="message-circle" size={20} color={COLORS.text} />
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -463,7 +463,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  headerPostBtn: {
+  headerMessageButton: {
     width: 38,
     height: 38,
     alignItems: 'center',
