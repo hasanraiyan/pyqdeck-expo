@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | Product | PYQDeck Community (Website + Expo app + shared backend) |
-| Version | 1.1 |
+| Version | 1.2 |
 | Date | 2026-10-17 |
 | Status | Draft |
 | Audience | Product, web, mobile, backend, and QA teams |
@@ -12,7 +12,7 @@ Priority: **M** = Must, **S** = Should, **C** = Could. This document describes t
 
 ## 1. Purpose
 
-PYQDeck Community lets students share and discover study notes, handwritten images, PDFs, doubts, PYQ solutions, and study tips. It should help students find resources relevant to their university, branch, semester, subject, and syllabus.
+PYQDeck Community lets students share and discover study notes, handwritten images, PDFs, doubts, PYQ solutions, and study tips through a simple, social feed.
 
 The feature must work on both the website and Expo app. A shared link should open the same post in the app when installed, or in the website otherwise.
 
@@ -21,7 +21,7 @@ The feature must work on both the website and Expo app. A shared link should ope
 Included:
 - Public community feed and searchable notes library.
 - Create posts with images or PDFs.
-- Academic tags: university/curriculum, branch, semester, subject, module, and topic.
+- Optional hashtags in post bodies for discovery (for example, #ComputerNetworks or #Semester6).
 - Doubts, comments, helpful reactions, bookmarks, and reports.
 - Links to existing PYQs and syllabus topics.
 - Shareable web pages, social previews, and app deep links.
@@ -48,13 +48,13 @@ Users should be able to browse without signing in or completing an academic prof
 | FR-1 | The website SHALL provide a Community page and individual public post pages. | M |
 | FR-2 | The Expo app SHALL provide a Community feed, post details, notes viewer, and create-post flow. | M |
 | FR-3 | Users SHALL be able to share notes, ask doubts, post PYQ solutions, and share study tips. | M |
-| FR-4 | Posts SHALL support a title, optional text, attachments, and relevant academic tags. | M |
-| FR-5 | Academic selectors SHALL use existing syllabus/catalogue records where available. The server SHALL validate submitted IDs. | M |
-| FR-6 | Users SHALL be able to filter/search by branch, semester, subject, module, topic, and post type. | M |
-| FR-7 | The feed SHOULD prioritize resources matching the user's selected academic profile. Users MUST still be able to browse other content. | S |
+| FR-4 | Posts SHALL use one main body field with optional image/PDF attachments. A separate title field SHALL NOT be required. | M |
+| FR-5 | Users SHOULD be able to add hashtags in the body. Hashtags SHALL support search and discovery. | M |
+| FR-6 | Users SHALL be able to search and filter posts by hashtag and post type. No branch, semester, subject, module, or topic selection SHALL be required to publish. | M |
+| FR-7 | The feed SHOULD help users discover relevant posts without requiring an academic profile. | S |
 | FR-8 | Authors SHALL be able to edit or remove their own posts. Edited content or attachments MUST be checked again before publication. | M |
 | FR-9 | Users SHALL be able to comment, react/helpful-vote, bookmark, and report eligible posts. | M |
-| FR-10 | A post MAY link to an existing PYQ question, subject, module, or topic. | M |
+| FR-10 | A post MAY link to an existing PYQ question or syllabus resource, but such linking SHALL be optional. | M |
 | FR-11 | Users SHALL see upload progress and clear pending, published, rejected, or failed states. | M |
 | FR-12 | Users SHALL be able to see the status of their own posts. | S |
 | FR-13 | Public feeds, search results, profiles, and pages MUST show only published posts. | M |
@@ -119,13 +119,13 @@ These are suggested API contracts, not claims that the routes already exist. Reu
 
 The implementation must follow the existing backend's authentication and upload approach.
 
-A post record will generally need: stable ID, slug, author ID, post type, title, optional body, attachment references, academic tags, status, and timestamps. Attachments need their media type and moderation/publication state. This is a conceptual model; adapt it to the current database conventions.
+A post record will generally need: stable ID, slug, author ID, post type, body, attachment references, hashtags, status, and timestamps. A separate title or structured academic selections are not required. Attachments need their media type and moderation/publication state. This is a conceptual model; adapt it to the current database conventions.
 
 ## 9. MVP acceptance checklist
 
 - [ ] Guests can browse and read published posts on the website.
-- [ ] Signed-in students can create a tagged post with images or a PDF.
-- [ ] Academic filters return relevant results and reject invalid catalogue references.
+- [ ] Signed-in students can create a body-first post with optional hashtags and images/PDFs, without filling out academic dropdowns.
+- [ ] Hashtag search returns relevant posts.
 - [ ] Pending or unsafe uploads never appear publicly.
 - [ ] Users can share a canonical link with a useful preview.
 - [ ] The link opens the same post in the app when installed and the website otherwise.
@@ -150,3 +150,4 @@ A post record will generally need: stable ID, slug, author ID, post type, title,
 |---|---|---|
 | 1.0 | 2026-10-17 | Initial detailed draft |
 | 1.1 | 2026-10-17 | Simplified structure and condensed requirements |
+| 1.2 | 2026-10-17 | Simplified posting to body, optional hashtags, and attachments; removed mandatory academic selections |
