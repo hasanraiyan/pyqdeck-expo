@@ -7,7 +7,7 @@ export const INITIAL_MOCK_POSTS: CommunityPost[] = [
     author: {
       id: 'user-1',
       name: 'Aarav Sharma',
-      headline: 'CSE 3rd Year • Operating Systems & Core CS',
+      bio: 'CSE 3rd Year • Operating Systems & Core CS',
       college: 'BEU Tech',
     },
     createdAt: '2h',
@@ -42,7 +42,7 @@ Attached my rough calculation sheet. Would appreciate any insights from seniors 
     author: {
       id: 'user-2',
       name: 'Priya Patel',
-      headline: 'ECE 6th Sem • Networking & Telecom • Top Contributor',
+      bio: 'ECE 6th Sem • Networking & Telecom • Top Contributor',
       college: 'GEC Patna',
     },
     createdAt: '4h',
@@ -90,7 +90,7 @@ Attaching the full 6-page PDF. Clean diagrams, high-yield for university exams. 
     author: {
       id: 'user-3',
       name: 'Vikram Singh',
-      headline: 'IT Final Year • Database Systems & Cloud',
+      bio: 'IT Final Year • Database Systems & Cloud',
       college: 'MIT Muzaffarpur',
     },
     createdAt: '7h',
@@ -138,7 +138,7 @@ Attached 2 high-res photos of the complete step-by-step tree construction.
     author: {
       id: 'user-4',
       name: 'Sneha Roy',
-      headline: 'CSE Senior • Compiler Design & Systems Programming',
+      bio: 'CSE Senior • Compiler Design & Systems Programming',
       college: 'BCE Bhagalpur',
     },
     createdAt: '1d',
@@ -168,7 +168,7 @@ export const INITIAL_MOCK_COMMENTS: Record<string, CommunityComment[]> = {
       author: {
         id: 'user-commenter-1',
         name: 'Nikhil Kashyap',
-        headline: 'CSE Sem 6 • Systems & OS',
+        bio: 'CSE Sem 6 • Systems & OS',
       },
       body: `Look at step 2 in your trace: if you allocate $(1, 0, 2)$, the new Need vector for $P_1$ becomes:
 $$\\text{Need}_{P_1} = (0, 2, 0)$$
@@ -185,7 +185,7 @@ but $\\text{Available}$ drops to $(2, 3, 0)$. None of the remaining processes ca
           author: {
             id: 'user-commenter-2',
             name: 'Ananya Sen',
-            headline: 'CSE Sem 5 • Core CS',
+            bio: 'CSE Sem 5 • Core CS',
           },
           body: `@Nikhil Exactly! And remember: **Unsafe state $\\ne$ Deadlock**, but *Unsafe state may lead to deadlock*. That is why Banker's algorithm is strictly conservative.`,
           createdAt: '45m ago',
@@ -200,7 +200,7 @@ but $\\text{Available}$ drops to $(2, 3, 0)$. None of the remaining processes ca
               author: {
                 id: 'user-1',
                 name: 'Aarav Sharma',
-                headline: 'Author • CSE 3rd Year',
+                bio: 'Author • CSE 3rd Year',
               },
               body: '@Ananya @Nikhil Oh wow, that completely clicked for me now! I forgot to verify if the NEXT process in line would starve with the reduced vector. Thank you both!',
               createdAt: '20m ago',
@@ -217,7 +217,7 @@ but $\\text{Available}$ drops to $(2, 3, 0)$. None of the remaining processes ca
       author: {
         id: 'user-c2',
         name: 'Rohan Mehra',
-        headline: 'IT Sem 6 • Software Engineering',
+        bio: 'IT Sem 6 • Software Engineering',
       },
       body: 'Can this same logic apply to Resource Allocation Graphs (RAG) when multiple resource instances are present?',
       createdAt: '30m ago',
@@ -232,7 +232,7 @@ but $\\text{Available}$ drops to $(2, 3, 0)$. None of the remaining processes ca
           author: {
             id: 'user-3',
             name: 'Vikram Singh',
-            headline: 'IT Final Year',
+            bio: 'IT Final Year',
           },
           body: '@Rohan For single instances, a simple cycle in RAG is necessary and sufficient for deadlock. But for multiple instances, a cycle is only necessary, not sufficient—that\'s where Banker\'s matrix safety test comes in.',
           createdAt: '15m ago',
@@ -247,7 +247,7 @@ but $\\text{Available}$ drops to $(2, 3, 0)$. None of the remaining processes ca
       author: {
         id: 'user-c3',
         name: 'Kavya Nair',
-        headline: 'CSE Final Year • Distributed Systems',
+        bio: 'CSE Final Year • Distributed Systems',
       },
       body: `There is a quick inspection shortcut for university exams:
 If $\\sum \\text{Allocation}_i = \\text{Total Resources}$, and $\\text{Available} = (0, 0, 0)$, you can immediately inspect the smallest Need vector. If even one process has $\\text{Need}_k > 0$, deadlock is unavoidable without preemption.`,
@@ -263,7 +263,7 @@ If $\\sum \\text{Allocation}_i = \\text{Total Resources}$, and $\\text{Available
           author: {
             id: 'user-c3-reply1',
             name: 'Kunal Verma',
-            headline: 'CSE Sem 5 • GATE Aspirant',
+            bio: 'CSE Sem 5 • GATE Aspirant',
           },
           body: '@Kavya Wait, is that true even if one process can release a non-critical resource?',
           createdAt: '25m ago',
@@ -278,7 +278,7 @@ If $\\sum \\text{Allocation}_i = \\text{Total Resources}$, and $\\text{Available
           author: {
             id: 'user-c3',
             name: 'Kavya Nair',
-            headline: 'CSE Final Year • Distributed Systems',
+            bio: 'CSE Final Year • Distributed Systems',
           },
           body: '@Kunal Good catch! Only when the resource is non-preemptible. In classic Banker\'s assumptions, resources are non-preemptible and processes hold-and-wait.',
           createdAt: '18m ago',
@@ -293,7 +293,7 @@ If $\\sum \\text{Allocation}_i = \\text{Total Resources}$, and $\\text{Available
       author: {
         id: 'user-c4',
         name: 'Meera Joshi',
-        headline: 'IT 3rd Year • OS & Linux Kernel',
+        bio: 'IT 3rd Year • OS & Linux Kernel',
       },
       body: `Here is the clean breakdown from Silberschatz:
 
@@ -317,7 +317,7 @@ If step 3 fails for all unfinished processes, the system is in an unsafe state!`
           author: {
             id: 'user-c4-reply1',
             name: 'Rahul Gupta',
-            headline: 'ECE Sem 6',
+            bio: 'ECE Sem 6',
           },
           body: '@Meera Thanks for writing down the exact 3 conditions! Memorizing these step-by-step is crucial for 14-mark answers.',
           createdAt: '22m ago',
@@ -332,7 +332,7 @@ If step 3 fails for all unfinished processes, the system is in an unsafe state!`
       author: {
         id: 'user-c5',
         name: 'Deepak Choudhary',
-        headline: 'CSE Sem 6 • Algorithms & CP',
+        bio: 'CSE Sem 6 • Algorithms & CP',
       },
       body: `A fun practical note:
 The time complexity of the safety algorithm is:
@@ -350,7 +350,7 @@ where $n$ is processes and $m$ is resource types. That's why real production OS 
           author: {
             id: 'user-4',
             name: 'Sneha Roy',
-            headline: 'CSE Senior • Systems Programming',
+            bio: 'CSE Senior • Systems Programming',
           },
           body: '@Deepak The Ostrich algorithm is everyone\'s favorite viva question! "Stick head in sand and pretend there is no problem."',
           createdAt: '12m ago',
@@ -365,7 +365,7 @@ where $n$ is processes and $m$ is resource types. That's why real production OS 
           author: {
             id: 'user-1',
             name: 'Aarav Sharma',
-            headline: 'Author • CSE 3rd Year',
+            bio: 'Author • CSE 3rd Year',
           },
           body: '@Sneha @Deepak Haha love this! Makes total sense why modern OSes wouldn\'t waste CPU cycles checking matrices on every single malloc/alloc call.',
           createdAt: '8m ago',
@@ -380,7 +380,7 @@ where $n$ is processes and $m$ is resource types. That's why real production OS 
       author: {
         id: 'user-c6',
         name: 'Ishaan Kapoor',
-        headline: 'Electrical & CS • Systems Programming',
+        bio: 'Electrical & CS • Systems Programming',
       },
       body: 'Can someone clarify what happens if two processes request resources simultaneously? Does Banker\'s algorithm evaluate requests sequentially or concurrently?',
       createdAt: '21m ago',
@@ -395,7 +395,7 @@ where $n$ is processes and $m$ is resource types. That's why real production OS 
           author: {
             id: 'user-commenter-1',
             name: 'Nikhil Kashyap',
-            headline: 'CSE Sem 6 • Systems & OS',
+            bio: 'CSE Sem 6 • Systems & OS',
           },
           body: '@Ishaan Requests are strictly serialized using kernel spinlocks/monitors, so only one safety matrix check runs at any instant.',
           createdAt: '9m ago',
@@ -410,7 +410,7 @@ where $n$ is processes and $m$ is resource types. That's why real production OS 
       author: {
         id: 'user-c7',
         name: 'Pooja Trivedi',
-        headline: 'Computer Engineering 3rd Year',
+        bio: 'Computer Engineering 3rd Year',
       },
       body: `Sharing a quick C snippet of the check loop if anyone wants to run test vectors:
 
@@ -436,7 +436,7 @@ Testing $(1, 0, 2)$ flags unsafe immediately!`,
       author: {
         id: 'user-c8',
         name: 'Tanmay Bhatia',
-        headline: 'CSE 2nd Year • Core Enthusiast',
+        bio: 'CSE 2nd Year • Core Enthusiast',
       },
       body: 'Bookmarked! The explanation in this comment section is clearer than any textbook chapter.',
       createdAt: '10m ago',
@@ -449,7 +449,7 @@ Testing $(1, 0, 2)$ flags unsafe immediately!`,
       author: {
         id: 'user-c9',
         name: 'Dr. Rajesh K.',
-        headline: 'Adjunct Faculty • Systems Engineering',
+        bio: 'Adjunct Faculty • Systems Engineering',
       },
       body: `Impressive technical depth in this discussion! One reminder for semester exam candidates:
 Don't forget to state the **3 fundamental assumptions** of Banker's Algorithm:
@@ -468,7 +468,7 @@ Don't forget to state the **3 fundamental assumptions** of Banker's Algorithm:
           author: {
             id: 'user-1',
             name: 'Aarav Sharma',
-            headline: 'Author • CSE 3rd Year',
+            bio: 'Author • CSE 3rd Year',
           },
           body: '@Dr. Rajesh K. Thank you sir! Adding these exact 3 assumptions to my study sheet right now.',
           createdAt: '2m ago',
@@ -485,7 +485,7 @@ Don't forget to state the **3 fundamental assumptions** of Banker's Algorithm:
       author: {
         id: 'user-c201',
         name: 'Aditi Verma',
-        headline: 'ECE Sem 6 • Networks',
+        bio: 'ECE Sem 6 • Networks',
       },
       body: 'The Leaky Bucket vs Token Bucket diagram on page 4 is crystal clear! Our professor asked this exact comparison in last year\'s internals.',
       createdAt: '2h ago',
@@ -500,7 +500,7 @@ Don't forget to state the **3 fundamental assumptions** of Banker's Algorithm:
           author: {
             id: 'user-2',
             name: 'Priya Patel',
-            headline: 'Author • ECE 6th Sem',
+            bio: 'Author • ECE 6th Sem',
           },
           body: '@Aditi So glad it helped! Be sure to write the formula for Token Bucket burst capacity as well, evaluators give 2 extra marks for that.',
           createdAt: '1h ago',
@@ -607,7 +607,7 @@ class CommunityStore {
     parentCommentId?: string,
     replyToAuthorName?: string,
     authorName = 'You',
-    authorHeadline = 'Student • PYQDeck Community'
+    authorBio = 'Student • PYQDeck Community'
   ): CommunityComment {
     const newComment: CommunityComment = {
       id: `c-${Date.now()}`,
@@ -617,7 +617,7 @@ class CommunityStore {
       author: {
         id: 'current-user',
         name: authorName,
-        headline: authorHeadline,
+        bio: authorBio,
       },
       body: text,
       createdAt: 'Just now',

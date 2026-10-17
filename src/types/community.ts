@@ -2,7 +2,7 @@ export interface CommunityAuthor {
   id: string;
   name: string;
   avatarUrl?: string;
-  headline?: string; // e.g. "Computer Science & Engineering • 3rd Year"
+  bio?: string; // e.g. "Computer Science & Engineering • 3rd Year"
   badge?: string;
   college?: string;
 }

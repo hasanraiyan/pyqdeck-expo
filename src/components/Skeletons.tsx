@@ -144,7 +144,7 @@ export const CommunityPostSkeleton = () => (
       <Bone style={styles.postAvatarSkeleton} />
       <View style={styles.postHeaderMetaSkeleton}>
         <Bone style={styles.postAuthorNameSkeleton} />
-        <Bone style={styles.postTimeSkeleton} />
+        <Bone style={styles.postBioSkeleton} />
       </View>
     </View>
     <View style={styles.postBodySkeleton}>
@@ -356,9 +356,9 @@ const styles = StyleSheet.create({
     height: 12,
     width: '45%',
   },
-  postTimeSkeleton: {
-    height: 9,
-    width: '25%',
+  postBioSkeleton: {
+    height: 10,
+    width: '65%',
   },
   postBodySkeleton: {
     gap: 6,

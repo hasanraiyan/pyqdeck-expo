@@ -285,9 +285,9 @@ export const CommunityCommentsBottomSheet: React.FC<CommunityCommentsBottomSheet
             </TouchableOpacity>
           </View>
 
-          {reply.author.headline && (
-            <Text style={styles.headlineText} numberOfLines={1}>
-              {reply.author.headline}
+          {reply.author.bio && (
+            <Text style={styles.bioText} numberOfLines={1}>
+              {reply.author.bio}
             </Text>
           )}
 
@@ -391,9 +391,9 @@ export const CommunityCommentsBottomSheet: React.FC<CommunityCommentsBottomSheet
             </TouchableOpacity>
           </View>
 
-          {comment.author.headline && (
-            <Text style={styles.headlineText} numberOfLines={1}>
-              {comment.author.headline}
+          {comment.author.bio && (
+            <Text style={styles.bioText} numberOfLines={1}>
+              {comment.author.bio}
             </Text>
           )}
 
@@ -796,7 +796,7 @@ const styles = StyleSheet.create({
     padding: 2,
     marginLeft: 4,
   },
-  headlineText: {
+  bioText: {
     fontFamily: FONTS.body,
     fontSize: 11,
     color: '#6b7280',

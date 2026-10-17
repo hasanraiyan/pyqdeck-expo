@@ -148,7 +148,7 @@ export const CreateCommunityPostModal: React.FC<CreateCommunityPostModalProps> =
         author: {
           id: 'me',
           name: 'You (Student)',
-          headline: 'Student • PYQDeck Community',
+          bio: 'Student • PYQDeck Community',
         },
         body: body.trim(),
         hashtags,

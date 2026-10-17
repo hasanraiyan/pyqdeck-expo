@@ -189,7 +189,7 @@ export const CommunityPostDetailScreen: React.FC = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
 
     const authorName = user?.fullName || user?.firstName || 'You (Student)';
-    const authorHeadline = user?.primaryEmailAddress?.emailAddress
+    const authorBio = user?.primaryEmailAddress?.emailAddress
       ? 'Student • PYQDeck'
       : 'B.Tech Student • PYQDeck';
 
@@ -199,7 +199,7 @@ export const CommunityPostDetailScreen: React.FC = () => {
       replyingTo?.commentId,
       replyingTo?.authorName,
       authorName,
-      authorHeadline
+      authorBio
     );
 
     // Auto-expand replies in the active thread so user sees their new response immediately
@@ -338,9 +338,9 @@ export const CommunityPostDetailScreen: React.FC = () => {
           </View>
 
           {/* Headline / Role Subtitle */}
-          {reply.author.headline && (
-            <Text style={styles.headlineText} numberOfLines={1}>
-              {reply.author.headline}
+          {reply.author.bio && (
+            <Text style={styles.bioText} numberOfLines={1}>
+              {reply.author.bio}
             </Text>
           )}
 
@@ -456,9 +456,9 @@ export const CommunityPostDetailScreen: React.FC = () => {
           </View>
 
           {/* Headline / Role Subtitle */}
-          {comment.author.headline && (
-            <Text style={styles.headlineText} numberOfLines={1}>
-              {comment.author.headline}
+          {comment.author.bio && (
+            <Text style={styles.bioText} numberOfLines={1}>
+              {comment.author.bio}
             </Text>
           )}
 
@@ -858,7 +858,7 @@ const styles = StyleSheet.create({
     padding: 2,
     marginLeft: 4,
   },
-  headlineText: {
+  bioText: {
     fontFamily: FONTS.body,
     fontSize: 11,
     color: '#64748b',

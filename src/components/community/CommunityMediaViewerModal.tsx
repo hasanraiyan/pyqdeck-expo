@@ -234,7 +234,7 @@ export const CommunityMediaViewerModal: React.FC<CommunityMediaViewerModalProps>
     onOpenDetail?.(post);
   }, [onClose, onOpenDetail, post]);
 
-  const cleanAuthorCollege = post.author.college || post.author.headline || 'Student';
+  const cleanAuthorCollege = post.author.college || post.author.bio || 'Student';
 
   // Flatten into a single line for the 1-line bottom preview
   const singleLineBody = React.useMemo(

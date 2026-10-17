@@ -138,8 +138,16 @@ export const CommunityPostCard: React.FC<CommunityPostCardProps> = ({
   const [selectedMediaIndex, setSelectedMediaIndex] = useState(0);
   const [mediaType, setMediaType] = useState<'document' | 'image'>('image');
   const [expandedText, setExpandedText] = useState(initialExpanded);
+  const [collapsedLimit, setCollapsedLimit] = useState(200);
+  const [needsTruncation, setNeedsTruncation] = useState(false);
+  const fitRef = useRef(false);
   const [optionsModalVisible, setOptionsModalVisible] = useState(false);
   const [isDismissing, setIsDismissing] = useState(false);
+  useEffect(() => {
+    fitRef.current = false;
+    setCollapsedLimit(200);
+    setNeedsTruncation(false);
+  }, [post.id]);
   const dismissTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
@@ -260,15 +268,26 @@ export const CommunityPostCard: React.FC<CommunityPostCardProps> = ({
     [onHashtagPress]
   );
 
-  const isLong = post.body.length > 220;
+  const truncatedNow = needsTruncation;
 
   const displayContent = useMemo(() => {
-    if (isLong && !expandedText) {
-      const truncated = truncateMarkdownSafely(post.body, 220);
+    if (truncatedNow && !expandedText) {
+      const truncated = truncateMarkdownSafely(post.body, collapsedLimit);
       return `${formatHashtagsForMarkdown(truncated)}... [see more](action:see_more)`;
     }
     return formatHashtagsForMarkdown(post.body);
-  }, [post.body, isLong, expandedText]);
+  }, [post.body, truncatedNow, expandedText, collapsedLimit]);
+
+  const bodyOnLayout = (e: any) => {
+    if (expandedText || fitRef.current) return;
+    const h = e?.nativeEvent?.layout?.height ?? 0;
+    if (h > 3 * 22 + 8 + 4 && collapsedLimit > 40) {
+      setNeedsTruncation(true);
+      setCollapsedLimit((prev) => Math.max(40, prev - 20));
+    } else if (h <= 3 * 22 + 8 + 4) {
+      fitRef.current = true;
+    }
+  };
 
   const getInitials = (name: string) => {
     const parts = name.trim().split(/\s+/);
@@ -327,6 +346,11 @@ export const CommunityPostCard: React.FC<CommunityPostCardProps> = ({
               <Text style={styles.timeDot}>•</Text>
               <Text style={styles.timeText}>{cleanTime}</Text>
             </View>
+            {post.author.bio ? (
+              <Text style={styles.authorBio} numberOfLines={1} ellipsizeMode="tail">
+                {post.author.bio}
+              </Text>
+            ) : null}
           </View>
         </TouchableOpacity>
 
@@ -363,6 +387,7 @@ export const CommunityPostCard: React.FC<CommunityPostCardProps> = ({
         activeOpacity={0.9}
         onPress={() => onOpenDetail?.(post)}
         style={styles.bodyTouchable}
+        onLayout={bodyOnLayout}
       >
         <NativeContentRenderer
           content={displayContent}
@@ -718,15 +743,15 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   avatar: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     backgroundColor: '#f3f4f6',
   },
   avatarMonogram: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     backgroundColor: '#eff6ff',
     borderWidth: 1,
     borderColor: '#bfdbfe',
@@ -735,11 +760,11 @@ const styles = StyleSheet.create({
   },
   avatarMonogramText: {
     fontFamily: FONTS.displayBold,
-    fontSize: 13,
+    fontSize: 13.5,
     color: '#1d4ed8',
   },
   authorMeta: {
-    marginLeft: 9,
+    marginLeft: 10,
     flex: 1,
     justifyContent: 'center',
   },
@@ -762,6 +787,12 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.body,
     fontSize: 12,
     color: '#6b7280',
+  },
+  authorBio: {
+    fontFamily: FONTS.body,
+    fontSize: 11.5,
+    color: '#64748b',
+    marginTop: 1,
   },
   headerRightActions: {
     flexDirection: 'row',
