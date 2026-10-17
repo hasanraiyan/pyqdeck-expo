@@ -194,7 +194,7 @@ export const CreateCommunityPostModal: React.FC<CreateCommunityPostModalProps> =
           <TextInput
             style={styles.textInput}
             multiline
-            placeholder="What do you want to talk about?"
+            placeholder="What do you want to share with the community?"
             placeholderTextColor="#9ca3af"
             value={body}
             onChangeText={setBody}
@@ -249,19 +249,20 @@ export const CreateCommunityPostModal: React.FC<CreateCommunityPostModalProps> =
 
         {/* LinkedIn-style Bottom Action Toolbar */}
         <View style={[styles.bottomToolBar, { paddingBottom: Math.max(insets.bottom, 12) }]}>
-          <TouchableOpacity style={styles.toolIconBtn} onPress={handlePickImages}>
-            <Feather name="image" size={22} color="#4b5563" />
+          <TouchableOpacity style={styles.toolIconBtn} onPress={handlePickImages} accessibilityLabel="Add photo">
+            <Feather name="image" size={21} color="#4b5563" />
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.toolIconBtn} onPress={handlePickDocument}>
-            <Feather name="file-text" size={22} color="#4b5563" />
+          <TouchableOpacity style={styles.toolIconBtn} onPress={handlePickDocument} accessibilityLabel="Add PDF">
+            <Feather name="file-text" size={21} color="#4b5563" />
           </TouchableOpacity>
 
           <TouchableOpacity
             style={styles.toolIconBtn}
             onPress={() => handleAddHashtag('Question')}
+            accessibilityLabel="Add tag"
           >
-            <Feather name="hash" size={22} color="#4b5563" />
+            <Feather name="hash" size={21} color="#4b5563" />
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
@@ -429,7 +430,7 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     borderTopWidth: 1,
     borderTopColor: '#e5e7eb',
-    gap: 20,
+    gap: 22,
     backgroundColor: '#ffffff',
   },
   toolIconBtn: {

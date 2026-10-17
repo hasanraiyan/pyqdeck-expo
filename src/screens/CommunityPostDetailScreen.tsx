@@ -18,6 +18,41 @@ import { CommunityComment, CommunityPost } from '../types/community';
 import { communityStore } from '../data/mockCommunity';
 import { CommunityPostCard } from '../components/community/CommunityPostCard';
 import { ScreenContainer } from '../components/ScreenContainer';
+import { NativeContentRenderer } from '../components/NativeContentRenderer';
+import { baseMarkdownStyles } from '../theme/markdownStyles';
+
+const commentMarkdownStyles = {
+  ...baseMarkdownStyles,
+  body: {
+    color: '#1f2937',
+    fontSize: 13.5,
+    lineHeight: 19.5,
+    fontFamily: FONTS.body,
+  },
+  paragraph: {
+    marginTop: 0,
+    marginBottom: 4,
+    color: '#1f2937',
+    lineHeight: 19.5,
+  },
+  strong: {
+    fontFamily: FONTS.bodyBold,
+    color: '#111827',
+  },
+  em: {
+    fontStyle: 'italic' as const,
+    color: '#1f2937',
+  },
+  code_inline: {
+    backgroundColor: '#f3f4f6',
+    color: '#111827',
+    fontFamily: FONTS.mono,
+    fontSize: 12,
+    paddingHorizontal: 4,
+    paddingVertical: 1,
+    borderRadius: 3,
+  },
+};
 
 export const CommunityPostDetailScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
@@ -126,12 +161,15 @@ export const CommunityPostDetailScreen: React.FC = () => {
               </Text>
             )}
 
-            <Text style={styles.bubbleBody}>
-              {comment.replyToAuthorName && (
-                <Text style={styles.replyMention}>@{comment.replyToAuthorName} </Text>
-              )}
-              {comment.body}
-            </Text>
+            {comment.replyToAuthorName && (
+              <Text style={styles.replyMention}>@{comment.replyToAuthorName} </Text>
+            )}
+            <NativeContentRenderer
+              content={comment.body}
+              variant="question"
+              fontSize={13.5}
+              markdownStyles={commentMarkdownStyles}
+            />
           </View>
 
           {/* Action Row: Like, Reply */}
@@ -180,6 +218,7 @@ export const CommunityPostDetailScreen: React.FC = () => {
           {/* Post item */}
           <CommunityPostCard
             post={post}
+            initialExpanded={true}
             onLikePress={(id) => communityStore.toggleLikePost(id)}
             onBookmarkPress={(id) => communityStore.toggleBookmarkPost(id)}
             onHashtagPress={(tag) => {

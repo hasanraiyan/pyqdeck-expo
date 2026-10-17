@@ -11,9 +11,11 @@ export const INITIAL_MOCK_POSTS: CommunityPost[] = [
       college: 'BEU Tech',
     },
     createdAt: '2h',
-    body: `Can someone explain why Banker's Algorithm fails if the allocation state doesn't have a safe sequence?
+    body: `Can someone explain why **Banker's Algorithm** fails if the allocation state doesn't have a *safe sequence*?
 
-Specifically confused about Step 3 in #OperatingSystems. In my handwritten trace below, P1 requests (1, 0, 2) but Available vector is (3, 3, 2). Why does the OS deny it even though available > request?
+Specifically confused about **Step 3** in #OperatingSystems. In my handwritten trace below, process $P_1$ requests $(1, 0, 2)$ but $\\text{Available} = (3, 3, 2)$. Why does the OS deny it even though:
+
+$$\\text{Available} \\ge \\text{Request}$$
 
 Attached my rough calculation sheet. Would appreciate any insights from seniors or peers who took the 2023 exam!
 
@@ -44,11 +46,12 @@ Attached my rough calculation sheet. Would appreciate any insights from seniors 
       college: 'GEC Patna',
     },
     createdAt: '4h',
-    body: `Finished compiling my handwritten revision notes for #ComputerNetworks Module 3 (Transport Layer & TCP Congestion Control).
+    body: `Finished compiling my handwritten revision notes for **#ComputerNetworks Module 3** (*Transport Layer & TCP Congestion Control*).
 
 Key areas summarized:
-• TCP 3-way handshake vs UDP header structure
-• Slow Start, Congestion Avoidance, Fast Retransmit (AIMD)
+• **TCP 3-way handshake** vs UDP header structure
+• Slow Start, Congestion Avoidance, Fast Retransmit (AIMD):
+$$\\text{CWND} = \\text{CWND} + \\frac{1}{\\text{CWND}}$$
 • Leaky Bucket vs Token Bucket with numerical walk-throughs
 
 Attaching the full 6-page PDF. Clean diagrams, high-yield for university exams. Feel free to download or save!
@@ -83,7 +86,10 @@ Attaching the full 6-page PDF. Clean diagrams, high-yield for university exams. 
       college: 'MIT Muzaffarpur',
     },
     createdAt: '7h',
-    body: `Solved solution for #DatabaseManagementSystems 2022 Q2b (B+ Tree insertion with splitting steps).
+    body: `Solved solution for **#DatabaseManagementSystems** 2022 Q2b (*B+ Tree insertion with splitting steps*).
+
+Order $m = 4$, so maximum keys per node is $m - 1 = 3$:
+$$\\text{Max Keys} = 3, \\quad \\text{Min Keys} = \\lceil m/2 \\rceil - 1 = 1$$
 
 Make sure to write out each intermediate split step explicitly during your university exam. University evaluators allocate 4 marks solely for intermediate root overflow diagrams!
 
@@ -122,11 +128,11 @@ Attached 2 high-res photos of the complete step-by-step tree construction.
       college: 'BCE Bhagalpur',
     },
     createdAt: '1d',
-    body: `A quick strategy tip for students appearing in #CompilerDesign:
+    body: `A quick strategy tip for students appearing in **#CompilerDesign**:
 
-1. Always left-factor and eliminate left recursion BEFORE starting FIRST and FOLLOW calculations.
-2. SLR(1) parsing tables have appeared for 14 marks in 2019, 2021, 2022, and 2023 papers without fail.
-3. If a shift-reduce conflict arises in state I_k, explain WHY the grammar is ambiguous instead of panicking. Evaluators award partial marks for conflict identification.
+1. Always left-factor and eliminate left recursion *before* starting $\\text{FIRST}$ and $\\text{FOLLOW}$ calculations.
+2. **SLR(1)** parsing tables have appeared for 14 marks in 2019, 2021, 2022, and 2023 papers without fail.
+3. If a shift-reduce conflict arises in state $I_k$, explain *why* the grammar is ambiguous instead of panicking. Evaluators award partial marks for conflict identification.
 
 Check 2021-2023 past questions on the app before test day. #ExamTips #CompilerDesign #Semester6`,
     hashtags: ['ExamTips', 'CompilerDesign', 'Semester6'],
@@ -150,7 +156,9 @@ export const INITIAL_MOCK_COMMENTS: Record<string, CommunityComment[]> = {
         name: 'Nikhil Kashyap',
         headline: 'CSE Sem 6 • Systems & OS',
       },
-      body: 'Look at step 2 in your trace: if you allocate (1, 0, 2), the new Need vector for P1 becomes (0, 2, 0) but Available drops to (2, 3, 0). None of the remaining processes can satisfy Need <= Available, so no safe sequence exists! The OS avoids entering this unsafe state.',
+      body: `Look at step 2 in your trace: if you allocate $(1, 0, 2)$, the new Need vector for $P_1$ becomes:
+$$\\text{Need}_{P_1} = (0, 2, 0)$$
+but $\\text{Available}$ drops to $(2, 3, 0)$. None of the remaining processes can satisfy $\\text{Need} \\le \\text{Available}$, so no safe sequence exists! The OS avoids entering this unsafe state.`,
       createdAt: '1h ago',
       likesCount: 14,
       isLiked: true,
@@ -165,7 +173,7 @@ export const INITIAL_MOCK_COMMENTS: Record<string, CommunityComment[]> = {
             name: 'Ananya Sen',
             headline: 'CSE Sem 5 • Core CS',
           },
-          body: '@Nikhil Exactly! And remember: Unsafe state ≠ Deadlock, but Unsafe state MAY lead to deadlock. That is why Banker\'s algorithm is strictly conservative.',
+          body: `@Nikhil Exactly! And remember: **Unsafe state $\\ne$ Deadlock**, but *Unsafe state may lead to deadlock*. That is why Banker's algorithm is strictly conservative.`,
           createdAt: '45m ago',
           likesCount: 6,
           isLiked: false,

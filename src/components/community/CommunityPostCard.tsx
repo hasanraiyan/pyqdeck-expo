@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   Platform,
   Alert,
   Modal,
+  Linking,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { Feather } from '@expo/vector-icons';
@@ -17,6 +18,8 @@ import { useNavigation } from '@react-navigation/native';
 import { CommunityPost } from '../../types/community';
 import { COLORS, FONTS, RADIUS } from '../../theme/colors';
 import { ImageViewerModal } from '../ImageViewerModal';
+import { NativeContentRenderer } from '../NativeContentRenderer';
+import { baseMarkdownStyles, markdownRules } from '../../theme/markdownStyles';
 
 interface CommunityPostCardProps {
   post: CommunityPost;
@@ -26,7 +29,113 @@ interface CommunityPostCardProps {
   onCommentPress?: (post: CommunityPost) => void;
   onOpenDetail?: (post: CommunityPost) => void;
   onDismissPost?: (postId: string) => void;
+  initialExpanded?: boolean;
 }
+
+export function formatHashtagsForMarkdown(text: string): string {
+  if (!text) return '';
+  const shielded: string[] = [];
+  const placeholder = (match: string) => {
+    shielded.push(match);
+    return `\uE002${shielded.length - 1}\uE003`;
+  };
+
+  let prepared = text
+    .replace(/```[\s\S]*?```/g, placeholder)
+    .replace(/`[^`\n]+`/g, placeholder)
+    .replace(/\$\$[\s\S]*?\$\$/g, placeholder)
+    .replace(/\$[^\$\n]+\$/g, placeholder);
+
+  prepared = prepared.replace(
+    /(^|[\s(\[])#([A-Za-z0-9_-]+)/g,
+    (_, prefix, tag) => `${prefix}[#${tag}](hashtag:${tag})`
+  );
+
+  return prepared.replace(/\uE002(\d+)\uE003/g, (_, i) => shielded[Number(i)]);
+}
+
+export function truncateMarkdownSafely(text: string, limit = 220): string {
+  if (text.length <= limit) return text;
+
+  let truncated = text.slice(0, limit);
+  const lastSpace = truncated.lastIndexOf(' ');
+  if (lastSpace > limit * 0.7) {
+    truncated = truncated.slice(0, lastSpace);
+  }
+
+  // Close unclosed bold (**)
+  const boldMatches = truncated.match(/\*\*/g);
+  if (boldMatches && boldMatches.length % 2 !== 0) {
+    truncated += '**';
+  }
+
+  // Close unclosed italic (*)
+  const strippedBold = truncated.replace(/\*\*/g, '');
+  const italicMatches = strippedBold.match(/\*/g);
+  if (italicMatches && italicMatches.length % 2 !== 0) {
+    truncated += '*';
+  }
+
+  // Close unclosed inline code (`)
+  const codeMatches = truncated.match(/`/g);
+  if (codeMatches && codeMatches.length % 2 !== 0) {
+    truncated += '`';
+  }
+
+  // Close unclosed display math ($$) or inline math ($)
+  const displayMathMatches = truncated.match(/\$\$/g);
+  if (displayMathMatches && displayMathMatches.length % 2 !== 0) {
+    truncated += '$$';
+  } else {
+    const strippedDisplay = truncated.replace(/\$\$/g, '');
+    const inlineMathMatches = strippedDisplay.match(/\$/g);
+    if (inlineMathMatches && inlineMathMatches.length % 2 !== 0) {
+      truncated += '$';
+    }
+  }
+
+  return truncated.trim();
+}
+
+const postMarkdownStyles = {
+  ...baseMarkdownStyles,
+  body: {
+    color: '#1f2937',
+    fontSize: 14.5,
+    lineHeight: 22,
+    fontFamily: FONTS.body,
+  },
+  paragraph: {
+    marginTop: 0,
+    marginBottom: 6,
+    color: '#1f2937',
+    lineHeight: 22,
+  },
+  strong: {
+    fontFamily: FONTS.bodyBold,
+    color: '#111827',
+  },
+  em: {
+    fontStyle: 'italic' as const,
+    color: '#1f2937',
+  },
+  link: {
+    color: '#0a66c2',
+    fontFamily: FONTS.bodySemi,
+    textDecorationLine: 'none' as const,
+  },
+  code_inline: {
+    backgroundColor: '#f3f4f6',
+    color: '#111827',
+    fontFamily: FONTS.mono,
+    fontSize: 12.5,
+    paddingHorizontal: 5,
+    paddingVertical: 1.5,
+    borderRadius: 4,
+    borderWidth: 0.5,
+    borderColor: '#e5e7eb',
+  },
+};
 
 export const CommunityPostCard: React.FC<CommunityPostCardProps> = ({
   post,
@@ -36,11 +145,12 @@ export const CommunityPostCard: React.FC<CommunityPostCardProps> = ({
   onCommentPress,
   onOpenDetail,
   onDismissPost,
+  initialExpanded = false,
 }) => {
   const navigation = useNavigation<any>();
   const [imageViewerVisible, setImageViewerVisible] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
-  const [expandedText, setExpandedText] = useState(false);
+  const [expandedText, setExpandedText] = useState(initialExpanded);
   const [optionsModalVisible, setOptionsModalVisible] = useState(false);
 
   const images = post.attachments
@@ -83,45 +193,64 @@ export const CommunityPostCard: React.FC<CommunityPostCardProps> = ({
     onDismissPost?.(post.id);
   };
 
-  // Render text with clickable hashtags
-  const renderFormattedBody = (text: string) => {
-    const isLong = text.length > 220;
-    const displayText = isLong && !expandedText ? `${text.slice(0, 220)}...` : text;
-    const tokens = displayText.split(/(#[A-Za-z0-9_-]+)/g);
-
-    return (
-      <View>
-        <Text style={styles.bodyText}>
-          {tokens.map((token, i) => {
-            if (token.startsWith('#')) {
-              const tag = token.slice(1);
-              return (
-                <Text
-                  key={i}
-                  style={styles.hashtagInline}
-                  onPress={() => {
-                    Haptics.selectionAsync().catch(() => {});
-                    onHashtagPress?.(tag);
-                  }}
-                >
-                  {token}{' '}
-                </Text>
-              );
-            }
-            return <Text key={i}>{token}</Text>;
-          })}
-          {isLong && !expandedText && (
+  // Custom markdown rules: intercept hashtag links and see-more inline link
+  const postMarkdownRules = useMemo(
+    () => ({
+      ...markdownRules,
+      link: (node: any, children: any, parent: any, styles: any) => {
+        const href = node.attributes?.href || '';
+        if (href === 'action:see_more') {
+          return (
             <Text
-              style={styles.seeMoreText}
-              onPress={() => setExpandedText(true)}
+              key={node.key}
+              style={styles.seeMoreInlineText}
+              onPress={() => {
+                Haptics.selectionAsync().catch(() => {});
+                setExpandedText(true);
+              }}
             >
               {' '}see more
             </Text>
-          )}
-        </Text>
-      </View>
-    );
-  };
+          );
+        }
+        return (
+          <Text
+            key={node.key}
+            style={[
+              styles.link,
+              {
+                color: '#0a66c2',
+                fontFamily: FONTS.bodySemi,
+                textDecorationLine: 'none',
+              },
+            ]}
+            onPress={() => {
+              if (href.startsWith('hashtag:')) {
+                const tag = href.slice(8);
+                Haptics.selectionAsync().catch(() => {});
+                onHashtagPress?.(tag);
+              } else {
+                Linking.openURL(href).catch(() => {});
+              }
+            }}
+          >
+            {children}
+          </Text>
+        );
+      },
+    }),
+    [onHashtagPress]
+  );
+
+  const isLong = post.body.length > 220;
+
+  const displayContent = useMemo(() => {
+    if (isLong && !expandedText) {
+      const truncated = truncateMarkdownSafely(post.body, 220);
+      return `${formatHashtagsForMarkdown(truncated)}... [see more](action:see_more)`;
+    }
+    return formatHashtagsForMarkdown(post.body);
+  }, [post.body, isLong, expandedText]);
 
   const getInitials = (name: string) => {
     const parts = name.trim().split(/\s+/);
@@ -148,10 +277,13 @@ export const CommunityPostCard: React.FC<CommunityPostCardProps> = ({
             </View>
           )}
           <View style={styles.authorMeta}>
-            <Text style={styles.authorName} numberOfLines={1}>
-              {post.author.name}
-            </Text>
-            <Text style={styles.timeText}>{cleanTime}</Text>
+            <View style={styles.authorNameRow}>
+              <Text style={styles.authorName} numberOfLines={1}>
+                {post.author.name}
+              </Text>
+              <Text style={styles.timeDot}>•</Text>
+              <Text style={styles.timeText}>{cleanTime}</Text>
+            </View>
           </View>
         </TouchableOpacity>
 
@@ -161,33 +293,39 @@ export const CommunityPostCard: React.FC<CommunityPostCardProps> = ({
               Haptics.selectionAsync().catch(() => {});
               setOptionsModalVisible(true);
             }}
-            hitSlop={{ top: 10, bottom: 10, left: 8, right: 8 }}
+            hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
             style={styles.headerActionBtn}
             accessibilityRole="button"
             accessibilityLabel="Post options"
           >
-            <Feather name="more-vertical" size={19} color={COLORS.textSubtle} />
+            <Feather name="more-vertical" size={18} color={COLORS.textSubtle} />
           </TouchableOpacity>
 
           <TouchableOpacity
             onPress={handleDiscard}
-            hitSlop={{ top: 10, bottom: 10, left: 8, right: 8 }}
+            hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
             style={styles.headerActionBtn}
             accessibilityRole="button"
             accessibilityLabel="Discard post"
           >
-            <Feather name="x" size={19} color={COLORS.textSubtle} />
+            <Feather name="x" size={18} color={COLORS.textSubtle} />
           </TouchableOpacity>
         </View>
       </View>
 
-      {/* Main Post Body */}
+      {/* Main Post Body (Full Markdown & LaTeX Support with Inline See More) */}
       <TouchableOpacity
         activeOpacity={0.9}
         onPress={() => onOpenDetail?.(post)}
         style={styles.bodyTouchable}
       >
-        {renderFormattedBody(post.body)}
+        <NativeContentRenderer
+          content={displayContent}
+          variant="question"
+          fontSize={14.5}
+          markdownStyles={postMarkdownStyles}
+          rules={postMarkdownRules}
+        />
       </TouchableOpacity>
 
 
@@ -510,8 +648,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 8,
+    paddingTop: 10,
+    paddingBottom: 6,
   },
   authorSection: {
     flexDirection: 'row',
@@ -520,15 +658,15 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   avatar: {
-    width: 44,
-    height: 44,
-    borderRadius: RADIUS.full,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
     backgroundColor: '#f3f4f6',
   },
   avatarMonogram: {
-    width: 44,
-    height: 44,
-    borderRadius: RADIUS.full,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
     backgroundColor: '#eff6ff',
     borderWidth: 1,
     borderColor: '#bfdbfe',
@@ -537,32 +675,41 @@ const styles = StyleSheet.create({
   },
   avatarMonogramText: {
     fontFamily: FONTS.displayBold,
-    fontSize: 16,
+    fontSize: 13,
     color: '#1d4ed8',
   },
   authorMeta: {
-    marginLeft: 11,
+    marginLeft: 9,
     flex: 1,
     justifyContent: 'center',
   },
+  authorNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
   authorName: {
     fontFamily: FONTS.displayBold,
-    fontSize: 14.5,
+    fontSize: 13.5,
     color: '#111827',
+    flexShrink: 1,
+  },
+  timeDot: {
+    fontSize: 11,
+    color: '#9ca3af',
   },
   timeText: {
     fontFamily: FONTS.body,
     fontSize: 12,
     color: '#6b7280',
-    marginTop: 1.5,
   },
   headerRightActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: 2,
   },
   headerActionBtn: {
-    padding: 6,
+    padding: 5,
     borderRadius: RADIUS.full,
   },
   modalBackdrop: {
@@ -636,20 +783,11 @@ const styles = StyleSheet.create({
   },
   bodyTouchable: {
     paddingHorizontal: 16,
-    paddingBottom: 10,
+    paddingBottom: 8,
   },
-  bodyText: {
-    fontFamily: FONTS.body,
+  seeMoreInlineText: {
+    fontFamily: FONTS.bodySemi,
     fontSize: 14,
-    color: '#1f2937',
-    lineHeight: 21,
-  },
-  hashtagInline: {
-    fontFamily: FONTS.bodySemi,
-    color: '#0a66c2',
-  },
-  seeMoreText: {
-    fontFamily: FONTS.bodySemi,
     color: '#6b7280',
   },
 
