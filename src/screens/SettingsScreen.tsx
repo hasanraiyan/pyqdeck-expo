@@ -266,11 +266,13 @@ export const SettingsScreen = ({ navigation }: any) => {
                   <SettingsRow
                     icon="user"
                     label={user?.fullName || user?.primaryEmailAddress?.emailAddress || 'Signed in'}
-                    subtitle={
-                      user?.fullName
-                        ? user?.primaryEmailAddress?.emailAddress
-                        : 'Manage your account'
-                    }
+                    subtitle="View & edit public profile"
+                    onPress={() => navigation.navigate('UserProfile', { userId: 'me' })}
+                  />
+                  <SettingsRow
+                    icon="shield"
+                    label="Account credentials"
+                    subtitle="Security, email & password"
                     onPress={() => navigation.navigate('ManageAccount')}
                   />
                   <SettingsRow

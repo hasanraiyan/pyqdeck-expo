@@ -60,6 +60,7 @@ import { TopicNotesScreen } from './src/screens/TopicNotesScreen';
 import { TopicQuestionsScreen } from './src/screens/TopicQuestionsScreen';
 import { CommunityFeedScreen } from './src/screens/CommunityFeedScreen';
 import { CommunityPostDetailScreen } from './src/screens/CommunityPostDetailScreen';
+import { UserProfileScreen } from './src/screens/UserProfileScreen';
 import { checkForStoreUpdate } from './src/utils/appUpdate';
 import { maybeRequestReview } from './src/utils/appReview';
 import { isSyllabusEnabled } from './src/config/features';
@@ -167,6 +168,7 @@ const linking: any = {
             screens: {
               CommunityFeed: 'community',
               CommunityPostDetail: 'community/:slug',
+              UserProfile: 'community/u/:userId',
             },
           },
           Search: {
@@ -239,6 +241,11 @@ function renderSharedScreens(StackNav: typeof Stack, syllabusTitle = 'Syllabus')
       <StackNav.Screen
         name="OriginalPaper"
         component={OriginalPaperScreen}
+        options={{ headerShown: false }}
+      />
+      <StackNav.Screen
+        name="UserProfile"
+        component={UserProfileScreen}
         options={{ headerShown: false }}
       />
       <StackNav.Screen

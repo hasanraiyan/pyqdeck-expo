@@ -329,7 +329,13 @@ export const CommunityPostCard: React.FC<CommunityPostCardProps> = ({
         <TouchableOpacity
           style={styles.authorSection}
           activeOpacity={0.8}
-          onPress={() => onOpenDetail?.(post)}
+          onPress={() => {
+            Haptics.selectionAsync().catch(() => {});
+            navigation.navigate('UserProfile', {
+              userId: post.author.id,
+              author: post.author,
+            });
+          }}
         >
           {post.author.avatarUrl ? (
             <Image source={{ uri: post.author.avatarUrl }} style={styles.avatar} />
@@ -730,28 +736,28 @@ const styles = StyleSheet.create({
   },
   headerRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingTop: 10,
-    paddingBottom: 6,
+    paddingTop: 12,
+    paddingBottom: 8,
   },
   authorSection: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     flex: 1,
     marginRight: 8,
   },
   avatar: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: '#f3f4f6',
   },
   avatarMonogram: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: '#eff6ff',
     borderWidth: 1,
     borderColor: '#bfdbfe',
@@ -760,24 +766,26 @@ const styles = StyleSheet.create({
   },
   avatarMonogramText: {
     fontFamily: FONTS.displayBold,
-    fontSize: 13.5,
+    fontSize: 14,
     color: '#1d4ed8',
   },
   authorMeta: {
-    marginLeft: 10,
+    marginLeft: 11,
     flex: 1,
     justifyContent: 'center',
+    paddingTop: 1,
   },
   authorNameRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
+    gap: 6,
   },
   authorName: {
     fontFamily: FONTS.displayBold,
-    fontSize: 13.5,
+    fontSize: 14,
     color: '#111827',
     flexShrink: 1,
+    lineHeight: 18,
   },
   timeDot: {
     fontSize: 11,
@@ -787,20 +795,23 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.body,
     fontSize: 12,
     color: '#6b7280',
+    lineHeight: 18,
   },
   authorBio: {
     fontFamily: FONTS.body,
-    fontSize: 11.5,
+    fontSize: 12,
     color: '#64748b',
-    marginTop: 1,
+    marginTop: 2,
+    lineHeight: 16,
   },
   headerRightActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 2,
+    gap: 4,
+    paddingTop: 2,
   },
   headerActionBtn: {
-    padding: 5,
+    padding: 6,
     borderRadius: RADIUS.full,
   },
   modalBackdrop: {

@@ -248,7 +248,11 @@ export const CommunityFeedScreen: React.FC = () => {
               <TouchableOpacity
                 onPress={() => {
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-                  navigation.navigate('Settings');
+                  if (isAuthEnabled && isSignedIn) {
+                    navigation.navigate('UserProfile', { userId: 'me' });
+                  } else {
+                    navigation.navigate('Settings');
+                  }
                 }}
                 style={[
                   styles.headerIconButton,
@@ -256,7 +260,7 @@ export const CommunityFeedScreen: React.FC = () => {
                 ]}
                 hitSlop={8}
                 accessibilityRole="button"
-                accessibilityLabel={isAuthEnabled && isSignedIn ? 'Profile & Settings' : 'Settings'}
+                accessibilityLabel={isAuthEnabled && isSignedIn ? 'My Profile' : 'Settings'}
               >
                 {isAuthEnabled && isSignedIn ? (
                   user?.imageUrl ? (
