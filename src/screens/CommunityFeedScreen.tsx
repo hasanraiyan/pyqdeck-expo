@@ -19,9 +19,10 @@ import * as Haptics from 'expo-haptics';
 import { useAuth, useUser } from '@clerk/expo';
 import { isAuthEnabled } from '../config/features';
 import { COLORS, FONTS, RADIUS } from '../theme/colors';
-import { CommunityPost } from '../types/community';
+import { CommunityPost, PendingPostUpload } from '../types/community';
 import { communityStore } from '../data/mockCommunity';
 import { CommunityPostCard } from '../components/community/CommunityPostCard';
+import { PendingPostCard } from '../components/community/PendingPostCard';
 import { CreateCommunityPostModal } from '../components/community/CreateCommunityPostModal';
 import { CommunityCommentsBottomSheet } from '../components/community/CommunityCommentsBottomSheet';
 import { CommunityInlineAdCard } from '../components/community/CommunityInlineAdCard';
@@ -58,11 +59,13 @@ export const CommunityFeedScreen: React.FC = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [createModalVisible, setCreateModalVisible] = useState(false);
   const [commentSheetPost, setCommentSheetPost] = useState<CommunityPost | null>(null);
+  const [pendingUploads, setPendingUploads] = useState<PendingPostUpload[]>([]);
 
   // Initial load simulation with skeleton placeholder
   useEffect(() => {
     const timer = setTimeout(() => {
       setPosts(communityStore.getPosts());
+      setPendingUploads([...communityStore.getPendingUploads()]);
       setIsLoading(false);
     }, 450);
     return () => clearTimeout(timer);
@@ -72,6 +75,7 @@ export const CommunityFeedScreen: React.FC = () => {
   useEffect(() => {
     const unsub = communityStore.subscribe(() => {
       setPosts(communityStore.getPosts());
+      setPendingUploads([...communityStore.getPendingUploads()]);
     });
     return unsub;
   }, []);
@@ -152,16 +156,32 @@ export const CommunityFeedScreen: React.FC = () => {
   };
 
   const renderHeader = () => {
-    if (!selectedHashtag) return null;
     return (
-      <View style={styles.activeFilterRow}>
-        <Text style={styles.activeFilterText}>Filtered by #{selectedHashtag}</Text>
-        <TouchableOpacity
-          onPress={() => setSelectedHashtag(null)}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-        >
-          <Feather name="x" size={13} color={COLORS.primary} />
-        </TouchableOpacity>
+      <View>
+        {/* Optimistic Background Uploading Posts (like Twitter/X & LinkedIn) */}
+        {pendingUploads.map((item) => (
+          <PendingPostCard
+            key={item.id}
+            upload={item}
+            onCancel={(id) => {
+              LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+              communityStore.cancelPostUpload(id);
+            }}
+          />
+        ))}
+
+        {/* Active Hashtag Filter Pill */}
+        {selectedHashtag ? (
+          <View style={styles.activeFilterRow}>
+            <Text style={styles.activeFilterText}>Filtered by #{selectedHashtag}</Text>
+            <TouchableOpacity
+              onPress={() => setSelectedHashtag(null)}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Feather name="x" size={13} color={COLORS.primary} />
+            </TouchableOpacity>
+          </View>
+        ) : null}
       </View>
     );
   };

@@ -269,35 +269,36 @@ export const CreateCommunityPostModal: React.FC<CreateCommunityPostModalProps> =
     }
 
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
-    setSubmitting(true);
 
     // Extract hashtags from body
     const matches = body.match(/#[A-Za-z0-9_-]+/g) || [];
     const hashtags = Array.from(new Set(matches.map((m) => m.replace(/^#/, ''))));
 
-    setTimeout(() => {
-      const created = communityStore.addPost({
-        author: {
-          id: user?.id || 'me',
-          name: authorName,
-          avatarUrl: authorAvatarUrl,
-          bio: 'Student • PYQDeck Community',
-        },
-        body: body.trim(),
-        hashtags,
-        attachments,
-        status: 'published',
-      });
+    const postPayload = {
+      author: {
+        id: user?.id || 'me',
+        name: authorName,
+        avatarUrl: authorAvatarUrl,
+        bio: 'Student • PYQDeck Community',
+      },
+      body: body.trim(),
+      hashtags,
+      attachments,
+      status: 'published' as const,
+    };
 
-      setSubmitting(false);
-      setBody('');
-      setAttachments([]);
-      onClose();
+    // Kick off background publishing with optimistic progress bar in the feed
+    communityStore.startPostUpload(postPayload, (created) => {
       onPostCreated?.(created.id);
-    }, 400);
+    });
+
+    // Instantly close modal and reset composer state (LinkedIn / X instant dismiss)
+    setBody('');
+    setAttachments([]);
+    onClose();
   };
 
-  const isPostDisabled = submitting || (!body.trim() && attachments.length === 0);
+  const isPostDisabled = !body.trim() && attachments.length === 0;
 
   return (
     <Modal

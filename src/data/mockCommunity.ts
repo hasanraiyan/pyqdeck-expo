@@ -1,4 +1,4 @@
-import { CommunityPost, CommunityComment } from '../types/community';
+import { CommunityPost, CommunityComment, PendingPostUpload } from '../types/community';
 
 export const INITIAL_MOCK_POSTS: CommunityPost[] = [
   {
@@ -665,6 +665,8 @@ Don't forget to state the **3 fundamental assumptions** of Banker's Algorithm:
 class CommunityStore {
   private posts: CommunityPost[] = [...INITIAL_MOCK_POSTS];
   private comments: Record<string, CommunityComment[]> = { ...INITIAL_MOCK_COMMENTS };
+  private pendingUploads: PendingPostUpload[] = [];
+  private uploadTimers: Record<string, ReturnType<typeof setInterval>> = {};
   private listeners: Set<() => void> = new Set();
 
   subscribe(listener: () => void) {
@@ -680,6 +682,73 @@ class CommunityStore {
 
   getPosts(): CommunityPost[] {
     return this.posts;
+  }
+
+  getPendingUploads(): PendingPostUpload[] {
+    return this.pendingUploads;
+  }
+
+  startPostUpload(
+    newPostData: Omit<
+      CommunityPost,
+      'id' | 'slug' | 'createdAt' | 'likesCount' | 'isLiked' | 'commentsCount' | 'bookmarksCount' | 'isBookmarked'
+    >,
+    onComplete?: (post: CommunityPost) => void
+  ): string {
+    const uploadId = `pending-${Date.now()}`;
+    const pendingItem: PendingPostUpload = {
+      id: uploadId,
+      author: newPostData.author,
+      body: newPostData.body,
+      hashtags: newPostData.hashtags,
+      attachments: newPostData.attachments,
+      progress: 0.08,
+      status: 'uploading',
+      createdAt: 'Just now',
+    };
+
+    this.pendingUploads = [pendingItem, ...this.pendingUploads];
+    this.notify();
+
+    // Smoothly simulate multi-stage background upload
+    let currentProgress = 0.08;
+    const interval = setInterval(() => {
+      // Step increment based on attachments
+      const step = pendingItem.attachments.length > 0 ? 0.12 : 0.22;
+      currentProgress = Math.min(1, currentProgress + step);
+
+      if (currentProgress >= 1) {
+        clearInterval(interval);
+        delete this.uploadTimers[uploadId];
+
+        // Successfully published: remove from pending and add to real posts
+        this.pendingUploads = this.pendingUploads.filter((p) => p.id !== uploadId);
+        const created = this.addPost(newPostData);
+        onComplete?.(created);
+        this.notify();
+      } else {
+        this.pendingUploads = this.pendingUploads.map((p) =>
+          p.id === uploadId ? { ...p, progress: currentProgress } : p
+        );
+        this.notify();
+      }
+    }, 280);
+
+    this.uploadTimers[uploadId] = interval;
+    return uploadId;
+  }
+
+  cancelPostUpload(uploadId: string): boolean {
+    if (this.uploadTimers[uploadId]) {
+      clearInterval(this.uploadTimers[uploadId]);
+      delete this.uploadTimers[uploadId];
+    }
+    const existed = this.pendingUploads.some((p) => p.id === uploadId);
+    this.pendingUploads = this.pendingUploads.filter((p) => p.id !== uploadId);
+    if (existed) {
+      this.notify();
+    }
+    return existed;
   }
 
   getPostById(idOrSlug: string): CommunityPost | undefined {

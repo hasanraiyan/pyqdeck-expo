@@ -61,3 +61,14 @@ export interface CommunityComment {
   replyToAuthorName?: string;
   replies?: CommunityComment[]; // Nested replies thread
 }
+
+export interface PendingPostUpload {
+  id: string;
+  author: CommunityAuthor;
+  body: string;
+  hashtags: string[];
+  attachments: CommunityAttachment[];
+  progress: number; // 0 to 1
+  status: 'uploading' | 'completed' | 'canceled';
+  createdAt: string;
+}
