@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | Product | PYQDeck Community (Website + Expo app + shared backend) |
-| Version | 1.2 |
+| Version | 1.3 |
 | Date | 2026-10-17 |
 | Status | Draft |
 | Audience | Product, web, mobile, backend, and QA teams |
@@ -39,7 +39,7 @@ Not included in the first version: direct messaging, live chat, monetization, or
 | Moderator | Review reported/pending posts and remove unsafe content |
 | Admin | Manage moderation and review audit records |
 
-Users should be able to browse without signing in or completing an academic profile. Sign-in is required for actions that change content.
+Users should be able to browse without signing in or completing an academic profile. Sign-in is required for actions that change content. Creating a post must not require an academic profile or academic dropdown selections.
 
 ## 4. Functional requirements
 
@@ -49,8 +49,8 @@ Users should be able to browse without signing in or completing an academic prof
 | FR-2 | The Expo app SHALL provide a Community feed, post details, notes viewer, and create-post flow. | M |
 | FR-3 | Users SHALL be able to share notes, ask doubts, post PYQ solutions, and share study tips. | M |
 | FR-4 | Posts SHALL use one main body field with optional image/PDF attachments. A separate title field SHALL NOT be required. | M |
-| FR-5 | Users SHOULD be able to add hashtags in the body. Hashtags SHALL support search and discovery. | M |
-| FR-6 | Users SHALL be able to search and filter posts by hashtag and post type. No branch, semester, subject, module, or topic selection SHALL be required to publish. | M |
+| FR-5 | Users MAY include hashtags directly in the post body. Hashtags SHALL be optional and support search and discovery. | M |
+| FR-6 | Users SHALL be able to search and filter posts by hashtag and post type. Creating a post MUST NOT require selecting a university, branch, semester, subject, module, or topic. | M |
 | FR-7 | The feed SHOULD help users discover relevant posts without requiring an academic profile. | S |
 | FR-8 | Authors SHALL be able to edit or remove their own posts. Edited content or attachments MUST be checked again before publication. | M |
 | FR-9 | Users SHALL be able to comment, react/helpful-vote, bookmark, and report eligible posts. | M |
@@ -97,7 +97,7 @@ Content suspected to involve sexual exploitation of minors requires a restricted
 - **Reliability:** Failed uploads and feed requests must show a recoverable error state.
 - **Accessibility:** Web pages must support keyboard navigation, visible focus, readable contrast, and responsive layouts.
 - **Consistency:** Website and app must use the same backend records and publication rules.
-- **Testing:** Test permissions, academic filters, upload moderation, direct URL navigation, share previews, and app deep links.
+- **Testing:** Test permissions, hashtag search, upload moderation, direct URL navigation, share previews, and app deep links.
 
 ## 8. Proposed API and data
 
@@ -151,3 +151,4 @@ A post record will generally need: stable ID, slug, author ID, post type, body, 
 | 1.0 | 2026-10-17 | Initial detailed draft |
 | 1.1 | 2026-10-17 | Simplified structure and condensed requirements |
 | 1.2 | 2026-10-17 | Simplified posting to body, optional hashtags, and attachments; removed mandatory academic selections |
+| 1.3 | 2026-10-17 | Explicitly clarified that post creation never requires academic dropdowns or an academic profile |
