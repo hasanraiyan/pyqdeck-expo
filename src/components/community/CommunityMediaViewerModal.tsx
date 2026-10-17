@@ -448,7 +448,7 @@ export const CommunityMediaViewerModal: React.FC<CommunityMediaViewerModalProps>
               isVertical
                 ? {
                     paddingTop: Math.max(insets.top + 60, 80),
-                    paddingBottom: Math.max(insets.bottom + 120, 160),
+                    paddingBottom: Math.max(insets.bottom + 24, 40),
                     alignItems: 'center',
                     gap: PAGE_GAP,
                   }
@@ -505,130 +505,134 @@ export const CommunityMediaViewerModal: React.FC<CommunityMediaViewerModalProps>
           />
         </View>
 
-        {/* Floating Right Actions Column (Exactly matching image.png) */}
-        <View style={[styles.rightActionsColumn, { bottom: Math.max(insets.bottom + 85, 115) }]}>
-          {/* Like Button */}
-          <TouchableOpacity
-            style={styles.verticalActionBtn}
-            onPress={handleToggleLike}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            accessibilityLabel="Like post"
-          >
-            <Feather
-              name="thumbs-up"
-              size={24}
-              color={isLikedState ? '#60a5fa' : '#ffffff'}
-            />
-            <Text style={[styles.actionBadgeText, isLikedState && styles.actionLikedText]}>
-              {likesCountState}
-            </Text>
-          </TouchableOpacity>
-
-          {/* Comment Button */}
-          <TouchableOpacity
-            style={styles.verticalActionBtn}
-            onPress={handleOpenComments}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            accessibilityLabel="View comments"
-          >
-            <Feather name="message-square" size={23} color="#ffffff" />
-            <Text style={styles.actionBadgeText}>
-              {post.commentsCount > 0 ? post.commentsCount : 0}
-            </Text>
-          </TouchableOpacity>
-
-          {/* Share Button */}
-          <TouchableOpacity
-            style={styles.verticalActionBtn}
-            onPress={handleInternalShare}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            accessibilityLabel="Share post"
-          >
-            <Feather name="share-2" size={22} color="#ffffff" />
-          </TouchableOpacity>
-
-          {/* Send / Paperplane Button */}
-          <TouchableOpacity
-            style={styles.verticalActionBtn}
-            onPress={handleInternalShare}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            accessibilityLabel="Send link"
-          >
-            <Feather name="send" size={21} color="#ffffff" />
-          </TouchableOpacity>
-        </View>
-
-        {/* Bottom Post & Author Overlay (Matching image.png) */}
-        <View style={[styles.bottomOverlay, { paddingBottom: Math.max(insets.bottom, 16) }]}>
-          {/* Author Row */}
-          <View style={styles.authorRow}>
-            {post.author.avatarUrl ? (
-              <Image
-                source={{ uri: post.author.avatarUrl }}
-                style={styles.authorAvatar}
-                contentFit="cover"
+        {/* Floating Right Actions Column (Images only, clean PDF viewer without social clutter) */}
+        {!isDocument && (
+          <View style={[styles.rightActionsColumn, { bottom: Math.max(insets.bottom + 85, 115) }]}>
+            {/* Like Button */}
+            <TouchableOpacity
+              style={styles.verticalActionBtn}
+              onPress={handleToggleLike}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              accessibilityLabel="Like post"
+            >
+              <Feather
+                name="thumbs-up"
+                size={24}
+                color={isLikedState ? '#60a5fa' : '#ffffff'}
               />
-            ) : (
-              <View style={styles.authorAvatarFallback}>
-                <Text style={styles.avatarInitial}>
-                  {post.author.name.charAt(0).toUpperCase()}
+              <Text style={[styles.actionBadgeText, isLikedState && styles.actionLikedText]}>
+                {likesCountState}
+              </Text>
+            </TouchableOpacity>
+
+            {/* Comment Button */}
+            <TouchableOpacity
+              style={styles.verticalActionBtn}
+              onPress={handleOpenComments}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              accessibilityLabel="View comments"
+            >
+              <Feather name="message-square" size={23} color="#ffffff" />
+              <Text style={styles.actionBadgeText}>
+                {post.commentsCount > 0 ? post.commentsCount : 0}
+              </Text>
+            </TouchableOpacity>
+
+            {/* Share Button */}
+            <TouchableOpacity
+              style={styles.verticalActionBtn}
+              onPress={handleInternalShare}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              accessibilityLabel="Share post"
+            >
+              <Feather name="share-2" size={22} color="#ffffff" />
+            </TouchableOpacity>
+
+            {/* Send / Paperplane Button */}
+            <TouchableOpacity
+              style={styles.verticalActionBtn}
+              onPress={handleInternalShare}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              accessibilityLabel="Send link"
+            >
+              <Feather name="send" size={21} color="#ffffff" />
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* Bottom Post & Author Overlay (Images only, clean PDF viewer without social clutter) */}
+        {!isDocument && (
+          <View style={[styles.bottomOverlay, { paddingBottom: Math.max(insets.bottom, 16) }]}>
+            {/* Author Row */}
+            <View style={styles.authorRow}>
+              {post.author.avatarUrl ? (
+                <Image
+                  source={{ uri: post.author.avatarUrl }}
+                  style={styles.authorAvatar}
+                  contentFit="cover"
+                />
+              ) : (
+                <View style={styles.authorAvatarFallback}>
+                  <Text style={styles.avatarInitial}>
+                    {post.author.name.charAt(0).toUpperCase()}
+                  </Text>
+                </View>
+              )}
+
+              <View style={styles.authorTextWrap}>
+                <Text style={styles.authorNameText} numberOfLines={1}>
+                  {post.author.name}
+                </Text>
+                <Text style={styles.authorCollegeText} numberOfLines={1}>
+                  {cleanAuthorCollege}
                 </Text>
               </View>
-            )}
 
-            <View style={styles.authorTextWrap}>
-              <Text style={styles.authorNameText} numberOfLines={1}>
-                {post.author.name}
-              </Text>
-              <Text style={styles.authorCollegeText} numberOfLines={1}>
-                {cleanAuthorCollege}
-              </Text>
+              <TouchableOpacity
+                style={styles.followPill}
+                onPress={() => {
+                  Haptics.selectionAsync().catch(() => {});
+                  Alert.alert('Following', `You will now receive updates from ${post.author.name}`);
+                }}
+              >
+                <Text style={styles.followPillText}>Follow</Text>
+              </TouchableOpacity>
             </View>
 
-            <TouchableOpacity
-              style={styles.followPill}
-              onPress={() => {
-                Haptics.selectionAsync().catch(() => {});
-                Alert.alert('Following', `You will now receive updates from ${post.author.name}`);
-              }}
-            >
-              <Text style={styles.followPillText}>Follow</Text>
-            </TouchableOpacity>
-          </View>
+            {/* Caption Snippet Row with Markdown & 1-line truncation */}
+            <View style={styles.captionRow}>
+              <TouchableOpacity
+                activeOpacity={0.88}
+                style={styles.captionTouchable}
+                onPress={handleOpenDetail}
+              >
+                <NativeContentRenderer
+                  content={displayMarkdown}
+                  variant="question"
+                  fontSize={13.5}
+                  markdownStyles={modalMarkdownStyles}
+                  rules={modalMarkdownRules}
+                />
+              </TouchableOpacity>
 
-          {/* Caption Snippet Row with Markdown & 1-line truncation */}
-          <View style={styles.captionRow}>
-            <TouchableOpacity
-              activeOpacity={0.88}
-              style={styles.captionTouchable}
-              onPress={handleOpenDetail}
-            >
-              <NativeContentRenderer
-                content={displayMarkdown}
-                variant="question"
-                fontSize={13.5}
-                markdownStyles={modalMarkdownStyles}
-                rules={modalMarkdownRules}
-              />
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.dotsMoreBtn}
-              onPress={() => {
-                Haptics.selectionAsync().catch(() => {});
-                Alert.alert('Options', `${post.author.name}'s Post`, [
-                  { text: 'View Full Post', onPress: handleOpenDetail },
-                  { text: 'Copy Link', onPress: handleInternalShare },
-                  { text: 'Cancel', style: 'cancel' },
-                ]);
-              }}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              accessibilityLabel="Post options"
-            >
-              <Feather name="more-horizontal" size={22} color="#ffffff" />
-            </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.dotsMoreBtn}
+                onPress={() => {
+                  Haptics.selectionAsync().catch(() => {});
+                  Alert.alert('Options', `${post.author.name}'s Post`, [
+                    { text: 'View Full Post', onPress: handleOpenDetail },
+                    { text: 'Copy Link', onPress: handleInternalShare },
+                    { text: 'Cancel', style: 'cancel' },
+                  ]);
+                }}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                accessibilityLabel="Post options"
+              >
+                <Feather name="more-horizontal" size={22} color="#ffffff" />
+              </TouchableOpacity>
+            </View>
           </View>
-        </View>
+        )}
       </View>
     </Modal>
   );
