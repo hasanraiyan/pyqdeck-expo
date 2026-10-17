@@ -1,14 +1,16 @@
 import React from 'react';
 import Svg, { Path } from 'react-native-svg';
+import { StyleProp, ViewStyle } from 'react-native';
 
 interface NewPostIconProps {
   size?: number;
   color?: string;
+  style?: StyleProp<ViewStyle>;
 }
 
-export const NewPostIcon: React.FC<NewPostIconProps> = ({ size = 20, color = 'currentColor' }) => {
+export const NewPostIcon: React.FC<NewPostIconProps> = ({ size = 20, color = 'currentColor', style }) => {
   return (
-    <Svg width={size} height={size} viewBox="0 0 20 20" fill={color}>
+    <Svg width={size} height={size} viewBox="0 0 20 20" fill={color} style={style}>
       <Path d="M8.16675 2.50127C8.53391 2.50127 8.83161 2.7992 8.83179 3.16631C8.83179 3.53358 8.53402 3.83135 8.16675 3.83135H5.83374C4.72836 3.83135 3.83197 4.72797 3.83179 5.8333V14.1663C3.83179 15.2718 4.72825 16.1683 5.83374 16.1683H14.1667C15.2722 16.1683 16.1687 15.2718 16.1687 14.1663V11.8333C16.1689 11.4662 16.4666 11.1683 16.8337 11.1683C17.2007 11.1684 17.4986 11.4663 17.4988 11.8333V14.1663C17.4988 16.0063 16.0068 17.4983 14.1667 17.4983H5.83374C3.99371 17.4983 2.50171 16.0063 2.50171 14.1663V5.8333C2.50189 3.99343 3.99382 2.50127 5.83374 2.50127H8.16675Z" />
       <Path
         fillRule="evenodd"

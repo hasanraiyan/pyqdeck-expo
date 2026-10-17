@@ -137,6 +137,59 @@ export const SubjectSkeleton = () => (
   </SkeletonPulse>
 );
 
+/** Community post card skeleton - author avatar + text lines + image box + actions. */
+export const CommunityPostSkeleton = () => (
+  <View style={styles.postCardSkeleton}>
+    <View style={styles.postHeaderSkeleton}>
+      <Bone style={styles.postAvatarSkeleton} />
+      <View style={styles.postHeaderMetaSkeleton}>
+        <Bone style={styles.postAuthorNameSkeleton} />
+        <Bone style={styles.postTimeSkeleton} />
+      </View>
+    </View>
+    <View style={styles.postBodySkeleton}>
+      <Bone style={styles.postLineLong} />
+      <Bone style={styles.postLineMedium} />
+      <Bone style={styles.postLineShort} />
+    </View>
+    <Bone style={styles.postMediaBoxSkeleton} />
+    <View style={styles.postActionBarSkeleton}>
+      <Bone style={styles.postActionPillSkeleton} />
+      <Bone style={styles.postActionPillSkeleton} />
+      <Bone style={styles.postActionPillSkeleton} />
+    </View>
+  </View>
+);
+
+/** Community feed skeleton - multiple post cards pulsating. */
+export const CommunityFeedSkeleton = () => (
+  <SkeletonPulse>
+    {[0, 1, 2].map((i) => (
+      <CommunityPostSkeleton key={i} />
+    ))}
+  </SkeletonPulse>
+);
+
+/** Community post detail skeleton - top post + comment thread skeletons. */
+export const CommunityPostDetailSkeleton = () => (
+  <SkeletonPulse>
+    <CommunityPostSkeleton />
+    <View style={styles.detailCommentsSkeletonHead}>
+      <Bone style={{ height: 16, width: 120, marginBottom: 16 }} />
+      {[0, 1, 2].map((i) => (
+        <View key={i} style={styles.commentSkeletonRow}>
+          <Bone style={styles.commentAvatarSkeleton} />
+          <View style={{ flex: 1, gap: 6 }}>
+            <Bone style={{ height: 12, width: '40%' }} />
+            <Bone style={{ height: 10, width: '92%' }} />
+            <Bone style={{ height: 10, width: '70%' }} />
+          </View>
+        </View>
+      ))}
+    </View>
+  </SkeletonPulse>
+);
+
 const styles = StyleSheet.create({
   bone: { backgroundColor: COLORS.borderLight, borderRadius: 4 },
 
@@ -255,4 +308,89 @@ const styles = StyleSheet.create({
   bubbleBone: { width: 20, height: 20, borderRadius: 10 },
   topicLine: { flex: 1 },
   topicLineShort: { flex: 1, width: '70%' },
+
+  // Community Skeletons
+  postCardSkeleton: {
+    backgroundColor: '#ffffff',
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: '#e5e7eb',
+    marginBottom: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+  },
+  postHeaderSkeleton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 12,
+  },
+  postAvatarSkeleton: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+  },
+  postHeaderMetaSkeleton: {
+    flex: 1,
+    gap: 6,
+  },
+  postAuthorNameSkeleton: {
+    height: 12,
+    width: '45%',
+  },
+  postTimeSkeleton: {
+    height: 9,
+    width: '25%',
+  },
+  postBodySkeleton: {
+    gap: 6,
+    marginBottom: 12,
+  },
+  postLineLong: {
+    height: 12,
+    width: '100%',
+  },
+  postLineMedium: {
+    height: 12,
+    width: '85%',
+  },
+  postLineShort: {
+    height: 12,
+    width: '60%',
+  },
+  postMediaBoxSkeleton: {
+    height: 160,
+    width: '100%',
+    borderRadius: 8,
+    marginBottom: 12,
+  },
+  postActionBarSkeleton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-around',
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderColor: '#f3f4f6',
+  },
+  postActionPillSkeleton: {
+    height: 20,
+    width: 60,
+    borderRadius: 10,
+  },
+  detailCommentsSkeletonHead: {
+    backgroundColor: '#ffffff',
+    padding: 16,
+    marginTop: 4,
+  },
+  commentSkeletonRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+    marginBottom: 16,
+  },
+  commentAvatarSkeleton: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+  },
 });

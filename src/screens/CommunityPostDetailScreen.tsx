@@ -34,6 +34,7 @@ import { CommunityPostCard } from '../components/community/CommunityPostCard';
 import { ScreenContainer } from '../components/ScreenContainer';
 import { NativeContentRenderer } from '../components/NativeContentRenderer';
 import { baseMarkdownStyles } from '../theme/markdownStyles';
+import { CommunityPostDetailSkeleton } from '../components/Skeletons';
 
 const commentMarkdownStyles = {
   ...baseMarkdownStyles,
@@ -235,6 +236,29 @@ export const CommunityPostDetailScreen: React.FC = () => {
       { text: 'Cancel', style: 'cancel' },
     ]);
   };
+
+  const [isLoading, setIsLoading] = useState(!initialPost && !post);
+
+  useEffect(() => {
+    if (!post && postId) {
+      const timer = setTimeout(() => {
+        setPost(communityStore.getPostById(postId));
+        setComments(communityStore.getComments(postId));
+        setIsLoading(false);
+      }, 350);
+      return () => clearTimeout(timer);
+    }
+  }, [postId, post]);
+
+  if (isLoading) {
+    return (
+      <View style={[styles.screen, { paddingTop: 10 }]}>
+        <ScreenContainer variant="read" gutter={false}>
+          <CommunityPostDetailSkeleton />
+        </ScreenContainer>
+      </View>
+    );
+  }
 
   if (!post) {
     return (

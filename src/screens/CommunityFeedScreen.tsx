@@ -25,6 +25,7 @@ import { CommunityPostCard } from '../components/community/CommunityPostCard';
 import { CreateCommunityPostModal } from '../components/community/CreateCommunityPostModal';
 import { NewPostIcon } from '../components/community/NewPostIcon';
 import { ScreenContainer } from '../components/ScreenContainer';
+import { CommunityFeedSkeleton } from '../components/Skeletons';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -37,7 +38,8 @@ export const CommunityFeedScreen: React.FC = () => {
   const { isSignedIn } = useAuth();
   const { user } = useUser();
 
-  const [posts, setPosts] = useState<CommunityPost[]>(() => communityStore.getPosts());
+  const [isLoading, setIsLoading] = useState(true);
+  const [posts, setPosts] = useState<CommunityPost[]>([]);
   const [selectedHashtag, setSelectedHashtag] = useState<string | null>(
     route.params?.filterHashtag || null
   );
@@ -45,6 +47,15 @@ export const CommunityFeedScreen: React.FC = () => {
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [createModalVisible, setCreateModalVisible] = useState(false);
+
+  // Initial load simulation with skeleton placeholder
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setPosts(communityStore.getPosts());
+      setIsLoading(false);
+    }, 450);
+    return () => clearTimeout(timer);
+  }, []);
 
   // Sync with store updates
   useEffect(() => {
@@ -118,7 +129,9 @@ export const CommunityFeedScreen: React.FC = () => {
 
   const renderEmpty = () => (
     <View style={styles.emptyContainer}>
-      <Feather name="message-square" size={36} color="#9ca3af" style={{ marginBottom: 10 }} />
+      <View style={styles.emptyIconCircle}>
+        <NewPostIcon size={32} color={COLORS.primary} />
+      </View>
       <Text style={styles.emptyTitle}>No posts found</Text>
       <Text style={styles.emptySubtitle}>
         {selectedHashtag
@@ -130,8 +143,9 @@ export const CommunityFeedScreen: React.FC = () => {
       <TouchableOpacity
         style={styles.emptyCtaBtn}
         onPress={() => setCreateModalVisible(true)}
+        activeOpacity={0.8}
       >
-        <Feather name="plus" size={16} color="#ffffff" style={{ marginRight: 6 }} />
+        <NewPostIcon size={16} color="#ffffff" />
         <Text style={styles.emptyCtaText}>Start a post</Text>
       </TouchableOpacity>
     </View>
@@ -264,38 +278,44 @@ export const CommunityFeedScreen: React.FC = () => {
         )}
       </View>
 
-      {/* Main Feed List */}
-      <FlatList
-        data={filteredPosts}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <ScreenContainer variant="read" gutter={false}>
-            <CommunityPostCard
-              post={item}
-              onLikePress={(id) => communityStore.toggleLikePost(id)}
-              onBookmarkPress={(id) => communityStore.toggleBookmarkPost(id)}
-              onHashtagPress={(tag) => setSelectedHashtag(tag)}
-              onCommentPress={handleOpenDetail}
-              onOpenDetail={handleOpenDetail}
-              onDismissPost={(id) => communityStore.dismissPost(id)}
+      {/* Main Feed Content or Loading Skeleton */}
+      {isLoading ? (
+        <ScreenContainer variant="read" gutter={false}>
+          <CommunityFeedSkeleton />
+        </ScreenContainer>
+      ) : (
+        <FlatList
+          data={filteredPosts}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => (
+            <ScreenContainer variant="read" gutter={false}>
+              <CommunityPostCard
+                post={item}
+                onLikePress={(id) => communityStore.toggleLikePost(id)}
+                onBookmarkPress={(id) => communityStore.toggleBookmarkPost(id)}
+                onHashtagPress={(tag) => setSelectedHashtag(tag)}
+                onCommentPress={handleOpenDetail}
+                onOpenDetail={handleOpenDetail}
+                onDismissPost={(id) => communityStore.dismissPost(id)}
+              />
+            </ScreenContainer>
+          )}
+          ListHeaderComponent={renderHeader}
+          ListEmptyComponent={renderEmpty}
+          contentContainerStyle={[
+            styles.listContent,
+            { paddingBottom: insets.bottom + 40 },
+          ]}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor={COLORS.primary}
+              colors={[COLORS.primary]}
             />
-          </ScreenContainer>
-        )}
-        ListHeaderComponent={renderHeader}
-        ListEmptyComponent={renderEmpty}
-        contentContainerStyle={[
-          styles.listContent,
-          { paddingBottom: insets.bottom + 40 },
-        ]}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor={COLORS.primary}
-            colors={[COLORS.primary]}
-          />
-        }
-      />
+          }
+        />
+      )}
 
       {/* Create Post Modal */}
       <CreateCommunityPostModal
@@ -467,38 +487,50 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingTop: 4,
+    flexGrow: 1,
   },
   emptyContainer: {
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 40,
-    marginTop: 20,
-    backgroundColor: COLORS.card,
-    marginHorizontal: 16,
-    borderRadius: RADIUS.lg,
-    borderWidth: 1,
-    borderColor: COLORS.border,
+    paddingHorizontal: 32,
+    paddingVertical: 40,
+    backgroundColor: 'transparent',
+    alignSelf: 'center',
+    maxWidth: 420,
+    width: '100%',
+  },
+  emptyIconCircle: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: COLORS.primaryLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
   },
   emptyTitle: {
     fontFamily: FONTS.displayBold,
-    fontSize: 16,
+    fontSize: 17,
     color: COLORS.text,
-    marginBottom: 4,
+    marginBottom: 6,
+    textAlign: 'center',
   },
   emptySubtitle: {
     fontFamily: FONTS.body,
-    fontSize: 13,
+    fontSize: 13.5,
     color: COLORS.textMuted,
     textAlign: 'center',
-    lineHeight: 19,
-    marginBottom: 16,
+    lineHeight: 20,
+    marginBottom: 20,
   },
   emptyCtaBtn: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 8,
     backgroundColor: COLORS.primary,
-    paddingHorizontal: 18,
-    paddingVertical: 9,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
     borderRadius: RADIUS.full,
   },
   emptyCtaText: {
