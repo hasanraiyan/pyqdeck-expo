@@ -19,6 +19,7 @@ import {
   UIManager,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
 import { Image } from 'expo-image';
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
@@ -49,6 +50,7 @@ export const CreateCommunityPostModal: React.FC<CreateCommunityPostModalProps> =
   onPostCreated,
 }) => {
   const insets = useSafeAreaInsets();
+  const navigation = useNavigation<any>();
   const { user } = useUser();
   const inputRef = useRef<TextInput>(null);
 
@@ -262,6 +264,29 @@ export const CreateCommunityPostModal: React.FC<CreateCommunityPostModalProps> =
     }
   };
 
+  const handleOpenOwnProfile = () => {
+    Haptics.selectionAsync().catch(() => {});
+    if (body.trim().length > 0 || attachments.length > 0) {
+      Alert.alert(
+        'Leave post composer?',
+        'Do you want to leave this draft to view your profile?',
+        [
+          { text: 'Keep editing', style: 'cancel' },
+          {
+            text: 'View profile',
+            onPress: () => {
+              onClose();
+              navigation.navigate('UserProfile', { userId: 'me' });
+            },
+          },
+        ]
+      );
+    } else {
+      onClose();
+      navigation.navigate('UserProfile', { userId: 'me' });
+    }
+  };
+
   const handleSubmit = () => {
     if (!body.trim() && attachments.length === 0) {
       Alert.alert('Empty Post', 'Please write a message or attach notes to share with the community.');
@@ -324,7 +349,13 @@ export const CreateCommunityPostModal: React.FC<CreateCommunityPostModalProps> =
             <Feather name="x" size={22} color="#111827" />
           </TouchableOpacity>
 
-          <View style={styles.headerAuthorRow}>
+          <TouchableOpacity
+            style={styles.headerAuthorRow}
+            activeOpacity={0.7}
+            onPress={handleOpenOwnProfile}
+            accessibilityRole="button"
+            accessibilityLabel="View your profile"
+          >
             {authorAvatarUrl ? (
               <Image source={{ uri: authorAvatarUrl }} style={styles.authorAvatarImg} contentFit="cover" />
             ) : (
@@ -340,7 +371,7 @@ export const CreateCommunityPostModal: React.FC<CreateCommunityPostModalProps> =
                 <Feather name="chevron-down" size={10} color="#9ca3af" style={{ marginLeft: 3 }} />
               </View>
             </View>
-          </View>
+          </TouchableOpacity>
 
           <TouchableOpacity
             onPress={handleSubmit}

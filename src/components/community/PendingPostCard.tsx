@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { Image } from 'expo-image';
 import { Feather } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
 import * as Haptics from 'expo-haptics';
 import { COLORS, FONTS, RADIUS } from '../../theme/colors';
 import { PendingPostUpload } from '../../types/community';
@@ -56,6 +57,7 @@ export const PendingPostCard: React.FC<PendingPostCardProps> = ({
   upload,
   onCancel,
 }) => {
+  const navigation = useNavigation<any>();
   const animatedProgress = useRef(new Animated.Value(0)).current;
   const shimmerAnim = useRef(new Animated.Value(0)).current;
   const duration = upload.attachments.length > 0 ? 3000 : 2000;
@@ -122,7 +124,19 @@ export const PendingPostCard: React.FC<PendingPostCardProps> = ({
     <View style={styles.cardContainer}>
       {/* Header Row: Same UI as CommunityPostCard */}
       <View style={styles.headerRow}>
-        <View style={styles.authorSection}>
+        <TouchableOpacity
+          style={styles.authorSection}
+          activeOpacity={0.8}
+          onPress={() => {
+            Haptics.selectionAsync().catch(() => {});
+            navigation.navigate('UserProfile', {
+              userId: upload.author.id || 'me',
+              author: upload.author,
+            });
+          }}
+          accessibilityRole="button"
+          accessibilityLabel="View your profile"
+        >
           {upload.author.avatarUrl ? (
             <Image
               source={{ uri: upload.author.avatarUrl }}
@@ -151,7 +165,7 @@ export const PendingPostCard: React.FC<PendingPostCardProps> = ({
               </Text>
             ) : null}
           </View>
-        </View>
+        </TouchableOpacity>
 
         {/* Top-Right Action Button: Standard X icon in same place as post card */}
         <View style={styles.headerRightActions}>
