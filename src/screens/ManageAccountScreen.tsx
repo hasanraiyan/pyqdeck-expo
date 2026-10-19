@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { useAuth } from '@clerk/expo';
-import { UserProfileView } from '@clerk/expo/native';
+import { UserProfileView } from '@clerk/expo/native-components';
 import { COLORS } from '../theme/colors';
 
 /**
@@ -19,7 +19,10 @@ import { COLORS } from '../theme/colors';
  * signing out from in here has to pop the route - hence the isSignedIn watch.
  */
 export const ManageAccountScreen = ({ navigation }: any) => {
-  const { isLoaded, isSignedIn } = useAuth();
+  // treatPendingAsSignedOut: false is required when native Clerk components
+  // (UserProfileView) are mounted — without it, in-progress session tasks
+  // flip isSignedIn to false and pop the route too early.
+  const { isLoaded, isSignedIn } = useAuth({ treatPendingAsSignedOut: false });
 
   useEffect(() => {
     // Signing out (or deleting the account) from inside the native view leaves

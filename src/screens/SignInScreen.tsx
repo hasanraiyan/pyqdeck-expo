@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@clerk/expo';
-import { AuthView } from '@clerk/expo/native';
+import { AuthView } from '@clerk/expo/native-components';
 import { COLORS } from '../theme/colors';
 import { rf } from '../utils/responsive';
 
@@ -29,7 +29,10 @@ import { rf } from '../utils/responsive';
  */
 export const SignInScreen = ({ navigation, route }: any) => {
   const insets = useSafeAreaInsets();
-  const { isLoaded, isSignedIn } = useAuth();
+  // treatPendingAsSignedOut: false is required when native Clerk components
+  // (AuthView) are mounted — without it, in-progress session tasks flip
+  // isSignedIn to false and dismiss the sheet before auth completes.
+  const { isLoaded, isSignedIn } = useAuth({ treatPendingAsSignedOut: false });
   // Why the sheet opened, so the heading names the thing the user just tried
   // to do. Anything else (Settings -> Sign in) gets no heading at all.
   const reason = route?.params?.reason;

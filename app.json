@@ -136,6 +136,12 @@
           "theme": "./clerk-theme.json"
         }
       ],
+      [
+        "@clerk/expo-native-components",
+        {
+          "theme": "./clerk-theme.json"
+        }
+      ],
       "expo-secure-store",
       "expo-asset",
       "expo-image",
