@@ -32,6 +32,7 @@ import { CommunityComment, CommunityPost } from '../types/community';
 import { addComment, deleteComment, toggleBookmarkPost, toggleLikeComment, toggleLikePost } from '../community/actions';
 import { useCommunityComments, useCommunityPost } from '../community/queries';
 import { promptReport } from '../community/reportPrompt';
+import { useRequireAuth } from '../auth/useRequireAuth';
 import { CommunityPostCard } from '../components/community/CommunityPostCard';
 import { ScreenContainer } from '../components/ScreenContainer';
 import { NativeContentRenderer } from '../components/NativeContentRenderer';
@@ -76,6 +77,7 @@ export const CommunityPostDetailScreen: React.FC = () => {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const { user } = useUser();
+  const { guard } = useRequireAuth();
   const inputRef = useRef<TextInput>(null);
   const scrollViewRef = useRef<ScrollView>(null);
   const headerHeight = useHeaderHeight();
@@ -179,6 +181,11 @@ export const CommunityPostDetailScreen: React.FC = () => {
 
   const handleSendComment = () => {
     if (!commentInput.trim() || !postId) return;
+    guard(sendComment, 'comment');
+  };
+
+  const sendComment = () => {
+    if (!postId) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
 
     void addComment(
@@ -220,6 +227,11 @@ export const CommunityPostDetailScreen: React.FC = () => {
 
   const handleLikeComment = (commentId: string) => {
     if (!postId) return;
+    guard(() => likeComment(commentId), 'react');
+  };
+
+  const likeComment = (commentId: string) => {
+    if (!postId) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     void toggleLikeComment(postId, commentId);
   };
@@ -246,7 +258,7 @@ export const CommunityPostDetailScreen: React.FC = () => {
           ]),
       });
     } else {
-      options.push({ text: 'Report comment', style: 'destructive', onPress: () => promptReport('comment', targetComment.id) });
+      options.push({ text: 'Report comment', style: 'destructive', onPress: () => guard(() => promptReport('comment', targetComment.id), 'flag') });
     }
     options.push({ text: 'Cancel', style: 'cancel' });
     Alert.alert('Comment Options', undefined, options);

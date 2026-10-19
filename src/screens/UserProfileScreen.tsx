@@ -35,6 +35,7 @@ import { COMMUNITY_SLUG } from '../community/config';
 import { toggleBookmarkPost, toggleLikePost } from '../community/actions';
 import { profileQuery, useBookmarks, useMemberPosts } from '../community/queries';
 import { promptReport } from '../community/reportPrompt';
+import { useRequireAuth } from '../auth/useRequireAuth';
 import { alertCommunityError } from '../community/errors';
 import { CommunityAuthor, CommunityPost } from '../types/community';
 import {
@@ -87,6 +88,7 @@ export const UserProfileScreen: React.FC = () => {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const { user: clerkUser } = useUser();
+  const { guard, isSignedIn, isLoaded: authLoaded } = useRequireAuth();
 
   const { userId = 'me', author: authorHint } = (route.params || {}) as {
     userId?: string;
@@ -204,7 +206,9 @@ export const UserProfileScreen: React.FC = () => {
     }
   }, [profileQ.data, profileQ.isError]);
 
-  const handleToggleFollow = async () => {
+  const handleToggleFollow = () => guard(doToggleFollow, 'follow');
+
+  const doToggleFollow = async () => {
     if (!profile) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
     const nextFollowing = !isFollowing;
@@ -298,7 +302,7 @@ export const UserProfileScreen: React.FC = () => {
           ? {
               text: 'Report Student',
               style: 'destructive',
-              onPress: () => promptReport('member', profile?.id ?? ''),
+              onPress: () => guard(() => promptReport('member', profile?.id ?? ''), 'flag'),
             }
           : null,
         {
@@ -333,6 +337,43 @@ export const UserProfileScreen: React.FC = () => {
     }
     return (name[0] || 'U').toUpperCase();
   };
+
+  // Your own profile needs an account; a profile that could not load says so instead of spinning forever.
+  if (isOwnProfile && authLoaded && !isSignedIn) {
+    return (
+      <View style={[styles.loadingContainer, { paddingHorizontal: 32 }]}>
+        <Text style={{ fontFamily: FONTS.displayBold, fontSize: 18, color: COLORS.text, textAlign: 'center' }}>
+          Sign in or create an account to see your profile
+        </Text>
+        <Text style={{ fontFamily: FONTS.body, fontSize: 14, color: COLORS.textMuted, textAlign: 'center', marginTop: 8 }}>
+          Your posts, saved posts and followers live in your community profile.
+        </Text>
+        <TouchableOpacity
+          onPress={() => navigation.navigate('SignIn', { reason: 'community' })}
+          style={{ marginTop: 20, backgroundColor: COLORS.primary, paddingHorizontal: 24, paddingVertical: 12, borderRadius: RADIUS.full }}
+          accessibilityRole="button"
+        >
+          <Text style={{ fontFamily: FONTS.bodySemi, color: '#ffffff', fontSize: 14 }}>Sign in or create account</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+  if (!profile && profileQ.isError) {
+    return (
+      <View style={[styles.loadingContainer, { paddingHorizontal: 32 }]}>
+        <Text style={{ fontFamily: FONTS.displayBold, fontSize: 18, color: COLORS.text, textAlign: 'center' }}>
+          Could not load this profile
+        </Text>
+        <TouchableOpacity
+          onPress={() => void profileQ.refetch()}
+          style={{ marginTop: 20, backgroundColor: COLORS.primary, paddingHorizontal: 24, paddingVertical: 12, borderRadius: RADIUS.full }}
+          accessibilityRole="button"
+        >
+          <Text style={{ fontFamily: FONTS.bodySemi, color: '#ffffff', fontSize: 14 }}>Try again</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   if (loading || !profile) {
     return (

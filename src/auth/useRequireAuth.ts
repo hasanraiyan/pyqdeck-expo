@@ -4,6 +4,21 @@ import { useNavigation } from '@react-navigation/native';
 import { setPendingAction, takePendingAction } from './pendingAction';
 import { isAuthEnabled } from '../config/features';
 
+/** Why the sign-in sheet opened; the sheet names the thing the person just tried to do. */
+export type SignInReason =
+  | 'vote'
+  | 'report'
+  | 'ai'
+  | 'progress'
+  | 'paper'
+  // Community:
+  | 'post'
+  | 'comment'
+  | 'react'
+  | 'follow'
+  | 'flag'
+  | 'community';
+
 /**
  * Gate for the features that need an account - voting, and later the AI tutor.
  * Everything else in this app (browsing papers, syllabus, search, reading
@@ -32,7 +47,7 @@ export const useRequireAuth = () => {
   }, [isLoaded, isSignedIn]);
 
   const guard = useCallback(
-    (run: () => void, reason: 'vote' | 'report' | 'ai' | 'progress' | 'paper' = 'vote') => {
+    (run: () => void, reason: SignInReason = 'vote') => {
       // If auth is disabled (e.g. for Play Store review), do not launch the SignIn sheet.
       if (!isAuthEnabled) {
         if (reason === 'report') {

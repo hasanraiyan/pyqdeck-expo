@@ -306,7 +306,7 @@ export const SettingsScreen = ({ navigation }: any) => {
               ) : (
                 <SettingsRow
                   icon="log-in"
-                  label="Sign in"
+                  label="Sign in or create account"
                   onPress={() => navigation.navigate('SignIn')}
                   last
                 />

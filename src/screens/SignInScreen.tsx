@@ -27,6 +27,8 @@ export const SignInScreen = ({ navigation, route }: any) => {
   // Why the sheet opened, so the heading names the thing the user just tried
   // to do. Anything else (Settings -> Sign in) gets no heading at all.
   const reason = route?.params?.reason;
+  // 'signUp' opens on account creation, 'signIn' on sign-in; by default one screen offers both.
+  const mode: 'signIn' | 'signUp' | 'signInOrUp' = route?.params?.mode ?? 'signInOrUp';
   const heading =
     reason === 'vote'
       ? 'Sign in to vote'
@@ -38,7 +40,19 @@ export const SignInScreen = ({ navigation, route }: any) => {
             ? 'Log in to save your progress'
             : reason === 'paper'
               ? 'Sign in to view the original paper'
-              : null;
+              : reason === 'post'
+                ? 'Sign in to post'
+                : reason === 'comment'
+                  ? 'Sign in to comment'
+                  : reason === 'react'
+                    ? 'Sign in to like and save posts'
+                    : reason === 'follow'
+                      ? 'Sign in to follow students'
+                      : reason === 'flag'
+                        ? 'Sign in to report this'
+                        : reason === 'community'
+                          ? 'Sign in to join the community'
+                          : null;
 
   // AuthView has no onSuccess callback - the documented pattern is to watch
   // auth state and close once the session lands.
@@ -54,10 +68,13 @@ export const SignInScreen = ({ navigation, route }: any) => {
       {heading && (
         <View style={styles.notice}>
           <Text style={styles.noticeTitle}>{heading}</Text>
+          <Text style={styles.noticeHint}>
+            New to PYQDeck? Continue with Google, GitHub or your email and your account is created in a few seconds.
+          </Text>
         </View>
       )}
       <AuthView
-        mode="signInOrUp"
+        mode={mode}
         isDismissible
         onDismiss={() => navigation.goBack()}
       />
@@ -74,6 +91,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 16,
     paddingBottom: 12,
+  },
+  noticeHint: {
+    marginTop: 4,
+    fontSize: rf(13),
+    color: COLORS.textMuted,
   },
   noticeTitle: {
     fontSize: rf(16),

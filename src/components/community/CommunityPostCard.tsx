@@ -24,6 +24,7 @@ import { useNavigation } from '@react-navigation/native';
 import { CommunityPost } from '../../types/community';
 import { deletePost } from '../../community/actions';
 import { promptReport } from '../../community/reportPrompt';
+import { useRequireAuth } from '../../auth/useRequireAuth';
 import { EditPostModal } from './EditPostModal';
 import { COLORS, FONTS, RADIUS } from '../../theme/colors';
 import { CommunityDocumentSlide } from './CommunityDocumentSlide';
@@ -137,6 +138,7 @@ export const CommunityPostCard: React.FC<CommunityPostCardProps> = ({
   showDismissAction = true,
 }) => {
   const navigation = useNavigation<any>();
+  const { guard } = useRequireAuth();
   const [mediaViewerVisible, setMediaViewerVisible] = useState(false);
   const [selectedMediaIndex, setSelectedMediaIndex] = useState(0);
   const [mediaType, setMediaType] = useState<'document' | 'image'>('image');
@@ -198,7 +200,9 @@ export const CommunityPostCard: React.FC<CommunityPostCardProps> = ({
 
   const cleanTime = (post.createdAt || '').replace(/[•·]?\s*🌐/g, '').trim();
 
-  const handleDiscard = () => {
+  const handleDiscard = () => guard(doDiscard, 'react');
+
+  const doDiscard = () => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setIsDismissing(true);
@@ -465,7 +469,7 @@ export const CommunityPostCard: React.FC<CommunityPostCardProps> = ({
           style={styles.actionTab}
           onPress={() => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-            onLikePress(post.id);
+            guard(() => onLikePress(post.id), 'react');
           }}
           activeOpacity={0.7}
           accessibilityLabel={`Like, ${post.likesCount} likes`}
@@ -517,7 +521,7 @@ export const CommunityPostCard: React.FC<CommunityPostCardProps> = ({
           style={styles.actionTab}
           onPress={() => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-            onBookmarkPress(post.id);
+            guard(() => onBookmarkPress(post.id), 'react');
           }}
           activeOpacity={0.7}
           accessibilityLabel="Save post"
@@ -547,7 +551,7 @@ export const CommunityPostCard: React.FC<CommunityPostCardProps> = ({
         initialIndex={selectedMediaIndex}
         initialType={mediaType}
         onClose={() => setMediaViewerVisible(false)}
-        onLikePress={onLikePress}
+        onLikePress={(id) => guard(() => onLikePress(id), 'react')}
         onCommentPress={onCommentPress}
         onSharePress={handleShare}
         onOpenDetail={
@@ -585,7 +589,7 @@ export const CommunityPostCard: React.FC<CommunityPostCardProps> = ({
               onPress={() => {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
                 setOptionsModalVisible(false);
-                onBookmarkPress(post.id);
+                guard(() => onBookmarkPress(post.id), 'react');
               }}
             >
               <View style={styles.optionIconWrap}>
@@ -707,7 +711,7 @@ export const CommunityPostCard: React.FC<CommunityPostCardProps> = ({
               onPress={() => {
                 Haptics.selectionAsync().catch(() => {});
                 setOptionsModalVisible(false);
-                promptReport('post', post.id);
+                guard(() => promptReport('post', post.id), 'flag');
               }}
             >
               <View style={[styles.optionIconWrap, { backgroundColor: '#fee2e2' }]}>

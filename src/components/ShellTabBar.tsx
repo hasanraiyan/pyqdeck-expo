@@ -63,7 +63,7 @@ function AccountItem({ expanded, onPress }: { expanded: boolean; onPress: (signe
   return (
     <FooterItem
       icon="user"
-      label={isSignedIn ? name : 'Sign in'}
+      label={isSignedIn ? name : 'Sign in / Sign up'}
       expanded={expanded}
       onPress={() => onPress(!!isSignedIn)}
     />

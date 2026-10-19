@@ -285,12 +285,23 @@ export const ActivityInboxScreen: React.FC<{ route?: any }> = () => {
               <View style={styles.emptyIconCircle}>
                 <Feather name="bell-off" size={26} color={COLORS.textMuted} />
               </View>
-              <Text style={styles.emptyTitle}>All caught up!</Text>
+              <Text style={styles.emptyTitle}>{isSignedIn ? 'All caught up!' : 'Sign in or create an account to see your activity'}</Text>
               <Text style={styles.emptySubtitle}>
-                {filter === 'unread'
-                  ? 'No unread notifications or messages.'
-                  : 'You have no notifications right now.'}
+                {!isSignedIn
+                  ? 'Likes, comments and new followers on your posts show up here.'
+                  : filter === 'unread'
+                    ? 'No unread notifications or messages.'
+                    : 'You have no notifications right now.'}
               </Text>
+              {!isSignedIn ? (
+                <TouchableOpacity
+                  onPress={() => navigation.navigate('SignIn', { reason: 'community' })}
+                  style={{ marginTop: 16, backgroundColor: COLORS.primary, paddingHorizontal: 24, paddingVertical: 12, borderRadius: RADIUS.full }}
+                  accessibilityRole="button"
+                >
+                  <Text style={{ fontFamily: FONTS.bodySemi, color: '#ffffff', fontSize: 14 }}>Sign in or create account</Text>
+                </TouchableOpacity>
+              ) : null}
             </View>
           ) : (
             <View style={styles.listSection}>

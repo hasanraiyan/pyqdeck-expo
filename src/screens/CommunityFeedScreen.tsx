@@ -25,6 +25,7 @@ import { useCommunityFeed } from '../community/queries';
 import { usePendingUploads, cancelPostUpload } from '../community/uploads';
 import { hidePost, toggleBookmarkPost, toggleLikePost } from '../community/actions';
 import { describeCommunityError } from '../community/errors';
+import { useRequireAuth } from '../auth/useRequireAuth';
 import { CommunityPostCard } from '../components/community/CommunityPostCard';
 import { PendingPostCard } from '../components/community/PendingPostCard';
 import { CreateCommunityPostModal } from '../components/community/CreateCommunityPostModal';
@@ -52,6 +53,7 @@ export const CommunityFeedScreen: React.FC = () => {
   const route = useRoute<any>();
   const { isSignedIn } = useAuth();
   const { user } = useUser();
+  const { guard } = useRequireAuth();
 
   const [selectedHashtag, setSelectedHashtag] = useState<string | null>(
     route.params?.filterHashtag || null
@@ -130,6 +132,31 @@ export const CommunityFeedScreen: React.FC = () => {
   const renderHeader = () => {
     return (
       <View>
+        {/* Signed-out visitors can read everything; this is the way in to post, like and comment. */}
+        {isAuthEnabled && !isSignedIn ? (
+          <View style={styles.joinCard}>
+            <Text style={styles.joinTitle}>Join the BEU community</Text>
+            <Text style={styles.joinBody}>Create an account to post, comment, like and follow other students.</Text>
+            <View style={styles.joinActions}>
+              <TouchableOpacity
+                style={styles.joinPrimary}
+                onPress={() => navigation.navigate('SignIn', { reason: 'community', mode: 'signUp' })}
+                accessibilityRole="button"
+                accessibilityLabel="Create account"
+              >
+                <Text style={styles.joinPrimaryText}>Create account</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.joinSecondary}
+                onPress={() => navigation.navigate('SignIn', { reason: 'community', mode: 'signIn' })}
+                accessibilityRole="button"
+                accessibilityLabel="Sign in"
+              >
+                <Text style={styles.joinSecondaryText}>Sign in</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        ) : null}
         {/* Optimistic Background Uploading Posts (like Twitter/X & LinkedIn) */}
         {pendingUploads.map((item) => (
           <PendingPostCard
@@ -182,7 +209,7 @@ export const CommunityFeedScreen: React.FC = () => {
       </Text>
       <TouchableOpacity
         style={styles.emptyCtaBtn}
-        onPress={() => setCreateModalVisible(true)}
+        onPress={() => guard(() => setCreateModalVisible(true), 'post')}
         activeOpacity={0.8}
       >
         <NewPostIcon size={16} color="#ffffff" />
@@ -364,7 +391,7 @@ export const CommunityFeedScreen: React.FC = () => {
         style={styles.fab}
         onPress={() => {
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
-          setCreateModalVisible(true);
+          guard(() => setCreateModalVisible(true), 'post');
         }}
         activeOpacity={0.85}
         accessibilityRole="button"
@@ -394,6 +421,32 @@ export const CommunityFeedScreen: React.FC = () => {
 };
 
 const styles = StyleSheet.create({
+  joinCard: {
+    marginHorizontal: 12,
+    marginTop: 12,
+    marginBottom: 12,
+    padding: 16,
+    borderRadius: RADIUS.xl,
+    backgroundColor: COLORS.primaryLight,
+  },
+  joinTitle: { fontFamily: FONTS.displayBold, fontSize: 16, color: COLORS.text },
+  joinBody: { fontFamily: FONTS.body, fontSize: 13, color: COLORS.textMuted, marginTop: 4 },
+  joinActions: { flexDirection: 'row', gap: 10, marginTop: 12 },
+  joinPrimary: {
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    borderRadius: RADIUS.full,
+  },
+  joinPrimaryText: { fontFamily: FONTS.bodySemi, fontSize: 14, color: '#ffffff' },
+  joinSecondary: {
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    borderRadius: RADIUS.full,
+    borderWidth: 1,
+    borderColor: COLORS.primary,
+  },
+  joinSecondaryText: { fontFamily: FONTS.bodySemi, fontSize: 14, color: COLORS.primary },
   screen: {
     flex: 1,
     backgroundColor: COLORS.background,

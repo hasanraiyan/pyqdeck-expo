@@ -26,6 +26,7 @@ import { CommunityComment, CommunityPost } from '../../types/community';
 import { addComment, deleteComment, toggleLikeComment } from '../../community/actions';
 import { useCommunityComments } from '../../community/queries';
 import { promptReport } from '../../community/reportPrompt';
+import { useRequireAuth, type SignInReason } from '../../auth/useRequireAuth';
 import { NativeContentRenderer } from '../NativeContentRenderer';
 import { baseMarkdownStyles } from '../../theme/markdownStyles';
 import { CommunityCommentsSkeleton } from '../Skeletons';
@@ -76,6 +77,13 @@ export const CommunityCommentsBottomSheet: React.FC<CommunityCommentsBottomSheet
 }) => {
   const insets = useSafeAreaInsets();
   const { user } = useUser();
+  const { guard, isSignedIn } = useRequireAuth();
+  // The sheet is a modal that would hide the sign-in screen, so it closes first; the parked action still runs afterwards.
+  const requireSignIn = (run: () => void, reason: SignInReason) => {
+    if (isSignedIn) return run();
+    onClose();
+    guard(run, reason);
+  };
   const inputRef = useRef<TextInput>(null);
   const scrollViewRef = useRef<ScrollView>(null);
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
@@ -161,6 +169,11 @@ export const CommunityCommentsBottomSheet: React.FC<CommunityCommentsBottomSheet
 
   const handleSendComment = () => {
     if (!commentInput.trim() || !post) return;
+    requireSignIn(sendComment, 'comment');
+  };
+
+  const sendComment = () => {
+    if (!post) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
 
     void addComment(
@@ -200,6 +213,11 @@ export const CommunityCommentsBottomSheet: React.FC<CommunityCommentsBottomSheet
 
   const handleLikeComment = (commentId: string) => {
     if (!post) return;
+    requireSignIn(() => likeComment(commentId), 'react');
+  };
+
+  const likeComment = (commentId: string) => {
+    if (!post) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     void toggleLikeComment(post.id, commentId);
   };
@@ -226,7 +244,7 @@ export const CommunityCommentsBottomSheet: React.FC<CommunityCommentsBottomSheet
           ]),
       });
     } else {
-      options.push({ text: 'Report comment', style: 'destructive', onPress: () => promptReport('comment', targetComment.id) });
+      options.push({ text: 'Report comment', style: 'destructive', onPress: () => requireSignIn(() => promptReport('comment', targetComment.id), 'flag') });
     }
     options.push({ text: 'Cancel', style: 'cancel' });
     Alert.alert('Comment Options', undefined, options);
