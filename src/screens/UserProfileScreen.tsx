@@ -26,7 +26,7 @@ import * as WebBrowser from 'expo-web-browser';
 import * as Clipboard from 'expo-clipboard';
 import * as ImagePicker from 'expo-image-picker';
 import { useUser } from '@clerk/expo';
-import { COLORS, FONTS, RADIUS } from '../theme/colors';
+import { COLORS, COVER_ASPECT, COVER_ASPECT_RATIO, FONTS, RADIUS } from '../theme/colors';
 import { ScreenContainer } from '../components/ScreenContainer';
 import { CommunityPostCard } from '../components/community/CommunityPostCard';
 import { CommunityCommentsBottomSheet } from '../components/community/CommunityCommentsBottomSheet';
@@ -216,7 +216,7 @@ export const UserProfileScreen: React.FC = () => {
       const picked = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['images'],
         allowsEditing: true,
-        aspect: [16, 9],
+        aspect: COVER_ASPECT,
         quality: 0.85,
       });
       if (picked.canceled || !picked.assets?.[0]) return;
@@ -926,7 +926,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   coverWrap: {
-    height: 140,
+    aspectRatio: COVER_ASPECT_RATIO,
     width: '100%',
     position: 'relative',
     backgroundColor: COLORS.primary,
