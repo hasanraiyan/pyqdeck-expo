@@ -167,7 +167,8 @@
           "microphonePermission": false
         }
       ],
-      "expo-sharing"
+      "expo-sharing",
+      "expo-system-ui"
     ],
     "extra": {
       "eas": {
