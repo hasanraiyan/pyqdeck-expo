@@ -30,8 +30,8 @@ importers:
         specifier: ^15.1.1
         version: 15.1.1(expo-font@57.0.4(expo@57.0.26)(react-native@0.86.3(@babel/core@7.29.7)(@types/react@19.2.18)(bufferutil@4.1.0)(react@19.2.3))(react@19.2.3))(react-native@0.86.3(@babel/core@7.29.7)(@types/react@19.2.18)(bufferutil@4.1.0)(react@19.2.3))(react@19.2.3)
       '@pyqdeck/community-sdk':
-        specifier: file:../pyqdeck-community/sdk
-        version: file:../pyqdeck-community/sdk
+        specifier: ^0.3.0
+        version: 0.3.0
       '@react-native-async-storage/async-storage':
         specifier: 2.2.0
         version: 2.2.0(react-native@0.86.3(@babel/core@7.29.7)(@types/react@19.2.18)(bufferutil@4.1.0)(react@19.2.3))
@@ -1160,8 +1160,8 @@ packages:
   '@protobufjs/utf8@1.1.2':
     resolution: {integrity: sha512-b1UQwcEZ4yCnMCD8DAL1VlbvBJE9/IX4FTIp7BG1xYpf29SLazLSrqUkj4w7Y5y7cCVP6E5tcqqcI0xemPkHug==}
 
-  '@pyqdeck/community-sdk@file:../pyqdeck-community/sdk':
-    resolution: {directory: ../pyqdeck-community/sdk, type: directory}
+  '@pyqdeck/community-sdk@0.3.0':
+    resolution: {integrity: sha512-pgtWnucIFMFFCSGE6OX46Roh9lbD/GRaYkMo+lnQYqjDKB1SWpPUkw9zk4qVCCWHNJB4z6TeSb3UX/1HI6h8zQ==}
 
   '@react-native-async-storage/async-storage@2.2.0':
     resolution: {integrity: sha512-gvRvjR5JAaUZF8tv2Kcq/Gbt3JHwbKFYfmb445rhOj6NUMx3qPLixmDx5pZAyb9at1bYvJ4/eTUipU5aki45xw==}
@@ -5152,7 +5152,7 @@ snapshots:
 
   '@protobufjs/utf8@1.1.2': {}
 
-  '@pyqdeck/community-sdk@file:../pyqdeck-community/sdk': {}
+  '@pyqdeck/community-sdk@0.3.0': {}
 
   '@react-native-async-storage/async-storage@2.2.0(react-native@0.86.3(@babel/core@7.29.7)(@types/react@19.2.18)(bufferutil@4.1.0)(react@19.2.3))':
     dependencies:

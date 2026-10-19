@@ -10,7 +10,7 @@
     "@expo-google-fonts/patrick-hand": "^0.4.1",
     "@expo-google-fonts/plus-jakarta-sans": "^0.4.2",
     "@expo/vector-icons": "^15.1.1",
-    "@pyqdeck/community-sdk": "file:../pyqdeck-community/sdk",
+    "@pyqdeck/community-sdk": "^0.3.0",
     "@react-native-async-storage/async-storage": "2.2.0",
     "@react-native-firebase/analytics": "26.4.0",
     "@react-native-firebase/app": "26.4.0",
