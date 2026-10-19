@@ -22,6 +22,7 @@ import * as Haptics from 'expo-haptics';
 import * as Clipboard from 'expo-clipboard';
 import { COLORS, FONTS, RADIUS } from '../../theme/colors';
 import { CommunityPost } from '../../types/community';
+import { ZoomableImage } from './ZoomableImage';
 import { NativeContentRenderer } from '../NativeContentRenderer';
 import { baseMarkdownStyles, markdownRules } from '../../theme/markdownStyles';
 import {
@@ -66,6 +67,8 @@ export const CommunityMediaViewerModal: React.FC<CommunityMediaViewerModalProps>
   const [isLikedState, setIsLikedState] = useState(post.isLiked);
   const [likesCountState, setLikesCountState] = useState(post.likesCount);
   const flatListRef = useRef<FlatList<MediaItem>>(null);
+  // While a page is zoomed in, dragging pans the image, so the pager must not swipe.
+  const [pageZoomed, setPageZoomed] = useState(false);
 
   const pdfAttachment = post.attachments.find((a) => a.type === 'pdf');
   const isDocument = initialType === 'document' && !!pdfAttachment;
@@ -442,6 +445,7 @@ export const CommunityMediaViewerModal: React.FC<CommunityMediaViewerModalProps>
             pagingEnabled={!isVertical}
             showsHorizontalScrollIndicator={false}
             showsVerticalScrollIndicator={isVertical}
+            scrollEnabled={!pageZoomed}
             onScroll={handleScroll}
             scrollEventThrottle={32}
             contentContainerStyle={
@@ -476,11 +480,11 @@ export const CommunityMediaViewerModal: React.FC<CommunityMediaViewerModalProps>
                       { width: docPageWidth, height: docPageHeight },
                     ]}
                   >
-                    <Image
-                      source={{ uri: item.uri }}
-                      style={styles.pdfPaperImage}
-                      contentFit="contain"
-                      transition={200}
+                    <ZoomableImage
+                      uri={item.uri}
+                      width={docPageWidth}
+                      height={docPageHeight}
+                      onZoomChange={setPageZoomed}
                     />
                     <View style={styles.pdfPageWatermark}>
                       <Text style={styles.pdfPageWatermarkText}>
@@ -493,11 +497,11 @@ export const CommunityMediaViewerModal: React.FC<CommunityMediaViewerModalProps>
 
               return (
                 <View style={[styles.mediaSlide, { width: windowWidth, height: windowHeight }]}>
-                  <Image
-                    source={{ uri: item.uri }}
-                    style={[styles.mediaImage, { width: windowWidth, height: windowHeight * 0.72 }]}
-                    contentFit="contain"
-                    transition={200}
+                  <ZoomableImage
+                    uri={item.uri}
+                    width={windowWidth}
+                    height={windowHeight * 0.72}
+                    onZoomChange={setPageZoomed}
                   />
                 </View>
               );
