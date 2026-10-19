@@ -17,12 +17,15 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth, useUser } from '@clerk/expo';
 import { isAuthEnabled } from '../config/features';
 import { COLORS, FONTS, RADIUS } from '../theme/colors';
 import { CommunityPost, PendingPostUpload } from '../types/community';
 import { useCommunityFeed } from '../community/queries';
 import { usePendingUploads, cancelPostUpload } from '../community/uploads';
+
+const COMMUNITY_JOIN_DISMISSED_KEY = 'pyqdeck:community_join_dismissed';
 import { hidePost, toggleBookmarkPost, toggleLikePost } from '../community/actions';
 import { describeCommunityError } from '../community/errors';
 import { useRequireAuth } from '../auth/useRequireAuth';
@@ -64,6 +67,21 @@ export const CommunityFeedScreen: React.FC = () => {
   const [createModalVisible, setCreateModalVisible] = useState(false);
   const [commentSheetPost, setCommentSheetPost] = useState<CommunityPost | null>(null);
   const pendingUploads = usePendingUploads();
+
+  // Remember dismissal of the "Join the BEU community" card across sessions (same as Study tab's SyncStatusBar)
+  const [joinDismissed, setJoinDismissed] = useState<boolean | null>(null);
+  useEffect(() => {
+    AsyncStorage.getItem(COMMUNITY_JOIN_DISMISSED_KEY)
+      .then((v) => setJoinDismissed(v === '1'))
+      .catch(() => setJoinDismissed(false));
+  }, []);
+
+  const dismissJoinCard = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setJoinDismissed(true);
+    AsyncStorage.setItem(COMMUNITY_JOIN_DISMISSED_KEY, '1').catch(() => {});
+  };
 
   // The feed is a TanStack Query: cached and saved offline, refetched when stale, paged by cursor. The server does
   // the hashtag filter and the search, so the list shown is exactly what it returned. Search waits for a pause in typing.
@@ -133,9 +151,20 @@ export const CommunityFeedScreen: React.FC = () => {
     return (
       <View>
         {/* Signed-out visitors can read everything; this is the way in to post, like and comment. */}
-        {isAuthEnabled && !isSignedIn ? (
+        {isAuthEnabled && !isSignedIn && joinDismissed === false ? (
           <View style={styles.joinCard}>
-            <Text style={styles.joinTitle}>Join the BEU community</Text>
+            <View style={styles.joinHeader}>
+              <Text style={styles.joinTitle}>Join the BEU community</Text>
+              <TouchableOpacity
+                style={styles.joinCloseBtn}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                accessibilityRole="button"
+                accessibilityLabel="Dismiss banner"
+                onPress={dismissJoinCard}
+              >
+                <Feather name="x" size={16} color={COLORS.textSubtle} />
+              </TouchableOpacity>
+            </View>
             <Text style={styles.joinBody}>Create an account to post, comment, like and follow other students.</Text>
             <View style={styles.joinActions}>
               <TouchableOpacity
@@ -427,7 +456,18 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.xl,
     backgroundColor: COLORS.primaryLight,
   },
-  joinTitle: { fontFamily: FONTS.displayBold, fontSize: 16, color: COLORS.text },
+  joinHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  joinTitle: { flex: 1, fontFamily: FONTS.displayBold, fontSize: 16, color: COLORS.text },
+  joinCloseBtn: {
+    marginTop: -2,
+    marginRight: -4,
+    padding: 4,
+  },
   joinBody: { fontFamily: FONTS.body, fontSize: 13, color: COLORS.textMuted, marginTop: 4 },
   joinActions: { flexDirection: 'row', gap: 10, marginTop: 12 },
   joinPrimary: {
