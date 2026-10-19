@@ -2,6 +2,15 @@
 
 All notable changes to PYQDeck are listed here, newest first.
 
+## 1.14.2
+
+### Added
+- **Zoom in the community image viewer.** Pinch to zoom, double-tap to zoom in and out, and drag to move around a zoomed image, right in the viewer. Swiping between images works again as soon as you zoom back out.
+
+### Fixed
+- **Back from a shared community link.** Opening a profile or post from a pyqdeck.in link and pressing Back now goes to the Community feed instead of Home.
+- **Sign-in on the web.** The web version showed an empty sign-in sheet; it now shows the sign-in form, and Manage account works there too.
+
 ## 1.14.1
 
 ### Fixed
