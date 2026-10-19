@@ -32,7 +32,7 @@ import { prefetchSubject } from '../api/prefetch';
 import { TopicNoteSearchResultItem, AiOverviewReference } from '../types';
 import { AiOverviewCard } from '../components/AiOverviewCard';
 import { searchLocalCache } from '../api/offlineSearch';
-import { COLORS, FONTS } from '../theme/colors';
+import { COLORS, FONTS, RADIUS } from '../theme/colors';
 import { Badge, MarksBadge, YearBadge } from '../components/Badge';
 import { CircleLoader } from '../components/CircleLoader';
 import { rf, verticalScale, useResponsive } from '../utils/responsive';
@@ -50,19 +50,36 @@ export interface SearchScreenProps {
   embedded?: boolean;
   onClose?: () => void;
   autoFocus?: boolean;
+  /**
+   * A term submitted from the Home header. It is validated and shown as if the
+   * person had typed it and pressed search, so results appear immediately.
+   */
+  initialQuery?: string;
 }
 
 export const SearchScreen: React.FC<SearchScreenProps> = ({
   embedded = false,
   onClose,
   autoFocus = false,
+  initialQuery,
 }) => {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const linkTo = useLinkTo();
   const { readMaxWidth, hPadding, compact } = useResponsive();
-  const [query, setQuery] = useState('');
+  const seededQuery = useMemo(() => {
+    if (!initialQuery) return null;
+    return initialQuery.trim().replace(/\s+/g, ' ');
+  }, [initialQuery]);
+  // Only a term that passes the search guard is submitted on mount; anything
+  // shorter just pre-fills the field, so the normal validation still applies.
+  const seededSubmitted = useMemo(() => {
+    if (!initialQuery) return null;
+    const norm = normalizeQuery(initialQuery);
+    return norm.ok ? norm.query : null;
+  }, [initialQuery]);
+  const [query, setQuery] = useState(seededQuery ?? '');
   const [inputFocused, setInputFocused] = useState(false);
   const [activeTab, setActiveTab] = useState<SearchTab>('all');
   const queryClient = useQueryClient();
@@ -72,7 +89,7 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({
   // The validated query the results below belong to. null = nothing submitted.
   // Everything on screen is derived from React Query for this string, so a new
   // submit cancels the old requests and a repeat is served from cache.
-  const [submitted, setSubmitted] = useState<string | null>(null);
+  const [submitted, setSubmitted] = useState<string | null>(seededSubmitted);
   // Counts submissions (not distinct texts) so each one is judged once.
   const submitSeqRef = useRef(0);
   const loggedEmptySeqRef = useRef(0);
@@ -212,29 +229,40 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({
   }, [suggestionsQ.data]);
   const cooldownTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Load recent searches from AsyncStorage on mount
+  // Load recent searches from AsyncStorage on mount. A term submitted from the
+  // Home header never passes through submitQuery, so it is merged in here.
   useEffect(() => {
     AsyncStorage.getItem(RECENT_SEARCHES_KEY)
       .then((raw) => {
+        let stored: RecentSearch[] = [];
         if (raw) {
           // Older versions stored a plain string[]; accept both shapes.
           const parsed = JSON.parse(raw);
           if (Array.isArray(parsed)) {
-            setRecentSearches(
-              parsed
-                .map((e: any): RecentSearch | null =>
-                  typeof e === 'string'
-                    ? { term: e }
-                    : e && typeof e.term === 'string'
-                      ? { term: e.term }
-                      : null
-                )
-                .filter((e): e is RecentSearch => e !== null)
-            );
+            stored = parsed
+              .map((e: any): RecentSearch | null =>
+                typeof e === 'string'
+                  ? { term: e }
+                  : e && typeof e.term === 'string'
+                    ? { term: e.term }
+                    : null
+              )
+              .filter((e): e is RecentSearch => e !== null);
           }
         }
+        if (seededSubmitted) {
+          stored = [
+            { term: seededSubmitted },
+            ...stored.filter((e) => e.term.toLowerCase() !== seededSubmitted.toLowerCase()),
+          ].slice(0, 6);
+          AsyncStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(stored)).catch(() => {});
+        }
+        setRecentSearches(stored);
       })
       .catch(() => {});
+    // seededSubmitted is fixed for this mount; re-reading storage on every render
+    // would undo searches saved from this screen.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Cooldown countdown — re-enable input when it hits 0
@@ -686,10 +714,10 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({
                 {query.trim().length > 0 && cooldownSec === 0 && (
                   <TouchableOpacity
                     onPress={handleSearch}
-                    style={styles.searchActionBtn}
+                    style={[styles.searchActionBtn, styles.embeddedSearchActionBtn]}
                     hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                   >
-                    <Feather name="arrow-right" size={17} color="#FFFFFF" />
+                    <Feather name="arrow-right" size={16} color="#FFFFFF" />
                   </TouchableOpacity>
                 )}
 
@@ -1173,6 +1201,19 @@ const styles = StyleSheet.create({
   embeddedSearchBar: {
     flex: 1,
     marginTop: 0,
+    // Compact pill that matches the Home/Community expanded header search.
+    height: 40,
+    borderRadius: RADIUS.full,
+    backgroundColor: COLORS.cardSecondary,
+    borderWidth: 1,
+    borderColor: COLORS.borderLight,
+    paddingLeft: 12,
+    paddingRight: 4,
+  },
+  embeddedSearchActionBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
   },
   searchBarFocused: {
     borderColor: COLORS.primary,

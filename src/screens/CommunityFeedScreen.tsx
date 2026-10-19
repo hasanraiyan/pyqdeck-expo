@@ -29,6 +29,7 @@ const COMMUNITY_JOIN_DISMISSED_KEY = 'pyqdeck:community_join_dismissed';
 import { hidePost, toggleBookmarkPost, toggleLikePost } from '../community/actions';
 import { describeCommunityError } from '../community/errors';
 import { useRequireAuth } from '../auth/useRequireAuth';
+import { useIsStaff, useModerationBacklog } from '../community/moderationQueries';
 import { CommunityPostCard } from '../components/community/CommunityPostCard';
 import { PendingPostCard } from '../components/community/PendingPostCard';
 import { CreateCommunityPostModal } from '../components/community/CreateCommunityPostModal';
@@ -57,6 +58,9 @@ export const CommunityFeedScreen: React.FC = () => {
   const { isSignedIn } = useAuth();
   const { user } = useUser();
   const { guard } = useRequireAuth();
+  // Moderators and admins get a shield in the header that opens the moderation screens, with what is waiting as a badge.
+  const isStaff = useIsStaff();
+  const backlog = useModerationBacklog(isStaff);
 
   const [selectedHashtag, setSelectedHashtag] = useState<string | null>(
     route.params?.filterHashtag || null
@@ -316,6 +320,26 @@ export const CommunityFeedScreen: React.FC = () => {
                 <Feather name="search" size={19} color={COLORS.text} />
               </TouchableOpacity>
 
+              {isStaff ? (
+                <TouchableOpacity
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                    navigation.navigate('CommunityModeration');
+                  }}
+                  style={styles.headerMessageButton}
+                  hitSlop={8}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Moderation${backlog > 0 ? `, ${backlog} waiting` : ''}`}
+                >
+                  <Feather name="shield" size={20} color={COLORS.text} />
+                  {backlog > 0 ? (
+                    <View style={styles.staffBadge}>
+                      <Text style={styles.staffBadgeText}>{backlog > 99 ? '99+' : backlog}</Text>
+                    </View>
+                  ) : null}
+                </TouchableOpacity>
+              ) : null}
+
               <TouchableOpacity
                 onPress={() => {
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
@@ -549,6 +573,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  staffBadge: {
+    position: 'absolute',
+    top: 2,
+    right: 0,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    paddingHorizontal: 4,
+    backgroundColor: COLORS.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  staffBadgeText: { fontFamily: FONTS.bodySemi, fontSize: 9.5, color: '#ffffff' },
   headerMessageButton: {
     width: 38,
     height: 38,

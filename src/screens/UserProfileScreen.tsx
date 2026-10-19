@@ -24,6 +24,7 @@ import { Image } from 'expo-image';
 import * as Haptics from 'expo-haptics';
 import * as WebBrowser from 'expo-web-browser';
 import * as Clipboard from 'expo-clipboard';
+import * as ImagePicker from 'expo-image-picker';
 import { useUser } from '@clerk/expo';
 import { COLORS, FONTS, RADIUS } from '../theme/colors';
 import { ScreenContainer } from '../components/ScreenContainer';
@@ -205,6 +206,30 @@ export const UserProfileScreen: React.FC = () => {
       setLoading(false);
     }
   }, [profileQ.data, profileQ.isError]);
+
+  // A new member starts with no cover. Picking one sends it through the same direct-upload path as post images.
+  const [coverUploading, setCoverUploading] = useState(false);
+  const handleUploadCover = async () => {
+    if (coverUploading) return;
+    Haptics.selectionAsync().catch(() => {});
+    try {
+      const picked = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        aspect: [16, 9],
+        quality: 0.85,
+      });
+      if (picked.canceled || !picked.assets?.[0]) return;
+      setCoverUploading(true);
+      const updated = await userProfileService.updateOwnProfile({ coverUrl: picked.assets[0].uri });
+      setProfile(updated);
+      queryClient.setQueryData(communityKeys.me(COMMUNITY_SLUG), updated);
+    } catch (err) {
+      alertCommunityError(err, 'Could not upload your cover image');
+    } finally {
+      setCoverUploading(false);
+    }
+  };
 
   const handleToggleFollow = () => guard(doToggleFollow, 'follow');
 
@@ -422,12 +447,30 @@ export const UserProfileScreen: React.FC = () => {
           <View style={styles.heroCard}>
             {/* Cover Banner */}
             <View style={styles.coverWrap}>
-              <Image
-                source={{ uri: profile.coverUrl }}
-                style={styles.coverImage}
-                contentFit="cover"
-              />
-              <View style={styles.coverOverlay} />
+              {profile.coverUrl ? (
+                <>
+                  <Image source={{ uri: profile.coverUrl }} style={styles.coverImage} contentFit="cover" />
+                  <View style={styles.coverOverlay} />
+                </>
+              ) : isOwnProfile ? (
+                <View style={styles.coverEmpty}>
+                  <TouchableOpacity
+                    style={styles.coverUploadBtn}
+                    onPress={handleUploadCover}
+                    disabled={coverUploading}
+                    activeOpacity={0.7}
+                    accessibilityRole="button"
+                    accessibilityLabel="Upload cover image"
+                  >
+                    {coverUploading ? (
+                      <ActivityIndicator size="small" color="#ffffff" />
+                    ) : (
+                      <Feather name="image" size={16} color="#ffffff" />
+                    )}
+                    <Text style={styles.coverUploadText}>{coverUploading ? 'Uploading...' : 'Upload cover image'}</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : null}
             </View>
 
             {/* Avatar Row */}
@@ -892,6 +935,24 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
   },
+  coverEmpty: {
+    ...StyleSheet.absoluteFill,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  // See-through so the banner colour shows; the white outline keeps it readable on any colour.
+  coverUploadBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: RADIUS.full,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.75)',
+    backgroundColor: 'rgba(255, 255, 255, 0.14)',
+  },
+  coverUploadText: { fontFamily: FONTS.bodySemi, fontSize: 14, color: '#ffffff' },
   coverOverlay: {
     ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(0, 0, 0, 0.18)',

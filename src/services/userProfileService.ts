@@ -31,6 +31,8 @@ export interface UserProfileData {
   isFollowing?: boolean;
   contributionsCount: number;
   upvotesCount: number;
+  /** The person's role in this community; moderators and admins get the moderation screens. */
+  role?: 'member' | 'moderator' | 'admin';
 }
 
 const isLocalFile = (uri?: string) => !!uri && /^(file|content|ph|assets-library):/i.test(uri);

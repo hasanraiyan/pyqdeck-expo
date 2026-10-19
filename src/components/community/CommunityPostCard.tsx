@@ -314,6 +314,25 @@ export const CommunityPostCard: React.FC<CommunityPostCardProps> = ({
           </Text>
         );
       },
+      image: (node: any) => {
+        const src = node.attributes?.src || '';
+        const alt = node.attributes?.alt || src;
+        return (
+          <Text
+            key={node.key}
+            style={{
+              color: '#0a66c2',
+              fontFamily: FONTS.bodySemi,
+              textDecorationLine: 'none',
+            }}
+            onPress={() => {
+              if (src) Linking.openURL(src).catch(() => {});
+            }}
+          >
+            {alt}
+          </Text>
+        );
+      },
     }),
     [onHashtagPress]
   );

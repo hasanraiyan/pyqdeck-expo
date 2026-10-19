@@ -111,5 +111,6 @@ export function toProfile(m: Member | OwnMember): UserProfileData {
     isFollowing: m.isFollowing,
     contributionsCount: m.postsCount,
     upvotesCount: m.upvotesCount,
+    role: m.role,
   };
 }

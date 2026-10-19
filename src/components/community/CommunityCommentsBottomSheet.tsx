@@ -27,8 +27,9 @@ import { addComment, deleteComment, toggleLikeComment } from '../../community/ac
 import { useCommunityComments } from '../../community/queries';
 import { promptReport } from '../../community/reportPrompt';
 import { useRequireAuth, type SignInReason } from '../../auth/useRequireAuth';
+import { Linking } from 'react-native';
 import { NativeContentRenderer } from '../NativeContentRenderer';
-import { baseMarkdownStyles } from '../../theme/markdownStyles';
+import { baseMarkdownStyles, markdownRules } from '../../theme/markdownStyles';
 import { CommunityCommentsSkeleton } from '../Skeletons';
 
 const commentMarkdownStyles = {
@@ -53,6 +54,11 @@ const commentMarkdownStyles = {
     fontStyle: 'italic' as const,
     color: '#1f2937',
   },
+  link: {
+    color: '#0a66c2',
+    fontFamily: FONTS.bodySemi,
+    textDecorationLine: 'none' as const,
+  },
   code_inline: {
     backgroundColor: '#f3f4f6',
     color: '#b23a2e',
@@ -61,6 +67,47 @@ const commentMarkdownStyles = {
     paddingHorizontal: 4,
     paddingVertical: 1,
     borderRadius: 3,
+  },
+};
+
+const commentMarkdownRules = {
+  ...markdownRules,
+  link: (node: any, children: any) => {
+    const href = node.attributes?.href || '';
+    return (
+      <Text
+        key={node.key}
+        style={{
+          color: '#0a66c2',
+          fontFamily: FONTS.bodySemi,
+          textDecorationLine: 'none',
+        }}
+        onPress={() => {
+          if (href) Linking.openURL(href).catch(() => {});
+        }}
+      >
+        {children}
+      </Text>
+    );
+  },
+  image: (node: any) => {
+    const src = node.attributes?.src || '';
+    const alt = node.attributes?.alt || src;
+    return (
+      <Text
+        key={node.key}
+        style={{
+          color: '#0a66c2',
+          fontFamily: FONTS.bodySemi,
+          textDecorationLine: 'none',
+        }}
+        onPress={() => {
+          if (src) Linking.openURL(src).catch(() => {});
+        }}
+      >
+        {alt}
+      </Text>
+    );
   },
 };
 
@@ -304,6 +351,7 @@ export const CommunityCommentsBottomSheet: React.FC<CommunityCommentsBottomSheet
               variant="question"
               fontSize={13}
               markdownStyles={commentMarkdownStyles}
+              rules={commentMarkdownRules}
             />
           </View>
 
@@ -407,6 +455,7 @@ export const CommunityCommentsBottomSheet: React.FC<CommunityCommentsBottomSheet
               variant="question"
               fontSize={13.5}
               markdownStyles={commentMarkdownStyles}
+              rules={commentMarkdownRules}
             />
           </View>
 

@@ -3,10 +3,12 @@ import {
   View,
   Text,
   Image,
+  TextInput,
   TouchableOpacity,
   StyleSheet,
   RefreshControl,
   ScrollView,
+  LayoutAnimation,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
@@ -17,7 +19,7 @@ import { useSemesters, subjectsQuery } from '../api/queries';
 import { Semester } from '../types';
 import { useAuth, useUser } from '@clerk/expo';
 import { isAuthEnabled } from '../config/features';
-import { COLORS, FONTS } from '../theme/colors';
+import { COLORS, FONTS, RADIUS } from '../theme/colors';
 import { CircleLoader } from '../components/CircleLoader';
 import { rf, scale, verticalScale, useResponsive } from '../utils/responsive';
 import { ScreenContainer } from '../components/ScreenContainer';
@@ -50,6 +52,10 @@ export const HomeScreen = () => {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<any>();
   const [isSearchActive, setIsSearchActive] = useState(false);
+  // The header search grows in place (same pattern as the community header)
+  // instead of swapping the whole screen for a separate search view.
+  const [isSearchExpanded, setIsSearchExpanded] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
   const { isSignedIn } = useAuth();
   const { user } = useUser();
   const { width, bp, wideMaxWidth, hPadding } = useResponsive();
@@ -179,8 +185,45 @@ export const HomeScreen = () => {
     [semestersData]
   );
 
+  const openHeaderSearch = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setIsSearchExpanded(true);
+  };
+
+  const closeHeaderSearch = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setIsSearchExpanded(false);
+    setSearchTerm('');
+  };
+
+  // Opening the results screen. An empty term lands on the browse view (recent
+  // searches + suggested subjects), exactly like opening search used to.
+  const openSearchScreen = (term: string) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    setSearchTerm(term);
+    setIsSearchActive(true);
+  };
+
+  const submitHeaderSearch = () => {
+    // Valid terms search immediately; short ones still open the search screen
+    // with the text kept, so its existing validation can explain the minimum.
+    openSearchScreen(searchTerm.trim());
+  };
+
   if (isSearchActive) {
-    return <SearchScreen embedded onClose={() => setIsSearchActive(false)} autoFocus />;
+    return (
+      <SearchScreen
+        embedded
+        initialQuery={searchTerm}
+        onClose={() => {
+          setIsSearchActive(false);
+          setIsSearchExpanded(false);
+          setSearchTerm('');
+        }}
+      />
+    );
   }
 
   return (
@@ -195,59 +238,100 @@ export const HomeScreen = () => {
             { maxWidth: wideMaxWidth, paddingHorizontal: hPadding },
           ]}
         >
-          <View style={styles.brandRow}>
-            <Image
-              source={require('../../assets/app-icon.png')}
-              style={styles.headerLogo}
-              resizeMode="contain"
-            />
-            <View style={styles.brandText}>
-              <Text style={styles.brandTitle} numberOfLines={1}>PyQdeck</Text>
-              <Text style={styles.brandSubtitle} numberOfLines={1}>BEU PYQ ARCHIVE</Text>
-            </View>
-          </View>
-          <View style={styles.headerActions}>
-            <TouchableOpacity
-              onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-                setIsSearchActive(true);
-              }}
-              style={styles.headerSearchButton}
-              hitSlop={8}
-              accessibilityRole="button"
-              accessibilityLabel="Search"
-            >
-              <Feather name="search" size={19} color={COLORS.text} />
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => navigation.navigate('Settings')}
-              style={[
-                styles.headerIconButton,
-                isAuthEnabled && isSignedIn && styles.headerIconButtonActive,
-              ]}
-              hitSlop={8}
-              accessibilityRole="button"
-              accessibilityLabel={isAuthEnabled && isSignedIn ? 'Profile & Settings' : 'Settings'}
-            >
-              {isAuthEnabled && isSignedIn ? (
-                user?.imageUrl ? (
-                  <Image
-                    source={{ uri: user.imageUrl }}
-                    style={styles.headerAvatar}
-                    resizeMode="cover"
+          {isSearchExpanded ? (
+            /* Expanded search: same compact pill the Community header uses,
+               so the brand row slides out and the input takes the bar. */
+            <View style={styles.expandedSearchRow}>
+              <View style={styles.expandedSearchInputContainer}>
+                <TouchableOpacity
+                  onPress={submitHeaderSearch}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  accessibilityRole="button"
+                  accessibilityLabel="Search"
+                >
+                  <Feather
+                    name="search"
+                    size={15}
+                    color={COLORS.textMuted}
+                    style={{ marginRight: 8 }}
                   />
-                ) : (
-                  <View style={styles.headerAvatarFallback}>
-                    <Text style={styles.headerAvatarText}>
-                      {(user?.firstName?.[0] || user?.primaryEmailAddress?.emailAddress?.[0] || 'U').toUpperCase()}
-                    </Text>
-                  </View>
-                )
-              ) : (
-                <Feather name="settings" size={17} color={COLORS.text} />
-              )}
-            </TouchableOpacity>
-          </View>
+                </TouchableOpacity>
+                <TextInput
+                  style={styles.expandedSearchInput}
+                  placeholder="Search subjects, questions, topics..."
+                  placeholderTextColor={COLORS.textSubtle}
+                  value={searchTerm}
+                  onChangeText={setSearchTerm}
+                  autoFocus
+                  autoCorrect={false}
+                  returnKeyType="search"
+                  onSubmitEditing={submitHeaderSearch}
+                />
+                <TouchableOpacity
+                  onPress={closeHeaderSearch}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  style={styles.searchCloseBtn}
+                  accessibilityRole="button"
+                  accessibilityLabel="Close search"
+                >
+                  <Feather name="x" size={16} color={COLORS.textMuted} />
+                </TouchableOpacity>
+              </View>
+            </View>
+          ) : (
+            <>
+              <View style={styles.brandRow}>
+                <Image
+                  source={require('../../assets/app-icon.png')}
+                  style={styles.headerLogo}
+                  resizeMode="contain"
+                />
+                <View style={styles.brandText}>
+                  <Text style={styles.brandTitle} numberOfLines={1}>PyQdeck</Text>
+                  <Text style={styles.brandSubtitle} numberOfLines={1}>BEU PYQ ARCHIVE</Text>
+                </View>
+              </View>
+              <View style={styles.headerActions}>
+                <TouchableOpacity
+                  onPress={openHeaderSearch}
+                  style={styles.headerSearchButton}
+                  hitSlop={8}
+                  accessibilityRole="button"
+                  accessibilityLabel="Search"
+                >
+                  <Feather name="search" size={19} color={COLORS.text} />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => navigation.navigate('Settings')}
+                  style={[
+                    styles.headerIconButton,
+                    isAuthEnabled && isSignedIn && styles.headerIconButtonActive,
+                  ]}
+                  hitSlop={8}
+                  accessibilityRole="button"
+                  accessibilityLabel={isAuthEnabled && isSignedIn ? 'Profile & Settings' : 'Settings'}
+                >
+                  {isAuthEnabled && isSignedIn ? (
+                    user?.imageUrl ? (
+                      <Image
+                        source={{ uri: user.imageUrl }}
+                        style={styles.headerAvatar}
+                        resizeMode="cover"
+                      />
+                    ) : (
+                      <View style={styles.headerAvatarFallback}>
+                        <Text style={styles.headerAvatarText}>
+                          {(user?.firstName?.[0] || user?.primaryEmailAddress?.emailAddress?.[0] || 'U').toUpperCase()}
+                        </Text>
+                      </View>
+                    )
+                  ) : (
+                    <Feather name="settings" size={17} color={COLORS.text} />
+                  )}
+                </TouchableOpacity>
+              </View>
+            </>
+          )}
         </View>
       </View>
 
@@ -657,6 +741,46 @@ const styles = StyleSheet.create({
     height: 38,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  // Expanded header search - mirrors the community header so both tabs feel
+  // like the same bar: a compact pill that grows in place of the brand row.
+  // headerInner already supplies the top/bottom inset; adding it here too
+  // pushed the pill down whenever the bar expanded.
+  expandedSearchRow: {
+    width: '100%',
+    paddingTop: 0,
+    paddingBottom: 0,
+  },
+  expandedSearchInputContainer: {
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.cardSecondary,
+    borderRadius: RADIUS.full,
+    borderWidth: 1,
+    borderColor: COLORS.borderLight,
+    paddingHorizontal: 14,
+    paddingVertical: 0,
+    // Matches the 40px brand logo, so the bar keeps its height when it expands.
+    height: 40,
+  },
+  searchCloseBtn: {
+    padding: 6,
+    marginLeft: 4,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  expandedSearchInput: {
+    flex: 1,
+    fontFamily: FONTS.body,
+    fontSize: 13,
+    color: COLORS.text,
+    padding: 0,
+    paddingVertical: 0,
+    paddingTop: 0,
+    paddingBottom: 0,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   headerIconButton: {
     width: 38,

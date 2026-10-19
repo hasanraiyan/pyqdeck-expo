@@ -61,6 +61,7 @@ import { TopicNotesScreen } from './src/screens/TopicNotesScreen';
 import { TopicQuestionsScreen } from './src/screens/TopicQuestionsScreen';
 import { CommunityFeedScreen } from './src/screens/CommunityFeedScreen';
 import { CommunityPostDetailScreen } from './src/screens/CommunityPostDetailScreen';
+import { CommunityModerationScreen } from './src/screens/CommunityModerationScreen';
 import { UserProfileScreen } from './src/screens/UserProfileScreen';
 import { ActivityInboxScreen } from './src/screens/ActivityInboxScreen';
 import { checkForStoreUpdate } from './src/utils/appUpdate';
@@ -364,6 +365,11 @@ function CommunityStack() {
             backgroundColor: '#ffffff',
           },
         }}
+      />
+      <Stack.Screen
+        name="CommunityModeration"
+        component={CommunityModerationScreen}
+        options={{ title: 'Moderation', headerStyle: { backgroundColor: '#ffffff' } }}
       />
       <Stack.Screen
         name="Settings"
