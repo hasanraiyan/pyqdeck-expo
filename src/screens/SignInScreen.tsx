@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@clerk/expo';
-import { AuthView } from '@clerk/expo/native-components';
+import { AuthView } from '@clerk/expo/native';
 import { COLORS } from '../theme/colors';
 import { rf } from '../utils/responsive';
 

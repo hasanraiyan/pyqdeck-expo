@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { useAuth } from '@clerk/expo';
-import { UserProfileView } from '@clerk/expo/native-components';
+import { UserProfileView } from '@clerk/expo/native';
 import { COLORS } from '../theme/colors';
 
 /**
