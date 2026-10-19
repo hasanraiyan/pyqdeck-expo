@@ -22,7 +22,14 @@ import * as Haptics from 'expo-haptics';
 import * as Clipboard from 'expo-clipboard';
 import { useNavigation } from '@react-navigation/native';
 import { CommunityPost } from '../../types/community';
-import { deletePost } from '../../community/actions';
+import {
+  deletePost,
+  optimisticLikePost,
+  commitLikePost,
+  optimisticBookmarkPost,
+  commitBookmarkPost,
+} from '../../community/actions';
+import { useDebouncedToggle } from '../../community/useDebouncedToggle';
 import { promptReport } from '../../community/reportPrompt';
 import { useRequireAuth } from '../../auth/useRequireAuth';
 import { EditPostModal } from './EditPostModal';
@@ -36,8 +43,8 @@ import { baseMarkdownStyles, markdownRules } from '../../theme/markdownStyles';
 
 interface CommunityPostCardProps {
   post: CommunityPost;
-  onLikePress: (postId: string) => void;
-  onBookmarkPress: (postId: string) => void;
+  onLikePress?: (postId: string) => void;
+  onBookmarkPress?: (postId: string) => void;
   onHashtagPress?: (hashtag: string) => void;
   onCommentPress?: (post: CommunityPost) => void;
   onOpenDetail?: (post: CommunityPost) => void;
@@ -149,6 +156,41 @@ export const CommunityPostCard: React.FC<CommunityPostCardProps> = ({
   const [optionsModalVisible, setOptionsModalVisible] = useState(false);
   const [editVisible, setEditVisible] = useState(false);
   const [isDismissing, setIsDismissing] = useState(false);
+
+  // Debounced Like toggle (Twitter / LinkedIn / YouTube style)
+  const debouncedLike = useDebouncedToggle({
+    current: post.isLiked,
+    onOptimistic: (liked) => optimisticLikePost(post.id, liked),
+    onCommit: (liked) => commitLikePost(post.id, liked),
+    delay: 500,
+  });
+
+  const handleLike = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    if (onLikePress) {
+      onLikePress(post.id);
+    } else {
+      debouncedLike();
+    }
+  };
+
+  // Debounced Bookmark toggle
+  const debouncedBookmark = useDebouncedToggle({
+    current: post.isBookmarked,
+    onOptimistic: (saved) => optimisticBookmarkPost(post.id, saved),
+    onCommit: (saved) => commitBookmarkPost(post.id, saved),
+    delay: 500,
+  });
+
+  const handleBookmark = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    if (onBookmarkPress) {
+      onBookmarkPress(post.id);
+    } else {
+      debouncedBookmark();
+    }
+  };
+
   useEffect(() => {
     fitRef.current = false;
     setCollapsedLimit(200);
@@ -467,10 +509,7 @@ export const CommunityPostCard: React.FC<CommunityPostCardProps> = ({
         {/* Like */}
         <TouchableOpacity
           style={styles.actionTab}
-          onPress={() => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-            guard(() => onLikePress(post.id), 'react');
-          }}
+          onPress={() => guard(handleLike, 'react')}
           activeOpacity={0.7}
           accessibilityLabel={`Like, ${post.likesCount} likes`}
         >
@@ -519,10 +558,7 @@ export const CommunityPostCard: React.FC<CommunityPostCardProps> = ({
         {/* Bookmark / Save */}
         <TouchableOpacity
           style={styles.actionTab}
-          onPress={() => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-            guard(() => onBookmarkPress(post.id), 'react');
-          }}
+          onPress={() => guard(handleBookmark, 'react')}
           activeOpacity={0.7}
           accessibilityLabel="Save post"
         >
@@ -551,7 +587,7 @@ export const CommunityPostCard: React.FC<CommunityPostCardProps> = ({
         initialIndex={selectedMediaIndex}
         initialType={mediaType}
         onClose={() => setMediaViewerVisible(false)}
-        onLikePress={(id) => guard(() => onLikePress(id), 'react')}
+        onLikePress={() => guard(handleLike, 'react')}
         onCommentPress={onCommentPress}
         onSharePress={handleShare}
         onOpenDetail={
@@ -587,9 +623,8 @@ export const CommunityPostCard: React.FC<CommunityPostCardProps> = ({
             <TouchableOpacity
               style={styles.optionItem}
               onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
                 setOptionsModalVisible(false);
-                guard(() => onBookmarkPress(post.id), 'react');
+                guard(handleBookmark, 'react');
               }}
             >
               <View style={styles.optionIconWrap}>

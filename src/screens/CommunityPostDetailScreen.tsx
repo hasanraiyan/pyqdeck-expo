@@ -568,8 +568,6 @@ export const CommunityPostDetailScreen: React.FC = () => {
             post={post}
             initialExpanded={true}
             showDismissAction={false}
-            onLikePress={(id) => void toggleLikePost(id)}
-            onBookmarkPress={(id) => void toggleBookmarkPost(id)}
             onHashtagPress={(tag) => {
               navigation.navigate('CommunityFeed', { filterHashtag: tag });
             }}

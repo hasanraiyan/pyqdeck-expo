@@ -25,14 +25,31 @@ import { toCommunityComment, toCommunityPost } from './mappers';
 
 const SLUG = COMMUNITY_SLUG;
 
-export async function toggleLikePost(postId: string): Promise<void> {
-  const current = findCachedPost(postId);
-  if (!current) return;
-  const liked = !current.isLiked;
+// ---- like: optimistic patch + debounced commit (Twitter/LinkedIn/YouTube pattern) ----
+
+/**
+ * Immediately patches the local cache so the UI flips without waiting for
+ * the network. Called on every tap by useDebouncedToggle.
+ */
+export function optimisticLikePost(postId: string, liked: boolean): void {
+  patchPost(postId, (p) => ({
+    isLiked: liked,
+    likesCount: Math.max(0, p.likesCount + (liked ? 1 : -1)),
+  }));
+}
+
+/**
+ * Commits the final like/unlike to the server. Called once per tap-burst
+ * (after the debounce window) by useDebouncedToggle. On error the cache is
+ * restored and the user is alerted.
+ */
+export async function commitLikePost(postId: string, liked: boolean): Promise<void> {
   const snapshot = snapshotCommunity();
-  patchPost(postId, (p) => ({ isLiked: liked, likesCount: Math.max(0, p.likesCount + (liked ? 1 : -1)) }));
   try {
-    const res = liked ? await communityClient.posts.like(postId) : await communityClient.posts.unlike(postId);
+    const res = liked
+      ? await communityClient.posts.like(postId)
+      : await communityClient.posts.unlike(postId);
+    // Settle to server truth in case the count drifted during rapid taps.
     patchPost(postId, { isLiked: res.isLiked, likesCount: res.likesCount });
   } catch (err) {
     restoreCommunity(snapshot);
@@ -40,20 +57,51 @@ export async function toggleLikePost(postId: string): Promise<void> {
   }
 }
 
-export async function toggleBookmarkPost(postId: string): Promise<void> {
+/** Legacy all-in-one wrapper — kept so any caller that isn't using the card can still use it. */
+export async function toggleLikePost(postId: string): Promise<void> {
   const current = findCachedPost(postId);
   if (!current) return;
-  const saved = !current.isBookmarked;
+  const liked = !current.isLiked;
+  optimisticLikePost(postId, liked);
+  await commitLikePost(postId, liked);
+}
+
+// ---- bookmark: same pattern ----
+
+/**
+ * Immediately patches the local cache for a bookmark toggle.
+ */
+export function optimisticBookmarkPost(postId: string, saved: boolean): void {
+  patchPost(postId, (p) => ({
+    isBookmarked: saved,
+    bookmarksCount: Math.max(0, p.bookmarksCount + (saved ? 1 : -1)),
+  }));
+}
+
+/**
+ * Commits the final bookmark/unbookmark to the server.
+ */
+export async function commitBookmarkPost(postId: string, saved: boolean): Promise<void> {
   const snapshot = snapshotCommunity();
-  patchPost(postId, (p) => ({ isBookmarked: saved, bookmarksCount: Math.max(0, p.bookmarksCount + (saved ? 1 : -1)) }));
   try {
-    const res = saved ? await communityClient.posts.bookmark(postId) : await communityClient.posts.unbookmark(postId);
+    const res = saved
+      ? await communityClient.posts.bookmark(postId)
+      : await communityClient.posts.unbookmark(postId);
     patchPost(postId, { isBookmarked: res.isBookmarked, bookmarksCount: res.bookmarksCount });
     void queryClient.invalidateQueries({ queryKey: communityKeys.bookmarks(SLUG) });
   } catch (err) {
     restoreCommunity(snapshot);
     alertCommunityError(err, 'Could not save this post');
   }
+}
+
+/** Legacy all-in-one wrapper. */
+export async function toggleBookmarkPost(postId: string): Promise<void> {
+  const current = findCachedPost(postId);
+  if (!current) return;
+  const saved = !current.isBookmarked;
+  optimisticBookmarkPost(postId, saved);
+  await commitBookmarkPost(postId, saved);
 }
 
 /** "Hide from my feed". Remembered by the server across sessions. */
@@ -158,6 +206,28 @@ export async function addComment(
   } catch (err) {
     restoreCommunity(snapshot);
     alertCommunityError(err, "Couldn't post your comment");
+  }
+}
+
+// ---- comment like: optimistic patch + debounced commit ----
+
+export function optimisticLikeComment(postId: string, commentId: string, liked: boolean): void {
+  patchComment(postId, commentId, (c) => ({
+    isLiked: liked,
+    likesCount: Math.max(0, c.likesCount + (liked ? 1 : -1)),
+  }));
+}
+
+export async function commitLikeComment(postId: string, commentId: string, liked: boolean): Promise<void> {
+  const snapshot = snapshotCommunity();
+  try {
+    const res = liked
+      ? await communityClient.comments.like(commentId)
+      : await communityClient.comments.unlike(commentId);
+    patchComment(postId, commentId, () => ({ isLiked: res.isLiked, likesCount: res.likesCount }));
+  } catch (err) {
+    restoreCommunity(snapshot);
+    alertCommunityError(err, 'Could not like this comment');
   }
 }
 

@@ -356,8 +356,6 @@ export const CommunityFeedScreen: React.FC = () => {
               ) : (
                 <CommunityPostCard
                   post={item.post}
-                  onLikePress={(id) => void toggleLikePost(id)}
-                  onBookmarkPress={(id) => void toggleBookmarkPost(id)}
                   onHashtagPress={(tag) => setSelectedHashtag(tag)}
                   onCommentPress={(p) => setCommentSheetPost(p)}
                   onOpenDetail={(p) => handleOpenDetail(p, false)}
