@@ -21,7 +21,7 @@ import { Image } from 'expo-image';
 import { Feather, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
-import { COLORS, FONTS, RADIUS } from '../../theme/colors';
+import { COLORS, COVER_ASPECT, COVER_ASPECT_RATIO, FONTS, RADIUS } from '../../theme/colors';
 import { UserProfileData } from '../../services/userProfileService';
 import { CollegePickerBottomSheet } from './CollegePickerBottomSheet';
 import { BranchPickerBottomSheet } from './BranchPickerBottomSheet';
@@ -319,7 +319,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
             const res = await ImagePicker.launchImageLibraryAsync({
               mediaTypes: ['images'],
               allowsEditing: true,
-              aspect: [16, 9],
+              aspect: COVER_ASPECT,
               quality: 0.85,
             });
             if (!res.canceled && res.assets && res.assets.length > 0) {
@@ -1073,7 +1073,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   coverWrapper: {
-    height: 110,
+    aspectRatio: COVER_ASPECT_RATIO,
     width: '100%',
     backgroundColor: '#cbd5e1',
     position: 'relative',

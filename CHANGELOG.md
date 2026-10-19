@@ -2,6 +2,11 @@
 
 All notable changes to PYQDeck are listed here, newest first.
 
+## 1.14.1
+
+### Fixed
+- **Profile cover image.** The cover is now cropped wide (5:2) when you pick it and shown at the same ratio on your profile and in Edit Profile, so it is no longer cut short after saving.
+
 ## 1.14.0
 
 ### Added

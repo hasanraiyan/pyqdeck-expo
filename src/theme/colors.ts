@@ -44,6 +44,10 @@ export const RADIUS = {
   pill: 9999,
 };
 
+// Profile cover: the picker crops to this ratio and every cover box renders at it, so nothing is re-cropped on display.
+export const COVER_ASPECT: [number, number] = [5, 2];
+export const COVER_ASPECT_RATIO = COVER_ASPECT[0] / COVER_ASPECT[1];
+
 export const SHADOWS = {
   none: {
     shadowColor: 'transparent',
