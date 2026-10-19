@@ -28,7 +28,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import { useUser } from '@clerk/expo';
 import { COLORS, FONTS, RADIUS } from '../../theme/colors';
 import { CommunityAttachment } from '../../types/community';
-import { communityStore } from '../../data/mockCommunity';
+import { startPostUpload } from '../../community/uploads';
 import { ImageCropEditor } from '../ImageCropEditor';
 
 import { enableLayoutAnimation } from '../../utils/layoutAnimation';
@@ -36,6 +36,8 @@ import { enableLayoutAnimation } from '../../utils/layoutAnimation';
 enableLayoutAnimation();
 
 const MAX_ATTACHMENTS = 5;
+// Images only for now: the community service stores no PDFs yet.
+const ALLOW_PDF = false;
 const POPULAR_TAGS = ['Doubt', 'Notes', 'PYQ', 'BEU', 'ExamPrep', 'Solutions'];
 
 interface CreateCommunityPostModalProps {
@@ -204,7 +206,6 @@ export const CreateCommunityPostModal: React.FC<CreateCommunityPostModalProps> =
     Alert.alert('Add Attachment', 'Choose a source to attach to your post:', [
       { text: 'Take Photo', onPress: handleSnapCamera },
       { text: 'Choose from Gallery', onPress: handlePickImages },
-      { text: 'Upload PDF Notes', onPress: handlePickDocument },
       { text: 'Cancel', style: 'cancel' },
     ]);
   };
@@ -313,7 +314,7 @@ export const CreateCommunityPostModal: React.FC<CreateCommunityPostModalProps> =
     };
 
     // Kick off background publishing with optimistic progress bar in the feed
-    communityStore.startPostUpload(postPayload, (created) => {
+    startPostUpload(postPayload, (created) => {
       onPostCreated?.(created.id);
     });
 
@@ -544,14 +545,16 @@ export const CreateCommunityPostModal: React.FC<CreateCommunityPostModalProps> =
                 <Feather name="image" size={20} color="#374151" />
               </TouchableOpacity>
 
-              <TouchableOpacity
-                style={styles.toolIconBtn}
-                onPress={handlePickDocument}
-                accessibilityLabel="Attach PDF notes"
-                activeOpacity={0.7}
-              >
-                <Feather name="file-text" size={20} color="#374151" />
-              </TouchableOpacity>
+              {ALLOW_PDF ? (
+                <TouchableOpacity
+                  style={styles.toolIconBtn}
+                  onPress={handlePickDocument}
+                  accessibilityLabel="Attach PDF notes"
+                  activeOpacity={0.7}
+                >
+                  <Feather name="file-text" size={20} color="#374151" />
+                </TouchableOpacity>
+              ) : null}
 
               <TouchableOpacity
                 style={styles.toolIconBtn}

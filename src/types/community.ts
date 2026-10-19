@@ -1,4 +1,5 @@
 export interface CommunityAuthor {
+  /** The member handle: what the profile screen opens. "deleted" for a deleted member. */
   id: string;
   name: string;
   avatarUrl?: string;
@@ -47,6 +48,18 @@ export interface CommunityPost {
   isBookmarked: boolean;
   status: CommunityPostStatus;
   isOwnPost?: boolean;
+  // Filled from the Community API:
+  /** ISO time, for sorting and the exact date. `createdAt` is the short "2h" label. */
+  createdAtIso?: string;
+  editedAt?: string | null;
+  /** The text as typed (own posts), for the edit form. `body` has short links substituted. */
+  rawBody?: string;
+  /** Why a post is held or removed (own posts only). */
+  heldReason?: "moderation" | "reports" | null;
+  removedReason?: string | null;
+  hasPendingEdit?: boolean;
+  /** Destination hosts of the links in the text, to show where a link goes. */
+  links?: Array<{ code: string; shortUrl: string; host: string; clicks?: number }>;
 }
 
 export interface CommunityComment {
@@ -60,6 +73,12 @@ export interface CommunityComment {
   parentId?: string; // Set when this comment is a reply to another comment ("comment pe comment")
   replyToAuthorName?: string;
   replies?: CommunityComment[]; // Nested replies thread
+  repliesCount?: number;
+  isOwn?: boolean;
+  createdAtIso?: string;
+  editedAt?: string | null;
+  rawBody?: string;
+  status?: CommunityPostStatus;
 }
 
 export interface PendingPostUpload {

@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { useCommunityUnreadCount } from './src/community/queries';
 import { Alert, InteractionManager, Platform, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import {
@@ -376,6 +377,8 @@ function CommunityStack() {
 
 /** The tab navigator, wrapped by the root stack so the auth screens can sit above it. */
 function TabsNavigator() {
+  const { isSignedIn: communitySignedIn } = useAuth();
+  const communityUnread = useCommunityUnreadCount(!!communitySignedIn);
   const insets = useSafeAreaInsets();
   const { shellMode } = useResponsive();
   const isBottom = shellMode === 'bottom';
@@ -514,7 +517,7 @@ function TabsNavigator() {
             tabBarIcon: ({ color, size }) => (
               <Feather name="bell" size={size} color={color} />
             ),
-            tabBarBadge: 3,
+            tabBarBadge: communityUnread > 0 ? Math.min(communityUnread, 99) : undefined,
             tabBarBadgeStyle: {
               backgroundColor: COLORS.primary,
               fontSize: 10,

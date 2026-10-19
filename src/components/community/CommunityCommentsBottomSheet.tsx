@@ -23,7 +23,9 @@ import * as Clipboard from 'expo-clipboard';
 import { useUser } from '@clerk/expo';
 import { COLORS, FONTS, RADIUS } from '../../theme/colors';
 import { CommunityComment, CommunityPost } from '../../types/community';
-import { communityStore } from '../../data/mockCommunity';
+import { addComment, deleteComment, toggleLikeComment } from '../../community/actions';
+import { useCommunityComments } from '../../community/queries';
+import { promptReport } from '../../community/reportPrompt';
 import { NativeContentRenderer } from '../NativeContentRenderer';
 import { baseMarkdownStyles } from '../../theme/markdownStyles';
 import { CommunityCommentsSkeleton } from '../Skeletons';
@@ -79,8 +81,10 @@ export const CommunityCommentsBottomSheet: React.FC<CommunityCommentsBottomSheet
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
   const keyboardSpace = useRef(new Animated.Value(0)).current;
 
-  const [isLoading, setIsLoading] = useState(true);
-  const [comments, setComments] = useState<CommunityComment[]>([]);
+  // Comments are a TanStack Query: cached per post, refetched when stale, updated in place by the actions.
+  const commentsQuery = useCommunityComments(post?.id, visible);
+  const comments = commentsQuery.data ?? [];
+  const isLoading = commentsQuery.isPending;
   const [commentInput, setCommentInput] = useState('');
   const [replyingTo, setReplyingTo] = useState<{
     commentId: string;
@@ -93,26 +97,6 @@ export const CommunityCommentsBottomSheet: React.FC<CommunityCommentsBottomSheet
   const [isLoadingMore, setIsLoadingMore] = useState(false);
 
   // Sync comments for current post with smooth initial skeleton
-  useEffect(() => {
-    if (visible && post) {
-      setIsLoading(true);
-      const timer = setTimeout(() => {
-        setComments(communityStore.getComments(post.id));
-        setIsLoading(false);
-      }, 300);
-
-      const unsub = communityStore.subscribe(() => {
-        setComments(communityStore.getComments(post.id));
-      });
-      return () => {
-        clearTimeout(timer);
-        unsub();
-      };
-    } else {
-      setIsLoading(true);
-    }
-  }, [visible, post]);
-
   // Keyboard height listener
   useEffect(() => {
     const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
@@ -179,18 +163,11 @@ export const CommunityCommentsBottomSheet: React.FC<CommunityCommentsBottomSheet
     if (!commentInput.trim() || !post) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
 
-    const authorName = user?.fullName || user?.firstName || 'You (Student)';
-    const authorHeadline = user?.primaryEmailAddress?.emailAddress
-      ? 'Student • PYQDeck'
-      : 'B.Tech Student • PYQDeck';
-
-    communityStore.addComment(
+    void addComment(
       post.id,
       commentInput.trim(),
       replyingTo?.commentId,
-      replyingTo?.authorName,
-      authorName,
-      authorHeadline
+      replyingTo?.authorName
     );
 
     if (replyingTo?.commentId) {
@@ -224,12 +201,12 @@ export const CommunityCommentsBottomSheet: React.FC<CommunityCommentsBottomSheet
   const handleLikeComment = (commentId: string) => {
     if (!post) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-    communityStore.toggleLikeComment(post.id, commentId);
+    void toggleLikeComment(post.id, commentId);
   };
 
   const handleCommentOptions = (targetComment: CommunityComment) => {
     Haptics.selectionAsync().catch(() => {});
-    Alert.alert('Comment Options', undefined, [
+    const options: any[] = [
       {
         text: 'Copy text',
         onPress: async () => {
@@ -237,13 +214,22 @@ export const CommunityCommentsBottomSheet: React.FC<CommunityCommentsBottomSheet
           Alert.alert('Copied', 'Comment copied to clipboard');
         },
       },
-      {
-        text: 'Report comment',
+    ];
+    if (targetComment.isOwn) {
+      options.push({
+        text: 'Delete comment',
         style: 'destructive',
-        onPress: () => Alert.alert('Reported', 'Thank you for reporting. Our team will review this comment.'),
-      },
-      { text: 'Cancel', style: 'cancel' },
-    ]);
+        onPress: () =>
+          Alert.alert('Delete comment?', 'This cannot be undone.', [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Delete', style: 'destructive', onPress: () => void deleteComment(post!.id, targetComment.id) },
+          ]),
+      });
+    } else {
+      options.push({ text: 'Report comment', style: 'destructive', onPress: () => promptReport('comment', targetComment.id) });
+    }
+    options.push({ text: 'Cancel', style: 'cancel' });
+    Alert.alert('Comment Options', undefined, options);
   };
 
   const getTotalCount = (list: CommunityComment[]): number => {

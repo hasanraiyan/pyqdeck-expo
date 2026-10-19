@@ -29,7 +29,9 @@ import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { COLORS, FONTS, RADIUS } from '../theme/colors';
 import { CommunityComment, CommunityPost } from '../types/community';
-import { communityStore } from '../data/mockCommunity';
+import { addComment, deleteComment, toggleBookmarkPost, toggleLikeComment, toggleLikePost } from '../community/actions';
+import { useCommunityComments, useCommunityPost } from '../community/queries';
+import { promptReport } from '../community/reportPrompt';
 import { CommunityPostCard } from '../components/community/CommunityPostCard';
 import { ScreenContainer } from '../components/ScreenContainer';
 import { NativeContentRenderer } from '../components/NativeContentRenderer';
@@ -81,12 +83,13 @@ export const CommunityPostDetailScreen: React.FC = () => {
   const keyboardSpace = useRef(new Animated.Value(0)).current;
   const { postId, initialPost, focusComments } = route.params || {};
 
-  const [post, setPost] = useState<CommunityPost | undefined>(
-    () => initialPost || communityStore.getPostById(postId)
-  );
-  const [comments, setComments] = useState<CommunityComment[]>(() =>
-    communityStore.getComments(postId)
-  );
+  // The post and its comments are TanStack Queries: the post passed in from the feed shows at once while the
+  // fresh copy loads, both are cached and saved offline, and likes or comments elsewhere update them in place.
+  const postQuery = useCommunityPost(postId, initialPost);
+  const commentsQuery = useCommunityComments(postId);
+  const notFound = postQuery.isError && (postQuery.error as { status?: number } | null)?.status === 404;
+  const post: CommunityPost | undefined = notFound ? undefined : postQuery.data;
+  const comments: CommunityComment[] = commentsQuery.data ?? [];
   const [commentInput, setCommentInput] = useState('');
   const [replyingTo, setReplyingTo] = useState<{
     commentId: string;
@@ -141,16 +144,6 @@ export const CommunityPostDetailScreen: React.FC = () => {
     };
   }, []);
 
-  useEffect(() => {
-    const unsub = communityStore.subscribe(() => {
-      if (postId) {
-        setPost(communityStore.getPostById(postId));
-        setComments(communityStore.getComments(postId));
-      }
-    });
-    return unsub;
-  }, [postId]);
-
   // Recursively collect all descendant replies in conversation order for 2-level flat rendering
   const flattenReplies = (repliesList: CommunityComment[]): CommunityComment[] => {
     const flat: CommunityComment[] = [];
@@ -188,18 +181,11 @@ export const CommunityPostDetailScreen: React.FC = () => {
     if (!commentInput.trim() || !postId) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
 
-    const authorName = user?.fullName || user?.firstName || 'You (Student)';
-    const authorBio = user?.primaryEmailAddress?.emailAddress
-      ? 'Student • PYQDeck'
-      : 'B.Tech Student • PYQDeck';
-
-    communityStore.addComment(
+    void addComment(
       postId,
       commentInput.trim(),
       replyingTo?.commentId,
-      replyingTo?.authorName,
-      authorName,
-      authorBio
+      replyingTo?.authorName
     );
 
     // Auto-expand replies in the active thread so user sees their new response immediately
@@ -235,12 +221,12 @@ export const CommunityPostDetailScreen: React.FC = () => {
   const handleLikeComment = (commentId: string) => {
     if (!postId) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-    communityStore.toggleLikeComment(postId, commentId);
+    void toggleLikeComment(postId, commentId);
   };
 
   const handleCommentOptions = (targetComment: CommunityComment) => {
     Haptics.selectionAsync().catch(() => {});
-    Alert.alert('Comment Options', undefined, [
+    const options: any[] = [
       {
         text: 'Copy text',
         onPress: async () => {
@@ -248,27 +234,25 @@ export const CommunityPostDetailScreen: React.FC = () => {
           Alert.alert('Copied', 'Comment copied to clipboard');
         },
       },
-      {
-        text: 'Report comment',
+    ];
+    if (targetComment.isOwn) {
+      options.push({
+        text: 'Delete comment',
         style: 'destructive',
-        onPress: () => Alert.alert('Reported', 'Thank you for reporting. Our team will review this comment.'),
-      },
-      { text: 'Cancel', style: 'cancel' },
-    ]);
+        onPress: () =>
+          Alert.alert('Delete comment?', 'This cannot be undone.', [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Delete', style: 'destructive', onPress: () => void deleteComment(postId, targetComment.id) },
+          ]),
+      });
+    } else {
+      options.push({ text: 'Report comment', style: 'destructive', onPress: () => promptReport('comment', targetComment.id) });
+    }
+    options.push({ text: 'Cancel', style: 'cancel' });
+    Alert.alert('Comment Options', undefined, options);
   };
 
-  const [isLoading, setIsLoading] = useState(!initialPost && !post);
-
-  useEffect(() => {
-    if (!post && postId) {
-      const timer = setTimeout(() => {
-        setPost(communityStore.getPostById(postId));
-        setComments(communityStore.getComments(postId));
-        setIsLoading(false);
-      }, 350);
-      return () => clearTimeout(timer);
-    }
-  }, [postId, post]);
+  const isLoading = !post && postQuery.isPending;
 
   if (isLoading) {
     return (
@@ -572,8 +556,8 @@ export const CommunityPostDetailScreen: React.FC = () => {
             post={post}
             initialExpanded={true}
             showDismissAction={false}
-            onLikePress={(id) => communityStore.toggleLikePost(id)}
-            onBookmarkPress={(id) => communityStore.toggleBookmarkPost(id)}
+            onLikePress={(id) => void toggleLikePost(id)}
+            onBookmarkPress={(id) => void toggleBookmarkPost(id)}
             onHashtagPress={(tag) => {
               navigation.navigate('CommunityFeed', { filterHashtag: tag });
             }}

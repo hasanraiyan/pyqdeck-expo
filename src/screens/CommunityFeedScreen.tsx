@@ -7,6 +7,7 @@ import {
   FlatList,
   StyleSheet,
   RefreshControl,
+  ActivityIndicator,
   Image,
   LayoutAnimation,
   Platform,
@@ -20,7 +21,10 @@ import { useAuth, useUser } from '@clerk/expo';
 import { isAuthEnabled } from '../config/features';
 import { COLORS, FONTS, RADIUS } from '../theme/colors';
 import { CommunityPost, PendingPostUpload } from '../types/community';
-import { communityStore } from '../data/mockCommunity';
+import { useCommunityFeed } from '../community/queries';
+import { usePendingUploads, cancelPostUpload } from '../community/uploads';
+import { hidePost, toggleBookmarkPost, toggleLikePost } from '../community/actions';
+import { describeCommunityError } from '../community/errors';
 import { CommunityPostCard } from '../components/community/CommunityPostCard';
 import { PendingPostCard } from '../components/community/PendingPostCard';
 import { CreateCommunityPostModal } from '../components/community/CreateCommunityPostModal';
@@ -49,8 +53,6 @@ export const CommunityFeedScreen: React.FC = () => {
   const { isSignedIn } = useAuth();
   const { user } = useUser();
 
-  const [isLoading, setIsLoading] = useState(true);
-  const [posts, setPosts] = useState<CommunityPost[]>([]);
   const [selectedHashtag, setSelectedHashtag] = useState<string | null>(
     route.params?.filterHashtag || null
   );
@@ -59,26 +61,20 @@ export const CommunityFeedScreen: React.FC = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [createModalVisible, setCreateModalVisible] = useState(false);
   const [commentSheetPost, setCommentSheetPost] = useState<CommunityPost | null>(null);
-  const [pendingUploads, setPendingUploads] = useState<PendingPostUpload[]>([]);
+  const pendingUploads = usePendingUploads();
 
-  // Initial load simulation with skeleton placeholder
+  // The feed is a TanStack Query: cached and saved offline, refetched when stale, paged by cursor. The server does
+  // the hashtag filter and the search, so the list shown is exactly what it returned. Search waits for a pause in typing.
+  const [debouncedQuery, setDebouncedQuery] = useState('');
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setPosts(communityStore.getPosts());
-      setPendingUploads([...communityStore.getPendingUploads()]);
-      setIsLoading(false);
-    }, 450);
+    const timer = setTimeout(() => setDebouncedQuery(searchQuery.trim()), 350);
     return () => clearTimeout(timer);
-  }, []);
-
-  // Sync with store updates
-  useEffect(() => {
-    const unsub = communityStore.subscribe(() => {
-      setPosts(communityStore.getPosts());
-      setPendingUploads([...communityStore.getPendingUploads()]);
-    });
-    return unsub;
-  }, []);
+  }, [searchQuery]);
+  const feed = useCommunityFeed({ hashtag: selectedHashtag, q: debouncedQuery });
+  const posts = feed.posts;
+  const isLoading = feed.isPending;
+  const feedError = feed.isError && posts.length === 0 ? describeCommunityError(feed.error) : null;
+  const loadingMore = feed.isFetchingNextPage;
 
   // Sync route params if navigated with filter
   useEffect(() => {
@@ -87,38 +83,14 @@ export const CommunityFeedScreen: React.FC = () => {
     }
   }, [route.params?.filterHashtag]);
 
-  const onRefresh = () => {
+  const onRefresh = async () => {
     setRefreshing(true);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-    setTimeout(() => {
-      setPosts(communityStore.getPosts());
-      setRefreshing(false);
-    }, 600);
+    await feed.refetch();
+    setRefreshing(false);
   };
 
-  // Filter posts based on hashtag and text search
-  const filteredPosts = useMemo(() => {
-    return posts.filter((post) => {
-      // 1. Hashtag filter
-      if (selectedHashtag) {
-        const matchesTag = post.hashtags.some(
-          (h) => h.toLowerCase() === selectedHashtag.toLowerCase()
-        ) || post.body.toLowerCase().includes(`#${selectedHashtag.toLowerCase()}`);
-        if (!matchesTag) return false;
-      }
-
-      // 2. Search query
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase();
-        const inBody = post.body.toLowerCase().includes(q);
-        const inAuthor = post.author.name.toLowerCase().includes(q);
-        const inTags = post.hashtags.some((h) => h.toLowerCase().includes(q));
-        if (!inBody && !inAuthor && !inTags) return false;
-      }
-
-      return true;
-    });
-  }, [posts, selectedHashtag, searchQuery]);
+  const filteredPosts = posts;
 
   const { flags } = useAppConfig();
   const entitlement = useAdsEntitlement();
@@ -165,7 +137,7 @@ export const CommunityFeedScreen: React.FC = () => {
             upload={item}
             onCancel={(id) => {
               LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-              communityStore.cancelPostUpload(id);
+              cancelPostUpload(id);
             }}
           />
         ))}
@@ -186,7 +158,16 @@ export const CommunityFeedScreen: React.FC = () => {
     );
   };
 
-  const renderEmpty = () => (
+  const renderEmpty = () =>
+    feedError ? (
+      <View style={styles.emptyContainer}>
+        <Text style={styles.emptyTitle}>Could not load the community</Text>
+        <Text style={styles.emptySubtitle}>{feedError}</Text>
+        <TouchableOpacity style={styles.emptyCtaBtn} onPress={onRefresh} activeOpacity={0.8}>
+          <Text style={styles.emptyCtaText}>Try again</Text>
+        </TouchableOpacity>
+      </View>
+    ) : (
     <View style={styles.emptyContainer}>
       <View style={styles.emptyIconCircle}>
         <NewPostIcon size={32} color={COLORS.primary} />
@@ -208,7 +189,7 @@ export const CommunityFeedScreen: React.FC = () => {
         <Text style={styles.emptyCtaText}>Start a post</Text>
       </TouchableOpacity>
     </View>
-  );
+    );
 
   return (
     <View style={[styles.screen, { paddingTop: insets.top }]}>
@@ -348,18 +329,21 @@ export const CommunityFeedScreen: React.FC = () => {
               ) : (
                 <CommunityPostCard
                   post={item.post}
-                  onLikePress={(id) => communityStore.toggleLikePost(id)}
-                  onBookmarkPress={(id) => communityStore.toggleBookmarkPost(id)}
+                  onLikePress={(id) => void toggleLikePost(id)}
+                  onBookmarkPress={(id) => void toggleBookmarkPost(id)}
                   onHashtagPress={(tag) => setSelectedHashtag(tag)}
                   onCommentPress={(p) => setCommentSheetPost(p)}
                   onOpenDetail={(p) => handleOpenDetail(p, false)}
-                  onDismissPost={(id) => communityStore.dismissPost(id)}
+                  onDismissPost={(id) => void hidePost(id)}
                 />
               )}
             </ScreenContainer>
           )}
           ListHeaderComponent={renderHeader}
           ListEmptyComponent={renderEmpty}
+          onEndReachedThreshold={0.6}
+          onEndReached={() => feed.hasNextPage && !feed.isFetchingNextPage && void feed.fetchNextPage()}
+          ListFooterComponent={loadingMore ? <ActivityIndicator style={{ marginVertical: 16 }} color={COLORS.primary} /> : null}
           contentContainerStyle={[
             styles.listContent,
             { paddingBottom: insets.bottom + 40 },

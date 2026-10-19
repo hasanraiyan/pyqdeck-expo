@@ -29,7 +29,13 @@ import { COLORS, FONTS, RADIUS } from '../theme/colors';
 import { ScreenContainer } from '../components/ScreenContainer';
 import { CommunityPostCard } from '../components/community/CommunityPostCard';
 import { CommunityCommentsBottomSheet } from '../components/community/CommunityCommentsBottomSheet';
-import { communityStore } from '../data/mockCommunity';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { communityKeys } from '@pyqdeck/community-sdk';
+import { COMMUNITY_SLUG } from '../community/config';
+import { toggleBookmarkPost, toggleLikePost } from '../community/actions';
+import { profileQuery, useBookmarks, useMemberPosts } from '../community/queries';
+import { promptReport } from '../community/reportPrompt';
+import { alertCommunityError } from '../community/errors';
 import { CommunityAuthor, CommunityPost } from '../types/community';
 import {
   userProfileService,
@@ -157,17 +163,16 @@ export const UserProfileScreen: React.FC = () => {
   const [notificationsActive, setNotificationsActive] = useState(false);
   const [commentSheetPost, setCommentSheetPost] = useState<CommunityPost | null>(null);
 
-  // Community store posts subscription
-  const [allPosts, setAllPosts] = useState<CommunityPost[]>(() => communityStore.getPosts());
+  // Posts, saved posts and the profile itself are TanStack Queries (cached, saved offline, updated in place by likes).
+  const queryClient = useQueryClient();
+  const profileQ = useQuery(profileQuery(userId, clerkUser?.id));
+  const memberPostsQ = useMemberPosts(profile?.id);
+  const bookmarksQ = useBookmarks(!!isOwnProfile);
+  const userPosts: CommunityPost[] = memberPostsQ.data ?? [];
+  const savedPosts: CommunityPost[] = bookmarksQ.data ?? [];
+  const allPosts = useMemo(() => [...userPosts, ...savedPosts], [userPosts, savedPosts]);
 
-  useEffect(() => {
-    const unsub = communityStore.subscribe(() => {
-      setAllPosts([...communityStore.getPosts()]);
-    });
-    return unsub;
-  }, []);
-
-  // Keep commentSheetPost in sync with store updates
+  // Keep commentSheetPost in sync with cache updates
   useEffect(() => {
     if (commentSheetPost) {
       const updated = allPosts.find((p) => p.id === commentSheetPost.id);
@@ -188,36 +193,16 @@ export const UserProfileScreen: React.FC = () => {
     [navigation]
   );
 
-  const loadProfile = useCallback(async () => {
-    try {
-      const data = await userProfileService.getProfile(userId, authorHint, clerkUser);
-      setProfile(data);
-      setIsFollowing(!!data.isFollowing);
-      setFollowersCount(data.followersCount);
-    } catch {
-      // Fallback
-    } finally {
+  useEffect(() => {
+    if (profileQ.data) {
+      setProfile(profileQ.data);
+      setIsFollowing(!!profileQ.data.isFollowing);
+      setFollowersCount(profileQ.data.followersCount);
+      setLoading(false);
+    } else if (profileQ.isError) {
       setLoading(false);
     }
-  }, [userId, authorHint, clerkUser]);
-
-  useEffect(() => {
-    loadProfile();
-  }, [loadProfile]);
-
-  const userPosts = useMemo(() => {
-    if (!profile) return [];
-    if (isOwnProfile) {
-      return allPosts.filter(
-        (p) => p.author.id === 'me' || p.author.id === profile.id || p.isOwnPost
-      );
-    }
-    return allPosts.filter((p) => p.author.id === profile.id);
-  }, [allPosts, profile, isOwnProfile]);
-
-  const savedPosts = useMemo(() => {
-    return allPosts.filter((p) => p.isBookmarked);
-  }, [allPosts]);
+  }, [profileQ.data, profileQ.isError]);
 
   const handleToggleFollow = async () => {
     if (!profile) return;
@@ -225,7 +210,13 @@ export const UserProfileScreen: React.FC = () => {
     const nextFollowing = !isFollowing;
     setIsFollowing(nextFollowing);
     setFollowersCount((prev) => (nextFollowing ? prev + 1 : Math.max(0, prev - 1)));
-    await userProfileService.toggleFollowUser(profile.id);
+    try {
+      await userProfileService.toggleFollowUser(profile.id);
+    } catch (err) {
+      setIsFollowing(!nextFollowing);
+      setFollowersCount((prev) => (nextFollowing ? Math.max(0, prev - 1) : prev + 1));
+      alertCommunityError(err, 'Could not update follow');
+    }
   };
 
   const handleToggleNotifications = () => {
@@ -307,12 +298,7 @@ export const UserProfileScreen: React.FC = () => {
           ? {
               text: 'Report Student',
               style: 'destructive',
-              onPress: () => {
-                Alert.alert(
-                  'Report Received',
-                  'Thank you for keeping our community safe. Our team will review this report.'
-                );
-              },
+              onPress: () => promptReport('member', profile?.id ?? ''),
             }
           : null,
         {
@@ -330,8 +316,14 @@ export const UserProfileScreen: React.FC = () => {
   };
 
   const handleSaveProfile = async (updates: Partial<UserProfileData>) => {
-    const updated = await userProfileService.updateOwnProfile(updates);
-    setProfile(updated);
+    try {
+      const updated = await userProfileService.updateOwnProfile(updates);
+      setProfile(updated);
+      queryClient.setQueryData(communityKeys.me(COMMUNITY_SLUG), updated);
+    } catch (err) {
+      alertCommunityError(err, 'Could not save your profile');
+      throw err;
+    }
   };
 
   const getInitials = (name: string) => {
@@ -660,8 +652,8 @@ export const UserProfileScreen: React.FC = () => {
                       key={post.id}
                       post={post}
                       showDismissAction={false}
-                      onLikePress={(id) => communityStore.toggleLikePost(id)}
-                      onBookmarkPress={(id) => communityStore.toggleBookmarkPost(id)}
+                      onLikePress={(id) => void toggleLikePost(id)}
+                      onBookmarkPress={(id) => void toggleBookmarkPost(id)}
                       onCommentPress={(p) => setCommentSheetPost(p)}
                       onOpenDetail={(p) => handleOpenDetail(p, false)}
                       onHashtagPress={(tag) => {
@@ -761,8 +753,8 @@ export const UserProfileScreen: React.FC = () => {
                         key={post.id}
                         post={post}
                         showDismissAction={false}
-                        onLikePress={(id) => communityStore.toggleLikePost(id)}
-                        onBookmarkPress={(id) => communityStore.toggleBookmarkPost(id)}
+                        onLikePress={(id) => void toggleLikePost(id)}
+                        onBookmarkPress={(id) => void toggleBookmarkPost(id)}
                         onCommentPress={(p) => setCommentSheetPost(p)}
                         onOpenDetail={(p) => handleOpenDetail(p, false)}
                         onHashtagPress={(tag) => {

@@ -22,6 +22,9 @@ import * as Haptics from 'expo-haptics';
 import * as Clipboard from 'expo-clipboard';
 import { useNavigation } from '@react-navigation/native';
 import { CommunityPost } from '../../types/community';
+import { deletePost } from '../../community/actions';
+import { promptReport } from '../../community/reportPrompt';
+import { EditPostModal } from './EditPostModal';
 import { COLORS, FONTS, RADIUS } from '../../theme/colors';
 import { CommunityDocumentSlide } from './CommunityDocumentSlide';
 import { CommunityMediaViewerModal } from './CommunityMediaViewerModal';
@@ -142,6 +145,7 @@ export const CommunityPostCard: React.FC<CommunityPostCardProps> = ({
   const [needsTruncation, setNeedsTruncation] = useState(false);
   const fitRef = useRef(false);
   const [optionsModalVisible, setOptionsModalVisible] = useState(false);
+  const [editVisible, setEditVisible] = useState(false);
   const [isDismissing, setIsDismissing] = useState(false);
   useEffect(() => {
     fitRef.current = false;
@@ -332,7 +336,7 @@ export const CommunityPostCard: React.FC<CommunityPostCardProps> = ({
           onPress={() => {
             Haptics.selectionAsync().catch(() => {});
             navigation.navigate('UserProfile', {
-              userId: post.author.id,
+              userId: post.isOwnPost ? 'me' : post.author.id,
               author: post.author,
             });
           }}
@@ -387,6 +391,25 @@ export const CommunityPostCard: React.FC<CommunityPostCardProps> = ({
           )}
         </View>
       </View>
+
+      {post.isOwnPost && post.status !== 'published' ? (
+        <View style={{ backgroundColor: post.status === 'rejected' ? '#fee2e2' : '#fef3c7', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6, marginBottom: 8 }}>
+          <Text style={{ fontFamily: FONTS.bodySemi, fontSize: 12, color: post.status === 'rejected' ? '#991b1b' : '#92400e' }}>
+            {post.status === 'rejected'
+              ? `Removed by a moderator${post.removedReason ? ` (${post.removedReason})` : ''}. Only you can see this.`
+              : post.heldReason === 'reports'
+                ? 'Hidden while moderators review reports. Only you can see this.'
+                : 'Under review. It will appear to others once a moderator approves it.'}
+          </Text>
+        </View>
+      ) : null}
+      {post.isOwnPost && post.hasPendingEdit ? (
+        <View style={{ backgroundColor: '#fef3c7', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6, marginBottom: 8 }}>
+          <Text style={{ fontFamily: FONTS.bodySemi, fontSize: 12, color: '#92400e' }}>
+            Your edit is under review. Others still see the previous version.
+          </Text>
+        </View>
+      ) : null}
 
       {/* Main Post Body (Full Markdown & LaTeX Support with Inline See More) */}
       <TouchableOpacity
@@ -640,17 +663,51 @@ export const CommunityPostCard: React.FC<CommunityPostCardProps> = ({
               </View>
             </TouchableOpacity>
 
-            {/* Report post */}
+            {post.isOwnPost ? (
+              <>
+                <TouchableOpacity
+                  style={styles.optionItem}
+                  onPress={() => {
+                    Haptics.selectionAsync().catch(() => {});
+                    setOptionsModalVisible(false);
+                    setEditVisible(true);
+                  }}
+                >
+                  <View style={styles.optionIconWrap}>
+                    <Feather name="edit-2" size={18} color="#374151" />
+                  </View>
+                  <View style={styles.optionTextContainer}>
+                    <Text style={styles.optionLabel}>Edit post</Text>
+                    <Text style={styles.optionSubtitle}>Change the text of your post</Text>
+                  </View>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.optionItem}
+                  onPress={() => {
+                    setOptionsModalVisible(false);
+                    Alert.alert('Delete post?', 'It disappears for everyone right away. This cannot be undone.', [
+                      { text: 'Cancel', style: 'cancel' },
+                      { text: 'Delete', style: 'destructive', onPress: () => void deletePost(post.id) },
+                    ]);
+                  }}
+                >
+                  <View style={[styles.optionIconWrap, { backgroundColor: '#fee2e2' }]}>
+                    <Feather name="trash-2" size={18} color="#dc2626" />
+                  </View>
+                  <View style={styles.optionTextContainer}>
+                    <Text style={[styles.optionLabel, { color: '#dc2626' }]}>Delete post</Text>
+                    <Text style={styles.optionSubtitle}>Remove it from the community</Text>
+                  </View>
+                </TouchableOpacity>
+              </>
+            ) : (
+            /* Report post */
             <TouchableOpacity
               style={[styles.optionItem, { borderBottomWidth: 0 }]}
               onPress={() => {
                 Haptics.selectionAsync().catch(() => {});
                 setOptionsModalVisible(false);
-                Alert.alert(
-                  'Report Post',
-                  'Thank you for reporting. Our moderation team will review this post.',
-                  [{ text: 'OK' }]
-                );
+                promptReport('post', post.id);
               }}
             >
               <View style={[styles.optionIconWrap, { backgroundColor: '#fee2e2' }]}>
@@ -661,6 +718,7 @@ export const CommunityPostCard: React.FC<CommunityPostCardProps> = ({
                 <Text style={styles.optionSubtitle}>Inappropriate, spam, or misleading content</Text>
               </View>
             </TouchableOpacity>
+            )}
 
             {/* Cancel Button */}
             <TouchableOpacity
@@ -672,6 +730,7 @@ export const CommunityPostCard: React.FC<CommunityPostCardProps> = ({
           </View>
         </TouchableOpacity>
       </Modal>
+      {post.isOwnPost ? <EditPostModal post={post} visible={editVisible} onClose={() => setEditVisible(false)} /> : null}
     </View>
   );
 };

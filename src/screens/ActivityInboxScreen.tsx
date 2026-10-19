@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -15,6 +15,16 @@ import { COLORS, FONTS, RADIUS } from '../theme/colors';
 import { ScreenContainer } from '../components/ScreenContainer';
 import { rf } from '../utils/responsive';
 import { SwipeableDismissItem } from '../components/SwipeableDismissItem';
+import { useAuth } from '@clerk/expo';
+import { useQueryClient } from '@tanstack/react-query';
+import { communityKeys } from '@pyqdeck/community-sdk';
+import type { Notification } from '@pyqdeck/community-sdk';
+import { markAllNotificationsRead } from '../community/actions';
+import { communityClient } from '../community/client';
+import { COMMUNITY_SLUG } from '../community/config';
+import { alertCommunityError } from '../community/errors';
+import { longAgo } from '../community/mappers';
+import { useCommunityNotifications } from '../community/queries';
 
 export interface UnifiedNotificationItem {
   id: string;
@@ -27,11 +37,13 @@ export interface UnifiedNotificationItem {
   senderName?: string;
   senderCollege?: string;
   userId?: string;
+  /** Community activity: the post to open when tapped. */
+  postId?: string;
   icon?: keyof typeof Feather.glyphMap;
   iconColor?: string;
 }
 
-const MOCK_NOTIFICATIONS: UnifiedNotificationItem[] = [
+const LOCAL_ITEMS: UnifiedNotificationItem[] = [
   {
     id: 'msg-1',
     type: 'message',
@@ -45,26 +57,6 @@ const MOCK_NOTIFICATIONS: UnifiedNotificationItem[] = [
     avatarLetter: 'A',
     icon: 'message-circle',
     iconColor: COLORS.primary,
-  },
-  {
-    id: 'notif-1',
-    type: 'comment',
-    title: 'Aarav Sharma commented on your post',
-    body: 'The step 3 calculation in Banker\'s Algo trace is really clear now. Thanks!',
-    time: '25m ago',
-    read: false,
-    icon: 'message-square',
-    iconColor: '#0284c7',
-  },
-  {
-    id: 'notif-2',
-    type: 'upvote',
-    title: 'New Upvotes on your post',
-    body: 'Your post "CN Module 3 Transport Layer" received 14 new upvotes.',
-    time: '2h ago',
-    read: false,
-    icon: 'arrow-up',
-    iconColor: '#16a34a',
   },
   {
     id: 'msg-2',
@@ -91,17 +83,6 @@ const MOCK_NOTIFICATIONS: UnifiedNotificationItem[] = [
     iconColor: '#f59e0b',
   },
   {
-    id: 'notif-4',
-    type: 'follow',
-    title: 'Priya Patel followed you',
-    body: 'ECE 6th Sem • GEC Patna • Top Contributor',
-    time: '1d ago',
-    read: true,
-    icon: 'user-plus',
-    iconColor: '#8b5cf6',
-    userId: 'user-2',
-  },
-  {
     id: 'msg-3',
     type: 'message',
     title: 'Vikram Singh sent you a message',
@@ -119,40 +100,90 @@ const MOCK_NOTIFICATIONS: UnifiedNotificationItem[] = [
 
 type FilterType = 'all' | 'unread' | 'messages' | 'activity';
 
+const STYLE: Record<Notification['type'], { icon: keyof typeof Feather.glyphMap; color: string }> = {
+  comment: { icon: 'message-square', color: '#0284c7' },
+  reply: { icon: 'corner-down-right', color: '#0284c7' },
+  upvote: { icon: 'arrow-up', color: '#16a34a' },
+  follow: { icon: 'user-plus', color: '#8b5cf6' },
+  moderation: { icon: 'shield', color: '#f59e0b' },
+};
+
+/** A community notification as an inbox row. Likes arrive aggregated ("received N new upvotes"). */
+function toItem(n: Notification): UnifiedNotificationItem {
+  const style = STYLE[n.type];
+  const upvotes = n.type === 'upvote' && n.count > 1;
+  return {
+    id: n.id,
+    type: n.type === 'reply' ? 'comment' : n.type === 'moderation' ? 'system' : n.type,
+    title: upvotes ? 'New upvotes on your post' : n.body || n.title,
+    body: upvotes ? `Your post received ${n.count} new upvotes.` : n.title,
+    time: longAgo(n.createdAt),
+    read: n.read,
+    icon: style.icon,
+    iconColor: style.color,
+    postId: n.target?.postId ?? (n.target?.type === 'post' ? n.target.id ?? undefined : undefined),
+    userId: n.type === 'follow' ? n.actor?.username ?? undefined : undefined,
+  };
+}
+
 export const ActivityInboxScreen: React.FC<{ route?: any }> = () => {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<any>();
-  const [items, setItems] = useState<UnifiedNotificationItem[]>(MOCK_NOTIFICATIONS);
+  // Community activity is a TanStack Query: cached, refetched when stale, and updated in place when you read or dismiss.
+  const { isSignedIn } = useAuth();
+  const queryClient = useQueryClient();
+  const notificationsQuery = useCommunityNotifications(!!isSignedIn);
+  const notificationsKey = communityKeys.notifications(COMMUNITY_SLUG, {});
+  const activity = useMemo(() => (notificationsQuery.data ?? []).map(toItem), [notificationsQuery.data]);
+  const patchNotifications = (fn: (list: Notification[]) => Notification[]) =>
+    queryClient.setQueryData<Notification[]>(notificationsKey, (old) => (old ? fn(old) : old));
+  const refreshUnreadBadge = () =>
+    queryClient.invalidateQueries({ queryKey: [...communityKeys.unreadCount(COMMUNITY_SLUG)] });
+  const [localItems, setLocalItems] = useState<UnifiedNotificationItem[]>(LOCAL_ITEMS);
+  const items = [...activity, ...localItems];
   const [filter, setFilter] = useState<FilterType>('all');
   const [refreshing, setRefreshing] = useState(false);
 
   const unreadCount = items.filter((n) => !n.read).length;
 
-  const onRefresh = () => {
+  const onRefresh = async () => {
     setRefreshing(true);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-    setTimeout(() => {
-      setRefreshing(false);
-    }, 600);
+    await notificationsQuery.refetch();
+    setRefreshing(false);
   };
 
   const markAllRead = () => {
     Haptics.selectionAsync().catch(() => {});
-    setItems((prev) => prev.map((n) => ({ ...n, read: true })));
+    patchNotifications((list) => list.map((n) => ({ ...n, read: true })));
+    setLocalItems((prev) => prev.map((n) => ({ ...n, read: true })));
+    markAllNotificationsRead().catch((err) => {
+      alertCommunityError(err);
+      void notificationsQuery.refetch();
+    });
   };
 
   const onItemPress = (item: UnifiedNotificationItem) => {
     Haptics.selectionAsync().catch(() => {});
-    setItems((prev) =>
-      prev.map((n) => (n.id === item.id ? { ...n, read: true } : n))
-    );
-    if (item.userId) {
+    setLocalItems((prev) => prev.map((n) => (n.id === item.id ? { ...n, read: true } : n)));
+    if (activity.some((n) => n.id === item.id) && !item.read) {
+      patchNotifications((list) => list.map((n) => (n.id === item.id ? { ...n, read: true } : n)));
+      communityClient.notifications.markRead(item.id).then(refreshUnreadBadge, () => {});
+    }
+    if (item.postId) {
+      navigation.navigate('CommunityPostDetail', { postId: item.postId });
+    } else if (item.userId) {
       navigation.navigate('UserProfile', { userId: item.userId });
     }
   };
 
   const onDismissItem = (id: string) => {
-    setItems((prev) => prev.filter((item) => item.id !== id));
+    if (activity.some((n) => n.id === id)) {
+      patchNotifications((list) => list.filter((n) => n.id !== id));
+      communityClient.notifications.dismiss(id).then(refreshUnreadBadge, () => {});
+    } else {
+      setLocalItems((prev) => prev.filter((item) => item.id !== id));
+    }
   };
 
   const filteredItems = items.filter((item) => {
