@@ -170,6 +170,9 @@ const linking: any = {
             },
           },
           Community: {
+            // A link builds only the matched route, so without this a cold-opened
+            // profile or post has nothing under it and Back falls out to Home.
+            initialRouteName: 'CommunityFeed',
             screens: {
               CommunityFeed: 'community',
               CommunityPostDetail: 'community/:postId',
