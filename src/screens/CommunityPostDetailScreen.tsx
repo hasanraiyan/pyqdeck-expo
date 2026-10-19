@@ -130,14 +130,17 @@ export const CommunityPostDetailScreen: React.FC = () => {
   const headerHeight = useHeaderHeight();
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
   const keyboardSpace = useRef(new Animated.Value(0)).current;
-  const { postId, initialPost, focusComments } = route.params || {};
+  // `postId` is whatever opened the screen: a post id from the app, or a slug from a shared link.
+  const { postId: postRef, initialPost, focusComments } = route.params || {};
 
   // The post and its comments are TanStack Queries: the post passed in from the feed shows at once while the
   // fresh copy loads, both are cached and saved offline, and likes or comments elsewhere update them in place.
-  const postQuery = useCommunityPost(postId, initialPost);
-  const commentsQuery = useCommunityComments(postId);
+  const postQuery = useCommunityPost(postRef, initialPost);
   const notFound = postQuery.isError && (postQuery.error as { status?: number } | null)?.status === 404;
   const post: CommunityPost | undefined = notFound ? undefined : postQuery.data;
+  // The comments endpoints take the post id, never the slug, so everything below uses the loaded post's own id.
+  const postId = post?.id;
+  const commentsQuery = useCommunityComments(postId);
   const comments: CommunityComment[] = commentsQuery.data ?? [];
   const [commentInput, setCommentInput] = useState('');
   const [replyingTo, setReplyingTo] = useState<{
@@ -284,6 +287,7 @@ export const CommunityPostDetailScreen: React.FC = () => {
   };
 
   const handleCommentOptions = (targetComment: CommunityComment) => {
+    if (!postId) return;
     Haptics.selectionAsync().catch(() => {});
     const options: any[] = [
       {
