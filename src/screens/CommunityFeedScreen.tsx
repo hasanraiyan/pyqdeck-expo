@@ -140,7 +140,7 @@ export const CommunityFeedScreen: React.FC = () => {
             <View style={styles.joinActions}>
               <TouchableOpacity
                 style={styles.joinPrimary}
-                onPress={() => navigation.navigate('SignIn', { reason: 'community', mode: 'signUp' })}
+                onPress={() => navigation.navigate('SignIn', { reason: 'community' })}
                 accessibilityRole="button"
                 accessibilityLabel="Create account"
               >
@@ -148,7 +148,7 @@ export const CommunityFeedScreen: React.FC = () => {
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.joinSecondary}
-                onPress={() => navigation.navigate('SignIn', { reason: 'community', mode: 'signIn' })}
+                onPress={() => navigation.navigate('SignIn', { reason: 'community' })}
                 accessibilityRole="button"
                 accessibilityLabel="Sign in"
               >

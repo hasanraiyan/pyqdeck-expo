@@ -13,48 +13,70 @@ const HINT_DISMISSED_KEY = 'pyqdeck:sync_hint_dismissed';
  * Signed out: a nudge under the Study header to sign in and back up
  * progress. Signed in: renders nothing - syncing happens silently in the background.
  *
- * `dismissible={false}` (used by the Study tab) renders a persistent,
- * non-dismissible "Log in to save your progress" card - no X button, no
- * AsyncStorage opt-out. The default `dismissible` pill keeps its old
- * dismiss behaviour for the Home slot.
+ * `dismissible={false}` (used by the Study tab) renders a wider "Log in to save
+ * your progress" card with both account buttons; it carries an X in the corner
+ * and remembers the dismissal in AsyncStorage, same as the Home pill.
  */
 export const SyncStatusBar = ({ dismissible = true }: { dismissible?: boolean } = {}) => {
   const navigation = useNavigation<any>();
   const { isLoaded, isSignedIn } = useAuth();
-  const [hintDismissed, setHintDismissed] = useState(true); // hidden until read
+  // null while AsyncStorage is being read, so the card never flashes in and
+  // then disappears for someone who dismissed it earlier.
+  const [hintDismissed, setHintDismissed] = useState<boolean | null>(null);
 
   useEffect(() => {
-    if (!dismissible) return;
     AsyncStorage.getItem(HINT_DISMISSED_KEY)
       .then((v) => setHintDismissed(v === '1'))
       .catch(() => setHintDismissed(false));
-  }, [dismissible]);
+  }, []);
+
+  const dismiss = () => {
+    setHintDismissed(true);
+    AsyncStorage.setItem(HINT_DISMISSED_KEY, '1').catch(() => {});
+  };
 
   if (!isAuthEnabled || !isLoaded) return null;
 
   if (!isSignedIn) {
-    if (dismissible && hintDismissed) return null;
+    if (hintDismissed !== false) return null;
     if (!dismissible) {
       return (
         <View style={styles.persistentCard}>
-          <View style={styles.persistentIcon}>
-            <Feather name="cloud" size={16} color={COLORS.primary} />
-          </View>
-          <View style={styles.persistentCopy}>
+          <View style={styles.persistentHeader}>
             <Text style={styles.persistentTitle}>Log in to save your progress</Text>
-            <Text style={styles.persistentSub}>
-              Your ticks stay on this device until you log in.
-            </Text>
+            <TouchableOpacity
+              style={styles.persistentClose}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              accessibilityRole="button"
+              accessibilityLabel="Dismiss"
+              onPress={dismiss}
+            >
+              <Feather name="x" size={16} color={COLORS.textSubtle} />
+            </TouchableOpacity>
           </View>
-          <TouchableOpacity
-            style={styles.persistentBtn}
-            activeOpacity={0.7}
-            onPress={() => navigation.navigate('SignIn', { reason: 'progress' })}
-            accessibilityRole="button"
-            accessibilityLabel="Log in to save your progress"
-          >
-            <Text style={styles.persistentBtnText}>Log in</Text>
-          </TouchableOpacity>
+          <Text style={styles.persistentSub}>
+            Your ticks stay on this device until you log in.
+          </Text>
+          <View style={styles.persistentActions}>
+            <TouchableOpacity
+              style={styles.persistentPrimary}
+              activeOpacity={0.7}
+              onPress={() => navigation.navigate('SignIn', { reason: 'progress' })}
+              accessibilityRole="button"
+              accessibilityLabel="Create account to save your progress"
+            >
+              <Text style={styles.persistentPrimaryText}>Create account</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.persistentSecondary}
+              activeOpacity={0.7}
+              onPress={() => navigation.navigate('SignIn', { reason: 'progress' })}
+              accessibilityRole="button"
+              accessibilityLabel="Log in to save your progress"
+            >
+              <Text style={styles.persistentSecondaryText}>Log in</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       );
     }
@@ -73,10 +95,7 @@ export const SyncStatusBar = ({ dismissible = true }: { dismissible?: boolean } 
             style={styles.dismiss}
             hitSlop={{ top: 8, bottom: 8, left: 4, right: 8 }}
             accessibilityLabel="Dismiss"
-            onPress={() => {
-              setHintDismissed(true);
-              AsyncStorage.setItem(HINT_DISMISSED_KEY, '1').catch(() => {});
-            }}
+            onPress={dismiss}
           >
             <Feather name="x" size={14} color={COLORS.textSubtle} />
           </TouchableOpacity>
@@ -126,37 +145,45 @@ const styles = StyleSheet.create({
     borderLeftColor: COLORS.border,
   },
   hintText: { fontFamily: FONTS.bodyMedium, fontSize: 12.5, color: COLORS.primary },
-  // Persistent Study-tab variant: full-width card, no dismiss control.
+  // Persistent Study-tab variant: same shape as the community "Join" card
+  // (tinted surface, big title, body, pill buttons) plus a corner X.
   persistentCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    backgroundColor: COLORS.card,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: 12,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
+    backgroundColor: COLORS.primaryLight,
+    borderRadius: 16,
+    padding: 16,
     marginBottom: 12,
   },
-  persistentIcon: {
-    width: 34,
-    height: 34,
-    borderRadius: 9,
-    backgroundColor: COLORS.primaryLight,
-    borderWidth: 1,
-    borderColor: COLORS.primaryBorder,
-    alignItems: 'center',
-    justifyContent: 'center',
+  persistentHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
   },
-  persistentCopy: { flex: 1, minWidth: 0 },
-  persistentTitle: { fontFamily: FONTS.bodyBold, fontSize: 13.5, color: COLORS.text },
-  persistentSub: { fontFamily: FONTS.bodyMedium, fontSize: 11.5, color: COLORS.textMuted, marginTop: 1 },
-  persistentBtn: {
+  persistentTitle: { flex: 1, fontFamily: FONTS.displayBold, fontSize: 16, color: COLORS.text },
+  persistentClose: {
+    marginTop: -2,
+    marginRight: -4,
+    padding: 4,
+  },
+  persistentSub: {
+    fontFamily: FONTS.body,
+    fontSize: 13,
+    color: COLORS.textMuted,
+    marginTop: 4,
+  },
+  persistentActions: { flexDirection: 'row', gap: 10, marginTop: 12 },
+  persistentPrimary: {
     backgroundColor: COLORS.primary,
-    borderRadius: 9,
-    paddingVertical: 8,
-    paddingHorizontal: 14,
+    borderRadius: 999,
+    paddingVertical: 10,
+    paddingHorizontal: 18,
   },
-  persistentBtnText: { fontFamily: FONTS.bodyBold, fontSize: 13, color: '#ffffff' },
+  persistentPrimaryText: { fontFamily: FONTS.bodySemi, fontSize: 14, color: '#ffffff' },
+  persistentSecondary: {
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: COLORS.primary,
+    paddingVertical: 10,
+    paddingHorizontal: 18,
+  },
+  persistentSecondaryText: { fontFamily: FONTS.bodySemi, fontSize: 14, color: COLORS.primary },
 });

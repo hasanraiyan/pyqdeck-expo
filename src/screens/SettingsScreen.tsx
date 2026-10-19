@@ -18,7 +18,7 @@ import * as WebBrowser from 'expo-web-browser';
 import { Share } from 'react-native';
 import Constants from 'expo-constants';
 import { useAuth, useUser } from '@clerk/expo';
-import { COLORS, FONTS } from '../theme/colors';
+import { COLORS, FONTS, RADIUS } from '../theme/colors';
 import { SettingsRow } from '../components/SettingsRow';
 import { rf, verticalScale } from '../utils/responsive';
 import { ScreenContainer } from '../components/ScreenContainer';
@@ -260,58 +260,74 @@ export const SettingsScreen = ({ navigation }: any) => {
         {isAuthEnabled && authLoaded && (
           <>
             <Text style={styles.sectionHeading}>ACCOUNT</Text>
-            <View style={styles.card}>
-              {isSignedIn ? (
-                <>
-                  <SettingsRow
-                    icon="user"
-                    label={user?.fullName || user?.primaryEmailAddress?.emailAddress || 'Signed in'}
-                    subtitle="View & edit public profile"
-                    onPress={() => navigation.navigate('UserProfile', { userId: 'me' })}
-                  />
+            {isSignedIn ? (
+              <View style={styles.card}>
+                <SettingsRow
+                  icon="user"
+                  label={user?.fullName || user?.primaryEmailAddress?.emailAddress || 'Signed in'}
+                  subtitle="View & edit public profile"
+                  onPress={() => navigation.navigate('UserProfile', { userId: 'me' })}
+                />
+                <SettingsRow
+                  icon="shield"
+                  label="Account credentials"
+                  subtitle="Security, email & password"
+                  onPress={() => navigation.navigate('ManageAccount')}
+                />
+                <SettingsRow
+                  icon="refresh-cw"
+                  label="Sync progress"
+                  subtitle={syncSubtitle()}
+                  onPress={() => void syncNow()}
+                  disabled={syncStatus.state === 'syncing'}
+                />
+                <SettingsRow
+                  icon="upload-cloud"
+                  label="Your contributions"
+                  subtitle="Exam papers you've uploaded for your batch"
+                  onPress={() => navigation.navigate('MyContributions')}
+                />
+                {admin.isAdmin && (
                   <SettingsRow
                     icon="shield"
-                    label="Account credentials"
-                    subtitle="Security, email & password"
-                    onPress={() => navigation.navigate('ManageAccount')}
+                    label="Admin tools"
+                    subtitle="Dashboard, notifications, user support, app config"
+                    onPress={() => navigation.navigate('AdminHome')}
                   />
-                  <SettingsRow
-                    icon="refresh-cw"
-                    label="Sync progress"
-                    subtitle={syncSubtitle()}
-                    onPress={() => void syncNow()}
-                    disabled={syncStatus.state === 'syncing'}
-                  />
-                  <SettingsRow
-                    icon="upload-cloud"
-                    label="Your contributions"
-                    subtitle="Exam papers you've uploaded for your batch"
-                    onPress={() => navigation.navigate('MyContributions')}
-                  />
-                  {admin.isAdmin && (
-                    <SettingsRow
-                      icon="shield"
-                      label="Admin tools"
-                      subtitle="Dashboard, notifications, user support, app config"
-                      onPress={() => navigation.navigate('AdminHome')}
-                    />
-                  )}
-                  <SettingsRow
-                    icon="log-out"
-                    label={signingOut ? 'Signing out...' : 'Sign out'}
-                    onPress={signingOut ? undefined : handleSignOut}
-                    last
-                  />
-                </>
-              ) : (
+                )}
                 <SettingsRow
-                  icon="log-in"
-                  label="Sign in or create account"
-                  onPress={() => navigation.navigate('SignIn')}
+                  icon="log-out"
+                  label={signingOut ? 'Signing out...' : 'Sign out'}
+                  onPress={signingOut ? undefined : handleSignOut}
                   last
                 />
-              )}
-            </View>
+              </View>
+            ) : (
+              <View style={styles.joinCard}>
+                <Text style={styles.joinTitle}>Join the PYQDeck community</Text>
+                <Text style={styles.joinBody}>
+                  Create an account to back up your progress, post, comment and follow other students.
+                </Text>
+                <View style={styles.joinActions}>
+                  <TouchableOpacity
+                    style={styles.joinPrimary}
+                    onPress={() => navigation.navigate('SignIn')}
+                    accessibilityRole="button"
+                    accessibilityLabel="Create account"
+                  >
+                    <Text style={styles.joinPrimaryText}>Create account</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.joinSecondary}
+                    onPress={() => navigation.navigate('SignIn')}
+                    accessibilityRole="button"
+                    accessibilityLabel="Log in"
+                  >
+                    <Text style={styles.joinSecondaryText}>Log in</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
           </>
         )}
 
@@ -623,6 +639,36 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border,
     borderRadius: 6,
   },
+  // Signed-out ACCOUNT block: same card as the community feed's "Join the BEU
+  // community" panel, so the two entry points look like one product.
+  joinCard: {
+    backgroundColor: COLORS.primaryLight,
+    borderRadius: RADIUS.xl,
+    padding: 16,
+  },
+  joinTitle: { fontFamily: FONTS.displayBold, fontSize: rf(16), color: COLORS.text },
+  joinBody: {
+    fontFamily: FONTS.body,
+    fontSize: rf(13),
+    color: COLORS.textMuted,
+    marginTop: 4,
+  },
+  joinActions: { flexDirection: 'row', gap: 10, marginTop: 12 },
+  joinPrimary: {
+    backgroundColor: COLORS.primary,
+    borderRadius: RADIUS.full,
+    paddingVertical: 10,
+    paddingHorizontal: 18,
+  },
+  joinPrimaryText: { fontFamily: FONTS.bodySemi, fontSize: rf(14), color: '#ffffff' },
+  joinSecondary: {
+    borderRadius: RADIUS.full,
+    borderWidth: 1,
+    borderColor: COLORS.primary,
+    paddingVertical: 10,
+    paddingHorizontal: 18,
+  },
+  joinSecondaryText: { fontFamily: FONTS.bodySemi, fontSize: rf(14), color: COLORS.primary },
   statusText: {
     fontFamily: FONTS.displayBold,
     fontSize: rf(11.5),

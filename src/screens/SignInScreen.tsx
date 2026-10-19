@@ -8,9 +8,9 @@ import { rf } from '../utils/responsive';
 
 /**
  * Sign-in sheet. Reached from Settings, from an AI entry point, from a vote /
- * report gate, or from the Study tab's persistent "Log in to save your
- * progress" card - no other screen in the app routes here, because nothing
- * else requires an account.
+ * report gate, or from the Study tab's "Log in to save your progress" card -
+ * no other screen in the app routes here, because nothing else requires an
+ * account.
  *
  * Uses Clerk's native AuthView rather than a hand-rolled form: the pyqdeck
  * Clerk instance has Google, GitHub, email-code and passkeys all enabled
@@ -18,6 +18,12 @@ import { rf } from '../utils/responsive';
  * custom flow would mean maintaining four strategies plus the smart-captcha
  * mount point. AuthView renders whatever the dashboard has enabled and syncs
  * the session to the JS client itself, so there is no setActive() call here.
+ *
+ * Always renders the default `signInOrUp` mode. Clerk's own flow carries the
+ * link between signing in and creating an account, so the sheet never boxes
+ * anyone into the mode they happened to arrive from. The `mode` route param is
+ * deliberately ignored: every caller used to pin `signIn` or `signUp`, which
+ * killed that link.
  *
  * Native component => needs a dev build (`pnpm android`), not Expo Go.
  */
@@ -27,8 +33,6 @@ export const SignInScreen = ({ navigation, route }: any) => {
   // Why the sheet opened, so the heading names the thing the user just tried
   // to do. Anything else (Settings -> Sign in) gets no heading at all.
   const reason = route?.params?.reason;
-  // 'signUp' opens on account creation, 'signIn' on sign-in; by default one screen offers both.
-  const mode: 'signIn' | 'signUp' | 'signInOrUp' = route?.params?.mode ?? 'signInOrUp';
   const heading =
     reason === 'vote'
       ? 'Sign in to vote'
@@ -69,12 +73,12 @@ export const SignInScreen = ({ navigation, route }: any) => {
         <View style={styles.notice}>
           <Text style={styles.noticeTitle}>{heading}</Text>
           <Text style={styles.noticeHint}>
-            New to PYQDeck? Continue with Google, GitHub or your email and your account is created in a few seconds.
+            Continue with Google, GitHub or your email — signing in and creating an account both live here.
           </Text>
         </View>
       )}
       <AuthView
-        mode={mode}
+        mode="signInOrUp"
         isDismissible
         onDismiss={() => navigation.goBack()}
       />
