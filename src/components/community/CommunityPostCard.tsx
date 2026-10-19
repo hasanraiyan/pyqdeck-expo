@@ -221,7 +221,7 @@ export const CommunityPostCard: React.FC<CommunityPostCardProps> = ({
 
   const handleShare = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-    const shareUrl = `https://pyqdeck.in/community/${post.slug}`;
+    const shareUrl = `https://www.pyqdeck.in/community/${post.slug}`;
     const shareMessage = `Check out this post on PYQDeck Community:\n"${post.body.slice(0, 100)}..."\n\n${shareUrl}`;
 
     try {
@@ -669,7 +669,7 @@ export const CommunityPostCard: React.FC<CommunityPostCardProps> = ({
               onPress={async () => {
                 Haptics.selectionAsync().catch(() => {});
                 setOptionsModalVisible(false);
-                const shareUrl = `https://pyqdeck.in/community/${post.slug}`;
+                const shareUrl = `https://www.pyqdeck.in/community/${post.slug}`;
                 try {
                   await Clipboard.setStringAsync(shareUrl);
                   Alert.alert('Link Copied', 'Post link copied to clipboard!');

@@ -172,7 +172,7 @@ const linking: any = {
           Community: {
             screens: {
               CommunityFeed: 'community',
-              CommunityPostDetail: 'community/:slug',
+              CommunityPostDetail: 'community/:postId',
               UserProfile: 'community/u/:userId',
             },
           },

@@ -266,7 +266,7 @@ export const UserProfileScreen: React.FC = () => {
 
   const handleShareProfile = async () => {
     Haptics.selectionAsync().catch(() => {});
-    const shareUrl = `https://pyqdeck.in/community/u/${profile?.id || 'student'}`;
+    const shareUrl = `https://www.pyqdeck.in/community/u/${profile?.id || 'student'}`;
     try {
       await Share.share({
         message: `Check out ${profile?.name || 'Student'}'s profile on PyQdeck Community:\n${shareUrl}`,
@@ -316,7 +316,7 @@ export const UserProfileScreen: React.FC = () => {
         {
           text: 'Copy Profile Link',
           onPress: async () => {
-            const shareUrl = `https://pyqdeck.in/community/u/${profile?.id || 'student'}`;
+            const shareUrl = `https://www.pyqdeck.in/community/u/${profile?.id || 'student'}`;
             try {
               await Clipboard.setStringAsync(shareUrl);
               Alert.alert('Copied', 'Profile URL copied to clipboard');

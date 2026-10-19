@@ -203,7 +203,7 @@ export const CommunityMediaViewerModal: React.FC<CommunityMediaViewerModalProps>
       onSharePress();
       return;
     }
-    const shareUrl = `https://pyqdeck.in/community/${post.slug}`;
+    const shareUrl = `https://www.pyqdeck.in/community/${post.slug}`;
     const shareMessage = `Check out this document on PYQDeck Community:\n"${post.body.slice(0, 100)}..."\n\n${shareUrl}`;
 
     try {
