@@ -196,7 +196,7 @@ export const CommunityPostCard: React.FC<CommunityPostCardProps> = ({
     setCollapsedLimit(200);
     setNeedsTruncation(false);
   }, [post.id]);
-  const dismissTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const dismissTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     return () => {
