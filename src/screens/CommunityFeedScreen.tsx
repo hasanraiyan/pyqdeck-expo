@@ -29,6 +29,7 @@ const COMMUNITY_JOIN_DISMISSED_KEY = 'pyqdeck:community_join_dismissed';
 import { hidePost, toggleBookmarkPost, toggleLikePost } from '../community/actions';
 import { describeCommunityError } from '../community/errors';
 import { useRequireAuth } from '../auth/useRequireAuth';
+import { COMMUNITY_NOTIFICATIONS_ENABLED } from '../community/config';
 import { useIsStaff, useModerationBacklog } from '../community/moderationQueries';
 import { CommunityPostCard } from '../components/community/CommunityPostCard';
 import { PendingPostCard } from '../components/community/PendingPostCard';
@@ -340,18 +341,20 @@ export const CommunityFeedScreen: React.FC = () => {
                 </TouchableOpacity>
               ) : null}
 
-              <TouchableOpacity
-                onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-                  navigation.navigate('Tabs', { screen: 'Activity' });
-                }}
-                style={styles.headerMessageButton}
-                hitSlop={8}
-                accessibilityRole="button"
-                accessibilityLabel="Messages & Activity"
-              >
-                <Feather name="message-circle" size={20} color={COLORS.text} />
-              </TouchableOpacity>
+              {COMMUNITY_NOTIFICATIONS_ENABLED ? (
+                <TouchableOpacity
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                    navigation.navigate('Tabs', { screen: 'Activity' });
+                  }}
+                  style={styles.headerMessageButton}
+                  hitSlop={8}
+                  accessibilityRole="button"
+                  accessibilityLabel="Messages & Activity"
+                >
+                  <Feather name="message-circle" size={20} color={COLORS.text} />
+                </TouchableOpacity>
+              ) : null}
 
               <TouchableOpacity
                 onPress={() => {

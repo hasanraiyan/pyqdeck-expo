@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useCommunityUnreadCount } from './src/community/queries';
+import { COMMUNITY_NOTIFICATIONS_ENABLED } from './src/community/config';
 import { Alert, InteractionManager, Platform, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import {
@@ -384,7 +385,8 @@ function CommunityStack() {
 /** The tab navigator, wrapped by the root stack so the auth screens can sit above it. */
 function TabsNavigator() {
   const { isSignedIn: communitySignedIn } = useAuth();
-  const communityUnread = useCommunityUnreadCount(!!communitySignedIn);
+  // No unread polling while the inbox is switched off.
+  const communityUnread = useCommunityUnreadCount(!!communitySignedIn && COMMUNITY_NOTIFICATIONS_ENABLED);
   const insets = useSafeAreaInsets();
   const { shellMode } = useResponsive();
   const isBottom = shellMode === 'bottom';
@@ -515,6 +517,7 @@ function TabsNavigator() {
             ...(isBottom ? { tabBarStyle: getTabStyleForRoute(route) } : null),
           })}
         />
+        {COMMUNITY_NOTIFICATIONS_ENABLED ? (
         <Tab.Screen
           name="Activity"
           component={ActivityStack}
@@ -535,6 +538,7 @@ function TabsNavigator() {
             ...(isBottom ? { tabBarStyle: getTabStyleForRoute(route) } : null),
           })}
         />
+        ) : null}
     </Tab.Navigator>
   );
 }

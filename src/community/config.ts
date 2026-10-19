@@ -11,5 +11,11 @@ export const COMMUNITY_SLUG = 'beu';
 export const COMMUNITY_API_URL =
   process.env.EXPO_PUBLIC_COMMUNITY_API_URL || 'https://community-api.pyqdeck.in';
 
+/**
+ * The Activity inbox (the bell tab, its unread badge and the header shortcut). Off until community notifications
+ * are complete (push delivery, grouping, settings). Everything behind it is kept; turn this on to bring it all back.
+ */
+export const COMMUNITY_NOTIFICATIONS_ENABLED = false;
+
 /** Most images per post the composer allows. The server's own limit can only be equal or higher. */
 export const COMMUNITY_MAX_IMAGES = 5;
