@@ -2,6 +2,12 @@
 
 All notable changes to PYQDeck are listed here, newest first.
 
+## 1.14.0
+
+### Added
+- **Community in onboarding.** A new welcome slide introduces the community: share notes and answers, ask doubts, and like, comment and save posts.
+- **Shared community links open in the app.** Tapping a shared community post link now opens that post directly, with its comments.
+
 ## 1.13.3
 
 ### Added

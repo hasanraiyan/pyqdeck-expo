@@ -51,6 +51,11 @@ const SLIDES = [
     heading: 'Find any question\nin seconds.',
     body: 'Search by keyword across every subject and year. Results appear instantly as you type.',
   },
+  {
+    kicker: 'COMMUNITY',
+    heading: 'Study together,\nnot alone.',
+    body: 'Share notes and answers, ask doubts, and learn from other students in your community. Like, comment and save the posts that help you.',
+  },
 ];
 
 /* Slide 1 Demo: Real QuestionItemClassic Component + Year Chips */
@@ -152,6 +157,48 @@ function DemoSearch() {
   );
 }
 
+/* Slide 4 Demo: Community Post Card */
+function DemoCommunity() {
+  return (
+    <View style={styles.demoContainer} pointerEvents="none">
+      <View style={styles.demoZapRow}>
+        <Feather name="users" size={12} color={COLORS.primary} />
+        <Text style={styles.demoZapHeading}>COMMUNITY</Text>
+      </View>
+
+      <View style={styles.demoCard}>
+        <View style={styles.demoPostHeader}>
+          <View style={styles.demoAvatar}>
+            <Text style={styles.demoAvatarText}>A</Text>
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.demoPostAuthor}>Aditi · 2h ago</Text>
+            <Text style={styles.demoPostMeta}>Operating Systems</Text>
+          </View>
+        </View>
+
+        <Text style={styles.demoQuestionText} numberOfLines={3}>
+          Can someone explain how paging differs from segmentation? Sharing my notes below.
+        </Text>
+
+        <View style={styles.demoPostActions}>
+          <View style={styles.demoAction}>
+            <Feather name="heart" size={13} color={COLORS.primary} />
+            <Text style={styles.demoActionText}>24</Text>
+          </View>
+          <View style={styles.demoAction}>
+            <Feather name="message-circle" size={13} color={COLORS.textMuted} />
+            <Text style={styles.demoActionText}>8</Text>
+          </View>
+          <View style={styles.demoAction}>
+            <Feather name="bookmark" size={13} color={COLORS.textMuted} />
+          </View>
+        </View>
+      </View>
+    </View>
+  );
+}
+
 interface Props {
   onDone: () => void;
 }
@@ -218,6 +265,7 @@ export function OnboardingScreen({ onDone }: Props) {
               {idx === 0 && <DemoQuestionCard />}
               {idx === 1 && <DemoJumpBackIn />}
               {idx === 2 && <DemoSearch />}
+              {idx === 3 && <DemoCommunity />}
             </View>
 
             {/* Slide Information */}
@@ -484,6 +532,55 @@ const styles = StyleSheet.create({
     color: COLORS.textSubtle,
     letterSpacing: 0.8,
     marginBottom: 6,
+  },
+
+  /* Demo Community */
+  demoPostHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 10,
+  },
+  demoAvatar: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: COLORS.primaryLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  demoAvatarText: {
+    fontFamily: FONTS.displayBold,
+    fontSize: rf(12),
+    color: COLORS.primary,
+  },
+  demoPostAuthor: {
+    fontFamily: FONTS.bodySemi,
+    fontSize: rf(12),
+    color: COLORS.text,
+  },
+  demoPostMeta: {
+    fontFamily: FONTS.body,
+    fontSize: rf(10.5),
+    color: COLORS.textSubtle,
+  },
+  demoPostActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 18,
+    paddingTop: 8,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: COLORS.border,
+  },
+  demoAction: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  demoActionText: {
+    fontFamily: FONTS.bodyMedium,
+    fontSize: rf(11.5),
+    color: COLORS.textMuted,
   },
 
   /* Copy Section */
