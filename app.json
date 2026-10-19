@@ -156,12 +156,6 @@
           "theme": "./clerk-theme.json"
         }
       ],
-      [
-        "@clerk/expo-native-components",
-        {
-          "theme": "./clerk-theme.json"
-        }
-      ],
       "expo-secure-store",
       "expo-asset",
       "expo-image",
@@ -173,7 +167,8 @@
           "microphonePermission": false
         }
       ],
-      "expo-sharing"
+      "expo-sharing",
+      "expo-system-ui"
     ],
     "extra": {
       "eas": {

@@ -3,8 +3,7 @@
   "version": "1.14.0",
   "main": "index.ts",
   "dependencies": {
-    "@clerk/expo": "^4.13.0",
-    "@clerk/expo-native-components": "^0.2.0",
+    "@clerk/expo": "4.6.8",
     "@expo-google-fonts/inter": "^0.4.2",
     "@expo-google-fonts/kalam": "^0.4.1",
     "@expo-google-fonts/patrick-hand": "^0.4.1",
@@ -44,6 +43,7 @@
     "expo-sharing": "~57.0.23",
     "expo-status-bar": "~57.0.1",
     "expo-store-review": "^57.0.2",
+    "expo-system-ui": "~57.0.4",
     "expo-task-manager": "~57.0.21",
     "expo-web-browser": "~57.0.2",
     "katex": "^0.18.7",
