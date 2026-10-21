@@ -10,6 +10,7 @@ All notable changes to PYQDeck are listed here, newest first.
 ### Fixed
 - **Back from a shared community link.** Opening a profile or post from a pyqdeck.in link and pressing Back now goes to the Community feed instead of Home.
 - **Sign-in on the web.** The web version showed an empty sign-in sheet; it now shows the sign-in form, and Manage account works there too.
+- **Math in question previews.** Cube roots and other nth roots (like ∛) now show properly instead of a stray digit, and fractions keep their numerator/denominator separator, so formulas such as the shaft-diameter options no longer look garbled in the question list.
 
 ## 1.14.1
 

@@ -32,6 +32,86 @@ const toSuper = (str: string): string =>
 const toSub = (str: string): string =>
   str.split('').map((c) => SUBSCRIPTS[c] || `_${c}`).join('');
 
+interface MNode {
+  tag: string;
+  text: string;
+  children: MNode[];
+}
+
+/** Minimal parser for the MathML string KaTeX emits (no attributes of interest). */
+function parseMathML(xml: string): MNode {
+  const root: MNode = { tag: 'root', text: '', children: [] };
+  const stack: MNode[] = [root];
+  const re = /<(\/?)([A-Za-z][\w-]*)[^>]*?(\/?)>|([^<]+)/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(xml))) {
+    const top = stack[stack.length - 1];
+    if (m[4] !== undefined) {
+      top.text += m[4];
+    } else if (m[1]) {
+      if (stack.length > 1) stack.pop();
+    } else {
+      const node: MNode = { tag: m[2].toLowerCase(), text: '', children: [] };
+      top.children.push(node);
+      if (!m[3]) stack.push(node);
+    }
+  }
+  return root;
+}
+
+const decodeEntities = (t: string): string =>
+  t
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"');
+
+const isWrapped = (t: string): boolean => {
+  if (!t.startsWith('(') || !t.endsWith(')')) return false;
+  let depth = 0;
+  for (let i = 0; i < t.length; i++) {
+    if (t[i] === '(') depth++;
+    else if (t[i] === ')' && --depth === 0 && i < t.length - 1) return false;
+  }
+  return true;
+};
+
+/** Parenthesise multi-character operands so the text stays unambiguous. */
+const wrap = (t: string): string => (t.length > 1 && !isWrapped(t) ? `(${t})` : t);
+
+const ROOT_SIGNS: Record<string, string> = { '2': '√', '3': '∛', '4': '∜' };
+
+function mathmlToText(node: MNode): string {
+  if (node.tag === 'annotation' || node.tag === 'annotation-xml') return '';
+  const kids = node.children;
+  const r = (n: MNode | undefined): string => (n ? mathmlToText(n) : '');
+  const plain = (n: MNode | undefined): string => r(n).trim();
+
+  switch (node.tag) {
+    case 'mfrac':
+      return `${wrap(plain(kids[0]))}/${wrap(plain(kids[1]))}`;
+    case 'msqrt':
+      return `√${wrap(kids.map(r).join('').trim())}`;
+    case 'mroot': {
+      const index = plain(kids[1]);
+      const sign = ROOT_SIGNS[index] ?? `${toSuper(index)}√`;
+      return `${sign}${wrap(plain(kids[0]))}`;
+    }
+    case 'msubsup':
+      return `${r(kids[0])}${toSub(plain(kids[1]))}${toSuper(plain(kids[2]))}`;
+    case 'msup':
+      return `${r(kids[0])}${toSuper(plain(kids[1]))}`;
+    case 'msub':
+      return `${r(kids[0])}${toSub(plain(kids[1]))}`;
+    case 'mtr':
+      return `${kids.map(r).join('')}; `;
+    case 'mtd':
+      return `${kids.map(r).join('')}, `;
+    default:
+      return decodeEntities(node.text) + kids.map(r).join('');
+  }
+}
+
 const cache = new Map<string, string>();
 const MAX_CACHE = 1000;
 
@@ -54,63 +134,7 @@ export function latexToUnicode(latex: string): string {
       throwOnError: false,
     });
 
-    // 1. Remove raw LaTeX annotation payload
-    let clean = mathml.replace(/<annotation[^>]*>[\s\S]*?<\/annotation>/gi, '');
-
-    // 2. Square roots
-    clean = clean.replace(/<msqrt>([\s\S]*?)<\/msqrt>/gi, '√($1)');
-
-    // 3. Fractions
-    clean = clean.replace(/<mfrac>([\s\S]*?)<\/mfrac>/gi, '($1)');
-
-    // 4. Matrices and tables
-    clean = clean.replace(/<mtr>([\s\S]*?)<\/mtr>/gi, '$1; ');
-    clean = clean.replace(/<mtd>([\s\S]*?)<\/mtd>/gi, '$1, ');
-
-    // 5. Subscripts and superscripts
-    clean = clean.replace(/<msubsup>([\s\S]*?)<\/msubsup>/gi, (_, inner) => {
-      const parts = inner.match(/<m[a-z]+[^>]*>[\s\S]*?<\/m[a-z]+>/gi) || [];
-      if (parts.length >= 3) {
-        const base = parts[0].replace(/<[^>]+>/g, '');
-        const sub = toSub(parts[1].replace(/<[^>]+>/g, ''));
-        const sup = toSuper(parts[2].replace(/<[^>]+>/g, ''));
-        return `${base}${sub}${sup}`;
-      }
-      return inner;
-    });
-
-    clean = clean.replace(/<msup>([\s\S]*?)<\/msup>/gi, (_, inner) => {
-      const parts = inner.match(/<m[a-z]+[^>]*>[\s\S]*?<\/m[a-z]+>/gi) || [];
-      if (parts.length >= 2) {
-        const base = parts[0].replace(/<[^>]+>/g, '');
-        const sup = toSuper(parts[1].replace(/<[^>]+>/g, ''));
-        return `${base}${sup}`;
-      }
-      return inner;
-    });
-
-    clean = clean.replace(/<msub>([\s\S]*?)<\/msub>/gi, (_, inner) => {
-      const parts = inner.match(/<m[a-z]+[^>]*>[\s\S]*?<\/m[a-z]+>/gi) || [];
-      if (parts.length >= 2) {
-        const base = parts[0].replace(/<[^>]+>/g, '');
-        const sub = toSub(parts[1].replace(/<[^>]+>/g, ''));
-        return `${base}${sub}`;
-      }
-      return inner;
-    });
-
-    // 6. Strip all remaining XML/HTML tags
-    clean = clean.replace(/<[^>]+>/g, '');
-
-    // 7. Decode standard XML entities
-    clean = clean
-      .replace(/&amp;/g, '&')
-      .replace(/&lt;/g, '<')
-      .replace(/&gt;/g, '>')
-      .replace(/&quot;/g, '"');
-
-    // 8. Clean spaces and matrix formatting artifacts
-    clean = clean
+    const clean = mathmlToText(parseMathML(mathml))
       .replace(/\s+/g, ' ')
       .replace(/,\s*;/g, ';')
       .replace(/;\s*;/g, ';')
