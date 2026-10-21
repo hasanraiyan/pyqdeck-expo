@@ -61,10 +61,10 @@ function parseMathML(xml: string): MNode {
 
 const decodeEntities = (t: string): string =>
   t
-    .replace(/&amp;/g, '&')
     .replace(/&lt;/g, '<')
     .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"');
+    .replace(/&quot;/g, '"')
+    .replace(/&amp;/g, '&');
 
 const isWrapped = (t: string): boolean => {
   if (!t.startsWith('(') || !t.endsWith(')')) return false;
