@@ -80,8 +80,15 @@ export const CommunityMediaViewerModal: React.FC<CommunityMediaViewerModalProps>
   useEffect(() => {
     if (visible) {
       setScrollMode(initialType === 'document' ? 'vertical' : 'horizontal');
+      setPageZoomed(false);
     }
   }, [visible, initialType]);
+
+  useEffect(() => {
+    if (!visible) {
+      setPageZoomed(false);
+    }
+  }, [visible]);
 
   const isVertical = scrollMode === 'vertical';
   const PAGE_GAP = 14;
@@ -407,6 +414,7 @@ export const CommunityMediaViewerModal: React.FC<CommunityMediaViewerModalProps>
                 style={styles.topIconBtn}
                 onPress={() => {
                   Haptics.selectionAsync().catch(() => {});
+                  setPageZoomed(false);
                   setScrollMode((prev) => (prev === 'vertical' ? 'horizontal' : 'vertical'));
                 }}
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}

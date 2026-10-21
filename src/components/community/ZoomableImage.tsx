@@ -1,4 +1,4 @@
-import React, { useMemo, useRef } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import { Animated, GestureResponderEvent, PanResponder, StyleSheet } from 'react-native';
 import { Image } from 'expo-image';
 
@@ -20,15 +20,15 @@ const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v
 
 const touchDistance = (e: GestureResponderEvent) => {
   const [a, b] = e.nativeEvent.touches;
-  return Math.hypot(a.pageX - b.pageX, a.pageY - b.pageY);
+  return Math.hypot(a.locationX - b.locationX, a.locationY - b.locationY);
 };
 
 const touchCentre = (e: GestureResponderEvent) => {
   const touches = e.nativeEvent.touches;
   const n = touches.length;
   return {
-    x: touches.reduce((sum, t) => sum + t.pageX, 0) / n,
-    y: touches.reduce((sum, t) => sum + t.pageY, 0) / n,
+    x: touches.reduce((sum, t) => sum + t.locationX, 0) / n,
+    y: touches.reduce((sum, t) => sum + t.locationY, 0) / n,
   };
 };
 
@@ -57,6 +57,15 @@ export const ZoomableImage: React.FC<ZoomableImageProps> = ({ uri, width, height
   size.current = { width, height };
   const onZoomChangeRef = useRef(onZoomChange);
   onZoomChangeRef.current = onZoomChange;
+
+  useEffect(
+    () => () => {
+      if (zoomedRef.current) {
+        onZoomChangeRef.current?.(false);
+      }
+    },
+    []
+  );
 
   const apply = (s: number, x: number, y: number, animate = false) => {
     const { width: w, height: h } = size.current;
@@ -145,24 +154,24 @@ export const ZoomableImage: React.FC<ZoomableImageProps> = ({ uri, width, height
           if (touchesLeft > 0) return;
           if (cur.current.s < MIN_SCALE * 1.02) apply(MIN_SCALE, 0, 0, true);
           if (moved.current) return;
-          const { pageX, pageY } = e.nativeEvent;
+          const { locationX, locationY } = e.nativeEvent;
           const now = Date.now();
           const prev = lastTap.current;
           if (
             now - prev.t < DOUBLE_TAP_MS &&
-            Math.abs(pageX - prev.x) < 40 &&
-            Math.abs(pageY - prev.y) < 40
+            Math.abs(locationX - prev.x) < 40 &&
+            Math.abs(locationY - prev.y) < 40
           ) {
             lastTap.current = { t: 0, x: 0, y: 0 };
             if (cur.current.s > MIN_SCALE * 1.05) {
               apply(MIN_SCALE, 0, 0, true);
             } else {
-              const f = fromCentre(pageX, pageY);
+              const f = fromCentre(locationX, locationY);
               const k = DOUBLE_TAP_SCALE / cur.current.s;
               apply(DOUBLE_TAP_SCALE, f.x - (f.x - cur.current.x) * k, f.y - (f.y - cur.current.y) * k, true);
             }
           } else {
-            lastTap.current = { t: now, x: pageX, y: pageY };
+            lastTap.current = { t: now, x: locationX, y: locationY };
           }
         },
       }),
