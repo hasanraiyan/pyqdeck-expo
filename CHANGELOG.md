@@ -2,6 +2,11 @@
 
 All notable changes to PYQDeck are listed here, newest first.
 
+## 1.14.2
+
+### Fixed
+- **Math in question previews.** Cube roots and other nth roots (like ∛) now show properly instead of a stray digit, and fractions keep their numerator/denominator separator, so formulas such as the shaft-diameter options no longer look garbled in the question list.
+
 ## 1.14.1
 
 ### Fixed
